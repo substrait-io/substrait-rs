@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+[package]
+name = "substrait"
+description = "Rust bindings for Substrait"
+version = "0.1.0"
+repository = "https://github.com/substrait/substrait-rs"
+homepage = "https://github.com/substrait/substrait-rs"
+license = "Apache-2.0"
+readme = "README.md"
+edition = "2021"
+build = "build.rs"
+include = [ "build.rs", "src/**/*.rs", "Cargo.lock", "substrait/proto/**/*.proto" ]
+keywords = [ "substrait" ]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+prost = "0.9"
+prost-types = "0.9"
+
+[build-dependencies]
+glob = "0.3"
+prost-build = { version = "0.9" }
