@@ -2,7 +2,7 @@
 [package]
 name = "substrait"
 description = "Rust bindings for Substrait"
-version = "0.1.0"
+version = "0.2.0"
 repository = "https://github.com/substrait/substrait-rs"
 homepage = "https://github.com/substrait/substrait-rs"
 license = "Apache-2.0"
