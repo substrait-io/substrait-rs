@@ -19,6 +19,7 @@ mod tests {
         let _ = Literal {
             nullable: true,
             literal_type: Some(LiteralType::I32(123)),
+            type_variation_reference: 0,
         };
     }
 }
