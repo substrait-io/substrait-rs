@@ -11,7 +11,7 @@ Rust bindings for [substrait](https://substrait.io/).
 Clone this repository.
 
 ```bash
-git clone git@github.com:substrait/substrait-rs.git
+git clone git@github.com:substrait-io/substrait-rs.git
 cd substrait-rs
 ```
 
