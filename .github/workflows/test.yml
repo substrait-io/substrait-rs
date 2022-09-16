@@ -18,6 +18,7 @@ jobs:
       - uses: actions-rs/cargo@v1.0.3
         with:
           command: check
+          args: --all-features
 
   test:
     name: Test
@@ -34,6 +35,7 @@ jobs:
       - uses: actions-rs/cargo@v1.0.3
         with:
           command: test
+          args: --all-features
 
   rustfmt:
     name: Rustfmt
@@ -66,4 +68,4 @@ jobs:
       - uses: actions-rs/cargo@v1.0.3
         with:
           command: clippy
-          args: -- -Dwarnings
+          args: --all-features -- -Dwarnings
