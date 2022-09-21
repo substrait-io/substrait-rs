@@ -19,19 +19,16 @@ default = []
 pbjson = ["dep:pbjson", "dep:pbjson-types", "dep:pbjson-build", "dep:serde"]
 
 [dependencies]
-pbjson = { version = "0.4", optional = true }
-pbjson-types = { version = "0.4", optional = true }
+pbjson = { version = "0.5", optional = true }
+pbjson-types = { version = "0.5", optional = true }
 prost = "0.11"
 prost-types = "0.11"
 serde = { version = "1", optional = true }
 
 [build-dependencies]
-pbjson-build = { version = "0.4", optional = true }
+pbjson-build = { version = "0.5", optional = true }
 prost-build = "0.11"
 walkdir = "2"
 
 [dev-dependencies]
 serde_json = "1" # { version = "1", optional = true } # rust-lang/cargo#1596
-
-[patch.crates-io]
-pbjson-build = { git = "https://github.com/mbrobbel/pbjson", branch = "escape-keywords", optional = true }
