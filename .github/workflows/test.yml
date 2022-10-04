@@ -15,6 +15,8 @@ jobs:
           profile: minimal
           toolchain: stable
       - uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions-rs/cargo@v1.0.3
         with:
           command: check
@@ -31,6 +33,8 @@ jobs:
           profile: minimal
           toolchain: stable
       - uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions-rs/cargo@v1.0.3
         with:
           command: test
@@ -63,6 +67,8 @@ jobs:
           toolchain: stable
           components: clippy
       - uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions-rs/cargo@v1.0.3
         with:
           command: clippy
