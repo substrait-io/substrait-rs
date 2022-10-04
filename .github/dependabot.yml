@@ -13,4 +13,8 @@ updates:
   - package-ecosystem: "gitsubmodule"
     directory: "/"
     schedule:
-      interval: "daily"
+      # 1 hour after the weekly Substrait release
+      # https://github.com/substrait-io/substrait/blob/90fce6a582c1009435d26b63083486ac1eed5906/.github/workflows/release.yml#L1-L6
+      interval: "weekly"
+      day: "sunday"
+      time: "03:00"
