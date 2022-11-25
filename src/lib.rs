@@ -2,7 +2,7 @@
 
 /// Generated types for the protobuf `substrait` package
 #[allow(clippy::all)]
-pub mod protobuf {
+pub mod proto {
 
     /// Generated types for the protobuf `substrait.extensions` package
     pub mod extensions {
@@ -18,9 +18,14 @@ pub mod protobuf {
     include!(concat!(env!("OUT_DIR"), "/substrait.serde.rs"));
 }
 
+/// Generated types for text-based definitions
+pub mod text {
+    include!(concat!(env!("OUT_DIR"), "/substrait_text.rs"));
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::protobuf::expression::{literal::LiteralType, Literal};
+    use crate::proto::expression::{literal::LiteralType, Literal};
     #[cfg(feature = "pbjson")]
     use std::error::Error;
 
@@ -36,7 +41,7 @@ mod tests {
     #[cfg(feature = "pbjson")]
     #[test]
     fn pbjson_serde() -> Result<(), Box<dyn Error>> {
-        let plan: crate::protobuf::Plan = serde_json::from_str(
+        let plan: crate::proto::Plan = serde_json::from_str(
             r#"{
                 "relations": [
                     {
