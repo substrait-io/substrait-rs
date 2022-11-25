@@ -15,6 +15,7 @@ include = [
   "Cargo.lock",
   "substrait/proto/**/*.proto",
   "substrait/text/**/*.yaml",
+  "substrait/extensions/**/*.yaml",
 ]
 keywords = ["substrait"]
 
@@ -37,4 +38,8 @@ prost-build = "0.11"
 schemars = "0.8"
 serde_yaml = "0.9"
 typify = "0.0.10"
+walkdir = "2"
+
+[dev-dependencies]
+serde_yaml = "0.9"
 walkdir = "2"
