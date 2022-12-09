@@ -4,26 +4,27 @@
 
 # substrait-rs
 
-Rust bindings for [substrait](https://substrait.io/).
+[![crates.io](https://img.shields.io/crates/v/substrait.svg)](https://crates.io/crates/substrait)
+[![docs.rs](https://docs.rs/substrait/badge.svg)](https://docs.rs/substrait)
+
+Rust crate for [substrait](https://substrait.io/).
+
+## Documentation
+
+- [Docs (release)](https://docs.rs/substrait)
+- [Docs (main)](https://substrait-io.github.io/substrait-rs/substrait/)
 
 ## Build & Test
 
 Clone this repository.
 
-```bash
-git clone git@github.com:substrait-io/substrait-rs.git
+```shell
+git clone --recursive git@github.com:substrait-io/substrait-rs.git
 cd substrait-rs
-```
-
-Update submodules.
-
-```bash
-git submodule init
-git submodule update
 ```
 
 Build and test with Cargo.
 
-```bash
+```shell
 cargo test
 ```
