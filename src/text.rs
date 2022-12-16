@@ -15,13 +15,13 @@ mod tests {
         WalkDir::new(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("substrait/extensions"))
             .into_iter()
             .filter_map(Result::ok)
+            .filter(|entry| entry.file_type().is_file())
             .filter(|entry| {
-                entry.file_type().is_file()
-                    && entry
-                        .path()
-                        .extension()
-                        .filter(|extension| extension == &"yaml")
-                        .is_some()
+                entry
+                    .path()
+                    .extension()
+                    .filter(|extension| extension == &"yaml")
+                    .is_some()
             })
             .map(DirEntry::into_path)
             // TODO(mbrobbel):
