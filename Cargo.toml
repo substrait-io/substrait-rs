@@ -27,6 +27,7 @@ include = [
 default = []
 serde = ["dep:prost-wkt", "dep:prost-wkt-build", "dep:prost-wkt-types"]
 pbjson = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
+protoc = ["dep:protobuf-src"]
 
 [dependencies]
 pbjson = { version = "0.5", optional = true }
@@ -44,6 +45,7 @@ pbjson-build = { version = "0.5", optional = true }
 prost-build = { version = "0.11", default-features = false }
 prost-types = "0.11"
 prost-wkt-build = { version = "0.3", optional = true }
+protobuf-src = { version = "1", optional = true }
 schemars = "0.8"
 serde_yaml = "0.9"
 typify = "0.0.10"

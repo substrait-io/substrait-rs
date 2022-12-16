@@ -143,6 +143,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     // for use in docker build where file changes can be wonky
     println!("cargo:rerun-if-env-changed=FORCE_REBUILD");
 
+    #[cfg(feature = "protoc")]
+    std::env::set_var("PROTOC", protobuf_src::protoc());
+
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     text(&out_dir)?;

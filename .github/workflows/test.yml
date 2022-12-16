@@ -12,6 +12,7 @@ jobs:
         feature:
           - default
           - pbjson
+          - protoc
           - serde
     steps:
       - uses: actions/checkout@v3

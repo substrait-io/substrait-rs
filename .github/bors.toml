@@ -1,6 +1,7 @@
 status = [
   "Check (default)",
   "Check (pbjson)",
+  "Check (protoc)",
   "Check (serde)",
   "Test (default)",
   "Test (pbjson)",
