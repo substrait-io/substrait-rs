@@ -1,34 +1,56 @@
 # SPDX-License-Identifier: Apache-2.0
 [package]
 name = "substrait"
-description = "Rust bindings for Substrait"
 version = "0.3.0"
-repository = "https://github.com/substrait-io/substrait-rs"
-homepage = "https://github.com/substrait-io/substrait-rs"
-license = "Apache-2.0"
-readme = "README.md"
 edition = "2021"
+rust-version = "1.60"
+description = "Cross-Language Serialization for Relational Algebra"
+documentation = "https://docs.rs/substrait"
+readme = "README.md"
+homepage = "https://substrait.io"
+repository = "https://github.com/substrait-io/substrait-rs"
+license = "Apache-2.0"
+keywords = ["substrait"]
 build = "build.rs"
-include = [ "build.rs", "src/**/*.rs", "Cargo.lock", "substrait/proto/**/*.proto" ]
-keywords = [ "substrait" ]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+include = [
+  "LICENSE",
+  "build.rs",
+  "src/**/*.rs",
+  "substrait/LICENSE",
+  "substrait/README.md",
+  "substrait/extensions/**/*.yaml",
+  "substrait/proto/**/*.proto",
+  "substrait/text/**/*.yaml",
+]
 
 [features]
 default = []
-pbjson = ["dep:pbjson", "dep:pbjson-types", "dep:pbjson-build", "dep:serde"]
+serde = ["dep:prost-wkt", "dep:prost-wkt-build", "dep:prost-wkt-types"]
+pbjson = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
+protoc = ["dep:protobuf-src"]
 
 [dependencies]
 pbjson = { version = "0.5", optional = true }
 pbjson-types = { version = "0.5", optional = true }
 prost = "0.11"
 prost-types = "0.11"
-serde = { version = "1", optional = true }
+prost-wkt = { version = "0.3", optional = true }
+prost-wkt-types = { version = "0.3", optional = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [build-dependencies]
+heck = "0.4"
 pbjson-build = { version = "0.5", optional = true }
-prost-build = "0.11"
+prost-build = { version = "0.11", default-features = false }
+prost-types = "0.11"
+prost-wkt-build = { version = "0.3", optional = true }
+protobuf-src = { version = "1", optional = true }
+schemars = "0.8"
+serde_yaml = "0.9"
+typify = "0.0.10"
 walkdir = "2"
 
 [dev-dependencies]
-serde_json = "1" # { version = "1", optional = true } # rust-lang/cargo#1596
+serde_yaml = "0.9"
+walkdir = "2"
