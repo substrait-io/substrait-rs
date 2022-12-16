@@ -20,7 +20,7 @@ jobs:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
       - uses: arduino/setup-protoc@v1
-        if: ${{ matrix.feature != protoc }}
+        if: ${{ matrix.feature != "protoc" }}
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo check --features ${{ matrix.feature }}
