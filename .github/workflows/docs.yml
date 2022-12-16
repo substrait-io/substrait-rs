@@ -9,7 +9,6 @@ permissions:
 
 concurrency:
   group: ${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   rustdoc:
@@ -23,7 +22,7 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo doc --all-features --no-deps
+      - run: cargo doc --no-deps
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v1
         with:

@@ -6,6 +6,12 @@ jobs:
   check:
     name: Check
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature:
+          - default
+          - pbjson
+          - serde
     steps:
       - uses: actions/checkout@v3
         with:
@@ -14,11 +20,17 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo check --all-features
+      - run: cargo check --features ${{ matrix.feature }}
 
   test:
     name: Test
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature:
+          - default
+          - pbjson
+          - serde
     steps:
       - uses: actions/checkout@v3
         with:
@@ -27,7 +39,7 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo test --all-features
+      - run: cargo test --features ${{ matrix.feature }}
 
   rustfmt:
     name: Rustfmt
@@ -40,6 +52,12 @@ jobs:
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature:
+          - default
+          - pbjson
+          - serde
     steps:
       - uses: actions/checkout@v3
         with:
@@ -48,4 +66,4 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo clippy --all-features -- -Dwarnings
+      - run: cargo clippy --features ${{ matrix.feature }} -- -Dwarnings
