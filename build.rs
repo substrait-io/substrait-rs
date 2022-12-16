@@ -46,17 +46,21 @@ fn text(out_dir: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
         let id = metadata
             .and_then(|metadata| metadata.id.as_ref())
             .map(ToString::to_string)
-            .expect(&format!(
-                "$id missing in schema metadata (`{}`)",
-                schema_path.display()
-            ));
+            .unwrap_or_else(|| {
+                panic!(
+                    "$id missing in schema metadata (`{}`)",
+                    schema_path.display()
+                )
+            });
         let title = metadata
             .and_then(|metadata| metadata.title.as_ref())
             .map(|title| title.to_snake_case())
-            .expect(&format!(
-                "title missing in schema metadata (`{}`)",
-                schema_path.display()
-            ));
+            .unwrap_or_else(|| {
+                panic!(
+                    "title missing in schema metadata (`{}`)",
+                    schema_path.display()
+                )
+            });
         let mut type_space = TypeSpace::new(TypeSpaceSettings::default().with_struct_builder(true));
         type_space.add_ref_types(schema.definitions)?;
         type_space.add_type(&Schema::Object(schema.schema))?;

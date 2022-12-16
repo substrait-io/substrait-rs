@@ -151,5 +151,6 @@
     html_favicon_url = "https://raw.githubusercontent.com/substrait-io/substrait/main/site/docs/img/logo.svg"
 )]
 
+#[allow(clippy::needless_borrow, clippy::large_enum_variant)]
 pub mod proto;
 pub mod text;

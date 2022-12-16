@@ -7,6 +7,7 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         feature:
           - default
@@ -26,6 +27,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         feature:
           - default
@@ -53,6 +55,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         feature:
           - default
