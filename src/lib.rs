@@ -153,4 +153,6 @@
 
 #[allow(clippy::needless_borrow, clippy::large_enum_variant)]
 pub mod proto;
+
+#[allow(clippy::uninlined_format_args)]
 pub mod text;
