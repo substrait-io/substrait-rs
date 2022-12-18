@@ -150,9 +150,12 @@
     html_logo_url = "https://raw.githubusercontent.com/substrait-io/substrait/main/site/docs/img/logo.svg",
     html_favicon_url = "https://raw.githubusercontent.com/substrait-io/substrait/main/site/docs/img/logo.svg"
 )]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 #[allow(clippy::needless_borrow, clippy::large_enum_variant)]
 pub mod proto;
 
 #[allow(clippy::uninlined_format_args)]
 pub mod text;
+
+pub mod version;
