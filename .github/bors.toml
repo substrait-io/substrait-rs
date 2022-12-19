@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+
 status = [
   "Check (default)",
   "Check (pbjson)",
@@ -11,6 +13,7 @@ status = [
   "Clippy (pbjson)",
   "Clippy (serde)",
   "Rustdoc",
+  "License",
 ]
 delete_merged_branches = true
 timeout_sec = 600
