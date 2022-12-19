@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Check
+
+on: [push, pull_request]
+
+jobs:
+  license:
+    name: SPDX License Header
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: enarx/spdx@master
+        with:
+          licenses: Apache-2.0
