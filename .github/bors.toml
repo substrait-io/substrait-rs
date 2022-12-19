@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: Apache-2.0
-
 status = [
   "Check (default)",
   "Check (pbjson)",
@@ -9,6 +8,7 @@ status = [
   "Clippy (pbjson)",
   "Clippy (serde)",
   "Conventional Commits",
+  "Formatting",
   "Rustdoc",
   "Rustfmt",
   "SPDX License Header",

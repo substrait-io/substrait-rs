@@ -18,6 +18,15 @@ substrait-rs uses [Depedendabot](https://docs.github.com/en/code-security/depend
 
 substrait-rs uses [bors](https://bors.tech/) to merge Pull Requests to prevent breaking the default branch using the [bors.toml](.github/bors.toml) configuration file.
 
+### Prettier
+
+substrait-rs uses [Prettier](https://prettier.io/) to format non-Rust source files. The `Formatting` job in the [Check](.github/workflows/check.yml) workflow checks this. To format your files locally (requires [Node.js](https://nodejs.org/en/)):
+
+```shell
+npm install prettier prettier-plugin-toml --save-dev --save-exact
+npx prettier --write --no-config --ignore-path .gitignore . '!substrait'
+```
+
 ## Governance
 
 Please refer to the [Substrait Governance](https://substrait.io/governance/) page.

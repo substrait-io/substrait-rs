@@ -13,3 +13,12 @@ jobs:
       - uses: enarx/spdx@master
         with:
           licenses: Apache-2.0
+
+  formatting:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm install prettier prettier-plugin-toml
+      - run: npx prettier --check --no-config --ignore-path .gitignore . '!substrait'
