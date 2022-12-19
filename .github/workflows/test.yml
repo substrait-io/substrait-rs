@@ -14,6 +14,7 @@ jobs:
         feature:
           - default
           - pbjson
+          - protoc
           - semver,serde
     steps:
       - uses: actions/checkout@v3
@@ -87,4 +88,4 @@ jobs:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo build
-      - run: cargo package --features protoc --allow-dirty
+      - run: cargo package --allow-dirty
