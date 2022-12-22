@@ -10,6 +10,9 @@ on:
       - edited
       - synchronize
 
+permissions:
+  issues: write
+
 jobs:
   title:
     name: Title
@@ -24,7 +27,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const message = `Substrait follows the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/) for automate releases.
+            const message = `Substrait follows the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/) for release automation.
               The PR title is used as the merge commit message.
               
               Please update your PR title to match the specification.`
