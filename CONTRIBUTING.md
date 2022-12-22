@@ -24,7 +24,7 @@ substrait-rs uses [Prettier](https://prettier.io/) to format non-Rust source fil
 
 ```shell
 npm install prettier prettier-plugin-toml --save-dev --save-exact
-npx prettier --write --no-config --ignore-path .gitignore . '!substrait'
+npx prettier --write --no-config .
 ```
 
 ## Governance
