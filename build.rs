@@ -25,11 +25,6 @@ fn substrait_version() -> Result<(), Box<dyn Error>> {
     let substrait_version_file =
         PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("src/version.in");
 
-    // Rebuild if the generated file was modified
-    println!(
-        "cargo:rerun-if-changed={}",
-        substrait_version_file.display()
-    );
     // Or if the Substrait submodule HEAD changed
     println!(
         "cargo:rerun-if-changed={}",
