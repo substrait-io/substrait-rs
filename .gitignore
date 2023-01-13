@@ -1,4 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+
 /target
 Cargo.lock
 
 .idea
+
+package.json
+package-lock.json
+node_modules/

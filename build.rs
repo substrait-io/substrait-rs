@@ -18,12 +18,12 @@ const TEXT_ROOT: &str = "substrait/text";
 compile_error!("Either feature `serde` or `pbjson` can be enabled");
 
 /// `text` type generation
-fn text(out_dir: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
+fn text(out_dir: &Path) -> Result<(), Box<dyn Error>> {
     use heck::ToSnakeCase;
     use schemars::schema::{RootSchema, Schema};
     use typify::{TypeSpace, TypeSpaceSettings};
 
-    let mut out_file = File::create(out_dir.as_ref().join("substrait_text").with_extension("rs"))?;
+    let mut out_file = File::create(out_dir.join("substrait_text").with_extension("rs"))?;
 
     for schema_path in WalkDir::new(TEXT_ROOT)
         .into_iter()
@@ -148,7 +148,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
-    text(&out_dir)?;
+    text(out_dir.as_path())?;
 
     let protos = WalkDir::new(PROTO_ROOT)
         .into_iter()

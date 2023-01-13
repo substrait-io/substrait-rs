@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+
 version: 2
 updates:
   - package-ecosystem: "cargo"
@@ -5,11 +7,15 @@ updates:
     schedule:
       interval: "daily"
     rebase-strategy: "disabled"
+    commit-message:
+      prefix: "chore(deps,cargo)"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
+    commit-message:
+      prefix: "chore(deps,github-actions)"
 
   - package-ecosystem: "gitsubmodule"
     directory: "/"
@@ -19,3 +25,5 @@ updates:
       interval: "weekly"
       day: "sunday"
       time: "06:00"
+    commit-message:
+      prefix: "chore(deps)!"
