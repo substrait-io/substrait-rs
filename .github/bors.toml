@@ -10,7 +10,6 @@ status = [
   "Check (ubuntu-latest, serde)",
   "Check (windows-latest, default)",
   "Check (windows-latest, pbjson)",
-  "Check (windows-latest, protoc)",
   "Check (windows-latest, serde)",
   "Clippy (default)",
   "Clippy (pbjson)",

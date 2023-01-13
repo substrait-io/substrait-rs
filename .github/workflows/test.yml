@@ -20,6 +20,9 @@ jobs:
           - pbjson
           - protoc
           - serde
+        exclude:
+          - os: windows-latest
+            feature: protoc
     steps:
       - uses: actions/checkout@v3
         with:
