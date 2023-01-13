@@ -1,9 +1,17 @@
 # SPDX-License-Identifier: Apache-2.0
 status = [
-  "Check (default)",
-  "Check (pbjson)",
-  "Check (protoc)",
-  "Check (serde)",
+  "Check (macos-latest, default)",
+  "Check (macos-latest, pbjson)",
+  "Check (macos-latest, protoc)",
+  "Check (macos-latest, serde)",
+  "Check (ubuntu-latest, default)",
+  "Check (ubuntu-latest, pbjson)",
+  "Check (ubuntu-latest, protoc)",
+  "Check (ubuntu-latest, serde)",
+  "Check (windows-latest, default)",
+  "Check (windows-latest, pbjson)",
+  "Check (windows-latest, protoc)",
+  "Check (windows-latest, serde)",
   "Clippy (default)",
   "Clippy (pbjson)",
   "Clippy (serde)",
@@ -14,7 +22,7 @@ status = [
   "SPDX License Header",
   "Test (default)",
   "Test (pbjson)",
-  "Test (serde)",
+  "Test (serde)"
 ]
 delete-merged-branches = true
 timeout-sec = 600
