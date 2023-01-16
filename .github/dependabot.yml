@@ -8,14 +8,14 @@ updates:
       interval: "daily"
     rebase-strategy: "disabled"
     commit-message:
-      prefix: "chore(deps,cargo)"
+      prefix: "chore(deps,cargo):"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
     commit-message:
-      prefix: "chore(deps,github-actions)"
+      prefix: "chore(deps,github-actions):"
 
   - package-ecosystem: "gitsubmodule"
     directory: "/"
@@ -26,4 +26,4 @@ updates:
       day: "sunday"
       time: "06:00"
     commit-message:
-      prefix: "chore(deps)!"
+      prefix: "chore(deps,substrait)!:"
