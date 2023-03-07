@@ -1,5 +1,35 @@
 
 
+## 0.4.1 (2023-03-07)
+
+<csr-id-1b193ae332a649b2e0d8a07f1cde98fa90131c3a/>
+
+### Chore
+
+ - <csr-id-1b193ae332a649b2e0d8a07f1cde98fa90131c3a/> ignore dtolnay/rust-toolchain updates
+   The way that action works is not really compatible with how dependabot suggests
+   updates (e.g. https://github.com/substrait-io/substrait-rs/pull/67) for it so
+   this modifies the configuration to ignore those "updates".
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 53 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#69](https://github.com/substrait-io/substrait-rs/issues/69)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#69](https://github.com/substrait-io/substrait-rs/issues/69)**
+    - Ignore dtolnay/rust-toolchain updates ([`1b193ae`](https://github.com/substrait-io/substrait-rs/commit/1b193ae332a649b2e0d8a07f1cde98fa90131c3a))
+</details>
+
 ## 0.4.0 (2023-01-13)
 
 ### New Features (BREAKING)
@@ -10,7 +40,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 27 commits contributed to the release over the course of 268 calendar days.
+ - 28 commits contributed to the release over the course of 268 calendar days.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 23 unique issues were worked on: [#1](https://github.com/substrait-io/substrait-rs/issues/1), [#10](https://github.com/substrait-io/substrait-rs/issues/10), [#11](https://github.com/substrait-io/substrait-rs/issues/11), [#14](https://github.com/substrait-io/substrait-rs/issues/14), [#2](https://github.com/substrait-io/substrait-rs/issues/2), [#23](https://github.com/substrait-io/substrait-rs/issues/23), [#26](https://github.com/substrait-io/substrait-rs/issues/26), [#27](https://github.com/substrait-io/substrait-rs/issues/27), [#29](https://github.com/substrait-io/substrait-rs/issues/29), [#30](https://github.com/substrait-io/substrait-rs/issues/30), [#31](https://github.com/substrait-io/substrait-rs/issues/31), [#32](https://github.com/substrait-io/substrait-rs/issues/32), [#33](https://github.com/substrait-io/substrait-rs/issues/33), [#35](https://github.com/substrait-io/substrait-rs/issues/35), [#37](https://github.com/substrait-io/substrait-rs/issues/37), [#39](https://github.com/substrait-io/substrait-rs/issues/39), [#4](https://github.com/substrait-io/substrait-rs/issues/4), [#40](https://github.com/substrait-io/substrait-rs/issues/40), [#41](https://github.com/substrait-io/substrait-rs/issues/41), [#42](https://github.com/substrait-io/substrait-rs/issues/42), [#48](https://github.com/substrait-io/substrait-rs/issues/48), [#5](https://github.com/substrait-io/substrait-rs/issues/5), [#6](https://github.com/substrait-io/substrait-rs/issues/6)
 
@@ -57,16 +87,17 @@
  * **[#40](https://github.com/substrait-io/substrait-rs/issues/40)**
     - Bump prost-build from 0.11.3 to 0.11.4 ([`bd104c1`](https://github.com/substrait-io/substrait-rs/commit/bd104c1379648f308599192af361a31d626d7d4a))
  * **[#41](https://github.com/substrait-io/substrait-rs/issues/41)**
-    - bump version to 0.3.0 ([`b852f01`](https://github.com/substrait-io/substrait-rs/commit/b852f01d09c0d6b8c26c6ceebcf19572402b9e6b))
+    - Bump version to 0.3.0 ([`b852f01`](https://github.com/substrait-io/substrait-rs/commit/b852f01d09c0d6b8c26c6ceebcf19572402b9e6b))
  * **[#42](https://github.com/substrait-io/substrait-rs/issues/42)**
     - Bump substrait from `7f272f1` to `81e34d4` ([`40e8adf`](https://github.com/substrait-io/substrait-rs/commit/40e8adf629f438b57354c23fefad61bba7843f7a))
  * **[#48](https://github.com/substrait-io/substrait-rs/issues/48)**
-    - follow conventional commits and setup automated releases ([`f8f50d3`](https://github.com/substrait-io/substrait-rs/commit/f8f50d3907a2fcbc6b5a09ff3c1b8e541c4b227e))
+    - Follow conventional commits and setup automated releases ([`f8f50d3`](https://github.com/substrait-io/substrait-rs/commit/f8f50d3907a2fcbc6b5a09ff3c1b8e541c4b227e))
  * **[#5](https://github.com/substrait-io/substrait-rs/issues/5)**
     - Setup GitHub actions and Dependabot ([`7418a17`](https://github.com/substrait-io/substrait-rs/commit/7418a17078a8ebfd062a17e4cf989a64a1aa52c2))
  * **[#6](https://github.com/substrait-io/substrait-rs/issues/6)**
     - Add `pbjson` feature for Protobuf JSON serde ([`43f97ef`](https://github.com/substrait-io/substrait-rs/commit/43f97ef0e1311bdd909c58afad429b4db54fa30d))
  * **Uncategorized**
+    - Release substrait v0.4.0 ([`65d5f3d`](https://github.com/substrait-io/substrait-rs/commit/65d5f3d8f48c3ae990c311ae8ed4590a76e57c3e))
     - Merge #24 ([`c726d2f`](https://github.com/substrait-io/substrait-rs/commit/c726d2fbab168487a975601d12c7b9462842b78b))
     - Bump pbjson-build from 0.5.0 to 0.5.1 ([`032eba1`](https://github.com/substrait-io/substrait-rs/commit/032eba11a6932fabe4fe1bc7f527c995a1056c9f))
     - Update LICENSE ([`06a611b`](https://github.com/substrait-io/substrait-rs/commit/06a611b1e46c39908aa55c51e4a9cb390c9a8091))
