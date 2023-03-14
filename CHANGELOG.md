@@ -1,5 +1,50 @@
 
 
+## 0.4.2 (2023-03-14)
+
+<csr-id-e52ab6f38fdd96a113f646de85e1fdd4b38e7548/>
+<csr-id-39e3441003de1b4c315a82a75fdbc9bb31bd1de3/>
+
+### Chore
+
+ - <csr-id-e52ab6f38fdd96a113f646de85e1fdd4b38e7548/> update crates index when creating releases
+   As suggested by a failed run:
+   ```console
+   [WARN ] Consider running with --update-crates-index to assure bumping on demand
+   uses the latest information
+   ```
+   This adds `--update-crates-index` to the smart-release invocation.
+ - <csr-id-39e3441003de1b4c315a82a75fdbc9bb31bd1de3/> also check PR body for conventional commits
+   Following the main Substrait repository: this makes the PR check match the Merge
+   check by also checking the body of the PR.  
+   
+   The PR comment note is moved to the job summary.
+   
+   Added a note about the use of
+   [`cargo-smart-release`](https://github.com/Byron/gitoxide/tree/main/cargo-smart-release)
+   to the contributing guide.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 6 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#57](https://github.com/substrait-io/substrait-rs/issues/57), [#72](https://github.com/substrait-io/substrait-rs/issues/72)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#57](https://github.com/substrait-io/substrait-rs/issues/57)**
+    - Also check PR body for conventional commits ([`39e3441`](https://github.com/substrait-io/substrait-rs/commit/39e3441003de1b4c315a82a75fdbc9bb31bd1de3))
+ * **[#72](https://github.com/substrait-io/substrait-rs/issues/72)**
+    - Update crates index when creating releases ([`e52ab6f`](https://github.com/substrait-io/substrait-rs/commit/e52ab6f38fdd96a113f646de85e1fdd4b38e7548))
+</details>
+
 ## 0.4.1 (2023-03-07)
 
 <csr-id-1b193ae332a649b2e0d8a07f1cde98fa90131c3a/>
@@ -15,7 +60,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 53 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#69](https://github.com/substrait-io/substrait-rs/issues/69)
@@ -28,6 +73,8 @@
 
  * **[#69](https://github.com/substrait-io/substrait-rs/issues/69)**
     - Ignore dtolnay/rust-toolchain updates ([`1b193ae`](https://github.com/substrait-io/substrait-rs/commit/1b193ae332a649b2e0d8a07f1cde98fa90131c3a))
+ * **Uncategorized**
+    - Release substrait v0.4.1 ([`a0e320f`](https://github.com/substrait-io/substrait-rs/commit/a0e320f805789a180f86a0bb1262c37b774d3df7))
 </details>
 
 ## 0.4.0 (2023-01-13)
