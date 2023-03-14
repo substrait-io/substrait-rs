@@ -6,9 +6,13 @@ All contributors and contributions are welcome! Please open an issue on GitHub i
 
 ### Pull requests
 
-Substrait follows the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/) for Pull Request titles. This allows for automation of releases based on commit messages that are merged to the default branch.
+Substrait follows the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/) for commit messages. This allows for automation of releases based on commit messages that are merged to the default branch.
 
-The `Title` job of the [Pull Request](.github/workflow/pull-request.yml) workflow and the `Conventional Commits` job of the [Merge](.github/workflows/merge.yml) workflow check the Pull Request title and merge commit message.
+The `Conventional Commits` job of the [Pull Request](.github/workflows/pull-request.yml) workflow and the `Conventional Commits` job of the [Merge](.github/workflows/merge.yml) workflow check the Pull Request title and body and the resulting merge commit message.
+
+### Releases
+
+Releases are published automatically with the [Release](./github/workflows/release.yml) workflow. The workflow is triggered for every commit to the `main` branch. [`cargo-smart-release`](https://github.com/Byron/gitoxide/tree/main/cargo-smart-release) is used to bump the version, create and publish the new release.
 
 ### Dependabot
 

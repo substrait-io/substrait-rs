@@ -10,48 +10,23 @@ on:
       - edited
       - synchronize
 
-permissions:
-  issues: write
-
 jobs:
-  title:
-    name: Title
+  conventional-commits:
+    name: Conventional Commits
     runs-on: ubuntu-latest
     if: "!startsWith(github.event.pull_request.title, '[Merged by Bors] - ')"
     steps:
       - uses: actions/setup-node@v3
       - run: npm install @commitlint/config-conventional
-      - id: commitlint
-        run: echo "${{ github.event.pull_request.title }}" | npx commitlint --extends @commitlint/config-conventional
+      - run: npx commitlint --extends @commitlint/config-conventional <<< $CONVENTIONAL_COMMIT
+        env:
+          CONVENTIONAL_COMMIT: |
+            ${{ github.event.pull_request.title }}
+
+            ${{ github.event.pull_request.body }}
       - if: failure()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const message = `Substrait follows the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/) for release automation.
-              The PR title is used as the merge commit message.
-              
-              Please update your PR title to match the specification.`
+        run:
+          echo "Substrait follows the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/) for release automation.
+          The PR title and body are used as the merge commit message.
 
-            // Get list of current comments
-            const list_comments = github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number
-            })
-            const comments = await github.paginate(list_comments)
-
-            // Check if this job already commented
-            for (const comment of comments) {
-              if (comment.body === message) {
-                return // Already commented
-              }
-            }
-
-            // Post the comment about Conventional Commits
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: message
-            })
-            core.setFailed('Invalid PR title')
+          Please update your PR title to match the specification." >> $GITHUB_STEP_SUMMARY
