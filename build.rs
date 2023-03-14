@@ -8,6 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use gix::bstr::ByteSlice;
 use prost_build::Config;
 use walkdir::{DirEntry, WalkDir};
 
@@ -19,7 +20,7 @@ compile_error!("Either feature `serde` or `pbjson` can be enabled");
 
 /// Add Substrait version information to the build
 fn substrait_version() -> Result<(), Box<dyn Error>> {
-    use git_repository::{bstr::ByteSlice, commit::describe::SelectRef};
+    use gix::commit::describe::SelectRef;
     use std::process::Command;
 
     let substrait_version_file =
@@ -37,7 +38,7 @@ fn substrait_version() -> Result<(), Box<dyn Error>> {
     );
 
     // Get the version from the submodule
-    match git_repository::open("substrait") {
+    match gix::open("substrait") {
         Ok(repo) => {
             let mut format = repo
                 .head_commit()?
