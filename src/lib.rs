@@ -12,6 +12,11 @@
 //! Protobuf serialization and deserialization are provided via [prost] in the
 //! [proto] module.
 //!
+//! > Please note that [protoc](https://grpc.io/docs/protoc-installation/) is
+//! > required to build this crate from source. The `protoc` feature can be
+//! > enabled to build `protoc` from source via
+//! > [protobuf-src](https://docs.rs/protobuf-src).
+//!
 //! ### Example
 //!
 //! #### Serialize and deserialize a plan
@@ -107,6 +112,9 @@
 //! deserialization support for these are provided via [typify] in the [text]
 //! module.
 //!
+//! > Please note that [rustfmt](https://github.com/rust-lang/rustfmt) is
+//! > required to build this crate from source.
+//!
 //! ### Example
 //!
 //! #### Read a simple extension
@@ -151,11 +159,16 @@
     html_favicon_url = "https://raw.githubusercontent.com/substrait-io/substrait/main/site/docs/img/logo.svg"
 )]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![deny(missing_docs)]
 
-#[allow(clippy::needless_borrow, clippy::large_enum_variant)]
+#[allow(clippy::needless_borrow, clippy::large_enum_variant, missing_docs)]
 pub mod proto;
-
-#[allow(clippy::uninlined_format_args)]
+#[allow(clippy::uninlined_format_args, missing_docs)]
 pub mod text;
 
 pub mod version;
+
+// Optional modules
+
+#[cfg(feature = "parse")]
+pub mod parse;

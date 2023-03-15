@@ -76,19 +76,19 @@ fn substrait_version() -> Result<(), Box<dyn Error>> {
             )?;
 
             fs::write(
-                substrait_version_file,
+                &substrait_version_file,
                 format!(
                     r#"// Note that this file is auto-generated and auto-synced using `build.rs`. It is
 // included in `version.rs`.
 
 /// The major version of Substrait used to build this crate
-pub const SUBSTRAIT_MAJOR_VERSION: u64 = {major};
+pub const SUBSTRAIT_MAJOR_VERSION: u32 = {major};
 
 /// The minor version of Substrait used to build this crate
-pub const SUBSTRAIT_MINOR_VERSION: u64 = {minor};
+pub const SUBSTRAIT_MINOR_VERSION: u32 = {minor};
 
 /// The patch version of Substrait used to build this crate
-pub const SUBSTRAIT_PATCH_VERSION: u64 = {patch};
+pub const SUBSTRAIT_PATCH_VERSION: u32 = {patch};
 
 /// The Git SHA (lower hex) of Substrait used to build this crate
 pub const SUBSTRAIT_GIT_SHA: &str = "{git_hash}";

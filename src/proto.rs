@@ -19,10 +19,10 @@ include!(concat!(env!("OUT_DIR"), "/substrait.serde.rs"));
 mod tests {
     #[cfg(feature = "pbjson")]
     #[test]
-    fn pbjson_serde() -> Result<(), Box<dyn std::error::Error>> {
+    fn pbjson_serde() -> Result<(), serde_json::Error> {
         let plan = serde_json::from_str::<super::Plan>(
             r#"{
-  "version": { "minorNumber": 19, "producer": "substrait-rs" },
+  "version": { "minorNumber": 42, "producer": "substrait-rs" },
   "extensionUris": [
     {
       "extensionUriAnchor": 1,
@@ -34,7 +34,7 @@ mod tests {
         assert_eq!(
             plan.version,
             Some(super::Version {
-                minor_number: 19,
+                minor_number: 42,
                 producer: "substrait-rs".into(),
                 ..Default::default()
             })

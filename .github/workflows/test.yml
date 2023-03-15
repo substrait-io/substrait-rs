@@ -11,17 +11,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        rust:
+          - stable
+          - 1.64.0
         feature:
-          - default
-          - pbjson
+          - full
+          - serde
           - protoc
-          - semver,serde
+        exclude:
+          - rust: 1.64.0
+            feature: protoc
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
           submodules: recursive
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
       - uses: arduino/setup-protoc@v1
         if: matrix.feature != 'protoc'
         with:
@@ -35,9 +42,8 @@ jobs:
       fail-fast: false
       matrix:
         feature:
-          - default
-          - pbjson
-          - semver,serde
+          - full
+          - serde
     steps:
       - uses: actions/checkout@v3
         with:
@@ -64,9 +70,8 @@ jobs:
       fail-fast: false
       matrix:
         feature:
-          - default
-          - pbjson
-          - semver,serde
+          - full
+          - serde
     steps:
       - uses: actions/checkout@v3
         with:

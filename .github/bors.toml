@@ -1,21 +1,20 @@
 # SPDX-License-Identifier: Apache-2.0
 status = [
-  "Check (default)",
-  "Check (pbjson)",
-  "Check (protoc)",
-  "Check (semver,serde)",
-  "Clippy (default)",
+  "Check (stable, full)",
+  "Check (stable, pbjson)",
+  "Check (stable, protoc)",
+  "Check (1.64.0, full)",
+  "Check (1.64.0, pbjson)",
+  "Clippy (full)",
   "Clippy (pbjson)",
-  "Clippy (semver,serde)",
   "Conventional Commits",
   "Formatting",
   "Package",
   "Rustdoc",
   "Rustfmt",
   "SPDX License Header",
-  "Test (default)",
-  "Test (pbjson)",
-  "Test (semver,serde)",
+  "Test (full)",
+  "Test (pbjson)"
 ]
 delete-merged-branches = true
 timeout-sec = 600

@@ -3,7 +3,7 @@
 name = "substrait"
 version = "0.5.1"
 edition = "2021"
-rust-version = "1.60"
+rust-version = "1.64"
 description = "Cross-Language Serialization for Relational Algebra"
 documentation = "https://docs.rs/substrait"
 readme = "README.md"
@@ -26,40 +26,61 @@ include = [
 
 [features]
 default = []
+full = ["parse", "pbjson", "semver"]
+parse = [
+  "dep:hex",
+  "dep:reqwest",
+  "dep:thiserror",
+  "dep:tracing",
+  "dep:url",
+  "semver"
+]
+parser = ["dep:anyhow", "dep:clap", "parse", "pbjson"]
 pbjson = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
 protoc = ["dep:protobuf-src"]
-serde = ["dep:prost-wkt", "dep:prost-wkt-build", "dep:prost-wkt-types"]
 semver = ["dep:semver"]
+serde = ["dep:prost-wkt", "dep:prost-wkt-build", "dep:prost-wkt-types"]
+
+[[bin]]
+name = "parser"
+required-features = ["parser"]
 
 [dependencies]
-pbjson = { version = "0.5", optional = true }
-pbjson-types = { version = "0.5", optional = true }
-prost = "0.11"
-prost-types = "0.11"
-prost-wkt = { version = "0.4", optional = true }
-prost-wkt-types = { version = "0.4", optional = true }
-semver = { version = "1", optional = true }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+anyhow = { version = "1.0.70", optional = true }
+clap = { version = "4.1.13", features = ["derive"], optional = true }
+hex = { version = "0.4.3", optional = true }
+reqwest = { version = "0.11.16", features = ["blocking"], optional = true }
+pbjson = { version = "0.5.1", optional = true }
+pbjson-types = { version = "0.5.1", optional = true }
+prost = "0.11.8"
+prost-types = "0.11.8"
+prost-wkt = { version = "0.4.1", optional = true }
+prost-wkt-types = { version = "0.4.1", optional = true }
+semver = { version = "1.0.17", optional = true }
+serde = { version = "1.0.158", features = ["derive"] }
+serde_json = "1.0.94"
+serde_yaml = "0.9.19"
+thiserror = { version = "1.0.40", optional = true }
+tracing = { version = "0.1.37", optional = true }
+url = { version = "2.3.1", optional = true }
 
 [build-dependencies]
-gix = { version = "0.42", default-features = false }
-heck = "0.4"
-pbjson-build = { version = "0.5", optional = true }
-prost-build = { version = "0.11", default-features = false }
-prost-types = "0.11"
-prost-wkt-build = { version = "0.4", optional = true }
-protobuf-src = { version = "1", optional = true }
-schemars = "0.8"
-semver = "1"
-serde_yaml = "0.9"
+gix = { version = "0.42.0", default-features = false }
+heck = "0.4.1"
+pbjson-build = { version = "0.5.1", optional = true }
+prost-build = { version = "0.11.8", default-features = false }
+prost-types = "0.11.8"
+prost-wkt-build = { version = "0.4.1", optional = true }
+protobuf-src = { version = "1.1.0", optional = true }
+schemars = "0.8.12"
+semver = "1.0.17"
+serde_yaml = "0.9.19"
 typify = "0.0.10"
-walkdir = "2"
+walkdir = "2.3.3"
 
 [dev-dependencies]
-serde_yaml = "0.9"
-walkdir = "2"
+walkdir = "2.3.3"
 
 [package.metadata.docs.rs]
-features = ["semver"]
+features = ["full"]
 rustdoc-args = ["--cfg", "docsrs"]
