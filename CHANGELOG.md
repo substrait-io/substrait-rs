@@ -1,5 +1,32 @@
 
 
+## 0.5.0 (2023-03-15)
+
+<csr-id-9a562fa749d8fb51806261982d357c282130eea6/>
+
+### Chore (BREAKING)
+
+ - <csr-id-9a562fa749d8fb51806261982d357c282130eea6/> bump `prost-wkt` dependencies to 0.4
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#59](https://github.com/substrait-io/substrait-rs/issues/59)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#59](https://github.com/substrait-io/substrait-rs/issues/59)**
+    - Bump `prost-wkt` dependencies to 0.4 ([`9a562fa`](https://github.com/substrait-io/substrait-rs/commit/9a562fa749d8fb51806261982d357c282130eea6))
+</details>
+
 ## 0.4.2 (2023-03-14)
 
 <csr-id-e52ab6f38fdd96a113f646de85e1fdd4b38e7548/>
@@ -28,7 +55,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 6 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#57](https://github.com/substrait-io/substrait-rs/issues/57), [#72](https://github.com/substrait-io/substrait-rs/issues/72)
@@ -43,6 +70,8 @@
     - Also check PR body for conventional commits ([`39e3441`](https://github.com/substrait-io/substrait-rs/commit/39e3441003de1b4c315a82a75fdbc9bb31bd1de3))
  * **[#72](https://github.com/substrait-io/substrait-rs/issues/72)**
     - Update crates index when creating releases ([`e52ab6f`](https://github.com/substrait-io/substrait-rs/commit/e52ab6f38fdd96a113f646de85e1fdd4b38e7548))
+ * **Uncategorized**
+    - Release substrait v0.4.2 ([`4321970`](https://github.com/substrait-io/substrait-rs/commit/4321970db81bdf5f64bb8beec04713378e94ba19))
 </details>
 
 ## 0.4.1 (2023-03-07)
