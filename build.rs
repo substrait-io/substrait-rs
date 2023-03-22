@@ -3,11 +3,12 @@
 use std::{
     env,
     error::Error,
-    fs::File,
+    fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
 };
 
+use gix::bstr::ByteSlice;
 use prost_build::Config;
 use walkdir::{DirEntry, WalkDir};
 
@@ -16,6 +17,108 @@ const TEXT_ROOT: &str = "substrait/text";
 
 #[cfg(all(feature = "serde", feature = "pbjson"))]
 compile_error!("Either feature `serde` or `pbjson` can be enabled");
+
+/// Add Substrait version information to the build
+fn substrait_version() -> Result<(), Box<dyn Error>> {
+    use gix::commit::describe::SelectRef;
+    use std::process::Command;
+
+    let substrait_version_file =
+        PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("src/version.in");
+
+    // Or if the Substrait submodule HEAD changed
+    println!(
+        "cargo:rerun-if-changed={}",
+        Path::new(".git/modules/substrait/HEAD").display()
+    );
+    // Or if the Substrait submodule changed (to allow setting `dirty`)
+    println!(
+        "cargo:rerun-if-changed={}",
+        Path::new("substrait").display()
+    );
+
+    // Get the version from the submodule
+    match gix::open("substrait") {
+        Ok(repo) => {
+            let mut format = repo
+                .head_commit()?
+                .describe()
+                .names(SelectRef::AllTags)
+                .try_resolve()?
+                .expect("substrait submodule tags missing")
+                .format()?;
+            format.long(true);
+
+            // TODO(mbrobbel): replace with something from `git-repository`
+            let git_dirty = !Command::new("git")
+                .current_dir("substrait")
+                .arg("status")
+                .arg("--porcelain")
+                .output()?
+                .stdout
+                .is_empty();
+            let git_depth = format.depth;
+            let git_hash = format.id.to_hex_with_len(40).to_string();
+            // TODO(mbrobbel): use `git-repository` dirty state support
+            let git_describe = format!("{format}{}", if git_dirty { "-dirty" } else { "" });
+            let semver::Version {
+                major,
+                minor,
+                patch,
+                ..
+            } = semver::Version::parse(
+                format
+                    .name
+                    .as_ref()
+                    .expect("substrait submodule tag missing")
+                    .to_str()?
+                    .trim_start_matches('v'),
+            )?;
+
+            fs::write(
+                substrait_version_file,
+                format!(
+                    r#"// Note that this file is auto-generated and auto-synced using `build.rs`. It is
+// included in `version.rs`.
+
+/// The major version of Substrait used to build this crate
+pub const SUBSTRAIT_MAJOR_VERSION: u64 = {major};
+
+/// The minor version of Substrait used to build this crate
+pub const SUBSTRAIT_MINOR_VERSION: u64 = {minor};
+
+/// The patch version of Substrait used to build this crate
+pub const SUBSTRAIT_PATCH_VERSION: u64 = {patch};
+
+/// The Git SHA (lower hex) of Substrait used to build this crate
+pub const SUBSTRAIT_GIT_SHA: &str = "{git_hash}";
+
+/// The `git describe` output of the Substrait submodule used to build this
+/// crate
+pub const SUBSTRAIT_GIT_DESCRIBE: &str = "{git_describe}";
+
+/// The amount of commits between the latest tag and this version the Substrait
+/// module that used to build this crate
+pub const SUBSTRAIT_GIT_DEPTH: u32 = {git_depth};
+
+/// The dirty state of the Substrait submodule used to build this crate
+pub const SUBSTRAIT_GIT_DIRTY: bool = {git_dirty};
+"#
+                ),
+            )?;
+        }
+        Err(e) => {
+            // If this is a package build the `substrait_version_file` should
+            // exist. If it does not, it means this is probably a Git build that
+            // did not clone the substrait submodule.
+            if !substrait_version_file.exists() {
+                panic!("Couldn't open the substrait submodule: {e}")
+            }
+        }
+    };
+
+    Ok(())
+}
 
 /// `text` type generation
 fn text(out_dir: &Path) -> Result<(), Box<dyn Error>> {
@@ -82,7 +185,6 @@ pub mod {title} {{
 fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
     use prost_types::DescriptorProto;
     use prost_wkt_build::{FileDescriptorSet, Message};
-    use std::fs;
 
     let descriptor_path = out_dir.join("proto_descriptor.bin");
 
@@ -123,7 +225,6 @@ fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Er
 /// Serialize and deserialize implementations for proto types using `pbjson`
 fn pbjson(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
     use pbjson_build::Builder;
-    use std::fs;
 
     let descriptor_path = out_dir.join("proto_descriptor.bin");
     let mut cfg = Config::new();
@@ -142,6 +243,8 @@ fn pbjson(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn E
 fn main() -> Result<(), Box<dyn Error>> {
     // for use in docker build where file changes can be wonky
     println!("cargo:rerun-if-env-changed=FORCE_REBUILD");
+
+    substrait_version()?;
 
     #[cfg(feature = "protoc")]
     std::env::set_var("PROTOC", protobuf_src::protoc());

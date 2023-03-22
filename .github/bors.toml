@@ -3,18 +3,19 @@ status = [
   "Check (default)",
   "Check (pbjson)",
   "Check (protoc)",
-  "Check (serde)",
+  "Check (semver,serde)",
   "Clippy (default)",
   "Clippy (pbjson)",
-  "Clippy (serde)",
+  "Clippy (semver,serde)",
   "Conventional Commits",
   "Formatting",
+  "Package",
   "Rustdoc",
   "Rustfmt",
   "SPDX License Header",
   "Test (default)",
   "Test (pbjson)",
-  "Test (serde)",
+  "Test (semver,serde)",
 ]
 delete-merged-branches = true
 timeout-sec = 600
