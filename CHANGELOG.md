@@ -1,5 +1,34 @@
 
 
+## 0.5.1 (2023-03-22)
+
+### New Features
+
+ - <csr-id-c3b72ae3c29744ed3cf6bb6ad7f438449b1e85ac/> add `version` module with Substrait version information
+   This PR adds a `version` module that relies on some additions to the build
+   script to provide information about the version of the Substrait submodule that
+   was used to build the crate. It should be helpful for producers to populate the
+   version field of a plan.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 6 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#46](https://github.com/substrait-io/substrait-rs/issues/46)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#46](https://github.com/substrait-io/substrait-rs/issues/46)**
+    - Add `version` module with Substrait version information ([`c3b72ae`](https://github.com/substrait-io/substrait-rs/commit/c3b72ae3c29744ed3cf6bb6ad7f438449b1e85ac))
+</details>
+
 ## 0.5.0 (2023-03-15)
 
 <csr-id-9a562fa749d8fb51806261982d357c282130eea6/>
@@ -12,7 +41,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#59](https://github.com/substrait-io/substrait-rs/issues/59)
@@ -25,6 +54,8 @@
 
  * **[#59](https://github.com/substrait-io/substrait-rs/issues/59)**
     - Bump `prost-wkt` dependencies to 0.4 ([`9a562fa`](https://github.com/substrait-io/substrait-rs/commit/9a562fa749d8fb51806261982d357c282130eea6))
+ * **Uncategorized**
+    - Release substrait v0.5.0 ([`749f958`](https://github.com/substrait-io/substrait-rs/commit/749f958a61a1969a5325dae3530919a97d7d3789))
 </details>
 
 ## 0.4.2 (2023-03-14)
