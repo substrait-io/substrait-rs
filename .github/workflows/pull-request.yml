@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/setup-node@v3
       - run: npm install @commitlint/config-conventional
-      - run: npx commitlint --extends @commitlint/config-conventional <<< $CONVENTIONAL_COMMIT
+      - run: npx commitlint <<< $CONVENTIONAL_COMMIT
         env:
           CONVENTIONAL_COMMIT: |
             ${{ github.event.pull_request.title }}

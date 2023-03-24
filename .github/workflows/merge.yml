@@ -14,10 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - if: github.ref == 'refs/heads/staging'
+        uses: actions/checkout@v3
+      - if: github.ref == 'refs/heads/staging'
         uses: actions/setup-node@v3
       - if: github.ref == 'refs/heads/staging'
         run: npm install @commitlint/config-conventional
       - if: github.ref == 'refs/heads/staging'
-        run: npx commitlint --extends @commitlint/config-conventional <<< $CONVENTIONAL_COMMIT
+        run: npx commitlint <<< $CONVENTIONAL_COMMIT
         env:
           CONVENTIONAL_COMMIT: ${{ github.event.head_commit.message }}
