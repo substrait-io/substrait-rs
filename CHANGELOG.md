@@ -1,5 +1,33 @@
 
 
+## 0.5.2 (2023-03-24)
+
+<csr-id-ef41bcf9c346095e0f930211c688387d60e2ec8d/>
+
+### Chore
+
+ - <csr-id-ef41bcf9c346095e0f930211c688387d60e2ec8d/> add commitlint config file to disable max line length limits
+   Adds a [commitlint configuration file](https://commitlint.js.org/#/reference-configuration) that "disables" the max (line) length rules. These limits are not required by the conventional commits specification, and they don't work well with dependabot PRs and long URLs in PR descriptions.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#77](https://github.com/substrait-io/substrait-rs/issues/77)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#77](https://github.com/substrait-io/substrait-rs/issues/77)**
+    - Add commitlint config file to disable max line length limits ([`ef41bcf`](https://github.com/substrait-io/substrait-rs/commit/ef41bcf9c346095e0f930211c688387d60e2ec8d))
+</details>
+
 ## 0.5.1 (2023-03-22)
 
 ### New Features
@@ -14,7 +42,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 6 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#46](https://github.com/substrait-io/substrait-rs/issues/46)
@@ -27,6 +55,8 @@
 
  * **[#46](https://github.com/substrait-io/substrait-rs/issues/46)**
     - Add `version` module with Substrait version information ([`c3b72ae`](https://github.com/substrait-io/substrait-rs/commit/c3b72ae3c29744ed3cf6bb6ad7f438449b1e85ac))
+ * **Uncategorized**
+    - Release substrait v0.5.1 ([`e177e14`](https://github.com/substrait-io/substrait-rs/commit/e177e14d2387e2b6025c89e67f1e3e03503a5bca))
 </details>
 
 ## 0.5.0 (2023-03-15)
