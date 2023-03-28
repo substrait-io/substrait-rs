@@ -1,5 +1,78 @@
 
 
+## 0.5.3 (2023-03-28)
+
+<csr-id-3991a0f9e25edf9e7ecce112916f322f39089702/>
+
+### Chore
+
+ - <csr-id-3991a0f9e25edf9e7ecce112916f322f39089702/> replace removed `typfify::TypeSpace::to_string()` with `prettyplease`
+   The use of `typify` assumed that `rustfmt` was installed... which turned out not to be a great assumption. We've modified `typify` to remove the dependency on `rustfmt-wrapper` and have removed the interface that used it `ToString::to_string()`. Instead we recommend that consumers use `prettyplease` for `build.rs` uses such as the one in this crate. See https://github.com/oxidecomputer/typify/pull/221
+   
+   Alternatively, the `build.rs` could just emit the tokens unformatted (to remove the build-time dependency on `prettyplease` and `syn`), but that seems annoying if and when you need to look at the generated code.
+   
+   FWIW `syn` is an existing dependency; `prettyplease` is the only new new crate I see in `Cargo.lock`.
+   
+   I can share the full diff between the old and new versions of the `substrait_text.rs`, but here's a sample:
+   
+   ```diff
+   @@ -1593,22 +1831,27 @@
+                T: std::convert::TryInto<Option<super::SessionDependent>>,
+                T::Error: std::fmt::Display,
+            {
+   -            self.session_dependent = value.try_into().map_err(|e| {
+   -                format!(
+   -                    "error converting supplied value for session_dependent: {}",
+   -                    e
+   -                )
+   -            });
+                self
+   +                .session_dependent = value
+   +                .try_into()
+   +                .map_err(|e| {
+   +                    format!(
+   +                        "error converting supplied value for session_dependent: {}", e
+   +                    )
+   +                });
+   +            self
+            }
+            pub fn variadic<T>(mut self, value: T) -> Self
+            where
+                T: std::convert::TryInto<Option<super::VariadicBehavior>>,
+                T::Error: std::fmt::Display,
+            {
+   -            self.variadic = value
+   +            self
+   +                .variadic = value
+                    .try_into()
+   -                .map_err(|e| format!("error converting supplied value for variadic: {}", e));
+   +                .map_err(|e| {
+   +                    format!("error converting supplied value for variadic: {}", e)
+   +                });
+                self
+            }
+            pub fn window_type<T>(mut self, value: T) -> Self
+   ```
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 4 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#73](https://github.com/substrait-io/substrait-rs/issues/73)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#73](https://github.com/substrait-io/substrait-rs/issues/73)**
+    - Replace removed `typfify::TypeSpace::to_string()` with `prettyplease` ([`3991a0f`](https://github.com/substrait-io/substrait-rs/commit/3991a0f9e25edf9e7ecce112916f322f39089702))
+</details>
+
 ## 0.5.2 (2023-03-24)
 
 <csr-id-ef41bcf9c346095e0f930211c688387d60e2ec8d/>
@@ -13,7 +86,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#77](https://github.com/substrait-io/substrait-rs/issues/77)
@@ -26,6 +99,8 @@
 
  * **[#77](https://github.com/substrait-io/substrait-rs/issues/77)**
     - Add commitlint config file to disable max line length limits ([`ef41bcf`](https://github.com/substrait-io/substrait-rs/commit/ef41bcf9c346095e0f930211c688387d60e2ec8d))
+ * **Uncategorized**
+    - Release substrait v0.5.2 ([`7964825`](https://github.com/substrait-io/substrait-rs/commit/7964825e0566b79235ba10e5d58c54d1e839d15e))
 </details>
 
 ## 0.5.1 (2023-03-22)
