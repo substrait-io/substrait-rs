@@ -174,7 +174,7 @@ pub mod {title} {{
     use serde::{{Deserialize, Serialize}};
     {}
 }}"#,
-            type_space.to_string()
+            prettyplease::unparse(&syn::parse2::<syn::File>(type_space.to_stream())?),
         ))?;
     }
     Ok(())
