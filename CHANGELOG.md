@@ -1,5 +1,32 @@
 
 
+## 0.6.0 (2023-03-30)
+
+<csr-id-d2e7ac8dad29754ab190207e9a3dd39f3deb1b1f/>
+
+### Chore (BREAKING)
+
+ - <csr-id-d2e7ac8dad29754ab190207e9a3dd39f3deb1b1f/> update typify, prettyplease and syn
+   Cherry-pick of #76, #82 and #83. These need to be combined.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#84](https://github.com/substrait-io/substrait-rs/issues/84)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#84](https://github.com/substrait-io/substrait-rs/issues/84)**
+    - Update typify, prettyplease and syn ([`d2e7ac8`](https://github.com/substrait-io/substrait-rs/commit/d2e7ac8dad29754ab190207e9a3dd39f3deb1b1f))
+</details>
+
 ## 0.5.4 (2023-03-30)
 
 ### Bug Fixes
@@ -11,7 +38,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#81](https://github.com/substrait-io/substrait-rs/issues/81)
@@ -24,6 +51,8 @@
 
  * **[#81](https://github.com/substrait-io/substrait-rs/issues/81)**
     - Checkout repository in pull request check job to get config file ([`63aa213`](https://github.com/substrait-io/substrait-rs/commit/63aa2137f369dde6f1ce8dfe9f3719d569020319))
+ * **Uncategorized**
+    - Release substrait v0.5.4 ([`8c1ded3`](https://github.com/substrait-io/substrait-rs/commit/8c1ded316241597ce8188fac9b817aba99bbda67))
 </details>
 
 ## 0.5.3 (2023-03-28)
