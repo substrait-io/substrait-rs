@@ -1,5 +1,31 @@
 
 
+## 0.5.4 (2023-03-30)
+
+### Bug Fixes
+
+ - <csr-id-63aa2137f369dde6f1ce8dfe9f3719d569020319/> checkout repository in pull request check job to get config file
+   Now that there is a config file for conventional commits we should also checkout the repo in the conventional commits check job of the pull request workflow.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#81](https://github.com/substrait-io/substrait-rs/issues/81)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#81](https://github.com/substrait-io/substrait-rs/issues/81)**
+    - Checkout repository in pull request check job to get config file ([`63aa213`](https://github.com/substrait-io/substrait-rs/commit/63aa2137f369dde6f1ce8dfe9f3719d569020319))
+</details>
+
 ## 0.5.3 (2023-03-28)
 
 <csr-id-3991a0f9e25edf9e7ecce112916f322f39089702/>
@@ -58,7 +84,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 4 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#73](https://github.com/substrait-io/substrait-rs/issues/73)
@@ -71,6 +97,8 @@
 
  * **[#73](https://github.com/substrait-io/substrait-rs/issues/73)**
     - Replace removed `typfify::TypeSpace::to_string()` with `prettyplease` ([`3991a0f`](https://github.com/substrait-io/substrait-rs/commit/3991a0f9e25edf9e7ecce112916f322f39089702))
+ * **Uncategorized**
+    - Release substrait v0.5.3 ([`622b4bb`](https://github.com/substrait-io/substrait-rs/commit/622b4bb251e47a7d60b80c372633bd0348034bbe))
 </details>
 
 ## 0.5.2 (2023-03-24)
