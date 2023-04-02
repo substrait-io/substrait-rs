@@ -1,5 +1,100 @@
 
 
+## 0.6.2 (2023-04-02)
+
+<csr-id-11d44c88162d76cfaf5b9ce479a864f0d3e56879/>
+
+### Chore
+
+ - <csr-id-11d44c88162d76cfaf5b9ce479a864f0d3e56879/> bump actions/deploy-pages from 1 to 2
+   Bumps [actions/deploy-pages](https://github.com/actions/deploy-pages) from 1 to 2.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a href="https://github.com/actions/deploy-pages/releases">actions/deploy-pages's releases</a>.</em></p>
+   <blockquote>
+   <h2>v2.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li><strong>REAPPLY:</strong> Update the deployment API endpoints used by the api-client module <a href="https://github.com/TooManyBees"><code>@​TooManyBees</code></a> / <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/140">#140</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/deploy-pages/compare/v1.2.8...v2.0.0">all code changes</a> since previous release.</p>
+   <h2>v1.2.8</h2>
+   <p>⚠️ This release is essentially a revert of <a href="https://github.com/actions/deploy-pages/releases/v1.2.7"><code>v1.2.7</code></a> and identical to the prior release <a href="https://github.com/actions/deploy-pages/releases/v1.2.6"><code>v1.2.6</code></a>.</p>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Revert shifted Deployments API endpoint usage <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/139">#139</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/deploy-pages/compare/v1.2.7...v1.2.8">all code changes</a> since previous release.</p>
+   <h2>v1.2.7</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Update the deployment API endpoints used by the api-client module <a href="https://github.com/TooManyBees"><code>@​TooManyBees</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/136">#136</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/deploy-pages/compare/v1.2.6...v1.2.7">all code changes</a> since previous release.</p>
+   <h2>v1.2.6</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Bump eslint from 8.35.0 to 8.36.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/133">#133</a>)</li>
+   <li>Bump <code>@​actions/http-client</code> from 2.0.1 to 2.1.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/134">#134</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/deploy-pages/compare/v1.2.5...v1.2.6">all code changes</a> since previous release.</p>
+   <h2>v1.2.5</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Use the <code>@actions/http-client</code> and <code>@actions/github</code> modules for proxy support <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/124">#124</a>)</li>
+   <li>Improve name of distributables checking workflow <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/131">#131</a>)</li>
+   <li>Bump eslint-config-prettier from 8.6.0 to 8.7.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/130">#130</a>)</li>
+   <li>Bump jest from 29.4.3 to 29.5.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/129">#129</a>)</li>
+   <li>Bump eslint from 8.34.0 to 8.35.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/127">#127</a>)</li>
+   <li>Revise Dependabot rebuild workflow <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/126">#126</a>)</li>
+   <li>Deprecate the <code>conclusion</code> parameter for the Action <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/125">#125</a>)</li>
+   <li>Bump prettier from 2.8.3 to 2.8.4 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/123">#123</a>)</li>
+   <li>Bump jest from 29.4.1 to 29.4.3 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/122">#122</a>)</li>
+   <li>Bump eslint from 8.33.0 to 8.34.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/121">#121</a>)</li>
+   <li>Separate use of Release Drafter <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/119">#119</a>)</li>
+   <li>Bump axios from 1.3.0 to 1.3.3 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/113">#113</a>)</li>
+   <li>Bump eslint-plugin-github from 4.3.4 to 4.6.1 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/116">#116</a>)</li>
+   <li>Update rebuilding workflow to utilize an org-owned PAT <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/115">#115</a>)</li>
+   <li>Bump nock from 13.2.0 to 13.3.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/104">#104</a>)</li>
+   <li>Add a workflow to rebuild the distributables for Dependabot PRs <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/110">#110</a>)</li>
+   </ul>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a href="https://github.com/actions/deploy-pages/commit/73e62e651178eeba977de2dc9f4c7645b3d01015"><code>73e62e6</code></a> Merge pull request <a href="https://redirect.github.com/actions/deploy-pages/issues/140">#140</a> from actions/cut-v2</li>
+   <li><a href="https://github.com/actions/deploy-pages/commit/b254707f5c3c910c335f3bcfd13a08eb14d18dca"><code>b254707</code></a> Update the deployment API endpoints used by the api-client module</li>
+   <li>See full diff in <a href="https://github.com/actions/deploy-pages/compare/v1...v2">compare view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/deploy-pages&package-manager=github_actions&previous-version=1&new-version=2)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself. You can also trigger a rebase manually by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#75](https://github.com/substrait-io/substrait-rs/issues/75)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#75](https://github.com/substrait-io/substrait-rs/issues/75)**
+    - Bump actions/deploy-pages from 1 to 2 ([`11d44c8`](https://github.com/substrait-io/substrait-rs/commit/11d44c88162d76cfaf5b9ce479a864f0d3e56879))
+</details>
+
 ## 0.6.1 (2023-04-02)
 
 <csr-id-b4bf64c476038d20e5858ed1171397baec7bb5fa/>
@@ -84,7 +179,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 2 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#60](https://github.com/substrait-io/substrait-rs/issues/60)
@@ -97,6 +192,8 @@
 
  * **[#60](https://github.com/substrait-io/substrait-rs/issues/60)**
     - Bump actions/configure-pages from 2 to 3 ([`b4bf64c`](https://github.com/substrait-io/substrait-rs/commit/b4bf64c476038d20e5858ed1171397baec7bb5fa))
+ * **Uncategorized**
+    - Release substrait v0.6.1 ([`f5fa994`](https://github.com/substrait-io/substrait-rs/commit/f5fa9943e6fc1222e8d51f2ec69de8c24216326c))
 </details>
 
 ## 0.6.0 (2023-03-30)
