@@ -2,6 +2,9 @@
 
 //! Generated types for text-based definitions
 
+// https://github.com/oxidecomputer/typify/issues/245
+#![allow(clippy::clone_on_copy)]
+
 include!(concat!(env!("OUT_DIR"), "/substrait_text.rs"));
 
 #[cfg(test)]

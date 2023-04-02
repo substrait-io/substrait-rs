@@ -15,10 +15,11 @@ jobs:
           - default
           - pbjson
           - protoc
-          - serde
+          - semver,serde
     steps:
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
       - uses: arduino/setup-protoc@v1
@@ -36,10 +37,11 @@ jobs:
         feature:
           - default
           - pbjson
-          - serde
+          - semver,serde
     steps:
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
       - uses: arduino/setup-protoc@v1
@@ -64,13 +66,29 @@ jobs:
         feature:
           - default
           - pbjson
-          - serde
+          - semver,serde
     steps:
       - uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@clippy
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo clippy --features ${{ matrix.feature }} -- -Dwarnings
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: cargo build
+      - run: cargo package --allow-dirty
