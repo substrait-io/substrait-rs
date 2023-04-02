@@ -1,5 +1,104 @@
 
 
+## 0.6.1 (2023-04-02)
+
+<csr-id-b4bf64c476038d20e5858ed1171397baec7bb5fa/>
+
+### Chore
+
+ - <csr-id-b4bf64c476038d20e5858ed1171397baec7bb5fa/> bump actions/configure-pages from 2 to 3
+   Bumps [actions/configure-pages](https://github.com/actions/configure-pages) from 2 to 3.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a href="https://github.com/actions/configure-pages/releases">actions/configure-pages's releases</a>.</em></p>
+   <blockquote>
+   <h2>v3.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Update default behavior to NOT attempt to create/enable the Pages site <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/48">#48</a>)</li>
+   <li>Bump actions/publish-action from 0.2.1 to 0.2.2 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/47">#47</a>)</li>
+   <li>Bump json5 from 1.0.1 to 1.0.2 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/45">#45</a>)</li>
+   <li>Add Dependabot config for Actions usage updates <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/46">#46</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/configure-pages/compare/v2.1.3...v2.1.4">all code changes</a> since previous release.</p>
+   <h2>v2.1.3</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Warn about unsupported file extensions <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/43">#43</a>)</li>
+   <li>Update to the latest <code>actions/publish-action</code> <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/42">#42</a>)</li>
+   <li>Test: Better support alternative file extensions for blank config files <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/41">#41</a>)</li>
+   <li>Support wrapped exports <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/38">#38</a>)</li>
+   <li>Merge PR <a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/33">#33</a> <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/37">#37</a>)</li>
+   <li>Bump actions <a href="https://github.com/yoannchaudet"><code>@​yoannchaudet</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/35">#35</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/configure-pages/compare/v2.1.2...v2.1.3">all code changes</a> since previous release.</p>
+   <h2>v2.1.2</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Update <code>@​actions/core</code> to 1.10.0 <a href="https://github.com/rentziass"><code>@​rentziass</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/31">#31</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/configure-pages/compare/v2.1.1...v2.1.2">all code changes</a> since previous release.</p>
+   <h2>v2.1.1</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Fix non-Code links in README <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/27">#27</a>)</li>
+   <li>Clean up some unused dependencies <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/26">#26</a>)</li>
+   <li>Add ESLint <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/25">#25</a>)</li>
+   <li>Expand Prettier usage <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/24">#24</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/configure-pages/compare/v2.1.0...v2.1.1">all code changes</a> since previous release.</p>
+   <h2>v2.1.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Apply consistent spacing and use of single quotes <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github.com/actions/configure-pages/commit/45efe609374726fd94570f0e5a4c32f41675e823">https://github.com/actions/configure-pages/commit/45efe609374726fd94570f0e5a4c32f41675e823</a>)</li>
+   <li>Use GitHub Pages site origin for setting up SSG configs <a href="https://github.com/AndrewLester"><code>@​AndrewLester</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/pull/21">#21</a>)</li>
+   <li>Update major version only on full releases <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://github-redirect.dependabot.com/actions/configure-pages/pull/20">#20</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/configure-pages/compare/v2.0.0...v2.0.1">all code changes</a> since previous release.</p>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a href="https://github.com/actions/configure-pages/commit/5992ce8fd557229bb0e98f78a89136a149cc9758"><code>5992ce8</code></a> Merge pull request <a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/48">#48</a> from actions/do-not-enable-by-default</li>
+   <li><a href="https://github.com/actions/configure-pages/commit/c8deda3832e3d38f7eb5bcaf7ebf9caab3b80449"><code>c8deda3</code></a> Update distributables</li>
+   <li><a href="https://github.com/actions/configure-pages/commit/5d8963e8a5ad9247b4796dc9d7c8071edf7902df"><code>5d8963e</code></a> Update default behavior to NOT attempt to create/enable the Pages site</li>
+   <li><a href="https://github.com/actions/configure-pages/commit/529ba710d519aa4546466c0eede5fb44bb7e37fc"><code>529ba71</code></a> Merge pull request <a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/47">#47</a> from actions/dependabot/github_actions/actions/publish...</li>
+   <li><a href="https://github.com/actions/configure-pages/commit/29e9dd5abeec9a7e9bbd197ca34df0ca6ccfa2b1"><code>29e9dd5</code></a> Bump actions/publish-action from 0.2.1 to 0.2.2</li>
+   <li><a href="https://github.com/actions/configure-pages/commit/c450a282d7e64525a8c9eb838cb283c6490b1c80"><code>c450a28</code></a> Merge pull request <a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/45">#45</a> from actions/dependabot/npm_and_yarn/json5-1.0.2</li>
+   <li><a href="https://github.com/actions/configure-pages/commit/6567d4c154b26b7bd05d333f214469bf5d1315e3"><code>6567d4c</code></a> Bump json5 from 1.0.1 to 1.0.2</li>
+   <li><a href="https://github.com/actions/configure-pages/commit/aba1aa6bab0f46358e2cf2ff046300601009e2a7"><code>aba1aa6</code></a> Merge pull request <a href="https://github-redirect.dependabot.com/actions/configure-pages/issues/46">#46</a> from actions/dependabot-config</li>
+   <li><a href="https://github.com/actions/configure-pages/commit/6a80311a7311cfb534beb3c7e1156325dcc2e776"><code>6a80311</code></a> Comply with Prettier expectations</li>
+   <li><a href="https://github.com/actions/configure-pages/commit/380c12d4cc49b34de8073de775c4aa81a2c4fcc7"><code>380c12d</code></a> Add Dependabot config for Actions usage updates</li>
+   <li>See full diff in <a href="https://github.com/actions/configure-pages/compare/v2...v3">compare view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/configure-pages&package-manager=github_actions&previous-version=2&new-version=3)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself. You can also trigger a rebase manually by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 2 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#60](https://github.com/substrait-io/substrait-rs/issues/60)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#60](https://github.com/substrait-io/substrait-rs/issues/60)**
+    - Bump actions/configure-pages from 2 to 3 ([`b4bf64c`](https://github.com/substrait-io/substrait-rs/commit/b4bf64c476038d20e5858ed1171397baec7bb5fa))
+</details>
+
 ## 0.6.0 (2023-03-30)
 
 <csr-id-d2e7ac8dad29754ab190207e9a3dd39f3deb1b1f/>
@@ -13,7 +112,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#84](https://github.com/substrait-io/substrait-rs/issues/84)
 
@@ -25,6 +124,8 @@
 
  * **[#84](https://github.com/substrait-io/substrait-rs/issues/84)**
     - Update typify, prettyplease and syn ([`d2e7ac8`](https://github.com/substrait-io/substrait-rs/commit/d2e7ac8dad29754ab190207e9a3dd39f3deb1b1f))
+ * **Uncategorized**
+    - Release substrait v0.6.0 ([`7a12bed`](https://github.com/substrait-io/substrait-rs/commit/7a12bed30c3f8361f4f0a74f3b514f07ab2e8b90))
 </details>
 
 ## 0.5.4 (2023-03-30)
