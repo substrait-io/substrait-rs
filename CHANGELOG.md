@@ -1,5 +1,232 @@
 
 
+## 0.7.0 (2023-04-02)
+
+<csr-id-6d117739ee41eb8a680931e57ea263539196a96f/>
+<csr-id-11d44c88162d76cfaf5b9ce479a864f0d3e56879/>
+<csr-id-b76692943ae2a5cb7c8fa83f4d8c502b265a0980/>
+
+### Chore
+
+ - <csr-id-6d117739ee41eb8a680931e57ea263539196a96f/> update gix requirement from 0.42 to 0.43
+   Updates the requirements on [gix](https://github.com/Byron/gitoxide) to permit the latest version.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a href="https://github.com/Byron/gitoxide/releases">gix's releases</a>.</em></p>
+   <blockquote>
+   <h2>gix-odb v0.43.0</h2>
+   <p>A maintenance release without user-facing changes.</p>
+   <h3>Commit Statistics</h3>
+   <ul>
+   <li>1 commit contributed to the release.</li>
+   <li>6 days passed between releases.</li>
+   <li>0 commits were understood as <a href="https://www.conventionalcommits.org">conventional</a>.</li>
+   <li>0 issues like '(#ID)' were seen in commit messages</li>
+   </ul>
+   <h3>Commit Details</h3>
+   <!-- raw HTML omitted -->
+   <!-- raw HTML omitted -->
+   <ul>
+   <li><strong>Uncategorized</strong>
+   <ul>
+   <li>Prepare changelogs prior to release (e06f5f5)</li>
+   </ul>
+   </li>
+   </ul>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   </details>
+   <details>
+   <summary>Changelog</summary>
+   <p><em>Sourced from <a href="https://github.com/Byron/gitoxide/blob/main/CHANGELOG.md">gix's changelog</a>.</em></p>
+   <blockquote>
+   <h1>Changelog</h1>
+   <p>All notable changes to this project will be documented in this file.</p>
+   <p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
+   and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+   <h2>0.23.0 (2023-02-24)</h2>
+   <p>This release adds the new <code>ein tool query</code> analytics engine, which maintains a database of a git repository as acceleration data structure to run useful queries on.
+   It's nothing more than an MVP, and was inspired by a program to accelerate <a href="https://redirect.github.com/jmforsythe/Git-Heat-Map/pull/6">Git-Heat-Map</a>.</p>
+   <h3>New Features</h3>
+   <ul>
+   <li><!-- raw HTML omitted --> <code>ein tool query</code> - a git analytics engine.
+   A tool to build and efficiently maintain a database of information contained
+   in a git repository, preferably the kind of information that is expensive to obtain,
+   in order to facilitate queries that would be prohibitive without an accelerating
+   data structure.</li>
+   <li><!-- raw HTML omitted --> <code>gix tree entries</code> with rev-spec support.
+   Previously it wanted a tree-id, now it can derive it itself.</li>
+   </ul>
+   <h3>Commit Statistics</h3>
+   <!-- raw HTML omitted -->
+   <ul>
+   <li>4 commits contributed to the release over the course of 7 calendar days.</li>
+   <li>7 days passed between releases.</li>
+   <li>2 commits were understood as <a href="https://www.conventionalcommits.org">conventional</a>.</li>
+   <li>0 issues like '(#ID)' were seen in commit messages</li>
+   </ul>
+   <h3>Commit Details</h3>
+   <!-- raw HTML omitted -->
+   <!-- raw HTML omitted -->
+   <ul>
+   <li><strong>Uncategorized</strong>
+   <ul>
+   <li>Merge branch 'rename-tracking' (<a href="https://github.com/Byron/gitoxide/commit/550144a5fd37d501d86f4b1c4db2948d951d1c93"><code>550144a</code></a>)</li>
+   <li><code>ein tool query</code> - a git analytics engine. (<a href="https://github.com/Byron/gitoxide/commit/f8cc62376bd6e940be4c41e84ccbfce111e64e39"><code>f8cc623</code></a>)</li>
+   <li><code>gix tree entries</code> with rev-spec support. (<a href="https://github.com/Byron/gitoxide/commit/49520d1f03ee1d011f6e9f2eb07084d327fe95ae"><code>49520d1</code></a>)</li>
+   <li>Fix journey tests; improve panic handling when --progress is used. (<a href="https://github.com/Byron/gitoxide/commit/571121ccceaab25323bc6cd1ed2e2a1560289a57"><code>571121c</code></a>)</li>
+   </ul>
+   </li>
+   </ul>
+   <!-- raw HTML omitted -->
+   <h2>0.22.1 (2023-02-17)</h2>
+   <h3>Bug Fixes</h3>
+   <ul>
+   <li><!-- raw HTML omitted --> re-enable local-time support for all binaries
+   The <code>time</code> improved the way one can opt-in to potential unsoundness</li>
+   </ul>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a href="https://github.com/Byron/gitoxide/commit/5dc1f9f2bcb8b3e147115fcb6f76558e8f48ffef"><code>5dc1f9f</code></a> Release gix-tempfile v5.0.2, gix-validate v0.7.4, gix-config v0.20.0, gix-pro...</li>
+   <li><a href="https://github.com/Byron/gitoxide/commit/3016a285f566bdfe7de2774fa6f2254c1b1a2c51"><code>3016a28</code></a> prepare changelogs prior to release</li>
+   <li><a href="https://github.com/Byron/gitoxide/commit/ee36e5bb985e9ad90bc382cdd051a8b5295ca18c"><code>ee36e5b</code></a> Merge branch 'fix-790'</li>
+   <li><a href="https://github.com/Byron/gitoxide/commit/603776ecf487ef087d25774d74e49465177aa370"><code>603776e</code></a> fix: binary config output parsing can now deal with quotes on windows. (<a href="https://redirect.github.com/Byron/gitoxide/issues/790">#790</a>)</li>
+   <li><a href="https://github.com/Byron/gitoxide/commit/7bd8823ab4241d6d0401f03aec8c0d34f68c347c"><code>7bd8823</code></a> fix: opening repositories without 'strict' mode also ignores IO errors. (<a href="https://redirect.github.com/Byron/gitoxide/issues/790">#790</a>)</li>
+   <li><a href="https://github.com/Byron/gitoxide/commit/e55f4ee230ed3164df5145c7a2b212464bb9db99"><code>e55f4ee</code></a> feat!: allow to ignore IO errors when reading configuration files. (<a href="https://redirect.github.com/Byron/gitoxide/issues/790">#790</a>)</li>
+   <li><a href="https://github.com/Byron/gitoxide/commit/8f2accdf738def9aa4abdf08fc299d0e9807bc3e"><code>8f2accd</code></a> Less dependencies for tests (via <code>serial_test</code> no default features)</li>
+   <li><a href="https://github.com/Byron/gitoxide/commit/a69f873ea53b073a0b86ade095596f21709b233b"><code>a69f873</code></a> Finally fix typos detected by <code>typos</code> tool.</li>
+   <li><a href="https://github.com/Byron/gitoxide/commit/2321eb971c2b89551506e2016a3495fafd15b47d"><code>2321eb9</code></a> Correct more typos with <code>typos</code> tool.</li>
+   <li><a href="https://github.com/Byron/gitoxide/commit/bbb4cb03ee2bcd0c5dd0635da542a942179cf6fd"><code>bbb4cb0</code></a> add group headings to all shallow-related arguments.</li>
+   <li>Additional commits viewable in <a href="https://github.com/Byron/gitoxide/compare/gix-v0.42.0...gix-v0.43.0">compare view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   You can trigger a rebase of this PR by commenting `@dependabot rebase`.
+ - <csr-id-11d44c88162d76cfaf5b9ce479a864f0d3e56879/> bump actions/deploy-pages from 1 to 2
+   Bumps [actions/deploy-pages](https://github.com/actions/deploy-pages) from 1 to 2.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a href="https://github.com/actions/deploy-pages/releases">actions/deploy-pages's releases</a>.</em></p>
+   <blockquote>
+   <h2>v2.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li><strong>REAPPLY:</strong> Update the deployment API endpoints used by the api-client module <a href="https://github.com/TooManyBees"><code>@​TooManyBees</code></a> / <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/140">#140</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/deploy-pages/compare/v1.2.8...v2.0.0">all code changes</a> since previous release.</p>
+   <h2>v1.2.8</h2>
+   <p>⚠️ This release is essentially a revert of <a href="https://github.com/actions/deploy-pages/releases/v1.2.7"><code>v1.2.7</code></a> and identical to the prior release <a href="https://github.com/actions/deploy-pages/releases/v1.2.6"><code>v1.2.6</code></a>.</p>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Revert shifted Deployments API endpoint usage <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/139">#139</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/deploy-pages/compare/v1.2.7...v1.2.8">all code changes</a> since previous release.</p>
+   <h2>v1.2.7</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Update the deployment API endpoints used by the api-client module <a href="https://github.com/TooManyBees"><code>@​TooManyBees</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/136">#136</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/deploy-pages/compare/v1.2.6...v1.2.7">all code changes</a> since previous release.</p>
+   <h2>v1.2.6</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Bump eslint from 8.35.0 to 8.36.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/133">#133</a>)</li>
+   <li>Bump <code>@​actions/http-client</code> from 2.0.1 to 2.1.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/134">#134</a>)</li>
+   </ul>
+   <p>See details of <a href="https://github.com/actions/deploy-pages/compare/v1.2.5...v1.2.6">all code changes</a> since previous release.</p>
+   <h2>v1.2.5</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Use the <code>@actions/http-client</code> and <code>@actions/github</code> modules for proxy support <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/124">#124</a>)</li>
+   <li>Improve name of distributables checking workflow <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/131">#131</a>)</li>
+   <li>Bump eslint-config-prettier from 8.6.0 to 8.7.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/130">#130</a>)</li>
+   <li>Bump jest from 29.4.3 to 29.5.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/129">#129</a>)</li>
+   <li>Bump eslint from 8.34.0 to 8.35.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/127">#127</a>)</li>
+   <li>Revise Dependabot rebuild workflow <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/126">#126</a>)</li>
+   <li>Deprecate the <code>conclusion</code> parameter for the Action <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/125">#125</a>)</li>
+   <li>Bump prettier from 2.8.3 to 2.8.4 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/123">#123</a>)</li>
+   <li>Bump jest from 29.4.1 to 29.4.3 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/122">#122</a>)</li>
+   <li>Bump eslint from 8.33.0 to 8.34.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/121">#121</a>)</li>
+   <li>Separate use of Release Drafter <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/119">#119</a>)</li>
+   <li>Bump axios from 1.3.0 to 1.3.3 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/113">#113</a>)</li>
+   <li>Bump eslint-plugin-github from 4.3.4 to 4.6.1 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/116">#116</a>)</li>
+   <li>Update rebuilding workflow to utilize an org-owned PAT <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/115">#115</a>)</li>
+   <li>Bump nock from 13.2.0 to 13.3.0 <a href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/104">#104</a>)</li>
+   <li>Add a workflow to rebuild the distributables for Dependabot PRs <a href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a> (<a href="https://redirect.github.com/actions/deploy-pages/issues/110">#110</a>)</li>
+   </ul>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a href="https://github.com/actions/deploy-pages/commit/73e62e651178eeba977de2dc9f4c7645b3d01015"><code>73e62e6</code></a> Merge pull request <a href="https://redirect.github.com/actions/deploy-pages/issues/140">#140</a> from actions/cut-v2</li>
+   <li><a href="https://github.com/actions/deploy-pages/commit/b254707f5c3c910c335f3bcfd13a08eb14d18dca"><code>b254707</code></a> Update the deployment API endpoints used by the api-client module</li>
+   <li>See full diff in <a href="https://github.com/actions/deploy-pages/compare/v1...v2">compare view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/deploy-pages&package-manager=github_actions&previous-version=1&new-version=2)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself. You can also trigger a rebase manually by commenting `@dependabot rebase`.
+
+### Chore (BREAKING)
+
+ - <csr-id-b76692943ae2a5cb7c8fa83f4d8c502b265a0980/> bump substrait from `7f272f1` to `26da4f1`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from `7f272f1` to `26da4f1`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a href="https://github.com/substrait-io/substrait/commit/26da4f155441ce1d5faf0ae9e7445f9f45abd0f2"><code>26da4f1</code></a> chore(release): 0.28.0</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/4f49e967fa8451eb60443a99287ee05c8680e190"><code>4f49e96</code></a> docs: fix some typos (<a href="https://redirect.github.com/substrait-io/substrait/issues/478">#478</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/425e7f868e0f89115bc125e8dab2c04b8144ff82"><code>425e7f8</code></a> feat: adding BibTex entry to cite Substrait (<a href="https://redirect.github.com/substrait-io/substrait/issues/481">#481</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/73228b4112d79eb1011af0ebb41753ce23ca180c"><code>73228b4</code></a> feat: adding SUM0 definition for aggregate functions (<a href="https://redirect.github.com/substrait-io/substrait/issues/465">#465</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/3955871c17f9cb0a12820192d9de9595c42654de"><code>3955871</code></a> chore(release): 0.27.0</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/45b4e483ff1fca3c3e4d0f71e6e55436c6d7638a"><code>45b4e48</code></a> fix(ci): fix link to conventional commits spec (<a href="https://redirect.github.com/substrait-io/substrait/issues/482">#482</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/b4d81fba48990523012c7b2c6cc71d2c01650e59"><code>b4d81fb</code></a> feat: add regexp_match_substring_all function to yaml (<a href="https://redirect.github.com/substrait-io/substrait/issues/469">#469</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/b7df38d2099cd970d1ed1783d441d828ce84253d"><code>b7df38d</code></a> fix: remove duplication in simple extensions schema (<a href="https://redirect.github.com/substrait-io/substrait/issues/404">#404</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/bb5d0bc0390ab7bd7e2047126cf9661d7b57c3df"><code>bb5d0bc</code></a> chore(ci): skip <code>release</code> job on forked repositories (<a href="https://redirect.github.com/substrait-io/substrait/issues/475">#475</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/96b686128e57eb66c55ab04e4dcbae64c9250dca"><code>96b6861</code></a> docs: fix typo, fetch operation only has one input (<a href="https://redirect.github.com/substrait-io/substrait/issues/461">#461</a>)</li>
+   <li>Additional commits viewable in <a href="https://github.com/substrait-io/substrait/compare/7f272f13f22cd5f5842baea42bcf7961e6251881...26da4f155441ce1d5faf0ae9e7445f9f45abd0f2">compare view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself. You can also trigger a rebase manually by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 3 unique issues were worked on: [#75](https://github.com/substrait-io/substrait-rs/issues/75), [#80](https://github.com/substrait-io/substrait-rs/issues/80), [#86](https://github.com/substrait-io/substrait-rs/issues/86)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#75](https://github.com/substrait-io/substrait-rs/issues/75)**
+    - Bump actions/deploy-pages from 1 to 2 ([`11d44c8`](https://github.com/substrait-io/substrait-rs/commit/11d44c88162d76cfaf5b9ce479a864f0d3e56879))
+ * **[#80](https://github.com/substrait-io/substrait-rs/issues/80)**
+    - Update gix requirement from 0.42 to 0.43 ([`6d11773`](https://github.com/substrait-io/substrait-rs/commit/6d117739ee41eb8a680931e57ea263539196a96f))
+ * **[#86](https://github.com/substrait-io/substrait-rs/issues/86)**
+    - Bump substrait from `7f272f1` to `26da4f1` ([`b766929`](https://github.com/substrait-io/substrait-rs/commit/b76692943ae2a5cb7c8fa83f4d8c502b265a0980))
+</details>
+
 ## 0.6.1 (2023-04-02)
 
 <csr-id-b4bf64c476038d20e5858ed1171397baec7bb5fa/>
@@ -84,7 +311,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 2 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#60](https://github.com/substrait-io/substrait-rs/issues/60)
@@ -97,6 +324,8 @@
 
  * **[#60](https://github.com/substrait-io/substrait-rs/issues/60)**
     - Bump actions/configure-pages from 2 to 3 ([`b4bf64c`](https://github.com/substrait-io/substrait-rs/commit/b4bf64c476038d20e5858ed1171397baec7bb5fa))
+ * **Uncategorized**
+    - Release substrait v0.6.1 ([`f5fa994`](https://github.com/substrait-io/substrait-rs/commit/f5fa9943e6fc1222e8d51f2ec69de8c24216326c))
 </details>
 
 ## 0.6.0 (2023-03-30)
