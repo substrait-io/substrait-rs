@@ -1,5 +1,30 @@
 
 
+## 0.7.1 (2023-04-04)
+
+### Bug Fixes
+
+ - <csr-id-6445de8a35a62fd095cd5ae1c9410f51a5f7e17f/> remove filter that skipped `extension_types.yaml` deserialize test
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 2 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#78](https://github.com/substrait-io/substrait-rs/issues/78)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#78](https://github.com/substrait-io/substrait-rs/issues/78)**
+    - Remove filter that skipped `extension_types.yaml` deserialize test ([`6445de8`](https://github.com/substrait-io/substrait-rs/commit/6445de8a35a62fd095cd5ae1c9410f51a5f7e17f))
+</details>
+
 ## 0.7.0 (2023-04-02)
 
 <csr-id-6d117739ee41eb8a680931e57ea263539196a96f/>
@@ -209,7 +234,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 3 unique issues were worked on: [#75](https://github.com/substrait-io/substrait-rs/issues/75), [#80](https://github.com/substrait-io/substrait-rs/issues/80), [#86](https://github.com/substrait-io/substrait-rs/issues/86)
 
@@ -225,6 +250,8 @@
     - Update gix requirement from 0.42 to 0.43 ([`6d11773`](https://github.com/substrait-io/substrait-rs/commit/6d117739ee41eb8a680931e57ea263539196a96f))
  * **[#86](https://github.com/substrait-io/substrait-rs/issues/86)**
     - Bump substrait from `7f272f1` to `26da4f1` ([`b766929`](https://github.com/substrait-io/substrait-rs/commit/b76692943ae2a5cb7c8fa83f4d8c502b265a0980))
+ * **Uncategorized**
+    - Release substrait v0.7.0 ([`4d94c48`](https://github.com/substrait-io/substrait-rs/commit/4d94c48417901f77f4474560fec6dd1514ee86d0))
 </details>
 
 ## 0.6.1 (2023-04-02)
