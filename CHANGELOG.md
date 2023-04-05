@@ -1,5 +1,32 @@
 
 
+## 0.7.2 (2023-04-05)
+
+<csr-id-d390c76ec390d5a346d19339eaffc69e5351452e/>
+
+### Chore
+
+ - <csr-id-d390c76ec390d5a346d19339eaffc69e5351452e/> add .vscode to gitignore
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#88](https://github.com/substrait-io/substrait-rs/issues/88)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#88](https://github.com/substrait-io/substrait-rs/issues/88)**
+    - Add .vscode to gitignore ([`d390c76`](https://github.com/substrait-io/substrait-rs/commit/d390c76ec390d5a346d19339eaffc69e5351452e))
+</details>
+
 ## 0.7.1 (2023-04-04)
 
 ### Bug Fixes
@@ -10,7 +37,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 2 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#78](https://github.com/substrait-io/substrait-rs/issues/78)
@@ -23,6 +50,8 @@
 
  * **[#78](https://github.com/substrait-io/substrait-rs/issues/78)**
     - Remove filter that skipped `extension_types.yaml` deserialize test ([`6445de8`](https://github.com/substrait-io/substrait-rs/commit/6445de8a35a62fd095cd5ae1c9410f51a5f7e17f))
+ * **Uncategorized**
+    - Release substrait v0.7.1 ([`98b3a7b`](https://github.com/substrait-io/substrait-rs/commit/98b3a7b2ce25c199b6a68181c618b955665e97ab))
 </details>
 
 ## 0.7.0 (2023-04-02)
