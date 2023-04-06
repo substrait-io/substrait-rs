@@ -16,9 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     if: "!startsWith(github.event.pull_request.title, '[Merged by Bors] - ')"
     steps:
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
       - run: npm install @commitlint/config-conventional
-      - run: npx commitlint --extends @commitlint/config-conventional <<< $CONVENTIONAL_COMMIT
+      - run: npx commitlint <<< $CONVENTIONAL_COMMIT
         env:
           CONVENTIONAL_COMMIT: |
             ${{ github.event.pull_request.title }}

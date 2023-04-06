@@ -2,6 +2,9 @@
 
 //! Generated types for text-based definitions
 
+// https://github.com/oxidecomputer/typify/issues/245
+#![allow(clippy::clone_on_copy)]
+
 include!(concat!(env!("OUT_DIR"), "/substrait_text.rs"));
 
 #[cfg(test)]
@@ -24,13 +27,6 @@ mod tests {
                     .is_some()
             })
             .map(DirEntry::into_path)
-            // TODO(mbrobbel):
-            // https://github.com/substrait-io/substrait/pull/404
-            .filter(|path| {
-                path != &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("substrait/extensions")
-                    .join("extension_types.yaml")
-            })
             .for_each(|path| {
                 let file = fs::read_to_string(&path).unwrap();
                 let simple_extension = serde_yaml::from_str::<SimpleExtensions>(&file);
