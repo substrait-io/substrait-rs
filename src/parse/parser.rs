@@ -11,7 +11,6 @@ use super::{
     Context, ContextError,
 };
 use std::collections::hash_map::Entry;
-use url::Url;
 
 /// A parser implementation.
 #[derive(Default)]

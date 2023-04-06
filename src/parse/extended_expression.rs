@@ -48,16 +48,10 @@ pub enum ExtendedExpressionError {
 impl From<ExtendedExpression> for proto::ExtendedExpression {
     fn from(value: ExtendedExpression) -> Self {
         let ExtendedExpression {
-            version,
-            extension_uris,
+            version: _,
+            extension_uris: _,
             // ...
         } = value;
-
-        proto::ExtendedExpression {
-            version: Some(version.into()),
-            extension_uris: extension_uris.into_iter().map(Into::into).collect(),
-            ..Default::default()
-        };
 
         todo!()
     }

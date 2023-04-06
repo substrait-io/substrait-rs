@@ -100,6 +100,7 @@ pub trait Context {
         &mut self,
         anchor: SimpleExtensionAnchor,
     ) -> Result<text::simple_extensions::SimpleExtensions, ContextError> {
+        let _ = anchor;
         unimplemented!()
     }
 

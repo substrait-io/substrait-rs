@@ -28,7 +28,7 @@ mod tests {
             })
             .map(DirEntry::into_path)
             .for_each(|path| {
-                let file = fs::read_to_string(&path).unwrap();
+                let file = fs::read_to_string(path).unwrap();
                 let simple_extension = serde_yaml::from_str::<SimpleExtensions>(&file);
                 assert!(simple_extension.is_ok());
             });
