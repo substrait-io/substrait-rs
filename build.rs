@@ -78,7 +78,9 @@ fn substrait_version() -> Result<(), Box<dyn Error>> {
             fs::write(
                 &substrait_version_file,
                 format!(
-                    r#"// Note that this file is auto-generated and auto-synced using `build.rs`. It is
+                    r#"// SPDX-License-Identifier: Apache-2.0
+
+// Note that this file is auto-generated and auto-synced using `build.rs`. It is
 // included in `version.rs`.
 
 /// The major version of Substrait used to build this crate

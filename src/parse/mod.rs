@@ -8,7 +8,7 @@
 //! and consumers to skip redundant checking of invariants described by the
 //! specification.
 //!
-//! This is based on the idea described in [Parse don't
+//! This is based on the idea described in the [Parse don't
 //! validate](https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/)
 //! blog post.
 //!
