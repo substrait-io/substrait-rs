@@ -1,5 +1,48 @@
 
 
+## 0.7.3 (2023-04-09)
+
+<csr-id-fb61e47daa9ad330bc2fbedbebf992313b5943b1/>
+
+### Chore
+
+ - <csr-id-fb61e47daa9ad330bc2fbedbebf992313b5943b1/> bump substrait from 0.28.0 to 0.28.1
+   Bumps [substrait](https://github.com/substrait-io/substrait) from `26da4f1` to `c88686c`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a href="https://github.com/substrait-io/substrait/commit/c88686c9326aeab444d596a47583fd24608928b2"><code>c88686c</code></a> chore(release): 0.28.1</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/90469453d111ba93983b00944dd79d0ddd8a3808"><code>9046945</code></a> fix: typo in the comment/docstring (<a href="https://redirect.github.com/substrait-io/substrait/issues/492">#492</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/fb3eafbc9a564fbaeb92e07dd8d616a9fe484638"><code>fb3eafb</code></a> chore(site): loosen mkdocs dependencies for site build (<a href="https://redirect.github.com/substrait-io/substrait/issues/486">#486</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/e8ced2a8df89a2fc635b3e13b6b5cd84ef9306af"><code>e8ced2a</code></a> chore(deps): bump bufbuild/buf-setup-action from 0.7.0 to 1.16.0 (<a href="https://redirect.github.com/substrait-io/substrait/issues/484">#484</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/577b4e0d87f3010469599e2087548a60372ca40e"><code>577b4e0</code></a> chore(deps): bump actions/checkout from 2 to 3 (<a href="https://redirect.github.com/substrait-io/substrait/issues/459">#459</a>)</li>
+   <li>See full diff in <a href="https://github.com/substrait-io/substrait/compare/26da4f155441ce1d5faf0ae9e7445f9f45abd0f2...c88686c9326aeab444d596a47583fd24608928b2">compare view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself. You can also trigger a rebase manually by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 3 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#91](https://github.com/substrait-io/substrait-rs/issues/91)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#91](https://github.com/substrait-io/substrait-rs/issues/91)**
+    - Bump substrait from 0.28.0 to 0.28.1 ([`fb61e47`](https://github.com/substrait-io/substrait-rs/commit/fb61e47daa9ad330bc2fbedbebf992313b5943b1))
+</details>
+
 ## 0.7.2 (2023-04-05)
 
 <csr-id-d390c76ec390d5a346d19339eaffc69e5351452e/>
@@ -12,7 +55,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#88](https://github.com/substrait-io/substrait-rs/issues/88)
@@ -25,6 +68,8 @@
 
  * **[#88](https://github.com/substrait-io/substrait-rs/issues/88)**
     - Add .vscode to gitignore ([`d390c76`](https://github.com/substrait-io/substrait-rs/commit/d390c76ec390d5a346d19339eaffc69e5351452e))
+ * **Uncategorized**
+    - Release substrait v0.7.2 ([`c83e2a7`](https://github.com/substrait-io/substrait-rs/commit/c83e2a757b298d630ff6cca38106e37524153378))
 </details>
 
 ## 0.7.1 (2023-04-04)
