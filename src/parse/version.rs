@@ -138,10 +138,13 @@ mod tests {
     #[test]
     fn version() {
         let version = proto::Version::default();
-        assert_eq!(version.parse(&mut TestContext), Err(VersionError::Missing));
+        assert_eq!(
+            version.parse(&mut TestContext::default()),
+            Err(VersionError::Missing)
+        );
 
         let version = version::version();
-        assert!(version.parse(&mut TestContext).is_ok());
+        assert!(version.parse(&mut TestContext::default()).is_ok());
     }
 
     #[test]
@@ -155,7 +158,7 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            version.parse(&mut TestContext),
+            version.parse(&mut TestContext::default()),
             Err(VersionError::GitHash(git_hash))
         );
 
@@ -166,7 +169,7 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            version.parse(&mut TestContext),
+            version.parse(&mut TestContext::default()),
             Err(VersionError::GitHash(git_hash))
         );
 
@@ -177,7 +180,7 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            version.parse(&mut TestContext),
+            version.parse(&mut TestContext::default()),
             Err(VersionError::GitHash(git_hash))
         );
 
@@ -188,14 +191,14 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            version.parse(&mut TestContext),
+            version.parse(&mut TestContext::default()),
             Err(VersionError::GitHash(git_hash))
         );
 
         // Valid.
         let git_hash = String::from("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12");
         let version = proto::Version { git_hash, ..base };
-        assert!(version.parse(&mut TestContext).is_ok());
+        assert!(version.parse(&mut TestContext::default()).is_ok());
     }
 
     #[test]
@@ -205,7 +208,10 @@ mod tests {
             producer: String::from(""),
             ..version::version()
         };
-        assert!(version.parse(&mut TestContext)?.producer.is_none());
+        assert!(version
+            .parse(&mut TestContext::default())?
+            .producer
+            .is_none());
         Ok(())
     }
 
@@ -213,7 +219,7 @@ mod tests {
     fn convert() -> Result<(), VersionError> {
         let version = version::version();
         assert_eq!(
-            proto::Version::from(version.clone().parse(&mut TestContext)?),
+            proto::Version::from(version.clone().parse(&mut TestContext::default())?),
             version
         );
         Ok(())
@@ -221,21 +227,21 @@ mod tests {
 
     #[test]
     fn compatible() -> Result<(), VersionError> {
-        let version = version::version().parse(&mut TestContext)?;
+        let _version = version::version().parse(&mut TestContext::default())?;
 
         let mut version = version::version();
         version.major_number += 1;
-        let version = version.parse(&mut TestContext);
+        let version = version.parse(&mut TestContext::default());
         matches!(version, Err(VersionError::Substrait(_, _)));
 
         let mut version = version::version();
         version.minor_number += 1;
-        let version = version.parse(&mut TestContext);
+        let version = version.parse(&mut TestContext::default());
         matches!(version, Err(VersionError::Substrait(_, _)));
 
         let mut version = version::version();
         version.patch_number += 1;
-        let version = version.parse(&mut TestContext)?;
+        let _version = version.parse(&mut TestContext::default())?;
 
         Ok(())
     }

@@ -116,7 +116,7 @@ mod tests {
     fn simple_extension_uri() -> Result<(), SimpleExtensionURIError> {
         let simple_extension_uri = proto::extensions::SimpleExtensionUri::default();
         assert!(matches!(
-            simple_extension_uri.parse(&mut TestContext),
+            simple_extension_uri.parse(&mut TestContext::default()),
             Err(SimpleExtensionURIError::InvalidURI(_))
         ));
 
@@ -124,7 +124,7 @@ mod tests {
             extension_uri_anchor: 1,
             uri: "https://example.com".to_string(),
         };
-        let simple_extension_uri = simple_extension_uri.parse(&mut TestContext)?;
+        let simple_extension_uri = simple_extension_uri.parse(&mut TestContext::default())?;
         assert_eq!(simple_extension_uri.anchor(), SimpleExtensionAnchor(1));
         assert_eq!(simple_extension_uri.uri().as_str(), "https://example.com/");
 

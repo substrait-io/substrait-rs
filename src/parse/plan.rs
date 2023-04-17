@@ -20,9 +20,9 @@ use thiserror::Error;
 /// This plan is parsed from a [proto::Plan] if:
 /// - The plan has a version
 ///     - The version is parsed ([proto::Version::parse])
-///     - The version is compatible ([Version::is_compatible])
+///     - The version is compatible
 /// - If the plan defines simple extension URIs:
-///     - The simple extension URIs are parsed ([proto::extensions::SimpleExtensionURI::parse])
+///     - The simple extension URIs are parsed ([proto::extensions::SimpleExtensionUri::parse])
 /// - If the plan defines simple extensions declarations:
 ///     - The simple extension declarations are parsed ([proto::extensions::SimpleExtensionDeclaration::parse])
 #[derive(Debug, PartialEq)]
@@ -152,7 +152,7 @@ mod tests {
             ..Default::default()
         };
         matches!(
-            plan.parse(&mut TestContext),
+            plan.parse(&mut TestContext::default()),
             Err(PlanError::Version(VersionError::Missing))
         );
 
@@ -162,7 +162,7 @@ mod tests {
             ..Default::default()
         };
         matches!(
-            plan.parse(&mut TestContext),
+            plan.parse(&mut TestContext::default()),
             Err(PlanError::Version(VersionError::Missing))
         );
 
@@ -177,7 +177,7 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(
-            plan.parse(&mut TestContext),
+            plan.parse(&mut TestContext::default()),
             Err(PlanError::Version(VersionError::Substrait(_, _)))
         ));
     }

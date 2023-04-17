@@ -14,7 +14,7 @@ use thiserror::Error;
 /// A parsed [text::simple_extensions::SimpleExtensions].
 pub struct SimpleExtensions {
     /// The deserialized simple extensions
-    simple_extensions: text::simple_extensions::SimpleExtensions,
+    pub(crate) simple_extensions: text::simple_extensions::SimpleExtensions,
 }
 
 impl SimpleExtensions {

@@ -14,7 +14,7 @@ use thiserror::Error;
 /// This plan version is parsed from a [proto::PlanVersion] if:
 /// - The plan version has a version
 ///     - The version is parsed ([proto::Version::parse])
-///     - The version is compatible ([Version::compatible])
+///     - The version is compatible
 #[derive(Clone, Debug, PartialEq)]
 pub struct PlanVersion {
     version: Version,
@@ -75,9 +75,9 @@ mod tests {
             version: Some(version::version()),
         };
         assert_eq!(
-            plan_version.parse(&mut TestContext)?,
+            plan_version.parse(&mut TestContext::default())?,
             PlanVersion {
-                version: version::version().parse(&mut TestContext)?
+                version: version::version().parse(&mut TestContext::default())?
             }
         );
 
@@ -88,7 +88,7 @@ mod tests {
     fn missing() {
         let plan_version = proto::PlanVersion::default();
         assert!(matches!(
-            plan_version.parse(&mut TestContext),
+            plan_version.parse(&mut TestContext::default()),
             Err(PlanVersionError::Version(VersionError::Missing))
         ));
     }
@@ -102,7 +102,7 @@ mod tests {
             }),
         };
         assert!(matches!(
-            plan_version.parse(&mut TestContext),
+            plan_version.parse(&mut TestContext::default()),
             Err(PlanVersionError::Version(VersionError::Substrait(_, _)))
         ));
     }

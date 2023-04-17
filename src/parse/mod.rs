@@ -252,15 +252,34 @@ pub trait Parse<C: Context>: std::fmt::Debug + Sized {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::text;
 
-    pub(super) struct TestContext;
+    pub(super) struct TestContext {
+        mock_simple_extensions: SimpleExtensions,
+    }
+
+    impl Default for TestContext {
+        fn default() -> Self {
+            Self {
+                mock_simple_extensions: SimpleExtensions {
+                    simple_extensions: text::simple_extensions::SimpleExtensions {
+                        aggregate_functions: Default::default(),
+                        scalar_functions: Default::default(),
+                        type_variations: Default::default(),
+                        types: Default::default(),
+                        window_functions: Default::default(),
+                    },
+                },
+            }
+        }
+    }
 
     impl Context for TestContext {
         fn add_simple_extension_uri(
             &mut self,
             _simple_extension_uri: &SimpleExtensionURI,
         ) -> Result<&SimpleExtensions, ContextError> {
-            todo!()
+            Ok(&self.mock_simple_extensions)
         }
 
         fn simple_extensions(&self, _anchor: SimpleExtensionAnchor) -> &SimpleExtensions {
