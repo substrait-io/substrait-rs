@@ -1,5 +1,29 @@
 
 
+## 0.7.5 (2023-04-17)
+
+### Bug Fixes
+
+ - <csr-id-e8aceb239cd7dba40f8d7dbd471bddaa5065dff9/> skip re-runs if there is no substrait git submodule
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#95](https://github.com/substrait-io/substrait-rs/issues/95)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#95](https://github.com/substrait-io/substrait-rs/issues/95)**
+    - Skip re-runs if there is no substrait git submodule ([`e8aceb2`](https://github.com/substrait-io/substrait-rs/commit/e8aceb239cd7dba40f8d7dbd471bddaa5065dff9))
+</details>
+
 ## 0.7.4 (2023-04-17)
 
 <csr-id-83a18ee71b2174cd3e1118ae789cb0e09d4a3b2e/>
@@ -25,8 +49,8 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
- - 7 days passed between releases.
+ - 2 commits contributed to the release.
+ - 8 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#93](https://github.com/substrait-io/substrait-rs/issues/93)
 
@@ -38,6 +62,8 @@
 
  * **[#93](https://github.com/substrait-io/substrait-rs/issues/93)**
     - Bump substrait from 0.28.1 to 0.28.2 ([`83a18ee`](https://github.com/substrait-io/substrait-rs/commit/83a18ee71b2174cd3e1118ae789cb0e09d4a3b2e))
+ * **Uncategorized**
+    - Release substrait v0.7.4 ([`e2f0cc9`](https://github.com/substrait-io/substrait-rs/commit/e2f0cc957122cfa07a88739ea13570e29ffa87c7))
 </details>
 
 ## 0.7.3 (2023-04-09)
