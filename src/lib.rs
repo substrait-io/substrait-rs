@@ -112,9 +112,6 @@
 //! deserialization support for these are provided via [typify] in the [text]
 //! module.
 //!
-//! > Please note that [rustfmt](https://github.com/rust-lang/rustfmt) is
-//! > required to build this crate from source.
-//!
 //! ### Example
 //!
 //! #### Read a simple extension
@@ -161,11 +158,12 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![deny(missing_docs)]
 
+#[cfg(feature = "extensions")]
+pub mod extensions;
 #[allow(clippy::needless_borrow, clippy::large_enum_variant, missing_docs)]
 pub mod proto;
 #[allow(clippy::uninlined_format_args, missing_docs)]
 pub mod text;
-
 pub mod version;
 
 // Optional modules

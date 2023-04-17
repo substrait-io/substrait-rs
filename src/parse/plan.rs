@@ -3,10 +3,14 @@
 //! Parsing of [proto::Plan].
 
 use super::{
-    extensions::simple_extension_uri::{SimpleExtensionURI, SimpleExtensionURIError},
-    plan_relation::PlanRelationError,
+    extensions::{
+        simple_extension_declaration::{
+            SimpleExtensionDeclaration, SimpleExtensionDeclarationError,
+        },
+        simple_extension_uri::{SimpleExtensionURI, SimpleExtensionURIError},
+    },
     version::{Version, VersionError},
-    Context, ContextError, Parse,
+    Context, Parse,
 };
 use crate::proto;
 use thiserror::Error;
@@ -19,11 +23,14 @@ use thiserror::Error;
 ///     - The version is compatible ([Version::is_compatible])
 /// - If the plan defines simple extension URIs:
 ///     - The simple extension URIs are parsed ([proto::extensions::SimpleExtensionURI::parse])
+/// - If the plan defines simple extensions declarations:
+///     - The simple extension declarations are parsed ([proto::extensions::SimpleExtensionDeclaration::parse])
 #[derive(Debug, PartialEq)]
 pub struct Plan {
     version: Version,
-    extension_uris: Vec<SimpleExtensionURI>,
-    // ..
+    simple_extension_uris: Vec<SimpleExtensionURI>,
+    simple_extension_declarations: Vec<SimpleExtensionDeclaration>,
+    // ...
 }
 
 impl Plan {
@@ -33,18 +40,37 @@ impl Plan {
     pub fn version(&self) -> &Version {
         &self.version
     }
+
+    /// Returns the simple extension URIs of this plan.
+    ///
+    /// See [proto::Plan::extension_uris].
+    pub fn simple_extension_uris(&self) -> &[SimpleExtensionURI] {
+        &self.simple_extension_uris
+    }
+
+    /// Returns the simple extension declarations of this plan.
+    ///
+    /// See [proto::Plan::extensions].
+    pub fn simple_extension_declarations(&self) -> &[SimpleExtensionDeclaration] {
+        &self.simple_extension_declarations
+    }
 }
 
 impl From<Plan> for proto::Plan {
     fn from(plan: Plan) -> Self {
         let Plan {
             version,
-            extension_uris,
+            simple_extension_uris,
+            simple_extension_declarations,
         } = plan;
 
         let _ = proto::Plan {
             version: Some(version.into()),
-            extension_uris: extension_uris.into_iter().map(Into::into).collect(),
+            extension_uris: simple_extension_uris.into_iter().map(Into::into).collect(),
+            extensions: simple_extension_declarations
+                .into_iter()
+                .map(Into::into)
+                .collect(),
             ..Default::default()
         };
         todo!()
@@ -55,24 +81,16 @@ impl From<Plan> for proto::Plan {
 #[derive(Debug, Error)]
 pub enum PlanError {
     /// The version of this plan is invalid.
-    #[error("the version of this plan is invalid")]
+    #[error("invalid version")]
     Version(#[from] VersionError),
 
     /// There is an error with a simple extension URI.
     #[error("invalid simple extension URI")]
     SimpleExtensionURI(#[from] SimpleExtensionURIError),
 
-    /// There is an error with a simple extension.
-    #[error("invalid simple extension")]
-    SimpleExtension(#[from] ContextError),
-
-    /// There must be a least one relation.
-    #[error("plan has no relations, expected at least one")]
-    MissingRelations,
-
-    /// An issue with a plan relation.
-    #[error("plan has an invalid relation")]
-    PlanRelation(#[from] PlanRelationError),
+    /// There is an error with a simple extension declaration.
+    #[error("invalid simple extension declaration")]
+    SimpleExtensionDeclaration(#[from] SimpleExtensionDeclarationError),
 }
 
 impl<C: Context> Parse<C> for proto::Plan {
@@ -83,61 +101,48 @@ impl<C: Context> Parse<C> for proto::Plan {
         let proto::Plan {
             version,
             extension_uris,
-            extensions: _,
-            relations,
+            extensions,
+            relations: _,
             advanced_extensions: _,
             expected_type_urls: _,
         } = self;
 
-        // A plan requires a version, and it must be valid.
-        let version = version
-            .map(|version| version.parse(ctx))
+        // A plan requires a version, and it must be valid and compatible.
+        let _version = version
+            .map(|version| ctx.parse_record_value(version))
             .transpose()?
             .ok_or(VersionError::Missing)?;
 
-        // The version must be compatible.
-        version.compatible()?;
-
-        // parse simple extension URIs.
-        let _extension_uris = extension_uris
+        // Parse simple extension URIs.
+        let _simple_extension_uris = extension_uris
             .into_iter()
-            .map(|extension_uri| extension_uri.parse(ctx))
+            .enumerate()
+            .map(|(index, simple_extension_uri)| {
+                ctx.parse_record_value_with_index(simple_extension_uri, index)
+            })
             .collect::<Result<Vec<_>, _>>()?;
 
-        for x in _extension_uris {
-            ctx.simple_extension(x.anchor())
-                .map_err(PlanError::SimpleExtension)?;
-        }
-
-        // parse simple extension definitions.
-        // extensions
-        //     .into_iter()
-        //     .try_for_each(|extension| extension.parse(context).map(|_| ()))?;
-
-        // parse plan relations.
-        let _plan_relations = relations
+        // Parse simple extension declarations.
+        let _simple_extension_declarations = extensions
             .into_iter()
-            .map(|plan_relation| plan_relation.parse(ctx))
+            .enumerate()
+            .map(|(index, simple_extension_declaration)| {
+                ctx.parse_record_index(simple_extension_declaration, index)
+            })
             .collect::<Result<Vec<_>, _>>()?;
 
-        // Make sure there is at least one root relation?
+        // Check for unused simple extension URIs.
+        // todo(mb): is this an error?
 
-        // Ok(Plan {
-        //     version,
-        //     extension_uris,
-        // })
-
-        todo!()
+        todo!("relations, advanced_extensions, expected_type_urls")
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::parse::test::TestContext;
+
     use super::*;
-
-    struct Context;
-
-    impl super::Context for Context {}
 
     #[test]
     fn version() {
@@ -146,20 +151,20 @@ mod tests {
             version: None,
             ..Default::default()
         };
-        // assert_eq!(
-        //     plan.parse(&mut Context),
-        //     Err(PlanError::Version(VersionError::Missing))
-        // );
+        matches!(
+            plan.parse(&mut TestContext),
+            Err(PlanError::Version(VersionError::Missing))
+        );
 
         // Version could be invalid.
         let plan = proto::Plan {
             version: Some(proto::Version::default()),
             ..Default::default()
         };
-        // assert_eq!(
-        //     plan.parse(&mut Context),
-        //     Err(PlanError::Version(VersionError::Missing))
-        // );
+        matches!(
+            plan.parse(&mut TestContext),
+            Err(PlanError::Version(VersionError::Missing))
+        );
 
         // Version could be incompatible.
         let plan = proto::Plan {
@@ -172,7 +177,7 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(
-            plan.parse(&mut Context),
+            plan.parse(&mut TestContext),
             Err(PlanError::Version(VersionError::Substrait(_, _)))
         ));
     }

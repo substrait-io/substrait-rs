@@ -13,29 +13,33 @@ license = "Apache-2.0"
 keywords = ["substrait"]
 build = "build.rs"
 include = [
-  "LICENSE",
   "build.rs",
+  "LICENSE",
   "src/**/*.rs",
+  "src/extensions.in",
   "src/version.in",
-  "substrait/LICENSE",
-  "substrait/README.md",
+  "src/version",
   "substrait/extensions/**/*.yaml",
+  "substrait/LICENSE",
   "substrait/proto/**/*.proto",
+  "substrait/README.md",
   "substrait/text/**/*.yaml",
 ]
 
 [features]
 default = []
-full = ["parse", "pbjson", "semver"]
+extensions = ["dep:once_cell"]
+full = ["extensions", "parse", "parser", "pbjson", "semver"]
 parse = [
   "dep:hex",
   "dep:reqwest",
   "dep:thiserror",
   "dep:tracing",
   "dep:url",
+  "extensions", # todo make this optional - the parser can just skip it
   "semver"
 ]
-parser = ["dep:anyhow", "dep:clap", "parse", "pbjson"]
+parser = ["dep:anyhow", "dep:clap", "dep:tracing-subscriber", "parse", "pbjson"]
 pbjson = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
 protoc = ["dep:protobuf-src"]
 semver = ["dep:semver"]
@@ -49,19 +53,21 @@ required-features = ["parser"]
 anyhow = { version = "1.0.70", optional = true }
 clap = { version = "4.1.13", features = ["derive"], optional = true }
 hex = { version = "0.4.3", optional = true }
-reqwest = { version = "0.11.16", features = ["blocking"], optional = true }
+once_cell = { version = "1.17.1", optional = true }
 pbjson = { version = "0.5.1", optional = true }
 pbjson-types = { version = "0.5.1", optional = true }
 prost = "0.11.8"
 prost-types = "0.11.8"
 prost-wkt = { version = "0.4.1", optional = true }
 prost-wkt-types = { version = "0.4.1", optional = true }
+reqwest = { version = "0.11.16", features = ["blocking"], optional = true }
 semver = { version = "1.0.17", optional = true }
 serde = { version = "1.0.158", features = ["derive"] }
 serde_json = "1.0.94"
 serde_yaml = "0.9.19"
 thiserror = { version = "1.0.40", optional = true }
 tracing = { version = "0.1.37", optional = true }
+tracing-subscriber = { version = "0.3.16", optional = true }
 url = { version = "2.3.1", optional = true }
 
 [build-dependencies]

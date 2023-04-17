@@ -54,14 +54,11 @@ impl<C: Context> Parse<C> for proto::PlanVersion {
     fn parse(self, ctx: &mut C) -> Result<Self::Parsed, Self::Error> {
         let proto::PlanVersion { version } = self;
 
-        // A plan version requires a version, and it must be valid.
+        // A plan version requires a version, and it must be valid and compatible.
         let version = version
-            .map(|version| version.parse(ctx))
+            .map(|version| ctx.parse_record_value(version))
             .transpose()?
             .ok_or(VersionError::Missing)?;
-
-        // The version must be compatible.
-        version.compatible()?;
 
         Ok(PlanVersion { version })
     }
@@ -70,10 +67,7 @@ impl<C: Context> Parse<C> for proto::PlanVersion {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::version;
-
-    struct Context;
-    impl super::Context for Context {}
+    use crate::{parse::test::TestContext, version};
 
     #[test]
     fn ok() -> Result<(), PlanVersionError> {
@@ -81,9 +75,9 @@ mod tests {
             version: Some(version::version()),
         };
         assert_eq!(
-            plan_version.parse(&mut Context)?,
+            plan_version.parse(&mut TestContext)?,
             PlanVersion {
-                version: version::version().parse(&mut Context)?
+                version: version::version().parse(&mut TestContext)?
             }
         );
 
@@ -94,7 +88,7 @@ mod tests {
     fn missing() {
         let plan_version = proto::PlanVersion::default();
         assert!(matches!(
-            plan_version.parse(&mut Context),
+            plan_version.parse(&mut TestContext),
             Err(PlanVersionError::Version(VersionError::Missing))
         ));
     }
@@ -108,7 +102,7 @@ mod tests {
             }),
         };
         assert!(matches!(
-            plan_version.parse(&mut Context),
+            plan_version.parse(&mut TestContext),
             Err(PlanVersionError::Version(VersionError::Substrait(_, _)))
         ));
     }

@@ -14,24 +14,40 @@
 //!
 //! # Progress
 //!
+//! ## Proto
+//!
 //! - [ ] [plan::Plan]
 //!   - [x] Version
-//!   - [x] SimpleExtensionURIs
+//!   - [x] SimpleExtensionURI
+//!   - [x] SimpleExtensionDeclaration
 //!   - [ ] ...
 //! - [x] [plan_version::PlanVersion]
 //!   - [x] Version
 //! - [ ] [extended_expression::ExtendedExpression]
 //!   - [x] Version
-//!   - [x] SimpleExtensionURIs
+//!   - [x] SimpleExtensionURI
+//!   - [x] SimpleExtensionDeclaration
+//!   - [ ] ...
+//!
+//! ## Text
+//!
+//! - [ ] [simple_extensions::SimpleExtensions]
 //!   - [ ] ...
 //!
 
-use crate::text;
-
-use self::extensions::simple_extension_uri::{
-    SimpleExtensionAnchor, SimpleExtensionURI, SimpleExtensionURIError,
+use self::{
+    extensions::{
+        simple_extension_declaration::{
+            ExtensionFunction, ExtensionFunctionAnchor, ExtensionFunctionName, ExtensionType,
+            ExtensionTypeAnchor, ExtensionTypeVariation, ExtensionTypeVariationAnchor,
+        },
+        simple_extension_uri::{SimpleExtensionAnchor, SimpleExtensionURI},
+    },
+    simple_extensions::{SimpleExtensionFunction, SimpleExtensions, SimpleExtensionsError},
 };
-use std::error::Error;
+use crate::text::simple_extensions::{
+    SimpleExtensionsTypeVariationsItem, SimpleExtensionsTypesItem,
+};
 use thiserror::Error;
 
 pub mod extended_expression;
@@ -42,18 +58,67 @@ pub mod plan_relation;
 pub mod plan_version;
 pub mod relation;
 pub mod root_relation;
+pub mod simple_extensions;
 pub mod version;
 
+/// Parse context errors.
 #[derive(Debug, Error)]
-/// Context errors.
 pub enum ContextError {
-    /// Failed to add simple extension URI to context.
-    #[error("failed to add simple extension URI to context")]
-    SimpleExtensionURI(#[from] SimpleExtensionURIError),
+    /// Undefined reference to simple extension.
+    #[error("undefined reference to simple extension with anchor `{0}`")]
+    UndefinedSimpleExtension(SimpleExtensionAnchor),
 
-    /// Failed to parse simple extension yaml.
-    #[error("failed to parse simple extension yaml")]
-    SimpleExtension(#[from] serde_yaml::Error),
+    /// Undefined reference to extension type.
+    #[error("undefined reference to extension type with anchor `{0}`")]
+    UndefinedExtensionType(ExtensionTypeAnchor),
+
+    /// Undefined reference to extension type variation.
+    #[error("undefined reference to extension type variation with anchor `{0}`")]
+    UndefinedExtensionTypeVariation(ExtensionTypeVariationAnchor),
+
+    /// Undefined reference to extension function.
+    #[error("undefined reference to extension function with anchor `{0}`")]
+    UndefinedExtensionFunction(ExtensionFunctionAnchor),
+
+    /// Undefined reference to extension function.
+    #[error("undefined reference to extension function with name `{0}`")]
+    UndefinedExtensionFunctionDefinition(ExtensionFunctionName),
+
+    /// Duplicate anchor for simple extension.
+    #[error("duplicate anchor `{0}` for simple extension")]
+    DuplicateSimpleExtension(SimpleExtensionAnchor),
+
+    /// Duplicate anchor for extension type.
+    #[error("duplicate anchor `{0}` for extension type")]
+    DuplicateExtensionType(ExtensionTypeAnchor),
+
+    /// Duplicate anchor for extension type variation.
+    #[error("duplicate anchor `{0}` for extension type variation")]
+    DuplicateExtensionTypeVariation(ExtensionTypeVariationAnchor),
+
+    /// Duplicate anchor for extension function.
+    #[error("duplicate anchor `{0}` for extension function")]
+    DuplicateExtensionFunction(ExtensionFunctionAnchor),
+
+    /// Duplicate simple extension URI definition.
+    #[error("duplicate definition for simple extension")]
+    DuplicateSimpleExtensionDefinition,
+
+    /// The resolved extension is invalid.
+    #[error("invalid simple extensions file: {0}")]
+    InvalidSimpleExtensions(serde_yaml::Error),
+
+    /// Failed to resolve simple extension URI.
+    #[error("failed to resolve simple extension URI: {0}")]
+    FailedSimpleExtensionResolve(reqwest::Error),
+
+    /// Unsupported simple extension URI.
+    #[error("unsupported simple extension URI: {0}")]
+    UnsupportedURI(String),
+
+    /// Simple extensions error.
+    #[error(transparent)]
+    SimpleExtensions(#[from] SimpleExtensionsError),
 }
 
 /// A parse context.
@@ -64,6 +129,7 @@ pub trait Context {
     /// Parse an item using this context.
     ///
     /// See [Parse::parse].
+    #[tracing::instrument(skip_all, err, fields(item = %std::any::type_name::<T>()))]
     fn parse<T: Parse<Self>>(&mut self, item: T) -> Result<T::Parsed, T::Error>
     where
         Self: Sized,
@@ -71,54 +137,101 @@ pub trait Context {
         item.parse(self)
     }
 
-    /// Add a [SimpleExtensionURI] to this context. Should return an error for
-    /// duplicate anchors ([ContextError::SimpleExtensionURI(SimpleExtensionURIError::DuplicateAnchor)]) or
-    /// when the URI is not supported
-    /// ([ContextError::SimpleExtensionURI(SimpleExtensionURIError::Unsupported)]).
+    /// Parse an item using this context and record the item value on the parse span.
     ///
-    /// This function may try to eagerly resolve and parse the simple extension,
-    /// but it can't report resolve errors until the extension is referenced, or
-    /// when checking for unused extensions.
+    /// See [Parse::parse].
+    #[tracing::instrument(name = "parse", skip_all, err, fields(item = %std::any::type_name::<T>(), value = ?item))]
+    fn parse_record_value<T: Parse<Self>>(&mut self, item: T) -> Result<T::Parsed, T::Error>
+    where
+        Self: Sized,
+    {
+        item.parse(self)
+    }
+
+    /// Parse an item using this context and record the item value and its index on the parse span.
     ///
-    /// The default implementation returns
-    /// [ContextError::SimpleExtensionURI(SimpleExtensionURIError::Unsupported)].
+    /// See [Parse::parse].
+    #[tracing::instrument(name = "parse", skip_all, err, fields(item = %std::any::type_name::<T>(), index = index, value = ?item))]
+    fn parse_record_value_with_index<T: Parse<Self>>(
+        &mut self,
+        item: T,
+        index: usize,
+    ) -> Result<T::Parsed, T::Error>
+    where
+        Self: Sized,
+    {
+        item.parse(self)
+    }
+
+    /// Parse an item using this context and record the item index on the parse span.
+    ///
+    /// See [Parse::parse].
+    #[tracing::instrument(name = "parse", skip_all, err, fields(item = %std::any::type_name::<T>(), index = index))]
+    fn parse_record_index<T: Parse<Self>>(
+        &mut self,
+        item: T,
+        index: usize,
+    ) -> Result<T::Parsed, T::Error>
+    where
+        Self: Sized,
+    {
+        item.parse(self)
+    }
+
+    /// Add a [SimpleExtensionURI] to this context. Should return an error for duplicate
+    /// anchors or when the URI is not supported.
+    ///
+    /// This function must eagerly resolve and parse the simple extension, returning an
+    /// error if either fails.
     fn add_simple_extension_uri(
         &mut self,
         simple_extension_uri: &SimpleExtensionURI,
-    ) -> Result<(), ContextError> {
-        let simple_extension_uri = Box::new(simple_extension_uri.clone());
-        Err(ContextError::SimpleExtensionURI(
-            SimpleExtensionURIError::Unsupported {
-                simple_extension_uri,
-                reason: "unimplemented".to_string(),
-            },
-        ))
-    }
+    ) -> Result<&SimpleExtensions, ContextError>;
 
-    /// ...
-    fn simple_extension(
+    /// Returns the simple extensions for the given simple extension anchor.
+    fn simple_extensions(&self, anchor: SimpleExtensionAnchor) -> &SimpleExtensions;
+
+    /// Add an extension type declaration to this context.
+    fn add_extension_type(
         &mut self,
-        anchor: SimpleExtensionAnchor,
-    ) -> Result<text::simple_extensions::SimpleExtensions, ContextError> {
-        let _ = anchor;
-        unimplemented!()
-    }
+        extension_type: &ExtensionType,
+    ) -> Result<&SimpleExtensionsTypesItem, ContextError>;
 
-    // /// Returns an function
-    // fn extension_function(&self, )
-    // fn extension_type
-    // fn extension_type_variation
+    /// Returns the extension type for the given extension type anchor.
+    fn extension_type(
+        &self,
+        extension_type_anchor: ExtensionTypeAnchor,
+    ) -> &SimpleExtensionsTypesItem;
 
-    /// Check the state of this context.
-    ///
-    /// Should be called after all relevant items are parsed using this context.
-    fn check_context(&self) -> Result<(), ContextError> {
-        todo!()
-    }
+    /// Add an extension type variation declaration to this context.
+    fn add_extension_type_variation(
+        &mut self,
+        extension_type_variation: &ExtensionTypeVariation,
+    ) -> Result<&SimpleExtensionsTypeVariationsItem, ContextError>;
+
+    /// Returns the extension type variation for the given extension type variation anchor.
+    // TODO(mbrobbel): return type
+    fn extension_type_variation(
+        &self,
+        extension_type_variation_anchor: ExtensionTypeVariationAnchor,
+    ) -> &SimpleExtensionsTypeVariationsItem;
+
+    /// Add an extension function declaration to this context.
+    fn add_extension_function(
+        &mut self,
+        extension_function: &ExtensionFunction,
+    ) -> Result<&SimpleExtensionFunction, ContextError>;
+
+    /// Returns the extension function for the given extension type variation anchor.
+    // TODO(mbrobbel): return type
+    fn extension_function(
+        &self,
+        extension_function_anchor: ExtensionFunctionAnchor,
+    ) -> &SimpleExtensionFunction;
 }
 
 /// A parse trait.
-pub trait Parse<C: Context>: Sized {
+pub trait Parse<C: Context>: std::fmt::Debug + Sized {
     /// The parsed type.
     ///
     /// After parsing this type must be able to convert back. Note that it is
@@ -130,8 +243,70 @@ pub trait Parse<C: Context>: Sized {
     type Parsed: Into<Self>;
 
     /// The error type for this parser.
-    type Error: Error;
+    type Error: std::error::Error;
 
     /// Parse and return a parsed type or error.
     fn parse(self, ctx: &mut C) -> Result<Self::Parsed, Self::Error>;
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    pub(super) struct TestContext;
+
+    impl Context for TestContext {
+        fn add_simple_extension_uri(
+            &mut self,
+            _simple_extension_uri: &SimpleExtensionURI,
+        ) -> Result<&SimpleExtensions, ContextError> {
+            todo!()
+        }
+
+        fn simple_extensions(&self, _anchor: SimpleExtensionAnchor) -> &SimpleExtensions {
+            todo!()
+        }
+
+        fn add_extension_type(
+            &mut self,
+            _extension_type: &ExtensionType,
+        ) -> Result<&SimpleExtensionsTypesItem, ContextError> {
+            todo!()
+        }
+
+        fn extension_type(
+            &self,
+            _extension_type_anchor: ExtensionTypeAnchor,
+        ) -> &SimpleExtensionsTypesItem {
+            todo!()
+        }
+
+        fn add_extension_type_variation(
+            &mut self,
+            _extension_type_variation: &ExtensionTypeVariation,
+        ) -> Result<&SimpleExtensionsTypeVariationsItem, ContextError> {
+            todo!()
+        }
+
+        fn extension_type_variation(
+            &self,
+            _extension_type_variation_anchor: ExtensionTypeVariationAnchor,
+        ) -> &SimpleExtensionsTypeVariationsItem {
+            todo!()
+        }
+
+        fn add_extension_function(
+            &mut self,
+            _extension_function: &ExtensionFunction,
+        ) -> Result<&SimpleExtensionFunction, ContextError> {
+            todo!()
+        }
+
+        fn extension_function(
+            &self,
+            _extension_function_anchor: ExtensionFunctionAnchor,
+        ) -> &SimpleExtensionFunction {
+            todo!()
+        }
+    }
 }

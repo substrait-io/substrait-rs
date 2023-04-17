@@ -8,6 +8,8 @@ use hex::FromHex;
 use thiserror::Error;
 
 /// A parsed [proto::Version].
+///
+/// This parses only for compatible versions. See [version::semver_req].
 #[derive(Clone, Debug, PartialEq)]
 pub struct Version {
     /// The semantic version.
@@ -34,15 +36,9 @@ impl Version {
         self.producer.as_deref()
     }
 
-    /// Returns `true` if this version is compatible with the Substrait version
-    /// of this crate.
-    pub fn is_compatible(&self) -> bool {
-        self.compatible().is_ok()
-    }
-
     /// Returns [VersionError::Substrait] if this version is incompatible with
     /// the Substrait [version::version] of this crate.
-    pub fn compatible(&self) -> Result<(), VersionError> {
+    pub(crate) fn compatible(&self) -> Result<(), VersionError> {
         let version = self.version();
         let version_req = version::semver_req();
         match version_req.matches(version) {
@@ -121,39 +117,36 @@ impl<C: Context> Parse<C> for proto::Version {
             return Err(VersionError::GitHash(git_hash));
         }
 
-        Ok(Version {
+        let version = Version {
             version: semver::Version::new(major_number as _, minor_number as _, patch_number as _),
             git_hash: (!git_hash.is_empty()).then(|| <[u8; 20]>::from_hex(git_hash).unwrap()),
             producer: (!producer.is_empty()).then_some(producer),
-        })
+        };
+
+        // The version must be compatible with the substrait version of this crate.
+        version.compatible()?;
+
+        Ok(version)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    struct Context;
-    impl super::Context for Context {}
+    use crate::parse::test::TestContext;
 
     #[test]
     fn version() {
         let version = proto::Version::default();
-        assert_eq!(version.parse(&mut Context), Err(VersionError::Missing));
+        assert_eq!(version.parse(&mut TestContext), Err(VersionError::Missing));
 
-        let version = proto::Version {
-            major_number: 1,
-            ..Default::default()
-        };
-        assert!(version.parse(&mut Context).is_ok());
+        let version = version::version();
+        assert!(version.parse(&mut TestContext).is_ok());
     }
 
     #[test]
     fn git_hash() {
-        let base = proto::Version {
-            major_number: 1,
-            ..Default::default()
-        };
+        let base = version::version();
 
         // Bad length.
         let git_hash = String::from("short");
@@ -162,7 +155,7 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            version.parse(&mut Context),
+            version.parse(&mut TestContext),
             Err(VersionError::GitHash(git_hash))
         );
 
@@ -173,7 +166,7 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            version.parse(&mut Context),
+            version.parse(&mut TestContext),
             Err(VersionError::GitHash(git_hash))
         );
 
@@ -184,7 +177,7 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            version.parse(&mut Context),
+            version.parse(&mut TestContext),
             Err(VersionError::GitHash(git_hash))
         );
 
@@ -195,76 +188,54 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            version.parse(&mut Context),
+            version.parse(&mut TestContext),
             Err(VersionError::GitHash(git_hash))
         );
 
         // Valid.
         let git_hash = String::from("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12");
-        let version = proto::Version {
-            git_hash,
-            ..base.clone()
-        };
-        assert!(version.parse(&mut Context).is_ok());
+        let version = proto::Version { git_hash, ..base };
+        assert!(version.parse(&mut TestContext).is_ok());
     }
 
     #[test]
-    fn producer() {
+    fn producer() -> Result<(), VersionError> {
         // Empty producer maps to `None`
         let version = proto::Version {
-            major_number: 1,
             producer: String::from(""),
-            ..Default::default()
+            ..version::version()
         };
-        assert!(version.parse(&mut Context).unwrap().producer.is_none());
+        assert!(version.parse(&mut TestContext)?.producer.is_none());
+        Ok(())
     }
 
     #[test]
-    fn convert() {
-        let version = proto::Version {
-            major_number: 1,
-            minor_number: 2,
-            patch_number: 3,
-            git_hash: String::from(""),
-            producer: String::from("test"),
-        };
+    fn convert() -> Result<(), VersionError> {
+        let version = version::version();
         assert_eq!(
-            proto::Version::from(version.clone().parse(&mut Context).unwrap()),
+            proto::Version::from(version.clone().parse(&mut TestContext)?),
             version
         );
+        Ok(())
     }
 
     #[test]
     fn compatible() -> Result<(), VersionError> {
-        let version = version::version().parse(&mut Context)?;
-        assert!(version.is_compatible());
+        let version = version::version().parse(&mut TestContext)?;
 
         let mut version = version::version();
         version.major_number += 1;
-        let version = version.parse(&mut Context)?;
-        assert_eq!(
-            version.compatible(),
-            Err(VersionError::Substrait(
-                version.version().clone(),
-                version::semver_req()
-            ))
-        );
+        let version = version.parse(&mut TestContext);
+        matches!(version, Err(VersionError::Substrait(_, _)));
 
         let mut version = version::version();
         version.minor_number += 1;
-        let version = version.parse(&mut Context)?;
-        assert_eq!(
-            version.compatible(),
-            Err(VersionError::Substrait(
-                version.version().clone(),
-                version::semver_req()
-            ))
-        );
+        let version = version.parse(&mut TestContext);
+        matches!(version, Err(VersionError::Substrait(_, _)));
 
         let mut version = version::version();
         version.patch_number += 1;
-        let version = version.parse(&mut Context)?;
-        assert!(version.is_compatible());
+        let version = version.parse(&mut TestContext)?;
 
         Ok(())
     }
