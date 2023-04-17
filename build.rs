@@ -29,12 +29,7 @@ fn substrait_version() -> Result<semver::Version, Box<dyn Error>> {
         PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("src/version.in");
     let substrait_version_file = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("src/version");
 
-    // Or if the Substrait submodule HEAD changed
-    println!(
-        "cargo:rerun-if-changed={}",
-        Path::new(".git/modules/substrait/HEAD").display()
-    );
-    // Or if the Substrait submodule changed (to allow setting `dirty`)
+    // Rerun if the Substrait submodule changed (to allow setting `dirty`)
     println!(
         "cargo:rerun-if-changed={}",
         Path::new("substrait").display()
@@ -43,6 +38,11 @@ fn substrait_version() -> Result<semver::Version, Box<dyn Error>> {
     // Get the version from the submodule
     match gix::open("substrait") {
         Ok(repo) => {
+            // Rerun if the Substrait submodule HEAD changed (when there is a submodule)
+            println!(
+                "cargo:rerun-if-changed={}",
+                Path::new(".git/modules/substrait/HEAD").display()
+            );
             let mut format = repo
                 .head_commit()?
                 .describe()

@@ -1,5 +1,116 @@
 
 
+## 0.7.5 (2023-04-17)
+
+### Bug Fixes
+
+ - <csr-id-e8aceb239cd7dba40f8d7dbd471bddaa5065dff9/> skip re-runs if there is no substrait git submodule
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#95](https://github.com/substrait-io/substrait-rs/issues/95)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#95](https://github.com/substrait-io/substrait-rs/issues/95)**
+    - Skip re-runs if there is no substrait git submodule ([`e8aceb2`](https://github.com/substrait-io/substrait-rs/commit/e8aceb239cd7dba40f8d7dbd471bddaa5065dff9))
+</details>
+
+## 0.7.4 (2023-04-17)
+
+<csr-id-83a18ee71b2174cd3e1118ae789cb0e09d4a3b2e/>
+
+### Chore
+
+ - <csr-id-83a18ee71b2174cd3e1118ae789cb0e09d4a3b2e/> bump substrait from 0.28.1 to 0.28.2
+   Bumps [substrait](https://github.com/substrait-io/substrait) from `c88686c` to `5e99f0b`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a href="https://github.com/substrait-io/substrait/commit/5e99f0b5f89306e1ab18c355d1f82ab5aff2d21a"><code>5e99f0b</code></a> chore(release): 0.28.2</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/8c230af70bc98805d84d20c72f32d0ddb84f8644"><code>8c230af</code></a> fix: separate strptime to fix spec violation (<a href="https://redirect.github.com/substrait-io/substrait/issues/493">#493</a>)</li>
+   <li>See full diff in <a href="https://github.com/substrait-io/substrait/compare/c88686c9326aeab444d596a47583fd24608928b2...5e99f0b5f89306e1ab18c355d1f82ab5aff2d21a">compare view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself. You can also trigger a rebase manually by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 8 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#93](https://github.com/substrait-io/substrait-rs/issues/93)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#93](https://github.com/substrait-io/substrait-rs/issues/93)**
+    - Bump substrait from 0.28.1 to 0.28.2 ([`83a18ee`](https://github.com/substrait-io/substrait-rs/commit/83a18ee71b2174cd3e1118ae789cb0e09d4a3b2e))
+ * **Uncategorized**
+    - Release substrait v0.7.4 ([`e2f0cc9`](https://github.com/substrait-io/substrait-rs/commit/e2f0cc957122cfa07a88739ea13570e29ffa87c7))
+</details>
+
+## 0.7.3 (2023-04-09)
+
+<csr-id-fb61e47daa9ad330bc2fbedbebf992313b5943b1/>
+
+### Chore
+
+ - <csr-id-fb61e47daa9ad330bc2fbedbebf992313b5943b1/> bump substrait from 0.28.0 to 0.28.1
+   Bumps [substrait](https://github.com/substrait-io/substrait) from `26da4f1` to `c88686c`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a href="https://github.com/substrait-io/substrait/commit/c88686c9326aeab444d596a47583fd24608928b2"><code>c88686c</code></a> chore(release): 0.28.1</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/90469453d111ba93983b00944dd79d0ddd8a3808"><code>9046945</code></a> fix: typo in the comment/docstring (<a href="https://redirect.github.com/substrait-io/substrait/issues/492">#492</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/fb3eafbc9a564fbaeb92e07dd8d616a9fe484638"><code>fb3eafb</code></a> chore(site): loosen mkdocs dependencies for site build (<a href="https://redirect.github.com/substrait-io/substrait/issues/486">#486</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/e8ced2a8df89a2fc635b3e13b6b5cd84ef9306af"><code>e8ced2a</code></a> chore(deps): bump bufbuild/buf-setup-action from 0.7.0 to 1.16.0 (<a href="https://redirect.github.com/substrait-io/substrait/issues/484">#484</a>)</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/577b4e0d87f3010469599e2087548a60372ca40e"><code>577b4e0</code></a> chore(deps): bump actions/checkout from 2 to 3 (<a href="https://redirect.github.com/substrait-io/substrait/issues/459">#459</a>)</li>
+   <li>See full diff in <a href="https://github.com/substrait-io/substrait/compare/26da4f155441ce1d5faf0ae9e7445f9f45abd0f2...c88686c9326aeab444d596a47583fd24608928b2">compare view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself. You can also trigger a rebase manually by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 3 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#91](https://github.com/substrait-io/substrait-rs/issues/91)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#91](https://github.com/substrait-io/substrait-rs/issues/91)**
+    - Bump substrait from 0.28.0 to 0.28.1 ([`fb61e47`](https://github.com/substrait-io/substrait-rs/commit/fb61e47daa9ad330bc2fbedbebf992313b5943b1))
+ * **Uncategorized**
+    - Release substrait v0.7.3 ([`9e9c1c7`](https://github.com/substrait-io/substrait-rs/commit/9e9c1c7c6ae0b84ab4ffa4c504b858c6ff0ff82d))
+</details>
+
 ## 0.7.2 (2023-04-05)
 
 <csr-id-d390c76ec390d5a346d19339eaffc69e5351452e/>
@@ -12,7 +123,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#88](https://github.com/substrait-io/substrait-rs/issues/88)
@@ -25,6 +136,8 @@
 
  * **[#88](https://github.com/substrait-io/substrait-rs/issues/88)**
     - Add .vscode to gitignore ([`d390c76`](https://github.com/substrait-io/substrait-rs/commit/d390c76ec390d5a346d19339eaffc69e5351452e))
+ * **Uncategorized**
+    - Release substrait v0.7.2 ([`c83e2a7`](https://github.com/substrait-io/substrait-rs/commit/c83e2a757b298d630ff6cca38106e37524153378))
 </details>
 
 ## 0.7.1 (2023-04-04)
