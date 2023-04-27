@@ -1,5 +1,34 @@
 
 
+## 0.8.1 (2023-04-27)
+
+<csr-id-e7b12ac1056fbbe4e227b7019c13cdfafcb63d09/>
+
+### Chore
+
+ - <csr-id-e7b12ac1056fbbe4e227b7019c13cdfafcb63d09/> update gix to 0.44
+   0.43 seems to fail after 0.44 was published, see
+     https://github.com/apache/arrow-datafusion/issues/6132 .
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 3 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#97](https://github.com/substrait-io/substrait-rs/issues/97)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#97](https://github.com/substrait-io/substrait-rs/issues/97)**
+    - Update gix to 0.44 ([`e7b12ac`](https://github.com/substrait-io/substrait-rs/commit/e7b12ac1056fbbe4e227b7019c13cdfafcb63d09))
+</details>
+
 ## 0.8.0 (2023-04-24)
 
 <csr-id-32f5a9dd33e298798d487830de81a93fea6139f8/>
@@ -26,7 +55,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 6 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#96](https://github.com/substrait-io/substrait-rs/issues/96)
@@ -39,6 +68,8 @@
 
  * **[#96](https://github.com/substrait-io/substrait-rs/issues/96)**
     - Bump substrait from 0.28.2 to 0.29.0 ([`32f5a9d`](https://github.com/substrait-io/substrait-rs/commit/32f5a9dd33e298798d487830de81a93fea6139f8))
+ * **Uncategorized**
+    - Release substrait v0.8.0 ([`2feae85`](https://github.com/substrait-io/substrait-rs/commit/2feae85523dde923599dae32bfa383774f380f74))
 </details>
 
 ## 0.7.5 (2023-04-17)
