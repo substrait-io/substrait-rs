@@ -1,5 +1,33 @@
 
 
+## 0.9.1 (2023-05-09)
+
+<csr-id-3ef303863d91d791b1595243f1e048d67906fe28/>
+
+### Chore
+
+ - <csr-id-3ef303863d91d791b1595243f1e048d67906fe28/> use `git2` instead of `gix` to reduce dependency graph
+   Use [git2](https://docs.rs/git2/latest/git2/) instead of [gix](https://docs.rs/gix/latest/gix/) to reduce the dependency graph.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#102](https://github.com/substrait-io/substrait-rs/issues/102)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#102](https://github.com/substrait-io/substrait-rs/issues/102)**
+    - Use `git2` instead of `gix` to reduce dependency graph ([`3ef3038`](https://github.com/substrait-io/substrait-rs/commit/3ef303863d91d791b1595243f1e048d67906fe28))
+</details>
+
 ## 0.9.0 (2023-05-08)
 
 <csr-id-9ed17a9cb9bfcf31ccee656679ae5217365b44ea/>
@@ -83,7 +111,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 10 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#101](https://github.com/substrait-io/substrait-rs/issues/101)
@@ -96,6 +124,8 @@
 
  * **[#101](https://github.com/substrait-io/substrait-rs/issues/101)**
     - Update typify requirement from 0.0.11 to 0.0.12 ([`9ed17a9`](https://github.com/substrait-io/substrait-rs/commit/9ed17a9cb9bfcf31ccee656679ae5217365b44ea))
+ * **Uncategorized**
+    - Release substrait v0.9.0 ([`1d2d4e7`](https://github.com/substrait-io/substrait-rs/commit/1d2d4e7359ec9cc11976ad5f81a7729e71a41f4f))
 </details>
 
 ## 0.8.1 (2023-04-27)
