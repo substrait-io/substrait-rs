@@ -3,23 +3,16 @@
 name: Merge
 
 on:
-  push:
-    branches:
-      - trying # always pass on trying because commit message is not configurable
-      - staging
+  merge_group:
 
 jobs:
   conventional-commits:
     name: Conventional Commits
     runs-on: ubuntu-latest
     steps:
-      - if: github.ref == 'refs/heads/staging'
-        uses: actions/checkout@v3
-      - if: github.ref == 'refs/heads/staging'
-        uses: actions/setup-node@v3
-      - if: github.ref == 'refs/heads/staging'
-        run: npm install @commitlint/config-conventional
-      - if: github.ref == 'refs/heads/staging'
-        run: npx commitlint <<< $CONVENTIONAL_COMMIT
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm install @commitlint/config-conventional
+      - run: npx commitlint <<< $CONVENTIONAL_COMMIT
         env:
           CONVENTIONAL_COMMIT: ${{ github.event.head_commit.message }}
