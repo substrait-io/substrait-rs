@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use prost_build::Config;
 use std::{
     env,
     error::Error,
@@ -7,9 +8,6 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-
-use gix::bstr::ByteSlice;
-use prost_build::Config;
 use walkdir::{DirEntry, WalkDir};
 
 #[cfg(feature = "extensions")]
@@ -22,8 +20,7 @@ compile_error!("Either feature `serde` or `pbjson` can be enabled");
 
 /// Add Substrait version information to the build
 fn substrait_version() -> Result<semver::Version, Box<dyn Error>> {
-    use gix::commit::describe::SelectRef;
-    use std::process::Command;
+    use git2::{DescribeFormatOptions, DescribeOptions, Repository};
 
     let substrait_version_in_file =
         PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("src/version.in");
@@ -36,42 +33,30 @@ fn substrait_version() -> Result<semver::Version, Box<dyn Error>> {
     );
 
     // Get the version from the submodule
-    match gix::open("substrait") {
+    match Repository::open("substrait") {
         Ok(repo) => {
             // Rerun if the Substrait submodule HEAD changed (when there is a submodule)
             println!(
                 "cargo:rerun-if-changed={}",
                 Path::new(".git/modules/substrait/HEAD").display()
             );
-            let mut format = repo
-                .head_commit()?
-                .describe()
-                .names(SelectRef::AllTags)
-                .try_resolve()?
-                .expect("substrait submodule tags missing")
-                .format()?;
-            format.long(true);
 
-            // TODO(mbrobbel): replace with something from `git-repository`
-            let git_dirty = !Command::new("git")
-                .current_dir("substrait")
-                .arg("status")
-                .arg("--porcelain")
-                .output()?
-                .stdout
-                .is_empty();
-            let git_depth = format.depth;
-            let git_hash = format.id.to_hex_with_len(40).to_string();
-            // TODO(mbrobbel): use `git-repository` dirty state support
-            let git_describe = format!("{format}{}", if git_dirty { "-dirty" } else { "" });
-            let version = semver::Version::parse(
-                format
-                    .name
-                    .as_ref()
-                    .expect("substrait submodule tag missing")
-                    .to_str()?
-                    .trim_start_matches('v'),
-            )?;
+            // Get describe output
+            let mut describe_options = DescribeOptions::default();
+            describe_options.describe_tags();
+            let mut describe_format_options = DescribeFormatOptions::default();
+            describe_format_options.always_use_long_format(true);
+            describe_format_options.dirty_suffix("-dirty");
+            let git_describe = repo
+                .describe(&describe_options)?
+                .format(Some(&describe_format_options))?;
+
+            let mut split = git_describe.split('-');
+            let git_version = split.next().unwrap_or_default();
+            let git_depth = split.next().unwrap_or_default();
+            let git_dirty = git_describe.ends_with("dirty");
+            let git_hash = repo.head()?.peel_to_commit()?.id().to_string();
+            let version = semver::Version::parse(git_version.trim_start_matches('v'))?;
 
             let &semver::Version {
                 major,

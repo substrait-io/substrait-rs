@@ -1,5 +1,177 @@
 
 
+## 0.9.0 (2023-05-08)
+
+<csr-id-9ed17a9cb9bfcf31ccee656679ae5217365b44ea/>
+
+### Chore (BREAKING)
+
+ - <csr-id-9ed17a9cb9bfcf31ccee656679ae5217365b44ea/> update typify requirement from 0.0.11 to 0.0.12
+   Updates the requirements on [typify](https://github.com/oxidecomputer/typify) to permit the latest version.
+   <details>
+   <summary>Changelog</summary>
+   <p><em>Sourced from <a href="https://github.com/oxidecomputer/typify/blob/main/CHANGELOG.adoc">typify's changelog</a>.</em></p>
+   <blockquote>
+   <p>== 0.0.12 (released 2023-05-03)</p>
+   <p><a href="https://github.com/oxidecomputer/typify/compare/v0.0.11%5C...v0.0.12%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.11\...v0.0.12[Full</a> list of commits]</p>
+   <p>== 0.0.11 (released 2023-03-18)</p>
+   <p>This is a big update with many, many changes to code generation, and many more
+   JSON schema structures well-handled. Among the many changes:</p>
+   <ul>
+   <li>Generate a <code>ToString</code> impl for untagged enums with trivial variants (<a href="https://redirect.github.com/oxidecomputer/typify/issues/145">#145</a>)</li>
+   <li>Allow conversion overrides by specifying a schema (<a href="https://redirect.github.com/oxidecomputer/typify/issues/155">#155</a>)</li>
+   <li>Handle untyped enums that contain nulls (<a href="https://redirect.github.com/oxidecomputer/typify/issues/167">#167</a>)</li>
+   <li>Handle <code>not</code> schemas for enumerated values (<a href="https://redirect.github.com/oxidecomputer/typify/issues/168">#168</a>)</li>
+   <li>Improve generated code for FromStr and TryFrom impls (<a href="https://redirect.github.com/oxidecomputer/typify/issues/174">#174</a>)</li>
+   <li>Handle format specifiers for enumerated strings (<a href="https://redirect.github.com/oxidecomputer/typify/issues/188">#188</a>)</li>
+   </ul>
+   <p>=== <em>Breaking</em>: The removal of <code>TypeSpace::to_string()</code></p>
+   <p>Previously all transitive consumers required the presence of <code>rustfmt</code>. In this
+   version we leave formatting to the consumer. See link:README.md#formatting[the formatting section of the README] for details on formatting.</p>
+   <p>=== CLI</p>
+   <p>This version adds the <code>cargo-typify</code> crate for stand-alone code generation.</p>
+   <p>=== Augmented Generation</p>
+   <p>Consumers can now affect how code is generated in several ways:</p>
+   <ul>
+   <li>adding derive macros to all generated types</li>
+   <li>modifying specific types by name to rename them or add derive macros</li>
+   <li>specifying a replacement type by name</li>
+   <li>specifying a replacement type by schema pattern</li>
+   </ul>
+   <p><a href="https://github.com/oxidecomputer/typify/compare/v0.0.10%5C...v0.0.11%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.10\...v0.0.11[Full</a> list of commits]</p>
+   <ul>
+   <li>Allow per-type renames and derive macro applications (<a href="https://redirect.github.com/oxidecomputer/typify/issues/131">#131</a>)</li>
+   <li><code>ToString</code> implementations for untagged enums with trivial newtype variants (<a href="https://redirect.github.com/oxidecomputer/typify/issues/145">#145</a>)</li>
+   <li>Fixed an issue with generation of enum defaults (<a href="https://redirect.github.com/oxidecomputer/typify/issues/137">#137</a>)</li>
+   <li>Allow conversion overrides by specifying a schema (<a href="https://redirect.github.com/oxidecomputer/typify/issues/155">#155</a>)</li>
+   </ul>
+   <p>== 0.0.10 (released 2022-09-10)</p>
+   <p><a href="https://github.com/oxidecomputer/typify/compare/v0.0.9%5C...v0.0.10%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.9\...v0.0.10[Full</a> list of commits]</p>
+   <ul>
+   <li>Add support for string types with <code>format</code> set to <code>ip</code>, <code>ipv4</code>, or <code>ipv6</code> (<a href="https://redirect.github.com/oxidecomputer/typify/issues/76">#76</a>)</li>
+   <li>Be more accommodating in the face of a missing <code>type</code> field #(79)</li>
+   <li>The order of derives on types has stabilized (and therefore has changed) (<a href="https://redirect.github.com/oxidecomputer/typify/issues/81">#81</a>)</li>
+   <li>Specific <code>From</code> and <code>Deserialize</code> implementations for constrainted string types (<a href="https://redirect.github.com/oxidecomputer/typify/issues/81">#81</a>)</li>
+   <li>Specific <code>From</code> implementation for untagged enums with constrained string variants (<a href="https://redirect.github.com/oxidecomputer/typify/issues/81">#81</a>)</li>
+   </ul>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a href="https://github.com/oxidecomputer/typify/commit/c868ddcbaa07716d4cbd01312f723921bf94bce8"><code>c868ddc</code></a> release typify 0.0.12</li>
+   <li><a href="https://github.com/oxidecomputer/typify/commit/a25d39f8884bd34eb8d6121d97813cb798b444c8"><code>a25d39f</code></a> update for cargo-release</li>
+   <li><a href="https://github.com/oxidecomputer/typify/commit/70a5b06a0948f13264f7a27b2015c3814f90ca8a"><code>70a5b06</code></a> Allow constrained strings to be keys in generated maps (<a href="https://redirect.github.com/oxidecomputer/typify/issues/276">#276</a>)</li>
+   <li><a href="https://github.com/oxidecomputer/typify/commit/b81f077d07b6a6b97c388bddf2a8b6c49a894003"><code>b81f077</code></a> Bump clap from 4.2.4 to 4.2.5 (<a href="https://redirect.github.com/oxidecomputer/typify/issues/275">#275</a>)</li>
+   <li><a href="https://github.com/oxidecomputer/typify/commit/20b5ba40eaab9254831b4e18a18a9a428ab45daa"><code>20b5ba4</code></a> some general enum cleanup (<a href="https://redirect.github.com/oxidecomputer/typify/issues/270">#270</a>)</li>
+   <li><a href="https://github.com/oxidecomputer/typify/commit/7d742a74fd2e1b643dab0e734e2a240d1243e600"><code>7d742a7</code></a> Bump uuid from 1.3.1 to 1.3.2 (<a href="https://redirect.github.com/oxidecomputer/typify/issues/273">#273</a>)</li>
+   <li><a href="https://github.com/oxidecomputer/typify/commit/e98b83fc5c644dfc38c54b750d9d06c2e0248955"><code>e98b83f</code></a> Bump regress from 0.5.0 to 0.6.0 (<a href="https://redirect.github.com/oxidecomputer/typify/issues/274">#274</a>)</li>
+   <li><a href="https://github.com/oxidecomputer/typify/commit/4152a79d8e04cb9d8625c2fa0232f6aa657dbb24"><code>4152a79</code></a> Small documentation change (<a href="https://redirect.github.com/oxidecomputer/typify/issues/271">#271</a>)</li>
+   <li><a href="https://github.com/oxidecomputer/typify/commit/8d505f920c0865ead018db360d5c20e7cb668519"><code>8d505f9</code></a> Bump expectorate from 1.0.6 to 1.0.7 (<a href="https://redirect.github.com/oxidecomputer/typify/issues/268">#268</a>)</li>
+   <li><a href="https://github.com/oxidecomputer/typify/commit/fb0eefa0cb7452646b564a65188631ae449224e6"><code>fb0eefa</code></a> Bump clap from 4.2.2 to 4.2.4 (<a href="https://redirect.github.com/oxidecomputer/typify/issues/267">#267</a>)</li>
+   <li>Additional commits viewable in <a href="https://github.com/oxidecomputer/typify/compare/v0.0.11...v0.0.12">compare view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   You can trigger a rebase of this PR by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 10 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#101](https://github.com/substrait-io/substrait-rs/issues/101)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#101](https://github.com/substrait-io/substrait-rs/issues/101)**
+    - Update typify requirement from 0.0.11 to 0.0.12 ([`9ed17a9`](https://github.com/substrait-io/substrait-rs/commit/9ed17a9cb9bfcf31ccee656679ae5217365b44ea))
+</details>
+
+## 0.8.1 (2023-04-27)
+
+<csr-id-e7b12ac1056fbbe4e227b7019c13cdfafcb63d09/>
+
+### Chore
+
+ - <csr-id-e7b12ac1056fbbe4e227b7019c13cdfafcb63d09/> update gix to 0.44
+   0.43 seems to fail after 0.44 was published, see
+     https://github.com/apache/arrow-datafusion/issues/6132 .
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 3 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#97](https://github.com/substrait-io/substrait-rs/issues/97)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#97](https://github.com/substrait-io/substrait-rs/issues/97)**
+    - Update gix to 0.44 ([`e7b12ac`](https://github.com/substrait-io/substrait-rs/commit/e7b12ac1056fbbe4e227b7019c13cdfafcb63d09))
+ * **Uncategorized**
+    - Release substrait v0.8.1 ([`74cb1fe`](https://github.com/substrait-io/substrait-rs/commit/74cb1fe0640d5d57b8155ff843d5eb4c15b22d91))
+</details>
+
+## 0.8.0 (2023-04-24)
+
+<csr-id-32f5a9dd33e298798d487830de81a93fea6139f8/>
+
+### Chore (BREAKING)
+
+ - <csr-id-32f5a9dd33e298798d487830de81a93fea6139f8/> bump substrait from 0.28.2 to 0.29.0
+   Bumps [substrait](https://github.com/substrait-io/substrait) from `5e99f0b` to `16503aa`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a href="https://github.com/substrait-io/substrait/commit/16503aaf412a3a4771fc0d17b5ac4883e26954aa"><code>16503aa</code></a> chore(release): 0.29.0</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/7246102f0e1f056a3b5a13eb96fec36ff28d27a5"><code>7246102</code></a> fix(text)!: mark <code>name</code> and <code>structure</code> property of <code>type</code> extension item as ...</li>
+   <li><a href="https://github.com/substrait-io/substrait/commit/b5d7ed26a17c0a0bd6d0779d312942e5216ea9fa"><code>b5d7ed2</code></a> fix: referenced simple extension in tutorial (set instead of string) (<a href="https://redirect.github.com/substrait-io/substrait/issues/494">#494</a>)</li>
+   <li>See full diff in <a href="https://github.com/substrait-io/substrait/compare/5e99f0b5f89306e1ab18c355d1f82ab5aff2d21a...16503aaf412a3a4771fc0d17b5ac4883e26954aa">compare view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't alter it yourself. You can also trigger a rebase manually by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 6 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#96](https://github.com/substrait-io/substrait-rs/issues/96)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#96](https://github.com/substrait-io/substrait-rs/issues/96)**
+    - Bump substrait from 0.28.2 to 0.29.0 ([`32f5a9d`](https://github.com/substrait-io/substrait-rs/commit/32f5a9dd33e298798d487830de81a93fea6139f8))
+ * **Uncategorized**
+    - Release substrait v0.8.0 ([`2feae85`](https://github.com/substrait-io/substrait-rs/commit/2feae85523dde923599dae32bfa383774f380f74))
+</details>
+
 ## 0.7.5 (2023-04-17)
 
 ### Bug Fixes
@@ -10,7 +182,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#95](https://github.com/substrait-io/substrait-rs/issues/95)
 
@@ -22,6 +194,8 @@
 
  * **[#95](https://github.com/substrait-io/substrait-rs/issues/95)**
     - Skip re-runs if there is no substrait git submodule ([`e8aceb2`](https://github.com/substrait-io/substrait-rs/commit/e8aceb239cd7dba40f8d7dbd471bddaa5065dff9))
+ * **Uncategorized**
+    - Release substrait v0.7.5 ([`6f064c8`](https://github.com/substrait-io/substrait-rs/commit/6f064c83127924481ad1c57e3150a91dd7caa5b0))
 </details>
 
 ## 0.7.4 (2023-04-17)
