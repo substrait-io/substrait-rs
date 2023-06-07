@@ -48,26 +48,6 @@ impl Version {
     }
 }
 
-impl From<Version> for proto::Version {
-    fn from(version: Version) -> Self {
-        let Version {
-            version,
-            git_hash,
-            producer,
-        } = version;
-
-        proto::Version {
-            // Note: we can use `as _` here because this Version is always
-            // constructed from `u32` values.
-            major_number: version.major as _,
-            minor_number: version.minor as _,
-            patch_number: version.patch as _,
-            git_hash: git_hash.map(hex::encode).unwrap_or_default(),
-            producer: producer.unwrap_or_default(),
-        }
-    }
-}
-
 /// Parse errors for [proto::Version].
 #[derive(Debug, Error, PartialEq)]
 pub enum VersionError {
@@ -130,10 +110,30 @@ impl<C: Context> Parse<C> for proto::Version {
     }
 }
 
+impl From<Version> for proto::Version {
+    fn from(version: Version) -> Self {
+        let Version {
+            version,
+            git_hash,
+            producer,
+        } = version;
+
+        proto::Version {
+            // Note: we can use `as _` here because this Version is always
+            // constructed from `u32` values.
+            major_number: version.major as _,
+            minor_number: version.minor as _,
+            patch_number: version.patch as _,
+            git_hash: git_hash.map(hex::encode).unwrap_or_default(),
+            producer: producer.unwrap_or_default(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::test::TestContext;
+    use crate::parse::context::test::TestContext;
 
     #[test]
     fn version() {

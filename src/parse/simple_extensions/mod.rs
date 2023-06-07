@@ -74,11 +74,9 @@ impl<C: Context> Parse<C> for text::simple_extensions::SimpleExtensions {
             .simple_extensions
             .types
             .iter()
-            .find(|item| !type_names.insert(item.name.as_ref().unwrap()))
+            .find(|item| !type_names.insert(item.name.as_str()))
         {
-            Err(Self::Error::DuplicateTypeName(
-                item.name.as_ref().unwrap().clone(),
-            ))?;
+            Err(Self::Error::DuplicateTypeName(item.name.clone()))?;
         }
 
         // Make sure the type variation names are unique

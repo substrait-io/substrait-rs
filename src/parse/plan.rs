@@ -56,27 +56,6 @@ impl Plan {
     }
 }
 
-impl From<Plan> for proto::Plan {
-    fn from(plan: Plan) -> Self {
-        let Plan {
-            version,
-            simple_extension_uris,
-            simple_extension_declarations,
-        } = plan;
-
-        let _ = proto::Plan {
-            version: Some(version.into()),
-            extension_uris: simple_extension_uris.into_iter().map(Into::into).collect(),
-            extensions: simple_extension_declarations
-                .into_iter()
-                .map(Into::into)
-                .collect(),
-            ..Default::default()
-        };
-        todo!()
-    }
-}
-
 /// Parse errors for [proto::Plan].
 #[derive(Debug, Error)]
 pub enum PlanError {
@@ -134,15 +113,35 @@ impl<C: Context> Parse<C> for proto::Plan {
         // Check for unused simple extension URIs.
         // todo(mb): is this an error?
 
-        todo!("relations, advanced_extensions, expected_type_urls")
+        todo!()
+    }
+}
+
+impl From<Plan> for proto::Plan {
+    fn from(plan: Plan) -> Self {
+        let Plan {
+            version,
+            simple_extension_uris,
+            simple_extension_declarations,
+        } = plan;
+
+        let _ = proto::Plan {
+            version: Some(version.into()),
+            extension_uris: simple_extension_uris.into_iter().map(Into::into).collect(),
+            extensions: simple_extension_declarations
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+            ..Default::default()
+        };
+        todo!()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::parse::test::TestContext;
-
     use super::*;
+    use crate::parse::context::test::TestContext;
 
     #[test]
     fn version() {

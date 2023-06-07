@@ -4,14 +4,11 @@
 
 use super::{
     extensions::{
-        simple_extension_declaration::{
-            ExtensionFunction, ExtensionFunctionAnchor, ExtensionType, ExtensionTypeAnchor,
-            ExtensionTypeVariation, ExtensionTypeVariationAnchor,
-        },
-        simple_extension_uri::{SimpleExtensionAnchor, SimpleExtensionURI},
+        simple_extension_declaration::{ExtensionFunction, ExtensionType, ExtensionTypeVariation},
+        simple_extension_uri::SimpleExtensionURI,
     },
     simple_extensions::{SimpleExtensionFunction, SimpleExtensions},
-    Context, ContextError,
+    Anchor, Context, ContextError,
 };
 use crate::{
     extensions::EXTENSIONS,
@@ -29,14 +26,14 @@ use std::{
 /// A parser implementation.
 #[derive(Default)]
 pub struct Parser {
-    extensions_uris: HashMap<SimpleExtensionAnchor, (SimpleExtensionURI, SimpleExtensions)>,
-    extension_types: HashMap<ExtensionTypeAnchor, (ExtensionType, SimpleExtensionsTypesItem)>,
+    extensions_uris: HashMap<Anchor<SimpleExtensionURI>, (SimpleExtensionURI, SimpleExtensions)>,
+    extension_types: HashMap<Anchor<ExtensionType>, (ExtensionType, SimpleExtensionsTypesItem)>,
     extension_type_variations: HashMap<
-        ExtensionTypeVariationAnchor,
+        Anchor<ExtensionTypeVariation>,
         (ExtensionTypeVariation, SimpleExtensionsTypeVariationsItem),
     >,
     extension_functions:
-        HashMap<ExtensionFunctionAnchor, (ExtensionFunction, SimpleExtensionFunction)>,
+        HashMap<Anchor<ExtensionFunction>, (ExtensionFunction, SimpleExtensionFunction)>,
 }
 
 impl Context for Parser {
@@ -84,7 +81,7 @@ impl Context for Parser {
         }
     }
 
-    fn simple_extensions(&self, anchor: SimpleExtensionAnchor) -> &SimpleExtensions {
+    fn simple_extensions(&self, anchor: Anchor<SimpleExtensionURI>) -> &SimpleExtensions {
         &self.extensions_uris.get(&anchor).unwrap().1
     }
 
@@ -97,7 +94,7 @@ impl Context for Parser {
 
     fn extension_type(
         &self,
-        extension_type_anchor: ExtensionTypeAnchor,
+        extension_type_anchor: Anchor<ExtensionType>,
     ) -> &SimpleExtensionsTypesItem {
         &self.extension_types.get(&extension_type_anchor).unwrap().1
     }
@@ -111,7 +108,7 @@ impl Context for Parser {
 
     fn extension_type_variation(
         &self,
-        extension_type_variation_anchor: ExtensionTypeVariationAnchor,
+        extension_type_variation_anchor: Anchor<ExtensionTypeVariation>,
     ) -> &SimpleExtensionsTypeVariationsItem {
         &self
             .extension_type_variations
@@ -140,7 +137,7 @@ impl Context for Parser {
                     // filter then next, error if next is some
                     Some((_, simple_extensions)) => {
                         // Find function with name
-                        let name = extension_function.name().name();
+                        let name = extension_function.name().as_ref();
                         let simple_extension_function = simple_extensions
                             .aggregate_functions()
                             .iter()
@@ -178,7 +175,7 @@ impl Context for Parser {
 
     fn extension_function(
         &self,
-        extension_function_anchor: ExtensionFunctionAnchor,
+        extension_function_anchor: Anchor<ExtensionFunction>,
     ) -> &SimpleExtensionFunction {
         &self
             .extension_functions

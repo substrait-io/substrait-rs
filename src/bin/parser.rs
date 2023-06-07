@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use substrait::{
-    parse::{parser::Parser, Context},
+    parse::{Context, Parser},
     proto,
 };
 

@@ -67,7 +67,7 @@ impl<C: Context> Parse<C> for proto::PlanVersion {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{parse::test::TestContext, version};
+    use crate::{parse::context::test::TestContext, version};
 
     #[test]
     fn ok() -> Result<(), PlanVersionError> {
