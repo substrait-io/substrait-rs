@@ -2,7 +2,7 @@
 
 name: Docs
 
-on: [push, pull_request, merge_group]
+on: [push, pull_request]
 
 permissions:
   contents: read

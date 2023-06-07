@@ -1,5 +1,226 @@
 
 
+## 0.11.0 (2023-06-06)
+
+<csr-id-ca60950ebc61981f5ef583d0a60e9f11e06a4329/>
+<csr-id-b75a5b8f39b79a115444bcc6c86a06a8ab924493/>
+<csr-id-2f4795a41683276ef21eb91a2428e8df0a984760/>
+<csr-id-3ef303863d91d791b1595243f1e048d67906fe28/>
+<csr-id-918cd9c201c0c194d371f8e718b687735b24a01c/>
+<csr-id-237ce185213f0414209dd68e08ffeed5c3fd0a6c/>
+
+### Chore
+
+ - <csr-id-ca60950ebc61981f5ef583d0a60e9f11e06a4329/> bump version to 0.10.0 to fix smart release
+   Since the release workflow was broken 0.10.0 was pushed to crates.io,
+   but the commit with changelog and version bump was not pushed to main.
+   This fixes the version to make sure the next smart release can bump to
+   0.11.0.
+ - <csr-id-b75a5b8f39b79a115444bcc6c86a06a8ab924493/> update typify requirement from 0.0.12 to 0.0.13
+   Updates the requirements on
+   [typify](https://github.com/oxidecomputer/typify) to permit the latest
+   version.
+   <details>
+   <summary>Changelog</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/oxidecomputer/typify/blob/main/CHANGELOG.adoc">typify's
+   changelog</a>.</em></p>
+   <blockquote>
+   <p>== 0.0.13 (released 2023-05-14)</p>
+   <ul>
+   <li>Fixed-length, single-type arrays to <code>[T; N]</code> (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/286">#286</a>)</li>
+   <li>Support for reflexive schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/292">#292</a>)</li>
+   <li>Much improved support for multi-type schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/291">#291</a>)</li>
+   <li>Better error messages on failures</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.12%5C...v0.0.13%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.12\...v0.0.13[Full</a>
+   list of commits]</p>
+   <p>== 0.0.12 (released 2023-05-03)</p>
+   <ul>
+   <li>Improved enum generation (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/270">#270</a>)</li>
+   <li>Improved integer type selection based on number criteria (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/255">#255</a>)</li>
+   <li><code>TypeSpace::add_root_schema()</code> (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/236">#236</a>)</li>
+   <li>... and many general improvements</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.11%5C...v0.0.12%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.11\...v0.0.12[Full</a>
+   list of commits]</p>
+   <p>== 0.0.11 (released 2023-03-18)</p>
+   <p>This is a big update with many, many changes to code generation, and
+   many more
+   JSON schema structures well-handled. Among the many changes:</p>
+   <ul>
+   <li>Generate a <code>ToString</code> impl for untagged enums with
+   trivial variants (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/145">#145</a>)</li>
+   <li>Allow conversion overrides by specifying a schema (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/155">#155</a>)</li>
+   <li>Handle untyped enums that contain nulls (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/167">#167</a>)</li>
+   <li>Handle <code>not</code> schemas for enumerated values (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/168">#168</a>)</li>
+   <li>Improve generated code for FromStr and TryFrom impls (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/174">#174</a>)</li>
+   <li>Handle format specifiers for enumerated strings (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/188">#188</a>)</li>
+   </ul>
+   <p>=== <em>Breaking</em>: The removal of
+   <code>TypeSpace::to_string()</code></p>
+   <p>Previously all transitive consumers required the presence of
+   <code>rustfmt</code>. In this
+   version we leave formatting to the consumer. See
+   link:README.md#formatting[the formatting section of the README] for
+   details on formatting.</p>
+   <p>=== CLI</p>
+   <p>This version adds the <code>cargo-typify</code> crate for stand-alone
+   code generation.</p>
+   <p>=== Augmented Generation</p>
+   <p>Consumers can now affect how code is generated in several ways:</p>
+   <ul>
+   <li>adding derive macros to all generated types</li>
+   <li>modifying specific types by name to rename them or add derive
+   macros</li>
+   <li>specifying a replacement type by name</li>
+   <li>specifying a replacement type by schema pattern</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.10%5C...v0.0.11%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.10\...v0.0.11[Full</a>
+   list of commits]</p>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/5e966779d4132f3baa128d9df2f83e4a7ff68378"><code>5e96677</code></a>
+   release typify 0.0.13</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/db0740ef6dea2212a04ad9c048263ba054894b63"><code>db0740e</code></a>
+   prep for 0.0.13</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/99ec168e1f4c4dc37bcc79759dd7f4b3d904102f"><code>99ec168</code></a>
+   use serde_json::Map with serde_json::Value (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/226">#226</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/958b86e8e5183b7384257ac8a1194daff9c8b817"><code>958b86e</code></a>
+   support for reflexive schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/292">#292</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/59de2f7b03a58c8a9ad2cd81f8bb7fce8c9e59bb"><code>59de2f7</code></a>
+   handle more complex type arrays (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/291">#291</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/28db444b60335af3db6e72e9be7f121148b8fdef"><code>28db444</code></a>
+   improve error message for external references (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/288">#288</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/28883bdb3868fd1f5c02d25bc5d5bd7ce7d9cc30"><code>28883bd</code></a>
+   Bump clap from 4.2.5 to 4.2.7 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/284">#284</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/fde91c3c9eb735f1e288e6dc98bd2ab80a0dca11"><code>fde91c3</code></a>
+   Bump serde from 1.0.160 to 1.0.162 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/285">#285</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/031d3156dbe1593d3b620a1e92ef108e1cc4deee"><code>031d315</code></a>
+   emit fixed-length arrays for single-type fixed length array schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/286">#286</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/736aa9ec1bb217d98c31c706ef2179974c9feaf1"><code>736aa9e</code></a>
+   stray println</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.12...v0.0.13">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   You can trigger a rebase of this PR by commenting `@dependabot rebase`.
+ - <csr-id-2f4795a41683276ef21eb91a2428e8df0a984760/> fix dependabot commit prefix configuration to include colon
+   Noticed in https://github.com/substrait-io/substrait-rs/pull/56 that a colon is
+   missing from the commit prefix configuration.
+   We need this to match the conventional commit spec.
+ - <csr-id-3ef303863d91d791b1595243f1e048d67906fe28/> use `git2` instead of `gix` to reduce dependency graph
+   Use [git2](https://docs.rs/git2/latest/git2/) instead of [gix](https://docs.rs/gix/latest/gix/) to reduce the dependency graph.
+
+### Bug Fixes
+
+ - <csr-id-6e5ca090b27e7dce785119060ef9ee9c53822b22/> typo in .gitignore
+
+### Chore (BREAKING)
+
+ - <csr-id-918cd9c201c0c194d371f8e718b687735b24a01c/> remove references to bors and `merge_group`
+   To fix the release workflow I'm marking this as breaking change.
+ - <csr-id-237ce185213f0414209dd68e08ffeed5c3fd0a6c/> bump substrait from `0.29.0` to `0.30.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `16503aa` to `3259a1b`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/3259a1bab342caac73ba3a3aaaff58cd9a91691b"><code>3259a1b</code></a>
+   chore(release): 0.30.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/aacd25c8fa5eb680c3456d2e0298ca0807eb7b87"><code>aacd25c</code></a>
+   feat: control indexing in temporal extraction (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/479">#479</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/16503aaf412a3a4771fc0d17b5ac4883e26954aa...3259a1bab342caac73ba3a3aaaff58cd9a91691b">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 9 commits contributed to the release over the course of 28 calendar days.
+ - 29 days passed between releases.
+ - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 9 unique issues were worked on: [#102](https://github.com/substrait-io/substrait-rs/issues/102), [#104](https://github.com/substrait-io/substrait-rs/issues/104), [#105](https://github.com/substrait-io/substrait-rs/issues/105), [#106](https://github.com/substrait-io/substrait-rs/issues/106), [#107](https://github.com/substrait-io/substrait-rs/issues/107), [#108](https://github.com/substrait-io/substrait-rs/issues/108), [#58](https://github.com/substrait-io/substrait-rs/issues/58), [#87](https://github.com/substrait-io/substrait-rs/issues/87), [#90](https://github.com/substrait-io/substrait-rs/issues/90)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#102](https://github.com/substrait-io/substrait-rs/issues/102)**
+    - Use `git2` instead of `gix` to reduce dependency graph ([`3ef3038`](https://github.com/substrait-io/substrait-rs/commit/3ef303863d91d791b1595243f1e048d67906fe28))
+ * **[#104](https://github.com/substrait-io/substrait-rs/issues/104)**
+    - Remove bors and add merge queue checks ([`c8a7db0`](https://github.com/substrait-io/substrait-rs/commit/c8a7db0bb144fa50e4bf11c3e7e81f95d0da2238))
+ * **[#105](https://github.com/substrait-io/substrait-rs/issues/105)**
+    - Bump substrait from `0.29.0` to `0.30.0` ([`237ce18`](https://github.com/substrait-io/substrait-rs/commit/237ce185213f0414209dd68e08ffeed5c3fd0a6c))
+ * **[#106](https://github.com/substrait-io/substrait-rs/issues/106)**
+    - Update typify requirement from 0.0.12 to 0.0.13 ([`b75a5b8`](https://github.com/substrait-io/substrait-rs/commit/b75a5b8f39b79a115444bcc6c86a06a8ab924493))
+ * **[#107](https://github.com/substrait-io/substrait-rs/issues/107)**
+    - Remove references to bors and `merge_group` ([`918cd9c`](https://github.com/substrait-io/substrait-rs/commit/918cd9c201c0c194d371f8e718b687735b24a01c))
+ * **[#108](https://github.com/substrait-io/substrait-rs/issues/108)**
+    - Bump version to 0.10.0 to fix smart release ([`ca60950`](https://github.com/substrait-io/substrait-rs/commit/ca60950ebc61981f5ef583d0a60e9f11e06a4329))
+ * **[#58](https://github.com/substrait-io/substrait-rs/issues/58)**
+    - Fix dependabot commit prefix configuration to include colon ([`2f4795a`](https://github.com/substrait-io/substrait-rs/commit/2f4795a41683276ef21eb91a2428e8df0a984760))
+ * **[#87](https://github.com/substrait-io/substrait-rs/issues/87)**
+    - Limit release job concurrency ([`5a7cf72`](https://github.com/substrait-io/substrait-rs/commit/5a7cf721800df05ddbe84aaf11091c7a0ed0e69c))
+ * **[#90](https://github.com/substrait-io/substrait-rs/issues/90)**
+    - Typo in .gitignore ([`6e5ca09`](https://github.com/substrait-io/substrait-rs/commit/6e5ca090b27e7dce785119060ef9ee9c53822b22))
+</details>
+
 ## 0.9.0 (2023-05-08)
 
 <csr-id-9ed17a9cb9bfcf31ccee656679ae5217365b44ea/>
@@ -83,7 +304,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 10 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#101](https://github.com/substrait-io/substrait-rs/issues/101)
@@ -96,6 +317,8 @@
 
  * **[#101](https://github.com/substrait-io/substrait-rs/issues/101)**
     - Update typify requirement from 0.0.11 to 0.0.12 ([`9ed17a9`](https://github.com/substrait-io/substrait-rs/commit/9ed17a9cb9bfcf31ccee656679ae5217365b44ea))
+ * **Uncategorized**
+    - Release substrait v0.9.0 ([`1d2d4e7`](https://github.com/substrait-io/substrait-rs/commit/1d2d4e7359ec9cc11976ad5f81a7729e71a41f4f))
 </details>
 
 ## 0.8.1 (2023-04-27)
