@@ -145,6 +145,10 @@
 //! # Ok(()) }
 //! ```
 //!
+//! # Parsing
+//!
+//! Write about [parse] module.
+//!
 //! [pbjson]: https://docs.rs/pbjson
 //! [Protobuf JSON Mapping]:
 //!     https://developers.google.com/protocol-buffers/docs/proto3#json
