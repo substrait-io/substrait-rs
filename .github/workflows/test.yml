@@ -13,13 +13,13 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.65.0
+          - 1.66.0
         feature:
           - full
           - serde
           - protoc
         exclude:
-          - rust: 1.65.0
+          - rust: 1.66.0
             feature: protoc
     steps:
       - uses: actions/checkout@v3
