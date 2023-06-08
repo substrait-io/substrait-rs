@@ -17,15 +17,24 @@ use crate::{
         simple_extensions::{SimpleExtensionsTypeVariationsItem, SimpleExtensionsTypesItem},
     },
 };
-use reqwest::blocking::{self, Response};
 use std::{
     borrow::Cow,
     collections::{hash_map::Entry, HashMap},
 };
+use url::Url;
+
+/// A resolver for simple extensions.
+pub trait SimpleExtensionURIResolver: Default {
+    /// The error type of this resolver.
+    type Error: std::error::Error;
+
+    /// Attempt to resolve the given URI to the source text of a [SimpleExtensions].
+    fn resolve(&self, uri: &Url) -> Result<String, Self::Error>;
+}
 
 /// A parser implementation.
 #[derive(Default)]
-pub struct Parser {
+pub struct Parser<R: SimpleExtensionURIResolver = UreqResolver> {
     extensions_uris: HashMap<Anchor<SimpleExtensionURI>, (SimpleExtensionURI, SimpleExtensions)>,
     extension_types: HashMap<Anchor<ExtensionType>, (ExtensionType, SimpleExtensionsTypesItem)>,
     extension_type_variations: HashMap<
@@ -34,6 +43,48 @@ pub struct Parser {
     >,
     extension_functions:
         HashMap<Anchor<ExtensionFunction>, (ExtensionFunction, SimpleExtensionFunction)>,
+    resolver: R,
+}
+
+#[cfg(feature = "parse-ureq")]
+/// A resolver that uses [ureq] to resolve simple extensions.
+pub struct UreqResolver {
+    agent: ureq::Agent,
+}
+
+impl Default for UreqResolver {
+    fn default() -> Self {
+        Self {
+            agent: ureq::Agent::new(),
+        }
+    }
+}
+
+impl SimpleExtensionURIResolver for UreqResolver {
+    type Error = ureq::Error;
+
+    fn resolve(&self, uri: &Url) -> Result<String, Self::Error> {
+        Ok(self.agent.get(uri.as_str()).call()?.into_string()?)
+    }
+}
+
+#[cfg(feature = "parse-reqwest")]
+#[derive(Default)]
+/// A resolver that uses [reqwest] to resolve simple extensions.
+pub struct ReqwestResolver {
+    client: reqwest::blocking::Client,
+}
+
+#[cfg(feature = "parse-reqwest")]
+impl SimpleExtensionURIResolver for ReqwestResolver {
+    type Error = reqwest::Error;
+
+    fn resolve(&self, uri: &Url) -> Result<String, reqwest::Error> {
+        self.client
+            .get(uri.clone())
+            .send()
+            .and_then(reqwest::blocking::Response::text)
+    }
 }
 
 impl Context for Parser {
@@ -41,20 +92,22 @@ impl Context for Parser {
         &mut self,
         simple_extension_uri: &SimpleExtensionURI,
     ) -> Result<&SimpleExtensions, ContextError> {
-        // Resolve the simple extension.
+        // Attempt to resolve the simple extension using the included extensions, else use the resolver.
         let simple_extension_str = match EXTENSIONS.get(simple_extension_uri.uri().as_str()) {
             Some(&path) => Cow::from(path),
-            None => blocking::get(simple_extension_uri.uri().clone())
-                .and_then(Response::text)
+            None => self
+                .resolver
+                .resolve(simple_extension_uri.uri())
                 .map(Cow::from)
-                .map_err(ContextError::FailedSimpleExtensionResolve)?,
+                .map_err(|e| ContextError::FailedSimpleExtensionResolve(e.into()))?,
         };
 
         // Deserialize.
-        let simple_extensions = serde_yaml::from_str::<text::simple_extensions::SimpleExtensions>(
-            &simple_extension_str,
-        )
-        .map_err(ContextError::InvalidSimpleExtensions)?;
+        let simple_extensions: text::simple_extensions::SimpleExtensions =
+            serde_yaml::from_str::<text::simple_extensions::SimpleExtensions>(
+                &simple_extension_str,
+            )
+            .map_err(ContextError::InvalidSimpleExtensions)?;
 
         // Parse.
         let simple_extensions = self.parse(simple_extensions)?;

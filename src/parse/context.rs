@@ -169,7 +169,7 @@ pub enum ContextError {
 
     /// Failed to resolve simple extension URI.
     #[error("failed to resolve simple extension URI: {0}")]
-    FailedSimpleExtensionResolve(reqwest::Error),
+    FailedSimpleExtensionResolve(anyhow::Error),
 
     /// Unsupported simple extension URI.
     #[error("unsupported simple extension URI: {0}")]
