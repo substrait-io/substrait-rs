@@ -1,5 +1,37 @@
 
 
+## 0.12.1 (2023-07-03)
+
+<csr-id-26748b8346c6d349877065d4798f7ecf085a8256/>
+
+### Chore
+
+ - <csr-id-26748b8346c6d349877065d4798f7ecf085a8256/> fix doc deployment file permissions
+   Change required to handle the [failed deploy
+   job](https://github.com/substrait-io/substrait-rs/actions/runs/5438507514/jobs/9889794289).
+   Caused by a change in the `upload-pages-artifact` action:
+   https://github.com/actions/upload-pages-artifact#file-permissions. Also
+   added an index file that redirects the client to the substrait crate
+   docs.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#112](https://github.com/substrait-io/substrait-rs/issues/112)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#112](https://github.com/substrait-io/substrait-rs/issues/112)**
+    - Fix doc deployment file permissions ([`26748b8`](https://github.com/substrait-io/substrait-rs/commit/26748b8346c6d349877065d4798f7ecf085a8256))
+</details>
+
 ## 0.12.0 (2023-07-02)
 
 <csr-id-c822997737ee92f246258a37265d54dffd0846b7/>
@@ -51,8 +83,8 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
- - 25 days passed between releases.
+ - 2 commits contributed to the release.
+ - 26 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#111](https://github.com/substrait-io/substrait-rs/issues/111)
 
@@ -64,6 +96,8 @@
 
  * **[#111](https://github.com/substrait-io/substrait-rs/issues/111)**
     - Bump substrait from `0.30.0` to `0.31.0` ([`c822997`](https://github.com/substrait-io/substrait-rs/commit/c822997737ee92f246258a37265d54dffd0846b7))
+ * **Uncategorized**
+    - Release substrait v0.12.0 ([`5cfeade`](https://github.com/substrait-io/substrait-rs/commit/5cfeade3c2772f8f4e9352e3edf02ae5b8bbc928))
 </details>
 
 ## 0.11.0 (2023-06-06)
