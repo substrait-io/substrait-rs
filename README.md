@@ -14,4 +14,4 @@ Rust crate for [Substrait](https://substrait.io/): Cross-Language Serialization 
 ## Documentation
 
 - [Docs (release)](https://docs.rs/substrait)
-- [Docs (main)](https://substrait-io.github.io/substrait-rs/substrait/)
+- [Docs (main)](https://substrait-io.github.io/substrait-rs/)
