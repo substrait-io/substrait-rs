@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
+//! Parsing of [proto::extensions::simple_extension_declaration::ExtensionFunction].
+
 use thiserror::Error;
 
 use crate::{

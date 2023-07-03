@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
+//! Parsing of [proto::extensions::simple_extension_declaration::ExtensionType].
+
 use crate::{
     parse::{
         extensions::simple_extension_uri::SimpleExtensionURI, Anchor, Context, ContextError, Name,

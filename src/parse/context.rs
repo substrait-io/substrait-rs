@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
+//! A parse context.
+
 use super::{
     extensions::{
         simple_extension_declaration::{ExtensionFunction, ExtensionType, ExtensionTypeVariation},

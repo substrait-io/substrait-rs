@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+
+//! A generic new type wrapper
+
 use std::{fmt, hash, marker::PhantomData};
 
 /// A generic new type wrapper for values of type `T` that belong to items of type `U`.
