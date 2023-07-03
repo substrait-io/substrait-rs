@@ -8,7 +8,7 @@ All contributors and contributions are welcome! Please open an issue on GitHub i
 
 Substrait follows the [Conventional Commits specification](https://www.conventionalcommits.org/en/v1.0.0/) for commit messages. This allows for automation of releases based on commit messages that are merged to the default branch.
 
-The `Conventional Commits` job of the [Pull Request](.github/workflows/pull-request.yml) workflow and the `Conventional Commits` job of the [Merge](.github/workflows/merge.yml) workflow check the Pull Request title and body and the resulting merge commit message.
+The `Conventional Commits` job of the [Pull Request](.github/workflows/pull-request.yml) workflow check the Pull Request title and body and the resulting merge commit message.
 
 ### Releases
 
@@ -17,10 +17,6 @@ Releases are published automatically with the [Release](./github/workflows/relea
 ### Dependabot
 
 substrait-rs uses [Depedendabot](https://docs.github.com/en/code-security/dependabot) to update dependencies using the [dependabot.yml](.github/dependabot.yml) configuration file.
-
-### Bors
-
-substrait-rs uses [bors](https://bors.tech/) to merge Pull Requests to prevent breaking the default branch using the [bors.toml](.github/bors.toml) configuration file.
 
 ### Prettier
 

@@ -1,5 +1,105 @@
 
 
+## 0.12.1 (2023-07-03)
+
+<csr-id-26748b8346c6d349877065d4798f7ecf085a8256/>
+
+### Chore
+
+ - <csr-id-26748b8346c6d349877065d4798f7ecf085a8256/> fix doc deployment file permissions
+   Change required to handle the [failed deploy
+   job](https://github.com/substrait-io/substrait-rs/actions/runs/5438507514/jobs/9889794289).
+   Caused by a change in the `upload-pages-artifact` action:
+   https://github.com/actions/upload-pages-artifact#file-permissions. Also
+   added an index file that redirects the client to the substrait crate
+   docs.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#112](https://github.com/substrait-io/substrait-rs/issues/112)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#112](https://github.com/substrait-io/substrait-rs/issues/112)**
+    - Fix doc deployment file permissions ([`26748b8`](https://github.com/substrait-io/substrait-rs/commit/26748b8346c6d349877065d4798f7ecf085a8256))
+</details>
+
+## 0.12.0 (2023-07-02)
+
+<csr-id-c822997737ee92f246258a37265d54dffd0846b7/>
+
+### Chore (BREAKING)
+
+ - <csr-id-c822997737ee92f246258a37265d54dffd0846b7/> bump substrait from `0.30.0` to `0.31.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `3259a1b` to `e486775`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/e486775009c40e1a010dc54776b976b1eddea7ca"><code>e486775</code></a>
+   chore(release): 0.31.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/a6ead70b1d62b79fad7ba2f9fdaf76c5b6d7696b"><code>a6ead70</code></a>
+   feat: add a two-arg variant of substring (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/513">#513</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/694340013433b1c0408c2a1cd77b22dfb9b22ad0"><code>6943400</code></a>
+   feat: add timestamp types to max/min function (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/511">#511</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/93a41d16bc3835a30be987d5b2c3cddb363ea7cb"><code>93a41d1</code></a>
+   chore(deps): update pymdown-extensions requirement (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/500">#500</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/9b763a008de8fac12622353ce65e856389dd1c0e"><code>9b763a0</code></a>
+   chore: add a CODEOWNERS file (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/454">#454</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/83dd1d3b481bcd93ee03a54d648f57dd2b1f3354"><code>83dd1d3</code></a>
+   ci: fetch collaborators from github (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/403">#403</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/3259a1bab342caac73ba3a3aaaff58cd9a91691b...e486775009c40e1a010dc54776b976b1eddea7ca">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 26 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#111](https://github.com/substrait-io/substrait-rs/issues/111)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#111](https://github.com/substrait-io/substrait-rs/issues/111)**
+    - Bump substrait from `0.30.0` to `0.31.0` ([`c822997`](https://github.com/substrait-io/substrait-rs/commit/c822997737ee92f246258a37265d54dffd0846b7))
+ * **Uncategorized**
+    - Release substrait v0.12.0 ([`5cfeade`](https://github.com/substrait-io/substrait-rs/commit/5cfeade3c2772f8f4e9352e3edf02ae5b8bbc928))
+</details>
+
 ## 0.11.0 (2023-06-06)
 
 <csr-id-ca60950ebc61981f5ef583d0a60e9f11e06a4329/>
@@ -190,7 +290,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 9 commits contributed to the release over the course of 28 calendar days.
+ - 10 commits contributed to the release over the course of 28 calendar days.
  - 29 days passed between releases.
  - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 9 unique issues were worked on: [#102](https://github.com/substrait-io/substrait-rs/issues/102), [#104](https://github.com/substrait-io/substrait-rs/issues/104), [#105](https://github.com/substrait-io/substrait-rs/issues/105), [#106](https://github.com/substrait-io/substrait-rs/issues/106), [#107](https://github.com/substrait-io/substrait-rs/issues/107), [#108](https://github.com/substrait-io/substrait-rs/issues/108), [#58](https://github.com/substrait-io/substrait-rs/issues/58), [#87](https://github.com/substrait-io/substrait-rs/issues/87), [#90](https://github.com/substrait-io/substrait-rs/issues/90)
@@ -219,6 +319,8 @@
     - Limit release job concurrency ([`5a7cf72`](https://github.com/substrait-io/substrait-rs/commit/5a7cf721800df05ddbe84aaf11091c7a0ed0e69c))
  * **[#90](https://github.com/substrait-io/substrait-rs/issues/90)**
     - Typo in .gitignore ([`6e5ca09`](https://github.com/substrait-io/substrait-rs/commit/6e5ca090b27e7dce785119060ef9ee9c53822b22))
+ * **Uncategorized**
+    - Release substrait v0.11.0 ([`313249e`](https://github.com/substrait-io/substrait-rs/commit/313249e2faffb67268632add1d0902468587a69c))
 </details>
 
 ## 0.9.0 (2023-05-08)
