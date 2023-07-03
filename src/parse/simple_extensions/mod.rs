@@ -147,7 +147,7 @@ fn rename_type_for_compound_signature(type_: &str) -> &str {
         "struct<T1,T2,…,TN>" => "struct",
         "list<T>" => "list",
         "map<K,V>" => "map",
-        r#"any[\d]?"# => "any",
+        r"any[\d]?" => "any",
         "user defined type" => "u!name",
         _ => panic!("unknown type"),
     }
