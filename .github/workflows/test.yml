@@ -171,5 +171,5 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo check --features ${{ matrix.feature }}
+      - run: cargo build --features ${{ matrix.feature }}
       - run: cargo package --features ${{ matrix.feature }} --allow-dirty
