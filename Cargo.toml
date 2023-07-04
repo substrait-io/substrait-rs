@@ -14,16 +14,14 @@ keywords = ["substrait"]
 build = "build.rs"
 include = [
   "build.rs",
+  "gen/",
   "LICENSE",
   "src/**/*.rs",
-  "src/extensions.in",
-  "src/version.in",
-  "src/version",
   "substrait/extensions/**/*.yaml",
   "substrait/LICENSE",
   "substrait/proto/**/*.proto",
   "substrait/README.md",
-  "substrait/text/**/*.yaml",
+  "substrait/text/**/*.yaml"
 ]
 
 [features]

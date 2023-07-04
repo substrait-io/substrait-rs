@@ -7,6 +7,7 @@ use std::{
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
+    str,
 };
 use walkdir::{DirEntry, WalkDir};
 
@@ -22,9 +23,11 @@ compile_error!("Either feature `serde` or `pbjson` can be enabled");
 fn substrait_version() -> Result<semver::Version, Box<dyn Error>> {
     use git2::{DescribeFormatOptions, DescribeOptions, Repository};
 
-    let substrait_version_in_file =
-        PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("src/version.in");
-    let substrait_version_file = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("src/version");
+    let gen_dir: &Path = Path::new("gen");
+    fs::create_dir_all(gen_dir)?;
+
+    let substrait_version_in_file = gen_dir.join("version.in");
+    let substrait_version_file = gen_dir.join("version");
 
     // Rerun if the Substrait submodule changed (to allow setting `dirty`)
     println!(
@@ -109,7 +112,7 @@ pub const SUBSTRAIT_GIT_DIRTY: bool = {git_dirty};
             // exist. If it does not, it means this is probably a Git build that
             // did not clone the substrait submodule.
             if !substrait_version_file.exists() {
-                panic!("Couldn't open the substrait submodule: {e}")
+                panic!("Couldn't open the substrait submodule: {e}. Please clone the submodule: `git submodule update --init`.")
             }
 
             // File exists we should get the version and return it.
@@ -182,11 +185,10 @@ pub mod {title} {{
 
 #[cfg(feature = "extensions")]
 /// Add Substrait core extensions
-fn extensions(version: semver::Version) -> Result<(), Box<dyn Error>> {
+fn extensions(version: semver::Version, out_dir: &Path) -> Result<(), Box<dyn Error>> {
     use std::collections::HashMap;
 
-    let substrait_extensions_file =
-        PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("src/extensions.in");
+    let substrait_extensions_file = out_dir.join("extensions.in");
 
     let mut output = String::from(
         r#"// SPDX-License-Identifier: Apache-2.0
@@ -222,8 +224,12 @@ fn extensions(version: semver::Version) -> Result<(), Box<dyn Error>> {
         output.push_str(&format!(
             r#"
 /// Included source of [`{name}`]({url}).
-pub const {var_name}: &str = include_str!("../{}");
+pub const {var_name}: &str = include_str!("{}/{}");
 "#,
+            PathBuf::from(dbg!(env::var("CARGO_MANIFEST_DIR").unwrap()))
+                // .strip_prefix(dbg!(env::var("CARGO_MANIFEST_DIR").unwrap()))
+                // .unwrap()
+                .display(),
             extension.display()
         ));
         map.insert(url, var_name);
@@ -258,7 +264,7 @@ pub static EXTENSIONS: Lazy<HashMap<&str, &str>> = Lazy::new(|| {
 
 #[cfg(feature = "serde")]
 /// Serialize deserialize implementations for proto types using `serde`
-fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
+fn serde(protos: &[impl AsRef<Path>], out_dir: &Path) -> Result<(), Box<dyn Error>> {
     use prost_types::DescriptorProto;
     use prost_wkt_build::{FileDescriptorSet, Message};
 
@@ -299,7 +305,7 @@ fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Er
 
 #[cfg(feature = "pbjson")]
 /// Serialize and deserialize implementations for proto types using `pbjson`
-fn pbjson(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
+fn pbjson(protos: &[impl AsRef<Path>], out_dir: &Path) -> Result<(), Box<dyn Error>> {
     use pbjson_build::Builder;
 
     let descriptor_path = out_dir.join("proto_descriptor.bin");
@@ -320,17 +326,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     // for use in docker build where file changes can be wonky
     println!("cargo:rerun-if-env-changed=FORCE_REBUILD");
 
-    let _version = substrait_version()?;
-
     #[cfg(feature = "protoc")]
     std::env::set_var("PROTOC", protobuf_src::protoc());
 
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let out_dir = PathBuf::from(env::var("OUT_DIR")?);
+    let out_dir = out_dir.as_path();
 
-    text(out_dir.as_path())?;
+    let _version = substrait_version()?;
+
+    text(out_dir)?;
 
     #[cfg(feature = "extensions")]
-    extensions(_version)?;
+    extensions(_version, out_dir)?;
 
     let protos = WalkDir::new(PROTO_ROOT)
         .into_iter()

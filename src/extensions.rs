@@ -6,4 +6,4 @@
 //! included in the packaged crate, ignored by git, and automatically kept
 //! in-sync.
 
-include!("extensions.in");
+include!(concat!(env!("OUT_DIR"), "/extensions.in"));
