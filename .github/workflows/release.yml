@@ -41,7 +41,6 @@ jobs:
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-release-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-
-            ${{ runner.os }}-cargo-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}

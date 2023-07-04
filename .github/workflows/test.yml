@@ -45,7 +45,6 @@ jobs:
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-check-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-
-            ${{ runner.os }}-cargo-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
@@ -84,7 +83,6 @@ jobs:
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-test-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-
-            ${{ runner.os }}-cargo-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
@@ -130,7 +128,6 @@ jobs:
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-clippy-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-
-            ${{ runner.os }}-cargo-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
@@ -168,7 +165,6 @@ jobs:
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-package-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-
-            ${{ runner.os }}-cargo-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
