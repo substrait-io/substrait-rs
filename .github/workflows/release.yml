@@ -16,6 +16,13 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     concurrency: release
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+        feature:
+          - full
     steps:
       - uses: actions/checkout@v3
         with:
@@ -29,16 +36,20 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-release-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-release-
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-release-
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-
             ${{ runner.os }}-cargo-
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo install cargo-smart-release --locked
-      - run: cargo check --features full
+      - run: cargo check --features ${{ matrix.feature }}
       - run: cargo changelog --execute substrait
       - run: |
           git config user.name github-actions[bot]

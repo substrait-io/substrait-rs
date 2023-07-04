@@ -19,6 +19,13 @@ jobs:
   rustdoc:
     name: Rustdoc
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - nightly
+        feature:
+          - full
     steps:
       - uses: actions/checkout@v3
         with:
@@ -32,15 +39,19 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-docs-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-rustdoc-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-docs-
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-rustdoc-
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-
             ${{ runner.os }}-cargo-
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo rustdoc --lib --features full -- --cfg docsrs
+      - run: cargo rustdoc --lib --features ${{ matrix.feature }} -- --cfg docsrs
       - run: chmod -c -R +rX "target/doc"
       - run: echo "<meta http-equiv=refresh content=0;url=substrait>" > target/doc/index.html
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'

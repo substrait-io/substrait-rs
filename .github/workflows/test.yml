@@ -40,8 +40,9 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-check-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-check-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-
             ${{ runner.os }}-cargo-
@@ -78,8 +79,9 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-test-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-test-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-
             ${{ runner.os }}-cargo-
@@ -123,8 +125,9 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-clippy-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-clippy-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-
             ${{ runner.os }}-cargo-
@@ -160,8 +163,9 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-package-${{ hashFiles('**/Cargo.toml') }}
           restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-package-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
             ${{ runner.os }}-cargo-${{ matrix.rust }}-
             ${{ runner.os }}-cargo-
