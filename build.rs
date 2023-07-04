@@ -296,7 +296,7 @@ fn serde(protos: &[impl AsRef<Path>], out_dir: &Path) -> Result<(), Box<dyn Erro
         .compile_protos(protos, &[PROTO_ROOT])?;
 
     prost_wkt_build::add_serde(
-        out_dir,
+        out_dir.to_path_buf(),
         FileDescriptorSet::decode(fs::read(descriptor_path)?.as_slice())?,
     );
 
