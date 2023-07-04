@@ -2,7 +2,13 @@
 
 name: Test
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+
+permissions:
+  actions: write
+  contents: read
 
 jobs:
   check:
@@ -26,6 +32,19 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-
+            ${{ runner.os }}-cargo-
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
@@ -41,6 +60,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        rust:
+          - stable
         feature:
           - full
           - serde
@@ -49,7 +70,22 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-
+            ${{ runner.os }}-cargo-
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -69,6 +105,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        rust:
+          - stable
         feature:
           - full
           - serde
@@ -77,7 +115,23 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-      - uses: dtolnay/rust-toolchain@clippy
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-
+            ${{ runner.os }}-cargo-
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: clippy
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -86,14 +140,36 @@ jobs:
   package:
     name: Package
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+        feature:
+          - full
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
           submodules: recursive
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ matrix.feature }}-
+            ${{ runner.os }}-cargo-${{ matrix.rust }}-
+            ${{ runner.os }}-cargo-
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo build
+      - run: cargo build --features ${{ matrix.feature }}
       - run: cargo package --allow-dirty

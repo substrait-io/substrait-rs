@@ -2,12 +2,15 @@
 
 name: Docs
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
 
 permissions:
+  actions: write
   contents: read
-  pages: write
   id-token: write
+  pages: write
 
 concurrency:
   group: ${{ github.ref }}
@@ -21,6 +24,18 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-docs-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-docs-
+            ${{ runner.os }}-cargo-
       - uses: dtolnay/rust-toolchain@nightly
       - uses: arduino/setup-protoc@v1
         with:

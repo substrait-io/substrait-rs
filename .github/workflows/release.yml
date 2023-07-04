@@ -7,6 +7,10 @@ on:
     branches:
       - main
 
+permissions:
+  actions: write
+  contents: write
+
 jobs:
   release:
     name: Release
@@ -17,12 +21,24 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-
+            ${{ runner.os }}-cargo-
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install cargo-smart-release --debug --locked
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo check
+      - run: cargo install cargo-smart-release --locked
+      - run: cargo check --features full
       - run: cargo changelog --execute substrait
       - run: |
           git config user.name github-actions[bot]
