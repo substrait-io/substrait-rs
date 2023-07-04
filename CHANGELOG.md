@@ -1,5 +1,33 @@
 
 
+## 0.12.2 (2023-07-03)
+
+<csr-id-9d6609152046771cdaee6b2cd4dba39d37dbec36/>
+
+### Chore
+
+ - <csr-id-9d6609152046771cdaee6b2cd4dba39d37dbec36/> update `CONTRIBUTING.md` to reflect workflow changes
+   We no longer use bors (#103) and the merge workflow was removed as part
+   of that change.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#109](https://github.com/substrait-io/substrait-rs/issues/109)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#109](https://github.com/substrait-io/substrait-rs/issues/109)**
+    - Update `CONTRIBUTING.md` to reflect workflow changes ([`9d66091`](https://github.com/substrait-io/substrait-rs/commit/9d6609152046771cdaee6b2cd4dba39d37dbec36))
+</details>
+
 ## 0.12.1 (2023-07-03)
 
 <csr-id-26748b8346c6d349877065d4798f7ecf085a8256/>
@@ -18,7 +46,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#112](https://github.com/substrait-io/substrait-rs/issues/112)
 
@@ -30,6 +58,8 @@
 
  * **[#112](https://github.com/substrait-io/substrait-rs/issues/112)**
     - Fix doc deployment file permissions ([`26748b8`](https://github.com/substrait-io/substrait-rs/commit/26748b8346c6d349877065d4798f7ecf085a8256))
+ * **Uncategorized**
+    - Release substrait v0.12.1 ([`a96b3b1`](https://github.com/substrait-io/substrait-rs/commit/a96b3b1945c81a59330a0dcf3671a90bf6f50a9b))
 </details>
 
 ## 0.12.0 (2023-07-02)
