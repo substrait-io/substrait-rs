@@ -1,5 +1,175 @@
 
 
+## 0.12.3 (2023-07-18)
+
+<csr-id-59644c4b9cab3f0330372dd7883805c0627f02c1/>
+
+### Chore
+
+ - <csr-id-59644c4b9cab3f0330372dd7883805c0627f02c1/> bump actions/upload-pages-artifact from 1 to 2
+   Bumps
+   [actions/upload-pages-artifact](https://github.com/actions/upload-pages-artifact)
+   from 1 to 2.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/upload-pages-artifact/releases">actions/upload-pages-artifact's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v2.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>:warning: <strong>BREAKING CHANGE:</strong> Remove built-in
+   <code>chmod</code> commands for <code>v2</code> <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/69">#69</a>)</li>
+   <li>Update README for <code>v2</code> <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/70">#70</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v1.0.10...v2.0.0">all
+   code changes</a> since previous release.</p>
+   <h2>v1.0.10</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>readme: fix/improve note about permissions <a
+   href="https://github.com/tshepang"><code>@​tshepang</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/65">#65</a>)</li>
+   <li>Revert <code>chmod</code> removal for <code>v1</code> <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/68">#68</a>)</li>
+   <li>Add file perms handling <a
+   href="https://github.com/tsusdere"><code>@​tsusdere</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/64">#64</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v1.0.9...v1.0.10">all
+   code changes</a> since previous release.</p>
+   <h2>v1.0.9</h2>
+   <p>Removed <code>chmod</code> as we moved towards trusting correct file
+   permissions have been set. In the event this isn't the case then we
+   raise an error in the action related to the file permissions.</p>
+   <h2>v1.0.8</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Fail if no artifact file is found to upload <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/55">#55</a>)</li>
+   <li>Fix link to releases in README <a
+   href="https://github.com/waldyrious"><code>@​waldyrious</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/53">#53</a>)</li>
+   <li>Bump actions/publish-action from 0.2.1 to 0.2.2 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/47">#47</a>)</li>
+   <li>Add Dependabot config for Actions usage updates <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/46">#46</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v1.0.7...v1.0.8">all
+   code changes</a> since previous release.</p>
+   <h2>v1.0.7</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Don't change file permissions of other files <a
+   href="https://github.com/KyeRussell"><code>@​KyeRussell</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/44">#44</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v1.0.6...v1.0.7">all
+   code changes</a> since previous release.</p>
+   <h2>v1.0.6</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Customize artifact name <a
+   href="https://github.com/yuradanyliuk"><code>@​yuradanyliuk</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/41">#41</a>)</li>
+   <li>Fix permissions <a
+   href="https://github.com/yoannchaudet"><code>@​yoannchaudet</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/42">#42</a>)</li>
+   <li>Print warnings about changed file permissions in bulk <a
+   href="https://github.com/TooManyBees"><code>@​TooManyBees</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/38">#38</a>)</li>
+   <li>Update to latest <code>actions/publish-action</code> <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/36">#36</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v1.0.5...v1.0.6">all
+   code changes</a> since previous release.</p>
+   <h2>v1.0.5</h2>
+   <h1>Changelog</h1>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/a753861a5debcf57bf8b404356158c8e1e33150c"><code>a753861</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/69">#69</a>
+   from actions/reapply-chmod-removal-for-v2</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/dca6bac0e5d658c10e82a0e89fa26dd05f9ef2e3"><code>dca6bac</code></a>
+   Merge branch 'main' into reapply-chmod-removal-for-v2</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/3138c054964e4f34b7f958dc2ae603b51877d906"><code>3138c05</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/70">#70</a>
+   from actions/v2-docs-improvements</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/07f501f6a0ff8cef2d64e4037d704f79061a4bd5"><code>07f501f</code></a>
+   Update README for <code>v2</code></li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/9c071e6bed590ca0b53a706c2d01ad1c39faf659"><code>9c071e6</code></a>
+   Reapply PR <a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/63">#63</a>
+   for v2</li>
+   <li>See full diff in <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v1...v2">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/upload-pages-artifact&package-manager=github_actions&previous-version=1&new-version=2)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 14 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#113](https://github.com/substrait-io/substrait-rs/issues/113)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#113](https://github.com/substrait-io/substrait-rs/issues/113)**
+    - Bump actions/upload-pages-artifact from 1 to 2 ([`59644c4`](https://github.com/substrait-io/substrait-rs/commit/59644c4b9cab3f0330372dd7883805c0627f02c1))
+</details>
+
 ## 0.12.2 (2023-07-03)
 
 <csr-id-9d6609152046771cdaee6b2cd4dba39d37dbec36/>
@@ -14,7 +184,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#109](https://github.com/substrait-io/substrait-rs/issues/109)
 
@@ -26,6 +196,8 @@
 
  * **[#109](https://github.com/substrait-io/substrait-rs/issues/109)**
     - Update `CONTRIBUTING.md` to reflect workflow changes ([`9d66091`](https://github.com/substrait-io/substrait-rs/commit/9d6609152046771cdaee6b2cd4dba39d37dbec36))
+ * **Uncategorized**
+    - Release substrait v0.12.2 ([`5da1b55`](https://github.com/substrait-io/substrait-rs/commit/5da1b555e2d67bd2a6b9a50b56d2037bd501120a))
 </details>
 
 ## 0.12.1 (2023-07-03)
