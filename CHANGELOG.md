@@ -1,5 +1,132 @@
 
 
+## 0.12.4 (2023-08-02)
+
+<csr-id-e68707c74066bd0c1069d6fc135336edc2cd26d7/>
+
+### Chore
+
+ - <csr-id-e68707c74066bd0c1069d6fc135336edc2cd26d7/> bump arduino/setup-protoc from 1 to 2
+   Bumps [arduino/setup-protoc](https://github.com/arduino/setup-protoc)
+   from 1 to 2.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/arduino/setup-protoc/releases">arduino/setup-protoc's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v2.0.0</h2>
+   <h2>Changelog</h2>
+   <p>Adding support for the <code>MINOR.PATCH</code> tag naming</p>
+   <h3>Breaking</h3>
+   <ul>
+   <li>Support only the new protobuf versioning scheme <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/78">arduino/setup-protoc#78</a></li>
+   </ul>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/arduino/setup-protoc/compare/v1.3.0...v2.0.0">https://github.com/arduino/setup-protoc/compare/v1.3.0...v2.0.0</a></p>
+   <h2>Contributors</h2>
+   <ul>
+   <li><a href="https://github.com/ajasmin"><code>@​ajasmin</code></a></li>
+   <li><a
+   href="https://github.com/woodruffw"><code>@​woodruffw</code></a></li>
+   <li><a href="https://github.com/zeisss"><code>@​zeisss</code></a></li>
+   </ul>
+   <h2>v1.3.0</h2>
+   <h2>Changelog</h2>
+   <h3>Enhancement</h3>
+   <ul>
+   <li>Support ARM64 and other platforms (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/44">#44</a>
+   )</li>
+   </ul>
+   <h2>Full Changeset</h2>
+   <p><a
+   href="https://github.com/arduino/setup-protoc/compare/v1.2.0...v1.3.0">https://github.com/arduino/setup-protoc/compare/v1.2.0...v1.3.0</a></p>
+   <h2>Contributors</h2>
+   <ul>
+   <li><a
+   href="https://github.com/adamchalmers"><code>@​adamchalmers</code></a></li>
+   <li><a href="https://github.com/nbaztec"><code>@​nbaztec</code></a></li>
+   </ul>
+   <h2>v1.2.0</h2>
+   <h2>Changelog</h2>
+   <h3>Enhancement</h3>
+   <ul>
+   <li>Add security policy link to readme (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/19">#19</a>)
+   in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/19">arduino/setup-protoc#19</a></li>
+   <li>Bump Node version to 16 (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/48">#48</a>)
+   <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/48">arduino/setup-protoc#48</a></li>
+   </ul>
+   <h3>Full Changeset</h3>
+   <p><a
+   href="https://github.com/arduino/setup-protoc/compare/v1.1.2...v1.2.0">https://github.com/arduino/setup-protoc/compare/v1.1.2...v1.2.0</a></p>
+   <h2>v1.1.2</h2>
+   <ul>
+   <li>Bump lodash from 4.17.15 to 4.17.19 <a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/8">#8</a></li>
+   <li>Bump <code>@​actions/core</code> from 1.0.0 to 1.2.6 <a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/12">#12</a></li>
+   <li>Add pagination logic when checking for versions <a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/1">#1</a></li>
+   </ul>
+   <h2>v1.1.1</h2>
+   <ul>
+   <li>Define <code>repo-token</code> input in metadata</li>
+   </ul>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/arduino/setup-protoc/commit/9b1ee5b22b0a3f1feb8c2ff99b32c89b3c3191e9"><code>9b1ee5b</code></a>
+   v2 release note (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/82">#82</a>)</li>
+   <li><a
+   href="https://github.com/arduino/setup-protoc/commit/28fd3e5ddcc4ae8820e0c2085bfea8ab68f631e3"><code>28fd3e5</code></a>
+   Support only the new protobuf versioning scheme (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/78">#78</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/arduino/setup-protoc/compare/v1...v2">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=arduino/setup-protoc&package-manager=github_actions&previous-version=1&new-version=2)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 14 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#116](https://github.com/substrait-io/substrait-rs/issues/116)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#116](https://github.com/substrait-io/substrait-rs/issues/116)**
+    - Bump arduino/setup-protoc from 1 to 2 ([`e68707c`](https://github.com/substrait-io/substrait-rs/commit/e68707c74066bd0c1069d6fc135336edc2cd26d7))
+</details>
+
 ## 0.12.3 (2023-07-18)
 
 <csr-id-59644c4b9cab3f0330372dd7883805c0627f02c1/>
@@ -155,8 +282,8 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
- - 14 days passed between releases.
+ - 2 commits contributed to the release.
+ - 15 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#113](https://github.com/substrait-io/substrait-rs/issues/113)
 
@@ -168,6 +295,8 @@
 
  * **[#113](https://github.com/substrait-io/substrait-rs/issues/113)**
     - Bump actions/upload-pages-artifact from 1 to 2 ([`59644c4`](https://github.com/substrait-io/substrait-rs/commit/59644c4b9cab3f0330372dd7883805c0627f02c1))
+ * **Uncategorized**
+    - Release substrait v0.12.3 ([`40a5c29`](https://github.com/substrait-io/substrait-rs/commit/40a5c296c2bb12e673d5920340e1bd46b4cd8195))
 </details>
 
 ## 0.12.2 (2023-07-03)
