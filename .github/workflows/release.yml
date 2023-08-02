@@ -19,7 +19,7 @@ jobs:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo install cargo-smart-release --debug --locked
-      - uses: arduino/setup-protoc@v1
+      - uses: arduino/setup-protoc@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo check
