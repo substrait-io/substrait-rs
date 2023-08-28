@@ -1,5 +1,86 @@
 
 
+## 0.13.0 (2023-08-28)
+
+<csr-id-920ba0d9ad7a385eea443b4ea4b173ed02b87303/>
+
+### Chore (BREAKING)
+
+ - <csr-id-920ba0d9ad7a385eea443b4ea4b173ed02b87303/> bump substrait from `0.31.0` to `0.33.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `e486775` to `51765cc`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/51765cccd92fa0014e9cf077cc8cc952731f33d0"><code>51765cc</code></a>
+   chore(release): 0.33.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/2da2afad579a428bb8f7460a153a1799af5c6ee3"><code>2da2afa</code></a>
+   feat: add radians and degrees functions (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/544">#544</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/8969a40832c64a4a85ff14e61f5f22374506b161"><code>8969a40</code></a>
+   docs: clarify compound extension signature naming for bools (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/545">#545</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/31b999060a6e014717f9ae3e6716986ad3066aaf"><code>31b9990</code></a>
+   chore(release): 0.32.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/bd14e0e40782dbd0fa49de597ec30217b48961f2"><code>bd14e0e</code></a>
+   feat: add windowrel support in proto (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/399">#399</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/90780416e36003b885437b4922c0aa6194ba834d"><code>9078041</code></a>
+   ci: pre-commit updates (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/542">#542</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/ede90abba5d4ef02da97ba618ccbd85de963c2e1"><code>ede90ab</code></a>
+   chore(deps): bump bufbuild/buf-setup-action from 1.26.0 to 1.26.1 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/541">#541</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/65c96636bf60f166802cd60ab4a36734e0cc7f22"><code>65c9663</code></a>
+   chore(deps): bump bufbuild/buf-setup-action from 1.16.0 to 1.26.0 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/539">#539</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/98380b0dd1dd9eb30457800ec49d7912b5dce11f"><code>98380b0</code></a>
+   feat: add expand rel (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/368">#368</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/2503beb3c872928483c05f76bf74d18188c84798"><code>2503beb</code></a>
+   feat!: require compound functions names in extension references (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/537">#537</a>)</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/substrait-io/substrait/compare/e486775009c40e1a010dc54776b976b1eddea7ca...51765cccd92fa0014e9cf077cc8cc952731f33d0">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 25 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#119](https://github.com/substrait-io/substrait-rs/issues/119)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#119](https://github.com/substrait-io/substrait-rs/issues/119)**
+    - Bump substrait from `0.31.0` to `0.33.0` ([`920ba0d`](https://github.com/substrait-io/substrait-rs/commit/920ba0d9ad7a385eea443b4ea4b173ed02b87303))
+</details>
+
 ## 0.12.4 (2023-08-02)
 
 <csr-id-e68707c74066bd0c1069d6fc135336edc2cd26d7/>
@@ -112,7 +193,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 14 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#116](https://github.com/substrait-io/substrait-rs/issues/116)
@@ -125,6 +206,8 @@
 
  * **[#116](https://github.com/substrait-io/substrait-rs/issues/116)**
     - Bump arduino/setup-protoc from 1 to 2 ([`e68707c`](https://github.com/substrait-io/substrait-rs/commit/e68707c74066bd0c1069d6fc135336edc2cd26d7))
+ * **Uncategorized**
+    - Release substrait v0.12.4 ([`27bad38`](https://github.com/substrait-io/substrait-rs/commit/27bad38ce578f02bd66951901732920b734a0762))
 </details>
 
 ## 0.12.3 (2023-07-18)
