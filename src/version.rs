@@ -64,6 +64,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::assertions_on_constants)]
     fn not_dirty() {
         // There should be no `dirty` in the describe output.
         assert!(!super::SUBSTRAIT_GIT_DESCRIBE.contains("dirty"));
