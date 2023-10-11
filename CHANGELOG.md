@@ -1,5 +1,89 @@
 
 
+## 0.17.0 (2023-10-11)
+
+<csr-id-bd038395adf909bacc590c0c0c651bc0d6f13902/>
+
+### Chore (BREAKING)
+
+ - <csr-id-bd038395adf909bacc590c0c0c651bc0d6f13902/> update prost and pbjson crates
+   Updates the requirements on [prost](https://github.com/tokio-rs/prost)
+   to permit the latest version.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/10582c2f674a1f4618e9fb8d380081136340ac84"><code>10582c2</code></a>
+   release 0.12.0</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/7ce9b9756ba1ca0c6228931e2a9ff7859931ac95"><code>7ce9b97</code></a>
+   feat: <code>Name</code> trait + <code>Any</code> encoding support (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/896">#896</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/f9a3cfff07536a412e4f96f5ea3749c52c50170f"><code>f9a3cff</code></a>
+   Make Debug impl optional for types (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/797">#797</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/6180f9fa3a93e42572633cb0b0610dcb0690c508"><code>6180f9f</code></a>
+   docs: fix protoc install link (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/900">#900</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/1d7405803004e85f58511af2a439460b4237a0e2"><code>1d74058</code></a>
+   prost-build: do not escape brackets followed by parenthesis in comments
+   (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/851">#851</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/413b0299e0d0e73b6085ad9b897fb7ec7e63cb2a"><code>413b029</code></a>
+   chore: Bump MSRV to 1.64 (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/902">#902</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/ca73cbe4bbcbdb4f3d30455a090ff50209dc1fc3"><code>ca73cbe</code></a>
+   feat: add TryFrom&lt;i32&gt; implementation to Enumeration (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/853">#853</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/9c877ce32ec0c465e437144c1bf4a27cb3aa705c"><code>9c877ce</code></a>
+   chore: Update ci (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/854">#854</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/65451cc4cbffaca578de1a8f4a218cca2ec1c9ac"><code>65451cc</code></a>
+   Fix <code>non_snake_case</code> warning on generated identity functions
+   (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/891">#891</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/80fb9d18b7af2c82a8f54fb6c9e7ccfa4d5629ce"><code>80fb9d1</code></a>
+   release 0.11.9 (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/842">#842</a>)
+   (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/895">#895</a>)</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/tokio-rs/prost/compare/prost-build-0.11.1...v0.12.0">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   You can trigger a rebase of this PR by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 2 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#121](https://github.com/substrait-io/substrait-rs/issues/121)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#121](https://github.com/substrait-io/substrait-rs/issues/121)**
+    - Update prost and pbjson crates ([`bd03839`](https://github.com/substrait-io/substrait-rs/commit/bd038395adf909bacc590c0c0c651bc0d6f13902))
+</details>
+
 ## 0.16.0 (2023-10-09)
 
 <csr-id-f2ee3e734d9849e714051b321de5ea618919a7a6/>
@@ -35,7 +119,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#131](https://github.com/substrait-io/substrait-rs/issues/131)
@@ -48,6 +132,8 @@
 
  * **[#131](https://github.com/substrait-io/substrait-rs/issues/131)**
     - Bump substrait from `0.35.0` to `0.36.0` ([`f2ee3e7`](https://github.com/substrait-io/substrait-rs/commit/f2ee3e734d9849e714051b321de5ea618919a7a6))
+ * **Uncategorized**
+    - Release substrait v0.16.0 ([`99760d8`](https://github.com/substrait-io/substrait-rs/commit/99760d885e4fad739efa1fab1a47762aa5f3aa29))
 </details>
 
 ## 0.15.0 (2023-10-02)
