@@ -1,5 +1,63 @@
 
 
+## 0.19.0 (2023-11-06)
+
+<csr-id-7f91d6243d399014bafbe48ef75ff361bfaab386/>
+
+### Chore (BREAKING)
+
+ - <csr-id-7f91d6243d399014bafbe48ef75ff361bfaab386/> bump substrait from `0.37.0` to `0.38.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `52e81a9` to `bdff923`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/bdff9232d858b0b73526bcc115921d39eaaf492d"><code>bdff923</code></a>
+   chore(release): 0.38.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/b3071bc9cd77cf916568641c83056a285f8123be"><code>b3071bc</code></a>
+   feat: add least and greatest functions to functions_comparison.yml (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/247">#247</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/6c88a1e1a6d8a8a05a3b5b8a141309009d62be29"><code>6c88a1e</code></a>
+   chore(deps): Bump bufbuild/buf-setup-action from 1.27.1 to 1.27.2 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/569">#569</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/2d9f1b95a4bef196aa0e27a8e9425f12ee8f2998"><code>2d9f1b9</code></a>
+   chore(deps): Bump actions/setup-node from 3 to 4 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/568">#568</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/52e81a9fe725881036eddaa77ae0dba8b2ad6f83...bdff9232d858b0b73526bcc115921d39eaaf492d">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 13 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#137](https://github.com/substrait-io/substrait-rs/issues/137)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#137](https://github.com/substrait-io/substrait-rs/issues/137)**
+    - Bump substrait from `0.37.0` to `0.38.0` ([`7f91d62`](https://github.com/substrait-io/substrait-rs/commit/7f91d6243d399014bafbe48ef75ff361bfaab386))
+</details>
+
 ## 0.18.1 (2023-10-24)
 
 <csr-id-47d00137150f3d15b813d0c366d518efd389d792/>
@@ -165,7 +223,8 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
+ - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#135](https://github.com/substrait-io/substrait-rs/issues/135)
 
@@ -177,6 +236,8 @@
 
  * **[#135](https://github.com/substrait-io/substrait-rs/issues/135)**
     - Bump actions/setup-node from 3 to 4 ([`47d0013`](https://github.com/substrait-io/substrait-rs/commit/47d00137150f3d15b813d0c366d518efd389d792))
+ * **Uncategorized**
+    - Release substrait v0.18.1 ([`15f467a`](https://github.com/substrait-io/substrait-rs/commit/15f467a7b276acd76247317b47894737722b999d))
 </details>
 
 ## 0.18.0 (2023-10-23)
