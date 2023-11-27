@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(
+    clippy::large_enum_variant,
+    clippy::needless_borrow,
+    clippy::needless_borrows_for_generic_args
+)]
+
 //! Generated types for the protobuf `substrait` package
 
 /// Generated types for the protobuf `substrait.extensions` package
