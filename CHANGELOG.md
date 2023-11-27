@@ -1,5 +1,36 @@
 
 
+## 0.20.0 (2023-11-27)
+
+<csr-id-6c5055baa8b6522a419f02ac550a07f9d9d0fedc/>
+
+### Chore (BREAKING)
+
+ - <csr-id-6c5055baa8b6522a419f02ac550a07f9d9d0fedc/> bump substrait from `0.38.0` to `0.39.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `bdff923` to `8f8d85e`.
+   
+   ---------
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 20 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#139](https://github.com/substrait-io/substrait-rs/issues/139)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#139](https://github.com/substrait-io/substrait-rs/issues/139)**
+    - Bump substrait from `0.38.0` to `0.39.0` ([`6c5055b`](https://github.com/substrait-io/substrait-rs/commit/6c5055baa8b6522a419f02ac550a07f9d9d0fedc))
+</details>
+
 ## 0.19.0 (2023-11-06)
 
 <csr-id-7f91d6243d399014bafbe48ef75ff361bfaab386/>
@@ -43,7 +74,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 13 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#137](https://github.com/substrait-io/substrait-rs/issues/137)
@@ -56,6 +87,8 @@
 
  * **[#137](https://github.com/substrait-io/substrait-rs/issues/137)**
     - Bump substrait from `0.37.0` to `0.38.0` ([`7f91d62`](https://github.com/substrait-io/substrait-rs/commit/7f91d6243d399014bafbe48ef75ff361bfaab386))
+ * **Uncategorized**
+    - Release substrait v0.19.0 ([`1d8e21f`](https://github.com/substrait-io/substrait-rs/commit/1d8e21f653a92531272ffdf346c9a6bd6aef452f))
 </details>
 
 ## 0.18.1 (2023-10-24)
