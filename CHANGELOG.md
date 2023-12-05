@@ -1,5 +1,172 @@
 
 
+## 0.20.1 (2023-12-05)
+
+<csr-id-c2d9ea0e39cd5e32a118b650d55c019171b6900e/>
+
+### Chore
+
+ - <csr-id-c2d9ea0e39cd5e32a118b650d55c019171b6900e/> bump actions/deploy-pages from 2 to 3
+   Bumps [actions/deploy-pages](https://github.com/actions/deploy-pages)
+   from 2 to 3.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/deploy-pages/releases">actions/deploy-pages's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v3.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Update action to node20 <a
+   href="https://github.com/takost"><code>@​takost</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/256">#256</a>)</li>
+   </ul>
+   <hr />
+   <p>See details of <a
+   href="https://github.com/actions/deploy-pages/compare/v2.0.5...v3.0.0">all
+   code changes</a> since previous release.</p>
+   <p>:warning: For use with products other than GitHub.com, such as GitHub
+   Enterprise Server, please consult the <a
+   href="https://github.com/actions/deploy-pages/#compatibilty">compatibility
+   table</a>.</p>
+   <h2>v2.0.5</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Bump prettier from 3.0.0 to 3.1.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/264">#264</a>)</li>
+   <li>Bump <code>@​octokit/request-error</code> from 5.0.0 to 5.0.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/263">#263</a>)</li>
+   <li>Bump <code>@​actions/http-client</code> from 2.1.0 to 2.2.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/262">#262</a>)</li>
+   <li>Bump <code>@​vercel/ncc</code> from 0.36.1 to 0.38.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/260">#260</a>)</li>
+   <li>Bump eslint from 8.44.0 to 8.54.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/257">#257</a>)</li>
+   <li>Bump nock from 13.3.1 to 13.3.8 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/254">#254</a>)</li>
+   <li>Bump actions/setup-node from 3 to 4 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/246">#246</a>)</li>
+   <li>Bump release-drafter/release-drafter from 5.24.0 to 5.25.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/245">#245</a>)</li>
+   <li>Bump eslint-plugin-github from 4.8.0 to 4.10.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/232">#232</a>)</li>
+   <li>Bump jest from 29.6.1 to 29.7.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/224">#224</a>)</li>
+   <li>Fix cosmetic error by replacing comma with period <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/210">#210</a>)</li>
+   <li>Bump actions/checkout from 3 to 4 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/220">#220</a>)</li>
+   <li>Bump eslint-config-prettier from 8.8.0 to 9.0.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/209">#209</a>)</li>
+   <li>Remove &quot;beta&quot; disclaimer from README <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/243">#243</a>)</li>
+   </ul>
+   <hr />
+   <p>See details of <a
+   href="https://github.com/actions/deploy-pages/compare/v2.0.4...v2.0.5">all
+   code changes</a> since previous release.</p>
+   <p>:warning: For use with products other than GitHub.com, such as GitHub
+   Enterprise Server, please consult the <a
+   href="https://github.com/actions/deploy-pages/#compatibilty">compatibility
+   table</a>.</p>
+   <h2>v2.0.4</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Update GHES compatibility table after verifying with
+   <code>3.9.x</code> <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/201">#201</a>)</li>
+   <li>Bump <code>@​octokit/request-error</code> from 4.0.1 to 5.0.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/194">#194</a>)</li>
+   <li>Bump prettier from 2.8.8 to 3.0.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/196">#196</a>)</li>
+   <li>Bump jest from 29.5.0 to 29.6.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/195">#195</a>)</li>
+   <li>Bump release-drafter/release-drafter from 5.23.0 to 5.24.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/192">#192</a>)</li>
+   <li>Bump eslint from 8.42.0 to 8.44.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/191">#191</a>)</li>
+   <li>Remove circular JSON references for error debugging <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/197">#197</a>)</li>
+   </ul>
+   <hr />
+   <p>See details of <a
+   href="https://github.com/actions/deploy-pages/compare/v2.0.3...v2.0.4">all
+   code changes</a> since previous release.</p>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/deploy-pages/commit/77d7344265e1f960dab5c00dbff52287a70b0d4f"><code>77d7344</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/deploy-pages/issues/256">#256</a>
+   from takost/update-to-node-20</li>
+   <li><a
+   href="https://github.com/actions/deploy-pages/commit/84abb89dc54f5055b934ca7dec97480f1a16f6bb"><code>84abb89</code></a>
+   Merge branch 'main' into update-to-node-20</li>
+   <li>See full diff in <a
+   href="https://github.com/actions/deploy-pages/compare/v2...v3">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/deploy-pages&package-manager=github_actions&previous-version=2&new-version=3)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 7 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#140](https://github.com/substrait-io/substrait-rs/issues/140)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#140](https://github.com/substrait-io/substrait-rs/issues/140)**
+    - Bump actions/deploy-pages from 2 to 3 ([`c2d9ea0`](https://github.com/substrait-io/substrait-rs/commit/c2d9ea0e39cd5e32a118b650d55c019171b6900e))
+</details>
+
 ## 0.20.0 (2023-11-27)
 
 <csr-id-6c5055baa8b6522a419f02ac550a07f9d9d0fedc/>
@@ -16,7 +183,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 20 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#139](https://github.com/substrait-io/substrait-rs/issues/139)
@@ -29,6 +196,8 @@
 
  * **[#139](https://github.com/substrait-io/substrait-rs/issues/139)**
     - Bump substrait from `0.38.0` to `0.39.0` ([`6c5055b`](https://github.com/substrait-io/substrait-rs/commit/6c5055baa8b6522a419f02ac550a07f9d9d0fedc))
+ * **Uncategorized**
+    - Release substrait v0.20.0 ([`2f0f42f`](https://github.com/substrait-io/substrait-rs/commit/2f0f42f975364a82e49074fa04a10f3f35386853))
 </details>
 
 ## 0.19.0 (2023-11-06)
