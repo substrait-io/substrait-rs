@@ -1,5 +1,189 @@
 
 
+## 0.20.2 (2023-12-05)
+
+<csr-id-d8912a529e86b82e200d9bbbb63dafa1d6c06a76/>
+
+### Chore
+
+ - <csr-id-d8912a529e86b82e200d9bbbb63dafa1d6c06a76/> bump actions/configure-pages from 3 to 4
+   Bumps
+   [actions/configure-pages](https://github.com/actions/configure-pages)
+   from 3 to 4.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/configure-pages/releases">actions/configure-pages's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v4.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Use a centralized <code>.node-version</code> file <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/117">#117</a>)</li>
+   <li>Update action to node20 <a
+   href="https://github.com/takost"><code>@​takost</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/108">#108</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/configure-pages/compare/v3.0.7...v4.0.0">all
+   code changes</a> since previous release.</p>
+   <h2>v3.0.7</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Update Actions workflows to use Node 20.x <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/116">#116</a>)</li>
+   <li>Bump eslint-plugin-github from 4.7.0 to 4.10.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/114">#114</a>)</li>
+   <li>Bump word-wrap from 1.2.3 to 1.2.5 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/113">#113</a>)</li>
+   <li>Bump jest from 29.5.0 to 29.7.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/112">#112</a>)</li>
+   <li>Bump <code>@​babel/traverse</code> from 7.21.3 to 7.23.5 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/110">#110</a>)</li>
+   <li>Bump espree from 9.5.2 to 9.6.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/111">#111</a>)</li>
+   <li>Bump eslint from 8.38.0 to 8.40.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/93">#93</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/configure-pages/compare/v3.0.6...v3.0.7">all
+   code changes</a> since previous release.</p>
+   <h2>v3.0.6</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Bump eslint from 8.36.0 to 8.38.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/89">#89</a>)</li>
+   <li>Bump eslint-plugin-github from 4.6.1 to 4.7.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/86">#86</a>)</li>
+   <li>Bump eslint-config-prettier from 8.7.0 to 8.8.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/85">#85</a>)</li>
+   <li>Bump prettier from 2.8.6 to 2.8.7 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/84">#84</a>)</li>
+   <li>Make &quot;Get Pages failed&quot; error message more helpful <a
+   href="https://github.com/WofWca"><code>@​WofWca</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/83">#83</a>)</li>
+   <li>Bump prettier from 2.8.4 to 2.8.6 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/81">#81</a>)</li>
+   <li>Add a CodeQL security scanning workflow <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/68">#68</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/configure-pages/compare/v3.0.5...v3.0.6">all
+   code changes</a> since previous release.</p>
+   <h2>v3.0.5</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Bump jest from 29.4.3 to 29.5.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/77">#77</a>)</li>
+   <li>Bump eslint from 8.35.0 to 8.36.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/76">#76</a>)</li>
+   <li>Bump espree from 9.4.1 to 9.5.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/78">#78</a>)</li>
+   <li>Bump eslint-config-prettier from 8.6.0 to 8.7.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/75">#75</a>)</li>
+   <li>Bump eslint from 8.34.0 to 8.35.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/73">#73</a>)</li>
+   <li>Bump jest from 29.4.1 to 29.4.3 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/72">#72</a>)</li>
+   <li>Bump eslint-plugin-github from 4.6.0 to 4.6.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/71">#71</a>)</li>
+   <li>Amend token coverage for enablement in Action metadata file <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/51">#51</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/configure-pages/compare/v3.0.4...v3.0.5">all
+   code changes</a> since previous release.</p>
+   <h2>v3.0.4</h2>
+   <h1>Changelog</h1>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/1f0c5cde4bc74cd7e1254d0cb4de8d49e9068c7d"><code>1f0c5cd</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/configure-pages/issues/117">#117</a>
+   from actions/use-node-version-file</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/591bb0deb9c3f137206bbbabf9b07b6161afc6ba"><code>591bb0d</code></a>
+   Merge branch 'main' into use-node-version-file</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/1465f012e6e7718cdf7bc61874e613e1e67ed84f"><code>1465f01</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/configure-pages/issues/108">#108</a>
+   from takost/update-to-node-20</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/f2fc55313325af8b5ee6da799ed072a114df7416"><code>f2fc553</code></a>
+   Merge branch 'main' into update-to-node-20</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/373694e352893db5ef78de6f321e8d55c860f7b6"><code>373694e</code></a>
+   Use a centralized .node-version file</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/3a014131e99a7bf2daf896787a8f92789126d038"><code>3a01413</code></a>
+   Update action to node20</li>
+   <li>See full diff in <a
+   href="https://github.com/actions/configure-pages/compare/v3...v4">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/configure-pages&package-manager=github_actions&previous-version=3&new-version=4)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#141](https://github.com/substrait-io/substrait-rs/issues/141)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#141](https://github.com/substrait-io/substrait-rs/issues/141)**
+    - Bump actions/configure-pages from 3 to 4 ([`d8912a5`](https://github.com/substrait-io/substrait-rs/commit/d8912a529e86b82e200d9bbbb63dafa1d6c06a76))
+</details>
+
 ## 0.20.1 (2023-12-05)
 
 <csr-id-c2d9ea0e39cd5e32a118b650d55c019171b6900e/>
@@ -152,7 +336,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#140](https://github.com/substrait-io/substrait-rs/issues/140)
@@ -165,6 +349,8 @@
 
  * **[#140](https://github.com/substrait-io/substrait-rs/issues/140)**
     - Bump actions/deploy-pages from 2 to 3 ([`c2d9ea0`](https://github.com/substrait-io/substrait-rs/commit/c2d9ea0e39cd5e32a118b650d55c019171b6900e))
+ * **Uncategorized**
+    - Release substrait v0.20.1 ([`02a5aae`](https://github.com/substrait-io/substrait-rs/commit/02a5aae4cd2a0199676e1c48b6f5448f77ac1b4c))
 </details>
 
 ## 0.20.0 (2023-11-27)
