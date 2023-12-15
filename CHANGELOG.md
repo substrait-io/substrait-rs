@@ -1,5 +1,173 @@
 
 
+## 0.20.3 (2023-12-15)
+
+<csr-id-8d9886a420488bf57ae81015571347e043b56e8f/>
+
+### Chore
+
+ - <csr-id-8d9886a420488bf57ae81015571347e043b56e8f/> update typify requirement from 0.0.14 to 0.0.15
+   Updates the requirements on
+   [typify](https://github.com/oxidecomputer/typify) to permit the latest
+   version.
+   <details>
+   <summary>Changelog</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/oxidecomputer/typify/blob/main/CHANGELOG.adoc">typify's
+   changelog</a>.</em></p>
+   <blockquote>
+   <p>== 0.0.15 (released 2023-12-15)</p>
+   <ul>
+   <li>Improvements to array merging and mutual exclusivity checks (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/412">#412</a>)</li>
+   <li>Support for 32-bit floating-point numbers (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/440">#440</a>)</li>
+   <li>Better handling for unsatisfiable merged schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/447">#447</a>)</li>
+   <li>Show original JSON Schema in generated type docs (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/454">#454</a>)</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.14%5C...v0.0.15%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.14\...v0.0.15[Full</a>
+   list of commits]</p>
+   <p>== 0.0.14 (released 2023-09-25)</p>
+   <ul>
+   <li>Handle arbitrary containment cycles (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/300">#300</a>)</li>
+   <li>More permissive of valid (if useless) schema constructions (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/306">#306</a>,
+   <a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/320">#320</a>)</li>
+   <li>Much better handling of <code>allOf</code> constructions by merging
+   schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/405">#405</a>)</li>
+   <li>Support for more <code>not</code> subschemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/410">#410</a>)</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.13%5C...v0.0.14%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.13\...v0.0.14[Full</a>
+   list of commits]</p>
+   <p>== 0.0.13 (released 2023-05-14)</p>
+   <ul>
+   <li>Fixed-length, single-type arrays to <code>[T; N]</code> (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/286">#286</a>)</li>
+   <li>Support for reflexive schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/292">#292</a>)</li>
+   <li>Much improved support for multi-type schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/291">#291</a>)</li>
+   <li>Better error messages on failures</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.12%5C...v0.0.13%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.12\...v0.0.13[Full</a>
+   list of commits]</p>
+   <p>== 0.0.12 (released 2023-05-03)</p>
+   <ul>
+   <li>Improved enum generation (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/270">#270</a>)</li>
+   <li>Improved integer type selection based on number criteria (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/255">#255</a>)</li>
+   <li><code>TypeSpace::add_root_schema()</code> (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/236">#236</a>)</li>
+   <li>... and many general improvements</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.11%5C...v0.0.12%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.11\...v0.0.12[Full</a>
+   list of commits]</p>
+   <p>== 0.0.11 (released 2023-03-18)</p>
+   <p>This is a big update with many, many changes to code generation, and
+   many more
+   JSON schema structures well-handled. Among the many changes:</p>
+   <ul>
+   <li>Generate a <code>ToString</code> impl for untagged enums with
+   trivial variants (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/145">#145</a>)</li>
+   <li>Allow conversion overrides by specifying a schema (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/155">#155</a>)</li>
+   <li>Handle untyped enums that contain nulls (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/167">#167</a>)</li>
+   <li>Handle <code>not</code> schemas for enumerated values (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/168">#168</a>)</li>
+   <li>Improve generated code for FromStr and TryFrom impls (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/174">#174</a>)</li>
+   <li>Handle format specifiers for enumerated strings (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/188">#188</a>)</li>
+   </ul>
+   <p>=== <em>Breaking</em>: The removal of
+   <code>TypeSpace::to_string()</code></p>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/0894f06e6798f24efcbd7134746962aa0e6eb371"><code>0894f06</code></a>
+   release typify 0.0.15</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/cafdeeb82f9af69ceb344ef0e356653dbb0b8521"><code>cafdeeb</code></a>
+   use Default::default rather than buidler::#type_name::Default to avoid
+   confli...</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/048828b669f4b472db4750dfc599eb8bc5b70b78"><code>048828b</code></a>
+   update Cargo.lock</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/41c581a465202b77ff100dcca32b0bfea073d145"><code>41c581a</code></a>
+   update changelog (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/455">#455</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/b0df7aa37ae13b61705161075146250224df24f2"><code>b0df7aa</code></a>
+   keep json; include in doc comments (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/454">#454</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/d1b6c7d97619b7398e03f4cb27557529c3c7fe75"><code>d1b6c7d</code></a>
+   Bump syn from 2.0.39 to 2.0.40 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/453">#453</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/a5a27d5c02d5346a1e4fb027543bdfa22170eaf6"><code>a5a27d5</code></a>
+   Bump clap from 4.4.10 to 4.4.11 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/452">#452</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/d6d85998d29825cfcf07072423f567a085db3ee0"><code>d6d8599</code></a>
+   Bump clap from 4.4.8 to 4.4.10 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/449">#449</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/2c52a39a0465caf9debfb67443e218d033ed468b"><code>2c52a39</code></a>
+   fix handling of references within allOf subschemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/448">#448</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/8b83fbf0a59d8e6d474e49cdd1657c663eba7284"><code>8b83fbf</code></a>
+   unsatisfiable allOf construction panics (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/447">#447</a>)</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.14...v0.0.15">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   You can trigger a rebase of this PR by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 9 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#143](https://github.com/substrait-io/substrait-rs/issues/143)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#143](https://github.com/substrait-io/substrait-rs/issues/143)**
+    - Update typify requirement from 0.0.14 to 0.0.15 ([`8d9886a`](https://github.com/substrait-io/substrait-rs/commit/8d9886a420488bf57ae81015571347e043b56e8f))
+</details>
+
 ## 0.20.2 (2023-12-05)
 
 <csr-id-d8912a529e86b82e200d9bbbb63dafa1d6c06a76/>
@@ -170,7 +338,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#141](https://github.com/substrait-io/substrait-rs/issues/141)
 
@@ -182,6 +350,8 @@
 
  * **[#141](https://github.com/substrait-io/substrait-rs/issues/141)**
     - Bump actions/configure-pages from 3 to 4 ([`d8912a5`](https://github.com/substrait-io/substrait-rs/commit/d8912a529e86b82e200d9bbbb63dafa1d6c06a76))
+ * **Uncategorized**
+    - Release substrait v0.20.2 ([`b8f1e56`](https://github.com/substrait-io/substrait-rs/commit/b8f1e56f9feb9c2be59fea6496ce3c3fe64beb64))
 </details>
 
 ## 0.20.1 (2023-12-05)
