@@ -1,5 +1,55 @@
 
 
+## 0.22.0 (2024-01-08)
+
+<csr-id-aec95c21814736286418070bd1e88760f1c1e92f/>
+
+### Chore (BREAKING)
+
+ - <csr-id-aec95c21814736286418070bd1e88760f1c1e92f/> bump substrait from `0.40.0` to `0.41.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `cdae23e` to `c7d7e9c`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/c7d7e9c5393aaa5e63b4a18ce65e423faa5eb9dd"><code>c7d7e9c</code></a>
+   chore(release): 0.41.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/aba1bc79acc5bf40a719b23276bfa6f7546e7ed5"><code>aba1bc7</code></a>
+   fix: renamed modulus to modulo; updated modulo operator defintion (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/583">#583</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/cdae23ea0f5784243efa60a5361fabf31127457f...c7d7e9c5393aaa5e63b4a18ce65e423faa5eb9dd">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 21 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#147](https://github.com/substrait-io/substrait-rs/issues/147)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#147](https://github.com/substrait-io/substrait-rs/issues/147)**
+    - Bump substrait from `0.40.0` to `0.41.0` ([`aec95c2`](https://github.com/substrait-io/substrait-rs/commit/aec95c21814736286418070bd1e88760f1c1e92f))
+</details>
+
 ## 0.21.0 (2023-12-17)
 
 <csr-id-e24c5a3b082bb1c4e8e2329efec4762fd79ff60a/>
@@ -12,7 +62,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#144](https://github.com/substrait-io/substrait-rs/issues/144)
@@ -25,6 +75,8 @@
 
  * **[#144](https://github.com/substrait-io/substrait-rs/issues/144)**
     - Bump substrait from `0.39.0` to `0.40.0` ([`e24c5a3`](https://github.com/substrait-io/substrait-rs/commit/e24c5a3b082bb1c4e8e2329efec4762fd79ff60a))
+ * **Uncategorized**
+    - Release substrait v0.21.0 ([`33a9669`](https://github.com/substrait-io/substrait-rs/commit/33a966916dae84c65b45d9e7bc550be635225156))
 </details>
 
 ## 0.20.3 (2023-12-15)
