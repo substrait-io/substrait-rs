@@ -1,5 +1,225 @@
 
 
+## 0.23.0 (2024-01-22)
+
+<csr-id-952c90f50a1aeaac48039e6ac8f0d4f2e70e2ad3/>
+<csr-id-33aaf9b613ccc804265678f192f864d7e5a2b5a7/>
+<csr-id-c2e596b124f95fc1364f96174d0bb104081be62d/>
+
+### Chore
+
+ - <csr-id-952c90f50a1aeaac48039e6ac8f0d4f2e70e2ad3/> bump actions/upload-pages-artifact from 2 to 3
+   Bumps
+   [actions/upload-pages-artifact](https://github.com/actions/upload-pages-artifact)
+   from 2 to 3.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/upload-pages-artifact/releases">actions/upload-pages-artifact's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v3.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Use <code>v4</code> upload-artifact tag <a
+   href="https://github.com/robherley"><code>@​robherley</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/80">#80</a>)</li>
+   <li>Upload pages artifact with upload-artifact v4-beta <a
+   href="https://github.com/konradpabjan"><code>@​konradpabjan</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/78">#78</a>)</li>
+   </ul>
+   <p>To deploy a GitHub Pages site which has been uploaded with his
+   version of <code>actions/upload-pages-artifact</code>, you must also use
+   <code>actions/deploy-pages@v4</code> or newer.</p>
+   <p>See details of <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v2.0.0...v3.0.0">all
+   code changes</a> since previous release.</p>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/0252fc4ba7626f0298f0cf00902a25c6afc77fa8"><code>0252fc4</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/81">#81</a>
+   from actions/artifacts-next</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/2a5c1440746537a84f699a04465e7ac8a64879e4"><code>2a5c144</code></a>
+   Use actions/download-artifact@v4 in test</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/7e3f6bb53bf41c0cc32c369403f7fcbb8989c9ae"><code>7e3f6bb</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/80">#80</a>
+   from robherley/patch-1</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/257e666c0505b64d304755738c09e8a1f32ff7e0"><code>257e666</code></a>
+   Use <code>v4</code> upload-artifact tag</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/0313a19afa9efdf74b4e31c9554d35f744213f0e"><code>0313a19</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/78">#78</a>
+   from konradpabjan/main</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/1228e656868935b3c8b085b28ea3b89b5763c64e"><code>1228e65</code></a>
+   Update action.yml</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/eb31309b6cdf94f92e47abb173a0cbed9b5056cf"><code>eb31309</code></a>
+   Update artifact names in tests</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/241a975ec2c9ecb3effc2875203cce4b9e25078d"><code>241a975</code></a>
+   Correct artifact name during download</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/ef95519d72c61a2dd9137c79470bacfc5bdbbaa8"><code>ef95519</code></a>
+   Unique artifact name per job</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/ecdd3edff76d306e98d046dfc846e651354ac144"><code>ecdd3ed</code></a>
+   Switch to using download@v4-beta</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v2...v3">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/upload-pages-artifact&package-manager=github_actions&previous-version=2&new-version=3)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+ - <csr-id-33aaf9b613ccc804265678f192f864d7e5a2b5a7/> bump actions/deploy-pages from 3 to 4
+   Bumps [actions/deploy-pages](https://github.com/actions/deploy-pages)
+   from 3 to 4.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/deploy-pages/releases">actions/deploy-pages's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v4.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Deploy pages using artifact IDs <a
+   href="https://github.com/konradpabjan"><code>@​konradpabjan</code></a>
+   (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/251">#251</a>)</li>
+   </ul>
+   <hr />
+   <p>:warning: This version of <code>actions/deploy-pages</code> is
+   <strong>ONLY</strong> compatible with artifacts uploaded by either:</p>
+   <ul>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/releases/tag/v3.0.0"><code>actions/upload-pages-artifact@v3</code></a>
+   or newer</li>
+   <li><a
+   href="https://github.com/actions/upload-artifact/releases/tag/v4.0.0"><code>actions/upload-artifact@v4</code></a>
+   or newer.</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/deploy-pages/compare/v3.0.1...v4.0.0">all
+   code changes</a> since previous release.</p>
+   <p>:warning: For use with products other than GitHub.com, such as GitHub
+   Enterprise Server, please consult the <a
+   href="https://github.com/actions/deploy-pages/#compatibilty">compatibility
+   table</a>.</p>
+   <h2>v3.0.1</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Bump eslint from 8.54.0 to 8.55.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/266">#266</a>)</li>
+   <li>Bump nock from 13.3.8 to 13.4.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/267">#267</a>)</li>
+   <li>Bump eslint-config-prettier from 9.0.0 to 9.1.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/268">#268</a>)</li>
+   <li>Bump <code>@​actions/core</code> from 1.10.0 to 1.10.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/269">#269</a>)</li>
+   <li>Bump <code>@​actions/github</code> from 5.1.1 to 6.0.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/261">#261</a>)</li>
+   <li>Update compatibility table for v3 <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/270">#270</a>)</li>
+   </ul>
+   <h2>🧰 Maintenance</h2>
+   <ul>
+   <li>chore/docs: update version, fix typos <a
+   href="https://github.com/kbdharun"><code>@​kbdharun</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/272">#272</a>)</li>
+   </ul>
+   <hr />
+   <p>See details of <a
+   href="https://github.com/actions/deploy-pages/compare/v3.0.0...v3.0.1">all
+   code changes</a> since previous release.</p>
+   <p>:warning: For use with products other than GitHub.com, such as GitHub
+   Enterprise Server, please consult the <a
+   href="https://github.com/actions/deploy-pages/#compatibilty">compatibility
+   table</a>.</p>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/deploy-pages/commit/f33f41b675f0ab2dc5a6863c9a170fe83af3571e"><code>f33f41b</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/deploy-pages/issues/279">#279</a>
+   from actions/artifacts-next-ga</li>
+   <li><a
+   href="https://github.com/actions/deploy-pages/commit/0d45f33cdeb74801a7a5c5af95dceac9fa933818"><code>0d45f33</code></a>
+   pretty</li>
+   <li><a
+   href="https://github.com/actions/deploy-pages/commit/d1e23d0efd9866b3e474883905cb86712868e97b"><code>d1e23d0</code></a>
+   Merge branch 'main' into artifacts-next-ga</li>
+   <li>See full diff in <a
+   href="https://github.com/actions/deploy-pages/compare/v3...v4">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/deploy-pages&package-manager=github_actions&previous-version=3&new-version=4)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Chore (BREAKING)
+
+ - <csr-id-c2e596b124f95fc1364f96174d0bb104081be62d/> bump substrait from `0.41.0` to `0.42.0`
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release over the course of 13 calendar days.
+ - 13 days passed between releases.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 3 unique issues were worked on: [#145](https://github.com/substrait-io/substrait-rs/issues/145), [#146](https://github.com/substrait-io/substrait-rs/issues/146), [#149](https://github.com/substrait-io/substrait-rs/issues/149)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#145](https://github.com/substrait-io/substrait-rs/issues/145)**
+    - Bump actions/deploy-pages from 3 to 4 ([`33aaf9b`](https://github.com/substrait-io/substrait-rs/commit/33aaf9b613ccc804265678f192f864d7e5a2b5a7))
+ * **[#146](https://github.com/substrait-io/substrait-rs/issues/146)**
+    - Bump actions/upload-pages-artifact from 2 to 3 ([`952c90f`](https://github.com/substrait-io/substrait-rs/commit/952c90f50a1aeaac48039e6ac8f0d4f2e70e2ad3))
+ * **[#149](https://github.com/substrait-io/substrait-rs/issues/149)**
+    - Bump substrait from `0.41.0` to `0.42.0` ([`c2e596b`](https://github.com/substrait-io/substrait-rs/commit/c2e596b124f95fc1364f96174d0bb104081be62d))
+</details>
+
 ## 0.22.0 (2024-01-08)
 
 <csr-id-aec95c21814736286418070bd1e88760f1c1e92f/>
@@ -35,8 +255,8 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
- - 21 days passed between releases.
+ - 2 commits contributed to the release.
+ - 22 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#147](https://github.com/substrait-io/substrait-rs/issues/147)
 
@@ -48,6 +268,8 @@
 
  * **[#147](https://github.com/substrait-io/substrait-rs/issues/147)**
     - Bump substrait from `0.40.0` to `0.41.0` ([`aec95c2`](https://github.com/substrait-io/substrait-rs/commit/aec95c21814736286418070bd1e88760f1c1e92f))
+ * **Uncategorized**
+    - Release substrait v0.22.0 ([`a605313`](https://github.com/substrait-io/substrait-rs/commit/a605313678b63b7a01be85069282645a9fb60938))
 </details>
 
 ## 0.21.0 (2023-12-17)
