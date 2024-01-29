@@ -1,5 +1,72 @@
 
 
+## 0.24.0 (2024-01-29)
+
+<csr-id-4a3583f8d7a416ba34af9ad1966bc349e7bd1d83/>
+
+### Chore (BREAKING)
+
+ - <csr-id-4a3583f8d7a416ba34af9ad1966bc349e7bd1d83/> bump substrait from `0.42.0` to `0.42.1`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `3251b1f` to `4734478`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/47344783dce74645dcb636cb646cd3628df37ef0"><code>4734478</code></a>
+   chore(release): 0.42.1</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/a4cf7417e348ce9683b558f1b0a274bf55af8c30"><code>a4cf741</code></a>
+   chore(deps): Bump bufbuild/buf-setup-action from 1.28.1 to 1.29.0 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/593">#593</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/8b9535c9a55ef68f83ca6fee1552646bd33757e6"><code>8b9535c</code></a>
+   docs: add more explanation of comparison function (in hash/merge join)
+   (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/586">#586</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/54454cbfec562af987edfa410e75a3dd203c12ad"><code>54454cb</code></a>
+   chore(deps): Bump actions/cache from 3 to 4 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/589">#589</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/543f740bcb7455650a1ded8f21729406926146d7"><code>543f740</code></a>
+   refactor: prefer boolean over BOOLEAN (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/590">#590</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/d55703a18a7a8f2ecf695f9367ca33fab6b1ef33"><code>d55703a</code></a>
+   fix: add missing RelCommon field to WriteRel and DdlRel (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/591">#591</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/3251b1fc5ede5788502be989b8eab778051d7a4d...47344783dce74645dcb636cb646cd3628df37ef0">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 7 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#150](https://github.com/substrait-io/substrait-rs/issues/150)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#150](https://github.com/substrait-io/substrait-rs/issues/150)**
+    - Bump substrait from `0.42.0` to `0.42.1` ([`4a3583f`](https://github.com/substrait-io/substrait-rs/commit/4a3583f8d7a416ba34af9ad1966bc349e7bd1d83))
+</details>
+
 ## 0.23.0 (2024-01-22)
 
 <csr-id-952c90f50a1aeaac48039e6ac8f0d4f2e70e2ad3/>
@@ -201,7 +268,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release over the course of 13 calendar days.
+ - 4 commits contributed to the release over the course of 13 calendar days.
  - 13 days passed between releases.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 3 unique issues were worked on: [#145](https://github.com/substrait-io/substrait-rs/issues/145), [#146](https://github.com/substrait-io/substrait-rs/issues/146), [#149](https://github.com/substrait-io/substrait-rs/issues/149)
@@ -218,6 +285,8 @@
     - Bump actions/upload-pages-artifact from 2 to 3 ([`952c90f`](https://github.com/substrait-io/substrait-rs/commit/952c90f50a1aeaac48039e6ac8f0d4f2e70e2ad3))
  * **[#149](https://github.com/substrait-io/substrait-rs/issues/149)**
     - Bump substrait from `0.41.0` to `0.42.0` ([`c2e596b`](https://github.com/substrait-io/substrait-rs/commit/c2e596b124f95fc1364f96174d0bb104081be62d))
+ * **Uncategorized**
+    - Release substrait v0.23.0 ([`4441c9b`](https://github.com/substrait-io/substrait-rs/commit/4441c9b7563ac9654af996b21e3f1602aa4171de))
 </details>
 
 ## 0.22.0 (2024-01-08)
