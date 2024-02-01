@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-      - uses: arduino/setup-protoc@v2
+      - uses: arduino/setup-protoc@v3
         if: matrix.feature != 'protoc'
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -44,7 +44,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-      - uses: arduino/setup-protoc@v2
+      - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo test --features ${{ matrix.feature }}
@@ -77,7 +77,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - uses: arduino/setup-protoc@v2
+      - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo clippy --features ${{ matrix.feature }} -- -Dwarnings
@@ -91,7 +91,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-      - uses: arduino/setup-protoc@v2
+      - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo build
