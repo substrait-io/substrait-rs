@@ -1,5 +1,122 @@
 
 
+## 0.24.1 (2024-02-01)
+
+<csr-id-2c392122195e3059f8afbffeb8bdd7f988ed7fe5/>
+
+### Chore
+
+ - <csr-id-2c392122195e3059f8afbffeb8bdd7f988ed7fe5/> bump arduino/setup-protoc from 2 to 3
+   Bumps [arduino/setup-protoc](https://github.com/arduino/setup-protoc)
+   from 2 to 3.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/arduino/setup-protoc/releases">arduino/setup-protoc's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v3.0.0</h2>
+   <h2>What's Changed</h2>
+   <ul>
+   <li>Correct <code>convetion</code> typo in README by <a
+   href="https://github.com/nixpanic"><code>@​nixpanic</code></a> in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/91">arduino/setup-protoc#91</a></li>
+   <li>Bump <code>@​babel/traverse</code> from 7.22.1 to 7.23.2 by <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/93">arduino/setup-protoc#93</a></li>
+   <li>Upgrade to node 20 by <a
+   href="https://github.com/alessio-perugini"><code>@​alessio-perugini</code></a>
+   in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/95">arduino/setup-protoc#95</a></li>
+   </ul>
+   <h2>New Contributors</h2>
+   <ul>
+   <li><a href="https://github.com/nixpanic"><code>@​nixpanic</code></a>
+   made their first contribution in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/91">arduino/setup-protoc#91</a></li>
+   </ul>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/arduino/setup-protoc/compare/v2.1.0...v3.0.0">https://github.com/arduino/setup-protoc/compare/v2.1.0...v3.0.0</a></p>
+   <h2>v2.1.0</h2>
+   <h2>What's Changed</h2>
+   <ul>
+   <li>Expose <code>path</code> and <code>version</code> in
+   <code>outputs</code> by <a
+   href="https://github.com/sebastienvermeille"><code>@​sebastienvermeille</code></a>
+   in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/89">arduino/setup-protoc#89</a></li>
+   <li>Bump semver from 7.5.1 to 7.5.2 by <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/87">arduino/setup-protoc#87</a></li>
+   <li>bump semver to 7.5.3 by <a
+   href="https://github.com/alessio-perugini"><code>@​alessio-perugini</code></a>
+   in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/90">arduino/setup-protoc#90</a></li>
+   </ul>
+   <h2>New Contributors</h2>
+   <ul>
+   <li><a
+   href="https://github.com/sebastienvermeille"><code>@​sebastienvermeille</code></a>
+   made their first contribution in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/89">arduino/setup-protoc#89</a></li>
+   </ul>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/arduino/setup-protoc/compare/v2.0.0...v2.1.0">https://github.com/arduino/setup-protoc/compare/v2.0.0...v2.1.0</a></p>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/arduino/setup-protoc/commit/c65c819552d16ad3c9b72d9dfd5ba5237b9c906b"><code>c65c819</code></a>
+   Upgrade to node 20 (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/95">#95</a>)</li>
+   <li><a
+   href="https://github.com/arduino/setup-protoc/commit/52a53b4e2d968277c5c749dac537d0b14a6f5272"><code>52a53b4</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/93">#93</a>
+   from arduino/dependabot/npm_and_yarn/babel/traverse-7....</li>
+   <li><a
+   href="https://github.com/arduino/setup-protoc/commit/cf7ab7fe8696fefcafb8135834d49955e824a56b"><code>cf7ab7f</code></a>
+   Bump <code>@​babel/traverse</code> from 7.22.1 to 7.23.2</li>
+   <li><a
+   href="https://github.com/arduino/setup-protoc/commit/e2995ba278e6b4bca9bac954e72667db122abed1"><code>e2995ba</code></a>
+   Correct <code>convetion</code> typo in README (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/91">#91</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/arduino/setup-protoc/compare/v2...v3">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=arduino/setup-protoc&package-manager=github_actions&previous-version=2&new-version=3)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 2 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#151](https://github.com/substrait-io/substrait-rs/issues/151)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#151](https://github.com/substrait-io/substrait-rs/issues/151)**
+    - Bump arduino/setup-protoc from 2 to 3 ([`2c39212`](https://github.com/substrait-io/substrait-rs/commit/2c392122195e3059f8afbffeb8bdd7f988ed7fe5))
+</details>
+
 ## 0.24.0 (2024-01-29)
 
 <csr-id-4a3583f8d7a416ba34af9ad1966bc349e7bd1d83/>
@@ -52,7 +169,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#150](https://github.com/substrait-io/substrait-rs/issues/150)
@@ -65,6 +182,8 @@
 
  * **[#150](https://github.com/substrait-io/substrait-rs/issues/150)**
     - Bump substrait from `0.42.0` to `0.42.1` ([`4a3583f`](https://github.com/substrait-io/substrait-rs/commit/4a3583f8d7a416ba34af9ad1966bc349e7bd1d83))
+ * **Uncategorized**
+    - Release substrait v0.24.0 ([`9c2bf1b`](https://github.com/substrait-io/substrait-rs/commit/9c2bf1bee99650005e18aa3f4aed77711f7d0db7))
 </details>
 
 ## 0.23.0 (2024-01-22)
