@@ -3,11 +3,14 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::atomic::{AtomicBool, Ordering},
 };
 use substrait::{
-    parse::{Context, Parser},
+    parse::{Context as _, Parser},
     proto,
 };
+use tracing::{Level, Metadata, Subscriber};
+use tracing_subscriber::{layer::Context, prelude::*, Layer};
 
 #[derive(clap::Parser, Debug)]
 #[command(author, version, about, long_about)]
@@ -28,11 +31,32 @@ fn parse(input: &Path) -> Result<(), anyhow::Error> {
 fn main() -> Result<(), anyhow::Error> {
     let Args { input } = <Args as clap::Parser>::parse();
 
-    tracing_subscriber::fmt()
+    /// Only show the first error.
+    #[derive(Default)]
+    struct Filter(AtomicBool);
+
+    impl<S: Subscriber> Layer<S> for Filter {
+        fn enabled(&self, metadata: &Metadata<'_>, _ctx: Context<'_, S>) -> bool {
+            if !self.0.load(Ordering::Relaxed) {
+                if metadata.level() == &Level::ERROR {
+                    self.0.store(true, Ordering::Relaxed);
+                }
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    let fmt = tracing_subscriber::fmt::layer()
         .pretty()
         .with_file(false)
         .with_line_number(false)
-        .without_time()
+        .without_time();
+
+    tracing_subscriber::registry()
+        .with(Filter::default())
+        .with(fmt)
         .init();
 
     parse(&input)
