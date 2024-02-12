@@ -1,5 +1,30 @@
 
 
+## 0.24.2 (2024-02-12)
+
+### Bug Fixes
+
+ - <csr-id-9f08ea67024fdbc4c58b90521af14cf876292956/> upgrade git2 to resolve CVEs
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 11 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#153](https://github.com/substrait-io/substrait-rs/issues/153)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#153](https://github.com/substrait-io/substrait-rs/issues/153)**
+    - Upgrade git2 to resolve CVEs ([`9f08ea6`](https://github.com/substrait-io/substrait-rs/commit/9f08ea67024fdbc4c58b90521af14cf876292956))
+</details>
+
 ## 0.24.1 (2024-02-01)
 
 <csr-id-2c392122195e3059f8afbffeb8bdd7f988ed7fe5/>
@@ -102,7 +127,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 2 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#151](https://github.com/substrait-io/substrait-rs/issues/151)
@@ -115,6 +140,8 @@
 
  * **[#151](https://github.com/substrait-io/substrait-rs/issues/151)**
     - Bump arduino/setup-protoc from 2 to 3 ([`2c39212`](https://github.com/substrait-io/substrait-rs/commit/2c392122195e3059f8afbffeb8bdd7f988ed7fe5))
+ * **Uncategorized**
+    - Release substrait v0.24.1 ([`452a41e`](https://github.com/substrait-io/substrait-rs/commit/452a41e6a7dce461fcf094ea0fe833af7fe74963))
 </details>
 
 ## 0.24.0 (2024-01-29)
