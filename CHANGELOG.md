@@ -1,5 +1,67 @@
 
 
+## 0.25.0 (2024-02-26)
+
+<csr-id-1290ec113f03ef259c12fdcee5518470ee1f0bc0/>
+
+### Chore (BREAKING)
+
+ - <csr-id-1290ec113f03ef259c12fdcee5518470ee1f0bc0/> bump substrait from `0.42.1` to `0.43.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `4734478` to `5e1948e`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/5e1948e7a9e945d347b011e6518d1bb501f8522a"><code>5e1948e</code></a>
+   chore(release): 0.43.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/087f87c0307572cf2e9a7d1db7fdd673662699c3"><code>087f87c</code></a>
+   feat: include precision parameter in timestamp types (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/594">#594</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/a3b1f32b0e6aac08bf0ee7437a5ae1c10100a859"><code>a3b1f32</code></a>
+   fix: remove function definitions w/ invalid return types (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/599">#599</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/d9b9672fd3c24285afdee9344fc2f4f7fcd70afb"><code>d9b9672</code></a>
+   docs: fix link to protobuf files (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/598">#598</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/3ded94d69e7ae329f2730b7634ba34900250e84a"><code>3ded94d</code></a>
+   docs: fix code blocks in field_references.md (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/595">#595</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/47344783dce74645dcb636cb646cd3628df37ef0...5e1948e7a9e945d347b011e6518d1bb501f8522a">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 13 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#154](https://github.com/substrait-io/substrait-rs/issues/154)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#154](https://github.com/substrait-io/substrait-rs/issues/154)**
+    - Bump substrait from `0.42.1` to `0.43.0` ([`1290ec1`](https://github.com/substrait-io/substrait-rs/commit/1290ec113f03ef259c12fdcee5518470ee1f0bc0))
+</details>
+
 ## 0.24.2 (2024-02-12)
 
 ### Bug Fixes
@@ -10,7 +72,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 11 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#153](https://github.com/substrait-io/substrait-rs/issues/153)
@@ -23,6 +85,8 @@
 
  * **[#153](https://github.com/substrait-io/substrait-rs/issues/153)**
     - Upgrade git2 to resolve CVEs ([`9f08ea6`](https://github.com/substrait-io/substrait-rs/commit/9f08ea67024fdbc4c58b90521af14cf876292956))
+ * **Uncategorized**
+    - Release substrait v0.24.2 ([`da71870`](https://github.com/substrait-io/substrait-rs/commit/da71870d377a90e71cabd6e50fa7efc66eddbab2))
 </details>
 
 ## 0.24.1 (2024-02-01)
