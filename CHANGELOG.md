@@ -1,5 +1,59 @@
 
 
+## 0.26.0 (2024-03-04)
+
+<csr-id-3c17273258101f7b228b953a4409fa09718ddbd5/>
+
+### Chore (BREAKING)
+
+ - <csr-id-3c17273258101f7b228b953a4409fa09718ddbd5/> bump substrait from `0.43.0` to `0.44.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `5e1948e` to `2e12da1`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/2e12da1b9915eea01f12ece0be9c37afa1384f74"><code>2e12da1</code></a>
+   chore(release): 0.44.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/cbec079ea03bec65cc063daa15e42807c4039707"><code>cbec079</code></a>
+   feat: add extra option for on domain errors in log functions (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/536">#536</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/55db05b4cf8cbb1e2bf565e4f5f0c6def6f0e6ed"><code>55db05b</code></a>
+   feat: add ignore nulls options to concat function (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/605">#605</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/5e1948e7a9e945d347b011e6518d1bb501f8522a...2e12da1b9915eea01f12ece0be9c37afa1384f74">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 3 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#156](https://github.com/substrait-io/substrait-rs/issues/156)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#156](https://github.com/substrait-io/substrait-rs/issues/156)**
+    - Bump substrait from `0.43.0` to `0.44.0` ([`3c17273`](https://github.com/substrait-io/substrait-rs/commit/3c17273258101f7b228b953a4409fa09718ddbd5))
+</details>
+
 ## 0.25.1 (2024-02-29)
 
 <csr-id-cc0e947f1a21249312dfd777f5a624bea0133f41/>
@@ -152,7 +206,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 2 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#155](https://github.com/substrait-io/substrait-rs/issues/155)
@@ -165,6 +219,8 @@
 
  * **[#155](https://github.com/substrait-io/substrait-rs/issues/155)**
     - Update typify requirement from 0.0.15 to 0.0.16 ([`cc0e947`](https://github.com/substrait-io/substrait-rs/commit/cc0e947f1a21249312dfd777f5a624bea0133f41))
+ * **Uncategorized**
+    - Release substrait v0.25.1 ([`17cdbeb`](https://github.com/substrait-io/substrait-rs/commit/17cdbeb513010971108903c70046c53541e4bbb8))
 </details>
 
 ## 0.25.0 (2024-02-26)
