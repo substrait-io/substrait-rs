@@ -29,6 +29,7 @@ default = []
 extensions = ["dep:once_cell"]
 full = ["extensions", "parse-full", "parser", "pbjson", "semver"]
 parse = [
+    "dep:anyhow",
     "dep:hex",
     "dep:thiserror",
     "dep:tracing",   # todo make this optional
@@ -43,7 +44,7 @@ parse-ureq = ["dep:ureq"] # Add simple extensions uri resolver based on ureq
 parse-reqwest = [
     "dep:reqwest",
 ] # Add simple extensions uri resolver based on reqwest
-parser = ["dep:anyhow", "dep:clap", "dep:tracing-subscriber", "parse", "pbjson"]
+parser = ["dep:clap", "dep:tracing-subscriber", "parse", "pbjson"]
 pbjson = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
 protoc = ["dep:protobuf-src"]
 semver = ["dep:semver"]
