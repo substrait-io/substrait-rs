@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 [package]
 name = "substrait"
-version = "0.12.2"
+version = "0.26.0"
 edition = "2021"
 rust-version = "1.66.0"
 description = "Cross-Language Serialization for Relational Algebra"
@@ -13,15 +13,15 @@ license = "Apache-2.0"
 keywords = ["substrait"]
 build = "build.rs"
 include = [
-  "build.rs",
-  "gen/",
-  "LICENSE",
-  "src/**/*.rs",
-  "substrait/extensions/**/*.yaml",
-  "substrait/LICENSE",
-  "substrait/proto/**/*.proto",
-  "substrait/README.md",
-  "substrait/text/**/*.yaml"
+    "build.rs",
+    "gen/",
+    "LICENSE",
+    "src/**/*.rs",
+    "substrait/extensions/**/*.yaml",
+    "substrait/LICENSE",
+    "substrait/proto/**/*.proto",
+    "substrait/README.md",
+    "substrait/text/**/*.yaml",
 ]
 
 [features]
@@ -29,19 +29,19 @@ default = []
 extensions = ["dep:once_cell"]
 full = ["extensions", "parse-full", "parser", "pbjson", "semver"]
 parse = [
-  "dep:hex",
-  "dep:thiserror",
-  "dep:tracing", # todo make this optional
-  "dep:url",
-  "extensions", # todo make this optional? - the parser can just skip it
-  "parse-ureq",
-  "semver"
+    "dep:hex",
+    "dep:thiserror",
+    "dep:tracing",   # todo make this optional
+    "dep:url",
+    "extensions",    # todo make this optional? - the parser can just skip it
+    "parse-ureq",
+    "semver",
 ]
 parse-full = ["parse", "parse-reqwest"]
 # parse-tracing = ["dep:tracing"]
 parse-ureq = ["dep:ureq"] # Add simple extensions uri resolver based on ureq
 parse-reqwest = [
-  "dep:reqwest"
+    "dep:reqwest",
 ] # Add simple extensions uri resolver based on reqwest
 parser = ["dep:anyhow", "dep:clap", "dep:tracing-subscriber", "parse", "pbjson"]
 pbjson = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
@@ -58,12 +58,12 @@ anyhow = { version = "1.0.70", optional = true }
 clap = { version = "4.1.13", features = ["derive"], optional = true }
 hex = { version = "0.4.3", optional = true }
 once_cell = { version = "1.17.1", optional = true }
-pbjson = { version = "0.5.1", optional = true }
-pbjson-types = { version = "0.5.1", optional = true }
-prost = "0.11.8"
-prost-types = "0.11.8"
-prost-wkt = { version = "0.4.1", optional = true }
-prost-wkt-types = { version = "0.4.1", optional = true }
+pbjson = { version = "0.6.0", optional = true }
+pbjson-types = { version = "0.6.0", optional = true }
+prost = "0.12.3"
+prost-types = "0.12.3"
+prost-wkt = { version = "0.5.0", optional = true }
+prost-wkt-types = { version = "0.5.0", optional = true }
 reqwest = { version = "0.11.16", features = ["blocking"], optional = true }
 semver = { version = "1.0.17", optional = true }
 serde = { version = "1.0.158", features = ["derive"] }
@@ -76,19 +76,19 @@ tracing-subscriber = { version = "0.3.16", optional = true }
 url = { version = "2.3.1", optional = true }
 
 [build-dependencies]
-git2 = { version = "0.17.1", default-features = false }
+git2 = { version = "0.18.2", default-features = false }
 heck = "0.4.1"
-pbjson-build = { version = "0.5.1", optional = true }
+pbjson-build = { version = "0.6.2", optional = true }
 prettyplease = "0.2.4"
-prost-build = { version = "0.11.9", default-features = false }
-prost-types = "0.11.9"
-prost-wkt-build = { version = "0.4.2", optional = true }
+prost-build = { version = "0.12.3", default-features = false }
+prost-types = "0.12.3"
+prost-wkt-build = { version = "0.5.0", optional = true }
 protobuf-src = { version = "1.1.0", optional = true }
 schemars = "0.8.12"
 semver = "1.0.17"
 serde_yaml = "0.9.21"
 syn = "2.0.11"
-typify = "0.0.13"
+typify = "0.0.16"
 walkdir = "2.3.3"
 
 [dev-dependencies]

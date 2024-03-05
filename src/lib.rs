@@ -168,6 +168,7 @@ pub mod extensions;
 pub mod proto;
 #[allow(clippy::uninlined_format_args, missing_docs)]
 pub mod text;
+
 pub mod version;
 
 // Optional modules

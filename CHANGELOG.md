@@ -1,5 +1,2923 @@
 
 
+## 0.26.0 (2024-03-04)
+
+<csr-id-3c17273258101f7b228b953a4409fa09718ddbd5/>
+
+### Chore (BREAKING)
+
+ - <csr-id-3c17273258101f7b228b953a4409fa09718ddbd5/> bump substrait from `0.43.0` to `0.44.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `5e1948e` to `2e12da1`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/2e12da1b9915eea01f12ece0be9c37afa1384f74"><code>2e12da1</code></a>
+   chore(release): 0.44.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/cbec079ea03bec65cc063daa15e42807c4039707"><code>cbec079</code></a>
+   feat: add extra option for on domain errors in log functions (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/536">#536</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/55db05b4cf8cbb1e2bf565e4f5f0c6def6f0e6ed"><code>55db05b</code></a>
+   feat: add ignore nulls options to concat function (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/605">#605</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/5e1948e7a9e945d347b011e6518d1bb501f8522a...2e12da1b9915eea01f12ece0be9c37afa1384f74">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 3 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#156](https://github.com/substrait-io/substrait-rs/issues/156)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#156](https://github.com/substrait-io/substrait-rs/issues/156)**
+    - Bump substrait from `0.43.0` to `0.44.0` ([`3c17273`](https://github.com/substrait-io/substrait-rs/commit/3c17273258101f7b228b953a4409fa09718ddbd5))
+</details>
+
+## 0.25.1 (2024-02-29)
+
+<csr-id-cc0e947f1a21249312dfd777f5a624bea0133f41/>
+
+### Chore
+
+ - <csr-id-cc0e947f1a21249312dfd777f5a624bea0133f41/> update typify requirement from 0.0.15 to 0.0.16
+   Updates the requirements on
+   [typify](https://github.com/oxidecomputer/typify) to permit the latest
+   version.
+   <details>
+   <summary>Changelog</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/oxidecomputer/typify/blob/main/CHANGELOG.adoc">typify's
+   changelog</a>.</em></p>
+   <blockquote>
+   <p>== 0.0.16 (released 2024-02-28)</p>
+   <ul>
+   <li>Introduce a proper Error type for various conversions (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/475">#475</a>)</li>
+   <li>Add docs to generated mods (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/476">#476</a>)</li>
+   <li>Various enum improvements</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.15%5C...v0.0.16%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.15\...v0.0.16[Full</a>
+   list of commits]</p>
+   <p>== 0.0.15 (released 2023-12-15)</p>
+   <ul>
+   <li>Improvements to array merging and mutual exclusivity checks (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/412">#412</a>)</li>
+   <li>Support for 32-bit floating-point numbers (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/440">#440</a>)</li>
+   <li>Better handling for unsatisfiable merged schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/447">#447</a>)</li>
+   <li>Show original JSON Schema in generated type docs (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/454">#454</a>)</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.14%5C...v0.0.15%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.14\...v0.0.15[Full</a>
+   list of commits]</p>
+   <p>== 0.0.14 (released 2023-09-25)</p>
+   <ul>
+   <li>Handle arbitrary containment cycles (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/300">#300</a>)</li>
+   <li>More permissive of valid (if useless) schema constructions (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/306">#306</a>,
+   <a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/320">#320</a>)</li>
+   <li>Much better handling of <code>allOf</code> constructions by merging
+   schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/405">#405</a>)</li>
+   <li>Support for more <code>not</code> subschemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/410">#410</a>)</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.13%5C...v0.0.14%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.13\...v0.0.14[Full</a>
+   list of commits]</p>
+   <p>== 0.0.13 (released 2023-05-14)</p>
+   <ul>
+   <li>Fixed-length, single-type arrays to <code>[T; N]</code> (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/286">#286</a>)</li>
+   <li>Support for reflexive schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/292">#292</a>)</li>
+   <li>Much improved support for multi-type schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/291">#291</a>)</li>
+   <li>Better error messages on failures</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.12%5C...v0.0.13%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.12\...v0.0.13[Full</a>
+   list of commits]</p>
+   <p>== 0.0.12 (released 2023-05-03)</p>
+   <ul>
+   <li>Improved enum generation (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/270">#270</a>)</li>
+   <li>Improved integer type selection based on number criteria (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/255">#255</a>)</li>
+   <li><code>TypeSpace::add_root_schema()</code> (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/236">#236</a>)</li>
+   <li>... and many general improvements</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.11%5C...v0.0.12%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.11\...v0.0.12[Full</a>
+   list of commits]</p>
+   <p>== 0.0.11 (released 2023-03-18)</p>
+   <p>This is a big update with many, many changes to code generation, and
+   many more
+   JSON schema structures well-handled. Among the many changes:</p>
+   <ul>
+   <li>Generate a <code>ToString</code> impl for untagged enums with
+   trivial variants (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/145">#145</a>)</li>
+   </ul>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/82a040e7eb8ec037cb703b5a7fc4ac1c692c7170"><code>82a040e</code></a>
+   release typify 0.0.16</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/c6e4947846a2ea00aa998a0679bcc03e736e0d8f"><code>c6e4947</code></a>
+   update changelog for next release</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/131fe0ef3722d3034a61a8ab2994c29f9c978903"><code>131fe0e</code></a>
+   Bump clap from 4.4.18 to 4.5.1 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/509">#509</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/78dcbffb83d9faa88153b33503d64c23ec090b95"><code>78dcbff</code></a>
+   Bump syn from 2.0.48 to 2.0.51 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/511">#511</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/cc35d40cdaa6b6c1e70e5338fe7954ac0df61995"><code>cc35d40</code></a>
+   Bump assert_cmd from 2.0.13 to 2.0.14 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/512">#512</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/e0a11a4e085a83498427e007a55d0b5366d131ce"><code>e0a11a4</code></a>
+   1.76 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/515">#515</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/113f8f9751c8ab0ce7b277fa05ea7de39bfdf9b4"><code>113f8f9</code></a>
+   Bump serde from 1.0.196 to 1.0.197 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/513">#513</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/92945bc1bdab8106189f2af3947bf74ee69a2947"><code>92945bc</code></a>
+   Bump serde_json from 1.0.113 to 1.0.114 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/514">#514</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/ce009d6f83b620cbd0e3acdd9b9ea071018471d8"><code>ce009d6</code></a>
+   Bump thiserror from 1.0.56 to 1.0.57 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/505">#505</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/b3beca8e708f1367cd7cca74816bdca6b4a18c4a"><code>b3beca8</code></a>
+   Bump chrono from 0.4.33 to 0.4.34 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/506">#506</a>)</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.15...v0.0.16">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   You can trigger a rebase of this PR by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 2 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#155](https://github.com/substrait-io/substrait-rs/issues/155)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#155](https://github.com/substrait-io/substrait-rs/issues/155)**
+    - Update typify requirement from 0.0.15 to 0.0.16 ([`cc0e947`](https://github.com/substrait-io/substrait-rs/commit/cc0e947f1a21249312dfd777f5a624bea0133f41))
+ * **Uncategorized**
+    - Release substrait v0.25.1 ([`17cdbeb`](https://github.com/substrait-io/substrait-rs/commit/17cdbeb513010971108903c70046c53541e4bbb8))
+</details>
+
+## 0.25.0 (2024-02-26)
+
+<csr-id-1290ec113f03ef259c12fdcee5518470ee1f0bc0/>
+
+### Chore (BREAKING)
+
+ - <csr-id-1290ec113f03ef259c12fdcee5518470ee1f0bc0/> bump substrait from `0.42.1` to `0.43.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `4734478` to `5e1948e`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/5e1948e7a9e945d347b011e6518d1bb501f8522a"><code>5e1948e</code></a>
+   chore(release): 0.43.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/087f87c0307572cf2e9a7d1db7fdd673662699c3"><code>087f87c</code></a>
+   feat: include precision parameter in timestamp types (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/594">#594</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/a3b1f32b0e6aac08bf0ee7437a5ae1c10100a859"><code>a3b1f32</code></a>
+   fix: remove function definitions w/ invalid return types (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/599">#599</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/d9b9672fd3c24285afdee9344fc2f4f7fcd70afb"><code>d9b9672</code></a>
+   docs: fix link to protobuf files (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/598">#598</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/3ded94d69e7ae329f2730b7634ba34900250e84a"><code>3ded94d</code></a>
+   docs: fix code blocks in field_references.md (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/595">#595</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/47344783dce74645dcb636cb646cd3628df37ef0...5e1948e7a9e945d347b011e6518d1bb501f8522a">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 13 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#154](https://github.com/substrait-io/substrait-rs/issues/154)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#154](https://github.com/substrait-io/substrait-rs/issues/154)**
+    - Bump substrait from `0.42.1` to `0.43.0` ([`1290ec1`](https://github.com/substrait-io/substrait-rs/commit/1290ec113f03ef259c12fdcee5518470ee1f0bc0))
+ * **Uncategorized**
+    - Release substrait v0.25.0 ([`2e188ab`](https://github.com/substrait-io/substrait-rs/commit/2e188ab4365d82335a84f0c45bd3b7d0058e4b4f))
+</details>
+
+## 0.24.2 (2024-02-12)
+
+### Bug Fixes
+
+ - <csr-id-9f08ea67024fdbc4c58b90521af14cf876292956/> upgrade git2 to resolve CVEs
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 11 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#153](https://github.com/substrait-io/substrait-rs/issues/153)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#153](https://github.com/substrait-io/substrait-rs/issues/153)**
+    - Upgrade git2 to resolve CVEs ([`9f08ea6`](https://github.com/substrait-io/substrait-rs/commit/9f08ea67024fdbc4c58b90521af14cf876292956))
+ * **Uncategorized**
+    - Release substrait v0.24.2 ([`da71870`](https://github.com/substrait-io/substrait-rs/commit/da71870d377a90e71cabd6e50fa7efc66eddbab2))
+</details>
+
+## 0.24.1 (2024-02-01)
+
+<csr-id-2c392122195e3059f8afbffeb8bdd7f988ed7fe5/>
+
+### Chore
+
+ - <csr-id-2c392122195e3059f8afbffeb8bdd7f988ed7fe5/> bump arduino/setup-protoc from 2 to 3
+   Bumps [arduino/setup-protoc](https://github.com/arduino/setup-protoc)
+   from 2 to 3.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/arduino/setup-protoc/releases">arduino/setup-protoc's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v3.0.0</h2>
+   <h2>What's Changed</h2>
+   <ul>
+   <li>Correct <code>convetion</code> typo in README by <a
+   href="https://github.com/nixpanic"><code>@​nixpanic</code></a> in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/91">arduino/setup-protoc#91</a></li>
+   <li>Bump <code>@​babel/traverse</code> from 7.22.1 to 7.23.2 by <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/93">arduino/setup-protoc#93</a></li>
+   <li>Upgrade to node 20 by <a
+   href="https://github.com/alessio-perugini"><code>@​alessio-perugini</code></a>
+   in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/95">arduino/setup-protoc#95</a></li>
+   </ul>
+   <h2>New Contributors</h2>
+   <ul>
+   <li><a href="https://github.com/nixpanic"><code>@​nixpanic</code></a>
+   made their first contribution in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/91">arduino/setup-protoc#91</a></li>
+   </ul>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/arduino/setup-protoc/compare/v2.1.0...v3.0.0">https://github.com/arduino/setup-protoc/compare/v2.1.0...v3.0.0</a></p>
+   <h2>v2.1.0</h2>
+   <h2>What's Changed</h2>
+   <ul>
+   <li>Expose <code>path</code> and <code>version</code> in
+   <code>outputs</code> by <a
+   href="https://github.com/sebastienvermeille"><code>@​sebastienvermeille</code></a>
+   in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/89">arduino/setup-protoc#89</a></li>
+   <li>Bump semver from 7.5.1 to 7.5.2 by <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/87">arduino/setup-protoc#87</a></li>
+   <li>bump semver to 7.5.3 by <a
+   href="https://github.com/alessio-perugini"><code>@​alessio-perugini</code></a>
+   in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/90">arduino/setup-protoc#90</a></li>
+   </ul>
+   <h2>New Contributors</h2>
+   <ul>
+   <li><a
+   href="https://github.com/sebastienvermeille"><code>@​sebastienvermeille</code></a>
+   made their first contribution in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/89">arduino/setup-protoc#89</a></li>
+   </ul>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/arduino/setup-protoc/compare/v2.0.0...v2.1.0">https://github.com/arduino/setup-protoc/compare/v2.0.0...v2.1.0</a></p>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/arduino/setup-protoc/commit/c65c819552d16ad3c9b72d9dfd5ba5237b9c906b"><code>c65c819</code></a>
+   Upgrade to node 20 (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/95">#95</a>)</li>
+   <li><a
+   href="https://github.com/arduino/setup-protoc/commit/52a53b4e2d968277c5c749dac537d0b14a6f5272"><code>52a53b4</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/93">#93</a>
+   from arduino/dependabot/npm_and_yarn/babel/traverse-7....</li>
+   <li><a
+   href="https://github.com/arduino/setup-protoc/commit/cf7ab7fe8696fefcafb8135834d49955e824a56b"><code>cf7ab7f</code></a>
+   Bump <code>@​babel/traverse</code> from 7.22.1 to 7.23.2</li>
+   <li><a
+   href="https://github.com/arduino/setup-protoc/commit/e2995ba278e6b4bca9bac954e72667db122abed1"><code>e2995ba</code></a>
+   Correct <code>convetion</code> typo in README (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/91">#91</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/arduino/setup-protoc/compare/v2...v3">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=arduino/setup-protoc&package-manager=github_actions&previous-version=2&new-version=3)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 2 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#151](https://github.com/substrait-io/substrait-rs/issues/151)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#151](https://github.com/substrait-io/substrait-rs/issues/151)**
+    - Bump arduino/setup-protoc from 2 to 3 ([`2c39212`](https://github.com/substrait-io/substrait-rs/commit/2c392122195e3059f8afbffeb8bdd7f988ed7fe5))
+ * **Uncategorized**
+    - Release substrait v0.24.1 ([`452a41e`](https://github.com/substrait-io/substrait-rs/commit/452a41e6a7dce461fcf094ea0fe833af7fe74963))
+</details>
+
+## 0.24.0 (2024-01-29)
+
+<csr-id-4a3583f8d7a416ba34af9ad1966bc349e7bd1d83/>
+
+### Chore (BREAKING)
+
+ - <csr-id-4a3583f8d7a416ba34af9ad1966bc349e7bd1d83/> bump substrait from `0.42.0` to `0.42.1`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `3251b1f` to `4734478`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/47344783dce74645dcb636cb646cd3628df37ef0"><code>4734478</code></a>
+   chore(release): 0.42.1</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/a4cf7417e348ce9683b558f1b0a274bf55af8c30"><code>a4cf741</code></a>
+   chore(deps): Bump bufbuild/buf-setup-action from 1.28.1 to 1.29.0 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/593">#593</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/8b9535c9a55ef68f83ca6fee1552646bd33757e6"><code>8b9535c</code></a>
+   docs: add more explanation of comparison function (in hash/merge join)
+   (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/586">#586</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/54454cbfec562af987edfa410e75a3dd203c12ad"><code>54454cb</code></a>
+   chore(deps): Bump actions/cache from 3 to 4 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/589">#589</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/543f740bcb7455650a1ded8f21729406926146d7"><code>543f740</code></a>
+   refactor: prefer boolean over BOOLEAN (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/590">#590</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/d55703a18a7a8f2ecf695f9367ca33fab6b1ef33"><code>d55703a</code></a>
+   fix: add missing RelCommon field to WriteRel and DdlRel (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/591">#591</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/3251b1fc5ede5788502be989b8eab778051d7a4d...47344783dce74645dcb636cb646cd3628df37ef0">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 7 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#150](https://github.com/substrait-io/substrait-rs/issues/150)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#150](https://github.com/substrait-io/substrait-rs/issues/150)**
+    - Bump substrait from `0.42.0` to `0.42.1` ([`4a3583f`](https://github.com/substrait-io/substrait-rs/commit/4a3583f8d7a416ba34af9ad1966bc349e7bd1d83))
+ * **Uncategorized**
+    - Release substrait v0.24.0 ([`9c2bf1b`](https://github.com/substrait-io/substrait-rs/commit/9c2bf1bee99650005e18aa3f4aed77711f7d0db7))
+</details>
+
+## 0.23.0 (2024-01-22)
+
+<csr-id-952c90f50a1aeaac48039e6ac8f0d4f2e70e2ad3/>
+<csr-id-33aaf9b613ccc804265678f192f864d7e5a2b5a7/>
+<csr-id-c2e596b124f95fc1364f96174d0bb104081be62d/>
+
+### Chore
+
+ - <csr-id-952c90f50a1aeaac48039e6ac8f0d4f2e70e2ad3/> bump actions/upload-pages-artifact from 2 to 3
+   Bumps
+   [actions/upload-pages-artifact](https://github.com/actions/upload-pages-artifact)
+   from 2 to 3.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/upload-pages-artifact/releases">actions/upload-pages-artifact's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v3.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Use <code>v4</code> upload-artifact tag <a
+   href="https://github.com/robherley"><code>@​robherley</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/80">#80</a>)</li>
+   <li>Upload pages artifact with upload-artifact v4-beta <a
+   href="https://github.com/konradpabjan"><code>@​konradpabjan</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/78">#78</a>)</li>
+   </ul>
+   <p>To deploy a GitHub Pages site which has been uploaded with his
+   version of <code>actions/upload-pages-artifact</code>, you must also use
+   <code>actions/deploy-pages@v4</code> or newer.</p>
+   <p>See details of <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v2.0.0...v3.0.0">all
+   code changes</a> since previous release.</p>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/0252fc4ba7626f0298f0cf00902a25c6afc77fa8"><code>0252fc4</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/81">#81</a>
+   from actions/artifacts-next</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/2a5c1440746537a84f699a04465e7ac8a64879e4"><code>2a5c144</code></a>
+   Use actions/download-artifact@v4 in test</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/7e3f6bb53bf41c0cc32c369403f7fcbb8989c9ae"><code>7e3f6bb</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/80">#80</a>
+   from robherley/patch-1</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/257e666c0505b64d304755738c09e8a1f32ff7e0"><code>257e666</code></a>
+   Use <code>v4</code> upload-artifact tag</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/0313a19afa9efdf74b4e31c9554d35f744213f0e"><code>0313a19</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/78">#78</a>
+   from konradpabjan/main</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/1228e656868935b3c8b085b28ea3b89b5763c64e"><code>1228e65</code></a>
+   Update action.yml</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/eb31309b6cdf94f92e47abb173a0cbed9b5056cf"><code>eb31309</code></a>
+   Update artifact names in tests</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/241a975ec2c9ecb3effc2875203cce4b9e25078d"><code>241a975</code></a>
+   Correct artifact name during download</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/ef95519d72c61a2dd9137c79470bacfc5bdbbaa8"><code>ef95519</code></a>
+   Unique artifact name per job</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/ecdd3edff76d306e98d046dfc846e651354ac144"><code>ecdd3ed</code></a>
+   Switch to using download@v4-beta</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v2...v3">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/upload-pages-artifact&package-manager=github_actions&previous-version=2&new-version=3)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+ - <csr-id-33aaf9b613ccc804265678f192f864d7e5a2b5a7/> bump actions/deploy-pages from 3 to 4
+   Bumps [actions/deploy-pages](https://github.com/actions/deploy-pages)
+   from 3 to 4.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/deploy-pages/releases">actions/deploy-pages's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v4.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Deploy pages using artifact IDs <a
+   href="https://github.com/konradpabjan"><code>@​konradpabjan</code></a>
+   (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/251">#251</a>)</li>
+   </ul>
+   <hr />
+   <p>:warning: This version of <code>actions/deploy-pages</code> is
+   <strong>ONLY</strong> compatible with artifacts uploaded by either:</p>
+   <ul>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/releases/tag/v3.0.0"><code>actions/upload-pages-artifact@v3</code></a>
+   or newer</li>
+   <li><a
+   href="https://github.com/actions/upload-artifact/releases/tag/v4.0.0"><code>actions/upload-artifact@v4</code></a>
+   or newer.</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/deploy-pages/compare/v3.0.1...v4.0.0">all
+   code changes</a> since previous release.</p>
+   <p>:warning: For use with products other than GitHub.com, such as GitHub
+   Enterprise Server, please consult the <a
+   href="https://github.com/actions/deploy-pages/#compatibilty">compatibility
+   table</a>.</p>
+   <h2>v3.0.1</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Bump eslint from 8.54.0 to 8.55.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/266">#266</a>)</li>
+   <li>Bump nock from 13.3.8 to 13.4.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/267">#267</a>)</li>
+   <li>Bump eslint-config-prettier from 9.0.0 to 9.1.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/268">#268</a>)</li>
+   <li>Bump <code>@​actions/core</code> from 1.10.0 to 1.10.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/269">#269</a>)</li>
+   <li>Bump <code>@​actions/github</code> from 5.1.1 to 6.0.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/261">#261</a>)</li>
+   <li>Update compatibility table for v3 <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/270">#270</a>)</li>
+   </ul>
+   <h2>🧰 Maintenance</h2>
+   <ul>
+   <li>chore/docs: update version, fix typos <a
+   href="https://github.com/kbdharun"><code>@​kbdharun</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/272">#272</a>)</li>
+   </ul>
+   <hr />
+   <p>See details of <a
+   href="https://github.com/actions/deploy-pages/compare/v3.0.0...v3.0.1">all
+   code changes</a> since previous release.</p>
+   <p>:warning: For use with products other than GitHub.com, such as GitHub
+   Enterprise Server, please consult the <a
+   href="https://github.com/actions/deploy-pages/#compatibilty">compatibility
+   table</a>.</p>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/deploy-pages/commit/f33f41b675f0ab2dc5a6863c9a170fe83af3571e"><code>f33f41b</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/deploy-pages/issues/279">#279</a>
+   from actions/artifacts-next-ga</li>
+   <li><a
+   href="https://github.com/actions/deploy-pages/commit/0d45f33cdeb74801a7a5c5af95dceac9fa933818"><code>0d45f33</code></a>
+   pretty</li>
+   <li><a
+   href="https://github.com/actions/deploy-pages/commit/d1e23d0efd9866b3e474883905cb86712868e97b"><code>d1e23d0</code></a>
+   Merge branch 'main' into artifacts-next-ga</li>
+   <li>See full diff in <a
+   href="https://github.com/actions/deploy-pages/compare/v3...v4">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/deploy-pages&package-manager=github_actions&previous-version=3&new-version=4)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Chore (BREAKING)
+
+ - <csr-id-c2e596b124f95fc1364f96174d0bb104081be62d/> bump substrait from `0.41.0` to `0.42.0`
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 4 commits contributed to the release over the course of 13 calendar days.
+ - 13 days passed between releases.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 3 unique issues were worked on: [#145](https://github.com/substrait-io/substrait-rs/issues/145), [#146](https://github.com/substrait-io/substrait-rs/issues/146), [#149](https://github.com/substrait-io/substrait-rs/issues/149)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#145](https://github.com/substrait-io/substrait-rs/issues/145)**
+    - Bump actions/deploy-pages from 3 to 4 ([`33aaf9b`](https://github.com/substrait-io/substrait-rs/commit/33aaf9b613ccc804265678f192f864d7e5a2b5a7))
+ * **[#146](https://github.com/substrait-io/substrait-rs/issues/146)**
+    - Bump actions/upload-pages-artifact from 2 to 3 ([`952c90f`](https://github.com/substrait-io/substrait-rs/commit/952c90f50a1aeaac48039e6ac8f0d4f2e70e2ad3))
+ * **[#149](https://github.com/substrait-io/substrait-rs/issues/149)**
+    - Bump substrait from `0.41.0` to `0.42.0` ([`c2e596b`](https://github.com/substrait-io/substrait-rs/commit/c2e596b124f95fc1364f96174d0bb104081be62d))
+ * **Uncategorized**
+    - Release substrait v0.23.0 ([`4441c9b`](https://github.com/substrait-io/substrait-rs/commit/4441c9b7563ac9654af996b21e3f1602aa4171de))
+</details>
+
+## 0.22.0 (2024-01-08)
+
+<csr-id-aec95c21814736286418070bd1e88760f1c1e92f/>
+
+### Chore (BREAKING)
+
+ - <csr-id-aec95c21814736286418070bd1e88760f1c1e92f/> bump substrait from `0.40.0` to `0.41.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `cdae23e` to `c7d7e9c`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/c7d7e9c5393aaa5e63b4a18ce65e423faa5eb9dd"><code>c7d7e9c</code></a>
+   chore(release): 0.41.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/aba1bc79acc5bf40a719b23276bfa6f7546e7ed5"><code>aba1bc7</code></a>
+   fix: renamed modulus to modulo; updated modulo operator defintion (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/583">#583</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/cdae23ea0f5784243efa60a5361fabf31127457f...c7d7e9c5393aaa5e63b4a18ce65e423faa5eb9dd">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 22 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#147](https://github.com/substrait-io/substrait-rs/issues/147)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#147](https://github.com/substrait-io/substrait-rs/issues/147)**
+    - Bump substrait from `0.40.0` to `0.41.0` ([`aec95c2`](https://github.com/substrait-io/substrait-rs/commit/aec95c21814736286418070bd1e88760f1c1e92f))
+ * **Uncategorized**
+    - Release substrait v0.22.0 ([`a605313`](https://github.com/substrait-io/substrait-rs/commit/a605313678b63b7a01be85069282645a9fb60938))
+</details>
+
+## 0.21.0 (2023-12-17)
+
+<csr-id-e24c5a3b082bb1c4e8e2329efec4762fd79ff60a/>
+
+### Chore (BREAKING)
+
+ - <csr-id-e24c5a3b082bb1c4e8e2329efec4762fd79ff60a/> bump substrait from `0.39.0` to `0.40.0`
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#144](https://github.com/substrait-io/substrait-rs/issues/144)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#144](https://github.com/substrait-io/substrait-rs/issues/144)**
+    - Bump substrait from `0.39.0` to `0.40.0` ([`e24c5a3`](https://github.com/substrait-io/substrait-rs/commit/e24c5a3b082bb1c4e8e2329efec4762fd79ff60a))
+ * **Uncategorized**
+    - Release substrait v0.21.0 ([`33a9669`](https://github.com/substrait-io/substrait-rs/commit/33a966916dae84c65b45d9e7bc550be635225156))
+</details>
+
+## 0.20.3 (2023-12-15)
+
+<csr-id-8d9886a420488bf57ae81015571347e043b56e8f/>
+
+### Chore
+
+ - <csr-id-8d9886a420488bf57ae81015571347e043b56e8f/> update typify requirement from 0.0.14 to 0.0.15
+   Updates the requirements on
+   [typify](https://github.com/oxidecomputer/typify) to permit the latest
+   version.
+   <details>
+   <summary>Changelog</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/oxidecomputer/typify/blob/main/CHANGELOG.adoc">typify's
+   changelog</a>.</em></p>
+   <blockquote>
+   <p>== 0.0.15 (released 2023-12-15)</p>
+   <ul>
+   <li>Improvements to array merging and mutual exclusivity checks (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/412">#412</a>)</li>
+   <li>Support for 32-bit floating-point numbers (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/440">#440</a>)</li>
+   <li>Better handling for unsatisfiable merged schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/447">#447</a>)</li>
+   <li>Show original JSON Schema in generated type docs (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/454">#454</a>)</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.14%5C...v0.0.15%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.14\...v0.0.15[Full</a>
+   list of commits]</p>
+   <p>== 0.0.14 (released 2023-09-25)</p>
+   <ul>
+   <li>Handle arbitrary containment cycles (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/300">#300</a>)</li>
+   <li>More permissive of valid (if useless) schema constructions (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/306">#306</a>,
+   <a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/320">#320</a>)</li>
+   <li>Much better handling of <code>allOf</code> constructions by merging
+   schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/405">#405</a>)</li>
+   <li>Support for more <code>not</code> subschemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/410">#410</a>)</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.13%5C...v0.0.14%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.13\...v0.0.14[Full</a>
+   list of commits]</p>
+   <p>== 0.0.13 (released 2023-05-14)</p>
+   <ul>
+   <li>Fixed-length, single-type arrays to <code>[T; N]</code> (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/286">#286</a>)</li>
+   <li>Support for reflexive schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/292">#292</a>)</li>
+   <li>Much improved support for multi-type schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/291">#291</a>)</li>
+   <li>Better error messages on failures</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.12%5C...v0.0.13%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.12\...v0.0.13[Full</a>
+   list of commits]</p>
+   <p>== 0.0.12 (released 2023-05-03)</p>
+   <ul>
+   <li>Improved enum generation (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/270">#270</a>)</li>
+   <li>Improved integer type selection based on number criteria (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/255">#255</a>)</li>
+   <li><code>TypeSpace::add_root_schema()</code> (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/236">#236</a>)</li>
+   <li>... and many general improvements</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.11%5C...v0.0.12%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.11\...v0.0.12[Full</a>
+   list of commits]</p>
+   <p>== 0.0.11 (released 2023-03-18)</p>
+   <p>This is a big update with many, many changes to code generation, and
+   many more
+   JSON schema structures well-handled. Among the many changes:</p>
+   <ul>
+   <li>Generate a <code>ToString</code> impl for untagged enums with
+   trivial variants (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/145">#145</a>)</li>
+   <li>Allow conversion overrides by specifying a schema (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/155">#155</a>)</li>
+   <li>Handle untyped enums that contain nulls (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/167">#167</a>)</li>
+   <li>Handle <code>not</code> schemas for enumerated values (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/168">#168</a>)</li>
+   <li>Improve generated code for FromStr and TryFrom impls (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/174">#174</a>)</li>
+   <li>Handle format specifiers for enumerated strings (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/188">#188</a>)</li>
+   </ul>
+   <p>=== <em>Breaking</em>: The removal of
+   <code>TypeSpace::to_string()</code></p>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/0894f06e6798f24efcbd7134746962aa0e6eb371"><code>0894f06</code></a>
+   release typify 0.0.15</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/cafdeeb82f9af69ceb344ef0e356653dbb0b8521"><code>cafdeeb</code></a>
+   use Default::default rather than buidler::#type_name::Default to avoid
+   confli...</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/048828b669f4b472db4750dfc599eb8bc5b70b78"><code>048828b</code></a>
+   update Cargo.lock</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/41c581a465202b77ff100dcca32b0bfea073d145"><code>41c581a</code></a>
+   update changelog (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/455">#455</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/b0df7aa37ae13b61705161075146250224df24f2"><code>b0df7aa</code></a>
+   keep json; include in doc comments (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/454">#454</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/d1b6c7d97619b7398e03f4cb27557529c3c7fe75"><code>d1b6c7d</code></a>
+   Bump syn from 2.0.39 to 2.0.40 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/453">#453</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/a5a27d5c02d5346a1e4fb027543bdfa22170eaf6"><code>a5a27d5</code></a>
+   Bump clap from 4.4.10 to 4.4.11 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/452">#452</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/d6d85998d29825cfcf07072423f567a085db3ee0"><code>d6d8599</code></a>
+   Bump clap from 4.4.8 to 4.4.10 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/449">#449</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/2c52a39a0465caf9debfb67443e218d033ed468b"><code>2c52a39</code></a>
+   fix handling of references within allOf subschemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/448">#448</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/8b83fbf0a59d8e6d474e49cdd1657c663eba7284"><code>8b83fbf</code></a>
+   unsatisfiable allOf construction panics (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/447">#447</a>)</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.14...v0.0.15">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   You can trigger a rebase of this PR by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 9 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#143](https://github.com/substrait-io/substrait-rs/issues/143)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#143](https://github.com/substrait-io/substrait-rs/issues/143)**
+    - Update typify requirement from 0.0.14 to 0.0.15 ([`8d9886a`](https://github.com/substrait-io/substrait-rs/commit/8d9886a420488bf57ae81015571347e043b56e8f))
+ * **Uncategorized**
+    - Release substrait v0.20.3 ([`8227aae`](https://github.com/substrait-io/substrait-rs/commit/8227aaef8d5cf0a730f282df006c12ed41469e90))
+</details>
+
+## 0.20.2 (2023-12-05)
+
+<csr-id-d8912a529e86b82e200d9bbbb63dafa1d6c06a76/>
+
+### Chore
+
+ - <csr-id-d8912a529e86b82e200d9bbbb63dafa1d6c06a76/> bump actions/configure-pages from 3 to 4
+   Bumps
+   [actions/configure-pages](https://github.com/actions/configure-pages)
+   from 3 to 4.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/configure-pages/releases">actions/configure-pages's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v4.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Use a centralized <code>.node-version</code> file <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/117">#117</a>)</li>
+   <li>Update action to node20 <a
+   href="https://github.com/takost"><code>@​takost</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/108">#108</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/configure-pages/compare/v3.0.7...v4.0.0">all
+   code changes</a> since previous release.</p>
+   <h2>v3.0.7</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Update Actions workflows to use Node 20.x <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/116">#116</a>)</li>
+   <li>Bump eslint-plugin-github from 4.7.0 to 4.10.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/114">#114</a>)</li>
+   <li>Bump word-wrap from 1.2.3 to 1.2.5 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/113">#113</a>)</li>
+   <li>Bump jest from 29.5.0 to 29.7.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/112">#112</a>)</li>
+   <li>Bump <code>@​babel/traverse</code> from 7.21.3 to 7.23.5 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/110">#110</a>)</li>
+   <li>Bump espree from 9.5.2 to 9.6.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/111">#111</a>)</li>
+   <li>Bump eslint from 8.38.0 to 8.40.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/93">#93</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/configure-pages/compare/v3.0.6...v3.0.7">all
+   code changes</a> since previous release.</p>
+   <h2>v3.0.6</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Bump eslint from 8.36.0 to 8.38.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/89">#89</a>)</li>
+   <li>Bump eslint-plugin-github from 4.6.1 to 4.7.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/86">#86</a>)</li>
+   <li>Bump eslint-config-prettier from 8.7.0 to 8.8.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/85">#85</a>)</li>
+   <li>Bump prettier from 2.8.6 to 2.8.7 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/84">#84</a>)</li>
+   <li>Make &quot;Get Pages failed&quot; error message more helpful <a
+   href="https://github.com/WofWca"><code>@​WofWca</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/83">#83</a>)</li>
+   <li>Bump prettier from 2.8.4 to 2.8.6 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/81">#81</a>)</li>
+   <li>Add a CodeQL security scanning workflow <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/68">#68</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/configure-pages/compare/v3.0.5...v3.0.6">all
+   code changes</a> since previous release.</p>
+   <h2>v3.0.5</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Bump jest from 29.4.3 to 29.5.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/77">#77</a>)</li>
+   <li>Bump eslint from 8.35.0 to 8.36.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/76">#76</a>)</li>
+   <li>Bump espree from 9.4.1 to 9.5.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/78">#78</a>)</li>
+   <li>Bump eslint-config-prettier from 8.6.0 to 8.7.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/75">#75</a>)</li>
+   <li>Bump eslint from 8.34.0 to 8.35.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/73">#73</a>)</li>
+   <li>Bump jest from 29.4.1 to 29.4.3 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/72">#72</a>)</li>
+   <li>Bump eslint-plugin-github from 4.6.0 to 4.6.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/71">#71</a>)</li>
+   <li>Amend token coverage for enablement in Action metadata file <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/51">#51</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/configure-pages/compare/v3.0.4...v3.0.5">all
+   code changes</a> since previous release.</p>
+   <h2>v3.0.4</h2>
+   <h1>Changelog</h1>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/1f0c5cde4bc74cd7e1254d0cb4de8d49e9068c7d"><code>1f0c5cd</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/configure-pages/issues/117">#117</a>
+   from actions/use-node-version-file</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/591bb0deb9c3f137206bbbabf9b07b6161afc6ba"><code>591bb0d</code></a>
+   Merge branch 'main' into use-node-version-file</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/1465f012e6e7718cdf7bc61874e613e1e67ed84f"><code>1465f01</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/configure-pages/issues/108">#108</a>
+   from takost/update-to-node-20</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/f2fc55313325af8b5ee6da799ed072a114df7416"><code>f2fc553</code></a>
+   Merge branch 'main' into update-to-node-20</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/373694e352893db5ef78de6f321e8d55c860f7b6"><code>373694e</code></a>
+   Use a centralized .node-version file</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/3a014131e99a7bf2daf896787a8f92789126d038"><code>3a01413</code></a>
+   Update action to node20</li>
+   <li>See full diff in <a
+   href="https://github.com/actions/configure-pages/compare/v3...v4">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/configure-pages&package-manager=github_actions&previous-version=3&new-version=4)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#141](https://github.com/substrait-io/substrait-rs/issues/141)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#141](https://github.com/substrait-io/substrait-rs/issues/141)**
+    - Bump actions/configure-pages from 3 to 4 ([`d8912a5`](https://github.com/substrait-io/substrait-rs/commit/d8912a529e86b82e200d9bbbb63dafa1d6c06a76))
+ * **Uncategorized**
+    - Release substrait v0.20.2 ([`b8f1e56`](https://github.com/substrait-io/substrait-rs/commit/b8f1e56f9feb9c2be59fea6496ce3c3fe64beb64))
+</details>
+
+## 0.20.1 (2023-12-05)
+
+<csr-id-c2d9ea0e39cd5e32a118b650d55c019171b6900e/>
+
+### Chore
+
+ - <csr-id-c2d9ea0e39cd5e32a118b650d55c019171b6900e/> bump actions/deploy-pages from 2 to 3
+   Bumps [actions/deploy-pages](https://github.com/actions/deploy-pages)
+   from 2 to 3.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/deploy-pages/releases">actions/deploy-pages's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v3.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Update action to node20 <a
+   href="https://github.com/takost"><code>@​takost</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/256">#256</a>)</li>
+   </ul>
+   <hr />
+   <p>See details of <a
+   href="https://github.com/actions/deploy-pages/compare/v2.0.5...v3.0.0">all
+   code changes</a> since previous release.</p>
+   <p>:warning: For use with products other than GitHub.com, such as GitHub
+   Enterprise Server, please consult the <a
+   href="https://github.com/actions/deploy-pages/#compatibilty">compatibility
+   table</a>.</p>
+   <h2>v2.0.5</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Bump prettier from 3.0.0 to 3.1.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/264">#264</a>)</li>
+   <li>Bump <code>@​octokit/request-error</code> from 5.0.0 to 5.0.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/263">#263</a>)</li>
+   <li>Bump <code>@​actions/http-client</code> from 2.1.0 to 2.2.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/262">#262</a>)</li>
+   <li>Bump <code>@​vercel/ncc</code> from 0.36.1 to 0.38.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/260">#260</a>)</li>
+   <li>Bump eslint from 8.44.0 to 8.54.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/257">#257</a>)</li>
+   <li>Bump nock from 13.3.1 to 13.3.8 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/254">#254</a>)</li>
+   <li>Bump actions/setup-node from 3 to 4 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/246">#246</a>)</li>
+   <li>Bump release-drafter/release-drafter from 5.24.0 to 5.25.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/245">#245</a>)</li>
+   <li>Bump eslint-plugin-github from 4.8.0 to 4.10.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/232">#232</a>)</li>
+   <li>Bump jest from 29.6.1 to 29.7.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/224">#224</a>)</li>
+   <li>Fix cosmetic error by replacing comma with period <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/210">#210</a>)</li>
+   <li>Bump actions/checkout from 3 to 4 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/220">#220</a>)</li>
+   <li>Bump eslint-config-prettier from 8.8.0 to 9.0.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/209">#209</a>)</li>
+   <li>Remove &quot;beta&quot; disclaimer from README <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/243">#243</a>)</li>
+   </ul>
+   <hr />
+   <p>See details of <a
+   href="https://github.com/actions/deploy-pages/compare/v2.0.4...v2.0.5">all
+   code changes</a> since previous release.</p>
+   <p>:warning: For use with products other than GitHub.com, such as GitHub
+   Enterprise Server, please consult the <a
+   href="https://github.com/actions/deploy-pages/#compatibilty">compatibility
+   table</a>.</p>
+   <h2>v2.0.4</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Update GHES compatibility table after verifying with
+   <code>3.9.x</code> <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/201">#201</a>)</li>
+   <li>Bump <code>@​octokit/request-error</code> from 4.0.1 to 5.0.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/194">#194</a>)</li>
+   <li>Bump prettier from 2.8.8 to 3.0.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/196">#196</a>)</li>
+   <li>Bump jest from 29.5.0 to 29.6.1 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/195">#195</a>)</li>
+   <li>Bump release-drafter/release-drafter from 5.23.0 to 5.24.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/192">#192</a>)</li>
+   <li>Bump eslint from 8.42.0 to 8.44.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/191">#191</a>)</li>
+   <li>Remove circular JSON references for error debugging <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/deploy-pages/issues/197">#197</a>)</li>
+   </ul>
+   <hr />
+   <p>See details of <a
+   href="https://github.com/actions/deploy-pages/compare/v2.0.3...v2.0.4">all
+   code changes</a> since previous release.</p>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/deploy-pages/commit/77d7344265e1f960dab5c00dbff52287a70b0d4f"><code>77d7344</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/deploy-pages/issues/256">#256</a>
+   from takost/update-to-node-20</li>
+   <li><a
+   href="https://github.com/actions/deploy-pages/commit/84abb89dc54f5055b934ca7dec97480f1a16f6bb"><code>84abb89</code></a>
+   Merge branch 'main' into update-to-node-20</li>
+   <li>See full diff in <a
+   href="https://github.com/actions/deploy-pages/compare/v2...v3">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/deploy-pages&package-manager=github_actions&previous-version=2&new-version=3)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 7 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#140](https://github.com/substrait-io/substrait-rs/issues/140)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#140](https://github.com/substrait-io/substrait-rs/issues/140)**
+    - Bump actions/deploy-pages from 2 to 3 ([`c2d9ea0`](https://github.com/substrait-io/substrait-rs/commit/c2d9ea0e39cd5e32a118b650d55c019171b6900e))
+ * **Uncategorized**
+    - Release substrait v0.20.1 ([`02a5aae`](https://github.com/substrait-io/substrait-rs/commit/02a5aae4cd2a0199676e1c48b6f5448f77ac1b4c))
+</details>
+
+## 0.20.0 (2023-11-27)
+
+<csr-id-6c5055baa8b6522a419f02ac550a07f9d9d0fedc/>
+
+### Chore (BREAKING)
+
+ - <csr-id-6c5055baa8b6522a419f02ac550a07f9d9d0fedc/> bump substrait from `0.38.0` to `0.39.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `bdff923` to `8f8d85e`.
+   
+   ---------
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 20 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#139](https://github.com/substrait-io/substrait-rs/issues/139)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#139](https://github.com/substrait-io/substrait-rs/issues/139)**
+    - Bump substrait from `0.38.0` to `0.39.0` ([`6c5055b`](https://github.com/substrait-io/substrait-rs/commit/6c5055baa8b6522a419f02ac550a07f9d9d0fedc))
+ * **Uncategorized**
+    - Release substrait v0.20.0 ([`2f0f42f`](https://github.com/substrait-io/substrait-rs/commit/2f0f42f975364a82e49074fa04a10f3f35386853))
+</details>
+
+## 0.19.0 (2023-11-06)
+
+<csr-id-7f91d6243d399014bafbe48ef75ff361bfaab386/>
+
+### Chore (BREAKING)
+
+ - <csr-id-7f91d6243d399014bafbe48ef75ff361bfaab386/> bump substrait from `0.37.0` to `0.38.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `52e81a9` to `bdff923`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/bdff9232d858b0b73526bcc115921d39eaaf492d"><code>bdff923</code></a>
+   chore(release): 0.38.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/b3071bc9cd77cf916568641c83056a285f8123be"><code>b3071bc</code></a>
+   feat: add least and greatest functions to functions_comparison.yml (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/247">#247</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/6c88a1e1a6d8a8a05a3b5b8a141309009d62be29"><code>6c88a1e</code></a>
+   chore(deps): Bump bufbuild/buf-setup-action from 1.27.1 to 1.27.2 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/569">#569</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/2d9f1b95a4bef196aa0e27a8e9425f12ee8f2998"><code>2d9f1b9</code></a>
+   chore(deps): Bump actions/setup-node from 3 to 4 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/568">#568</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/52e81a9fe725881036eddaa77ae0dba8b2ad6f83...bdff9232d858b0b73526bcc115921d39eaaf492d">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 13 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#137](https://github.com/substrait-io/substrait-rs/issues/137)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#137](https://github.com/substrait-io/substrait-rs/issues/137)**
+    - Bump substrait from `0.37.0` to `0.38.0` ([`7f91d62`](https://github.com/substrait-io/substrait-rs/commit/7f91d6243d399014bafbe48ef75ff361bfaab386))
+ * **Uncategorized**
+    - Release substrait v0.19.0 ([`1d8e21f`](https://github.com/substrait-io/substrait-rs/commit/1d8e21f653a92531272ffdf346c9a6bd6aef452f))
+</details>
+
+## 0.18.1 (2023-10-24)
+
+<csr-id-47d00137150f3d15b813d0c366d518efd389d792/>
+
+### Chore
+
+ - <csr-id-47d00137150f3d15b813d0c366d518efd389d792/> bump actions/setup-node from 3 to 4
+   Bumps [actions/setup-node](https://github.com/actions/setup-node) from 3
+   to 4.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/setup-node/releases">actions/setup-node's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v4.0.0</h2>
+   <h2>What's Changed</h2>
+   <p>In scope of this release we changed version of node runtime for
+   action from node16 to node20 and updated dependencies in <a
+   href="https://redirect.github.com/actions/setup-node/pull/866">actions/setup-node#866</a></p>
+   <p>Besides, release contains such changes as:</p>
+   <ul>
+   <li>Upgrade actions/checkout to v4 by <a
+   href="https://github.com/gmembre-zenika"><code>@​gmembre-zenika</code></a>
+   in <a
+   href="https://redirect.github.com/actions/setup-node/pull/868">actions/setup-node#868</a></li>
+   <li>Update actions/checkout for documentation and yaml by <a
+   href="https://github.com/dmitry-shibanov"><code>@​dmitry-shibanov</code></a>
+   in <a
+   href="https://redirect.github.com/actions/setup-node/pull/876">actions/setup-node#876</a></li>
+   </ul>
+   <h2>New Contributors</h2>
+   <ul>
+   <li><a
+   href="https://github.com/gmembre-zenika"><code>@​gmembre-zenika</code></a>
+   made their first contribution in <a
+   href="https://redirect.github.com/actions/setup-node/pull/868">actions/setup-node#868</a></li>
+   </ul>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/actions/setup-node/compare/v3...v4.0.0">https://github.com/actions/setup-node/compare/v3...v4.0.0</a></p>
+   <h2>v3.8.2</h2>
+   <h2>What's Changed</h2>
+   <ul>
+   <li>Update semver by <a
+   href="https://github.com/dmitry-shibanov"><code>@​dmitry-shibanov</code></a>
+   in <a
+   href="https://redirect.github.com/actions/setup-node/pull/861">actions/setup-node#861</a></li>
+   <li>Update temp directory creation by <a
+   href="https://github.com/nikolai-laevskii"><code>@​nikolai-laevskii</code></a>
+   in <a
+   href="https://redirect.github.com/actions/setup-node/pull/859">actions/setup-node#859</a></li>
+   <li>Bump <code>@​babel/traverse</code> from 7.15.4 to 7.23.2 by <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> in <a
+   href="https://redirect.github.com/actions/setup-node/pull/870">actions/setup-node#870</a></li>
+   <li>Add notice about binaries not being updated yet by <a
+   href="https://github.com/nikolai-laevskii"><code>@​nikolai-laevskii</code></a>
+   in <a
+   href="https://redirect.github.com/actions/setup-node/pull/872">actions/setup-node#872</a></li>
+   <li>Update toolkit cache and core by <a
+   href="https://github.com/dmitry-shibanov"><code>@​dmitry-shibanov</code></a>
+   and <a
+   href="https://github.com/seongwon-privatenote"><code>@​seongwon-privatenote</code></a>
+   in <a
+   href="https://redirect.github.com/actions/setup-node/pull/875">actions/setup-node#875</a></li>
+   </ul>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/actions/setup-node/compare/v3...v3.8.2">https://github.com/actions/setup-node/compare/v3...v3.8.2</a></p>
+   <h2>v3.8.1</h2>
+   <h2>What's Changed</h2>
+   <p>In scope of this release, the filter was removed within the
+   cache-save step by <a
+   href="https://github.com/dmitry-shibanov"><code>@​dmitry-shibanov</code></a>
+   in <a
+   href="https://redirect.github.com/actions/setup-node/pull/831">actions/setup-node#831</a>.
+   It is filtered and checked in the toolkit/cache library.</p>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/actions/setup-node/compare/v3...v3.8.1">https://github.com/actions/setup-node/compare/v3...v3.8.1</a></p>
+   <h2>v3.8.0</h2>
+   <h2>What's Changed</h2>
+   <h3>Bug fixes:</h3>
+   <ul>
+   <li>Add check for existing paths by <a
+   href="https://github.com/dmitry-shibanov"><code>@​dmitry-shibanov</code></a>
+   in <a
+   href="https://redirect.github.com/actions/setup-node/pull/803">actions/setup-node#803</a></li>
+   <li>Resolve SymbolicLink by <a
+   href="https://github.com/dmitry-shibanov"><code>@​dmitry-shibanov</code></a>
+   in <a
+   href="https://redirect.github.com/actions/setup-node/pull/809">actions/setup-node#809</a></li>
+   <li>Change passing logic for cache input by <a
+   href="https://github.com/dmitry-shibanov"><code>@​dmitry-shibanov</code></a>
+   in <a
+   href="https://redirect.github.com/actions/setup-node/pull/816">actions/setup-node#816</a></li>
+   <li>Fix armv7 cache issue by <a
+   href="https://github.com/louislam"><code>@​louislam</code></a> in <a
+   href="https://redirect.github.com/actions/setup-node/pull/794">actions/setup-node#794</a></li>
+   <li>Update check-dist workflow name by <a
+   href="https://github.com/sinchang"><code>@​sinchang</code></a> in <a
+   href="https://redirect.github.com/actions/setup-node/pull/710">actions/setup-node#710</a></li>
+   </ul>
+   <h3>Feature implementations:</h3>
+   <ul>
+   <li>feat: handling the case where &quot;node&quot; is used for
+   tool-versions file. by <a
+   href="https://github.com/xytis"><code>@​xytis</code></a> in <a
+   href="https://redirect.github.com/actions/setup-node/pull/812">actions/setup-node#812</a></li>
+   </ul>
+   <h3>Documentation changes:</h3>
+   <ul>
+   <li>Refer to semver package name in README.md by <a
+   href="https://github.com/olleolleolle"><code>@​olleolleolle</code></a>
+   in <a
+   href="https://redirect.github.com/actions/setup-node/pull/808">actions/setup-node#808</a></li>
+   </ul>
+   <h3>Update dependencies:</h3>
+   <ul>
+   <li>Update toolkit cache to fix zstd by <a
+   href="https://github.com/dmitry-shibanov"><code>@​dmitry-shibanov</code></a>
+   in <a
+   href="https://redirect.github.com/actions/setup-node/pull/804">actions/setup-node#804</a></li>
+   <li>Bump tough-cookie and <code>@​azure/ms-rest-js</code> by <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> in <a
+   href="https://redirect.github.com/actions/setup-node/pull/802">actions/setup-node#802</a></li>
+   <li>Bump semver from 6.1.2 to 6.3.1 by <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> in <a
+   href="https://redirect.github.com/actions/setup-node/pull/807">actions/setup-node#807</a></li>
+   </ul>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/setup-node/commit/8f152de45cc393bb48ce5d89d36b731f54556e65"><code>8f152de</code></a>
+   Update actions/checkout for documentation and yaml (<a
+   href="https://redirect.github.com/actions/setup-node/issues/876">#876</a>)</li>
+   <li><a
+   href="https://github.com/actions/setup-node/commit/23755b521f87533c8ed7f8fb13674f9021579e34"><code>23755b5</code></a>
+   upgrade actions/checkout to v4 (<a
+   href="https://redirect.github.com/actions/setup-node/issues/868">#868</a>)</li>
+   <li><a
+   href="https://github.com/actions/setup-node/commit/54534a2a9ba7308e8a8995af3104899e6a95b681"><code>54534a2</code></a>
+   Change node version for action to node20 (<a
+   href="https://redirect.github.com/actions/setup-node/issues/866">#866</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/actions/setup-node/compare/v3...v4">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/setup-node&package-manager=github_actions&previous-version=3&new-version=4)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#135](https://github.com/substrait-io/substrait-rs/issues/135)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#135](https://github.com/substrait-io/substrait-rs/issues/135)**
+    - Bump actions/setup-node from 3 to 4 ([`47d0013`](https://github.com/substrait-io/substrait-rs/commit/47d00137150f3d15b813d0c366d518efd389d792))
+ * **Uncategorized**
+    - Release substrait v0.18.1 ([`15f467a`](https://github.com/substrait-io/substrait-rs/commit/15f467a7b276acd76247317b47894737722b999d))
+</details>
+
+## 0.18.0 (2023-10-23)
+
+<csr-id-c5734ecd9fe997b8ad68e32c1fa6315445b80637/>
+<csr-id-e340c3b4c13988abae264c181f697d2b8bf767f5/>
+
+### Chore
+
+ - <csr-id-c5734ecd9fe997b8ad68e32c1fa6315445b80637/> update typify requirement from 0.0.13 to 0.0.14
+   Updates the requirements on
+   [typify](https://github.com/oxidecomputer/typify) to permit the latest
+   version.
+   <details>
+   <summary>Changelog</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/oxidecomputer/typify/blob/main/CHANGELOG.adoc">typify's
+   changelog</a>.</em></p>
+   <blockquote>
+   <p>== 0.0.14 (released 2023-09-25)</p>
+   <ul>
+   <li>Handle arbitrary containment cycles (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/300">#300</a>)</li>
+   <li>More permissive of valid (if useless) schema constructions (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/306">#306</a>,
+   <a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/320">#320</a>)</li>
+   <li>Much better handling of <code>allOf</code> constructions by merging
+   schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/405">#405</a>)</li>
+   <li>Support for more <code>not</code> subschemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/410">#410</a>)</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.13%5C...v0.0.14%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.13\...v0.0.14[Full</a>
+   list of commits]</p>
+   <p>== 0.0.13 (released 2023-05-14)</p>
+   <ul>
+   <li>Fixed-length, single-type arrays to <code>[T; N]</code> (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/286">#286</a>)</li>
+   <li>Support for reflexive schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/292">#292</a>)</li>
+   <li>Much improved support for multi-type schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/291">#291</a>)</li>
+   <li>Better error messages on failures</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.12%5C...v0.0.13%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.12\...v0.0.13[Full</a>
+   list of commits]</p>
+   <p>== 0.0.12 (released 2023-05-03)</p>
+   <ul>
+   <li>Improved enum generation (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/270">#270</a>)</li>
+   <li>Improved integer type selection based on number criteria (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/255">#255</a>)</li>
+   <li><code>TypeSpace::add_root_schema()</code> (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/236">#236</a>)</li>
+   <li>... and many general improvements</li>
+   </ul>
+   <p><a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.11%5C...v0.0.12%5BFull">https://github.com/oxidecomputer/typify/compare/v0.0.11\...v0.0.12[Full</a>
+   list of commits]</p>
+   <p>== 0.0.11 (released 2023-03-18)</p>
+   <p>This is a big update with many, many changes to code generation, and
+   many more
+   JSON schema structures well-handled. Among the many changes:</p>
+   <ul>
+   <li>Generate a <code>ToString</code> impl for untagged enums with
+   trivial variants (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/145">#145</a>)</li>
+   <li>Allow conversion overrides by specifying a schema (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/155">#155</a>)</li>
+   <li>Handle untyped enums that contain nulls (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/167">#167</a>)</li>
+   <li>Handle <code>not</code> schemas for enumerated values (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/168">#168</a>)</li>
+   <li>Improve generated code for FromStr and TryFrom impls (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/174">#174</a>)</li>
+   <li>Handle format specifiers for enumerated strings (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/188">#188</a>)</li>
+   </ul>
+   <p>=== <em>Breaking</em>: The removal of
+   <code>TypeSpace::to_string()</code></p>
+   <p>Previously all transitive consumers required the presence of
+   <code>rustfmt</code>. In this
+   version we leave formatting to the consumer. See
+   link:README.md#formatting[the formatting section of the README] for
+   details on formatting.</p>
+   <p>=== CLI</p>
+   <p>This version adds the <code>cargo-typify</code> crate for stand-alone
+   code generation.</p>
+   <p>=== Augmented Generation</p>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/85181edf85ca2c7513a7a39d50479017bc737b58"><code>85181ed</code></a>
+   release typify 0.0.14</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/277ed501b8e5d76ed5edb3d89e794a0a4d9be189"><code>277ed50</code></a>
+   prep for 0.0.14</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/6b2a3601a59cdbc6386922b9fdb241fd7d754d1d"><code>6b2a360</code></a>
+   fix stack overflow; improve <code>not</code> subschema handling (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/410">#410</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/6048f17e9bf052d626f360d45eb80751a28bf3fc"><code>6048f17</code></a>
+   Bump syn from 2.0.32 to 2.0.37 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/406">#406</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/3131d324f258f5965a61315527a954185295f7ab"><code>3131d32</code></a>
+   Bump clap from 4.4.2 to 4.4.4 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/407">#407</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/d28da5cb99bb535ff4d13e9ed1c8209e3a8ffea4"><code>d28da5c</code></a>
+   Bump chrono from 0.4.30 to 0.4.31 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/409">#409</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/ffd99b70a40764c5032d114fa90179dbe47af930"><code>ffd99b7</code></a>
+   handle <code>allOf</code> by merging schemas (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/405">#405</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/6370ce4a2de669f1040e46bf94544c226ac6cb5c"><code>6370ce4</code></a>
+   Bump serde_json from 1.0.106 to 1.0.107 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/399">#399</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/de16c4238a2b34400d0fece086a6469951c3236b"><code>de16c42</code></a>
+   Bump trybuild from 1.0.84 to 1.0.85 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/401">#401</a>)</li>
+   <li><a
+   href="https://github.com/oxidecomputer/typify/commit/ce4282e365800845186349630f4b7a43555968ce"><code>ce4282e</code></a>
+   Bump prettyplease from 0.2.14 to 0.2.15 (<a
+   href="https://redirect.github.com/oxidecomputer/typify/issues/402">#402</a>)</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/oxidecomputer/typify/compare/v0.0.13...v0.0.14">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   You can trigger a rebase of this PR by commenting `@dependabot rebase`.
+
+### Chore (BREAKING)
+
+ - <csr-id-e340c3b4c13988abae264c181f697d2b8bf767f5/> bump substrait from `0.36.0` to `0.37.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `92302d8` to `52e81a9`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/52e81a9fe725881036eddaa77ae0dba8b2ad6f83"><code>52e81a9</code></a>
+   chore(release): 0.37.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/cf327502bdb187ae06d9210e9de460193027679e"><code>cf32750</code></a>
+   feat: add NestedLoopJoinRel definition (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/561">#561</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/12f899b29f1cc4c48fa3f61a8e07d1af2515baf7"><code>12f899b</code></a>
+   docs: manually configure committers and smc members (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/566">#566</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/c776fda1fb8fa349f22022d1879b5acfb5186c0d"><code>c776fda</code></a>
+   chore(deps): Bump bufbuild/buf-setup-action from 1.27.0 to 1.27.1 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/564">#564</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/4f1868608b126d86e0a40ea161d9e7a30910c0af"><code>4f18686</code></a>
+   chore: add vbarua to CODEOWNERS (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/567">#567</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/f0eebab4ab8db68793975f1e35445d543a78b617"><code>f0eebab</code></a>
+   chore: add EpsilonPrime to CODEOWNERS (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/565">#565</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/6887fd51152a4c41e58fb24f20d5984a8eb86989"><code>6887fd5</code></a>
+   docs: add code of conduct (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/339">#339</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/ddf4d89e0b9d622eb82cdf0e7f00fd68aa0613fb"><code>ddf4d89</code></a>
+   chore(deps): Bump bufbuild/buf-setup-action from 1.26.1 to 1.27.0 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/562">#562</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/92302d840a751e72b760eef5fc8cbb0f16bfef38...52e81a9fe725881036eddaa77ae0dba8b2ad6f83">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release.
+ - 11 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#132](https://github.com/substrait-io/substrait-rs/issues/132), [#134](https://github.com/substrait-io/substrait-rs/issues/134)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#132](https://github.com/substrait-io/substrait-rs/issues/132)**
+    - Update typify requirement from 0.0.13 to 0.0.14 ([`c5734ec`](https://github.com/substrait-io/substrait-rs/commit/c5734ecd9fe997b8ad68e32c1fa6315445b80637))
+ * **[#134](https://github.com/substrait-io/substrait-rs/issues/134)**
+    - Bump substrait from `0.36.0` to `0.37.0` ([`e340c3b`](https://github.com/substrait-io/substrait-rs/commit/e340c3b4c13988abae264c181f697d2b8bf767f5))
+ * **Uncategorized**
+    - Release substrait v0.18.0 ([`86a3b70`](https://github.com/substrait-io/substrait-rs/commit/86a3b708e2b56b142314e52ae0ec49db99492524))
+</details>
+
+## 0.17.0 (2023-10-11)
+
+<csr-id-bd038395adf909bacc590c0c0c651bc0d6f13902/>
+
+### Chore (BREAKING)
+
+ - <csr-id-bd038395adf909bacc590c0c0c651bc0d6f13902/> update prost and pbjson crates
+   Updates the requirements on [prost](https://github.com/tokio-rs/prost)
+   to permit the latest version.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/10582c2f674a1f4618e9fb8d380081136340ac84"><code>10582c2</code></a>
+   release 0.12.0</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/7ce9b9756ba1ca0c6228931e2a9ff7859931ac95"><code>7ce9b97</code></a>
+   feat: <code>Name</code> trait + <code>Any</code> encoding support (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/896">#896</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/f9a3cfff07536a412e4f96f5ea3749c52c50170f"><code>f9a3cff</code></a>
+   Make Debug impl optional for types (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/797">#797</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/6180f9fa3a93e42572633cb0b0610dcb0690c508"><code>6180f9f</code></a>
+   docs: fix protoc install link (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/900">#900</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/1d7405803004e85f58511af2a439460b4237a0e2"><code>1d74058</code></a>
+   prost-build: do not escape brackets followed by parenthesis in comments
+   (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/851">#851</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/413b0299e0d0e73b6085ad9b897fb7ec7e63cb2a"><code>413b029</code></a>
+   chore: Bump MSRV to 1.64 (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/902">#902</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/ca73cbe4bbcbdb4f3d30455a090ff50209dc1fc3"><code>ca73cbe</code></a>
+   feat: add TryFrom&lt;i32&gt; implementation to Enumeration (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/853">#853</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/9c877ce32ec0c465e437144c1bf4a27cb3aa705c"><code>9c877ce</code></a>
+   chore: Update ci (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/854">#854</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/65451cc4cbffaca578de1a8f4a218cca2ec1c9ac"><code>65451cc</code></a>
+   Fix <code>non_snake_case</code> warning on generated identity functions
+   (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/891">#891</a>)</li>
+   <li><a
+   href="https://github.com/tokio-rs/prost/commit/80fb9d18b7af2c82a8f54fb6c9e7ccfa4d5629ce"><code>80fb9d1</code></a>
+   release 0.11.9 (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/842">#842</a>)
+   (<a
+   href="https://redirect.github.com/tokio-rs/prost/issues/895">#895</a>)</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/tokio-rs/prost/compare/prost-build-0.11.1...v0.12.0">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   You can trigger a rebase of this PR by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 2 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#121](https://github.com/substrait-io/substrait-rs/issues/121)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#121](https://github.com/substrait-io/substrait-rs/issues/121)**
+    - Update prost and pbjson crates ([`bd03839`](https://github.com/substrait-io/substrait-rs/commit/bd038395adf909bacc590c0c0c651bc0d6f13902))
+ * **Uncategorized**
+    - Release substrait v0.17.0 ([`e3a95d3`](https://github.com/substrait-io/substrait-rs/commit/e3a95d392182f8005bd2098b330b5bef6d4901fc))
+</details>
+
+## 0.16.0 (2023-10-09)
+
+<csr-id-f2ee3e734d9849e714051b321de5ea618919a7a6/>
+
+### Chore (BREAKING)
+
+ - <csr-id-f2ee3e734d9849e714051b321de5ea618919a7a6/> bump substrait from `0.35.0` to `0.36.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `9e39067` to `92302d8`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/92302d840a751e72b760eef5fc8cbb0f16bfef38"><code>92302d8</code></a>
+   chore(release): 0.36.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/8406cf6753b97829b2b5211344822d6f2f840eab"><code>8406cf6</code></a>
+   feat: geometry processing functions (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/556">#556</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/substrait-io/substrait/compare/9e39067e49f453f1df998c3c4a821e53dd7a1e8f...92302d840a751e72b760eef5fc8cbb0f16bfef38">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 7 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#131](https://github.com/substrait-io/substrait-rs/issues/131)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#131](https://github.com/substrait-io/substrait-rs/issues/131)**
+    - Bump substrait from `0.35.0` to `0.36.0` ([`f2ee3e7`](https://github.com/substrait-io/substrait-rs/commit/f2ee3e734d9849e714051b321de5ea618919a7a6))
+ * **Uncategorized**
+    - Release substrait v0.16.0 ([`99760d8`](https://github.com/substrait-io/substrait-rs/commit/99760d885e4fad739efa1fab1a47762aa5f3aa29))
+</details>
+
+## 0.15.0 (2023-10-02)
+
+<csr-id-e38a108eee497b1ce61e5d3bcd962a203725409f/>
+
+### Chore (BREAKING)
+
+ - <csr-id-e38a108eee497b1ce61e5d3bcd962a203725409f/> bump substrait from `0.34.0` to `0.35.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `dacc5a9` to `9e39067`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/9e39067e49f453f1df998c3c4a821e53dd7a1e8f"><code>9e39067</code></a>
+   chore(release): 0.35.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/727467cc66f4c4984c7a8ea1205a473644f00b23"><code>727467c</code></a>
+   feat: add geometry editor functions (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/554">#554</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/784fa9b1702a1df64a8286a25fce377a0aa29fd4"><code>784fa9b</code></a>
+   feat: adding geometry accessor functions (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/552">#552</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/3adc04861bcd117bc51419702c9ea283645acdae"><code>3adc048</code></a>
+   docs: eliminate early design phase language (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/547">#547</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/20684bba4bb92ceeaa2f2ec185ea081d266fa7ee"><code>20684bb</code></a>
+   docs: focus homepage on discussing what Substrait is (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/538">#538</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/02d07fd4e41c54a1915c8fb73a439294efd5208c"><code>02d07fd</code></a>
+   docs: add post_join_filter description (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/559">#559</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/30773b2fcb67413625535cd1ada144dccfdcde22"><code>30773b2</code></a>
+   fix!: specify nullability for is_not_distinct_from (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/555">#555</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/db52bbd844f7d8db328f1b6f00758f07009ca95b"><code>db52bbd</code></a>
+   feat: add geometric data types and functions (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/543">#543</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/c28f056e98b285e2a697e99424314fd2a48c7569"><code>c28f056</code></a>
+   docs: add the meeting calendar to the website (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/557">#557</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/da4b32ac41827ae8b53a2833ec34872670904e57"><code>da4b32a</code></a>
+   feat: add approval guidelines for documentation updates (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/553">#553</a>)</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/substrait-io/substrait/compare/dacc5a96a17fe45aed228f7819de3aa8a404a8b0...9e39067e49f453f1df998c3c4a821e53dd7a1e8f">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 13 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#130](https://github.com/substrait-io/substrait-rs/issues/130)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#130](https://github.com/substrait-io/substrait-rs/issues/130)**
+    - Bump substrait from `0.34.0` to `0.35.0` ([`e38a108`](https://github.com/substrait-io/substrait-rs/commit/e38a108eee497b1ce61e5d3bcd962a203725409f))
+ * **Uncategorized**
+    - Release substrait v0.15.0 ([`4b2e4c5`](https://github.com/substrait-io/substrait-rs/commit/4b2e4c51a79ad4919f02ec97363df4ce543afe91))
+</details>
+
+## 0.14.0 (2023-09-18)
+
+<csr-id-c647cae108696d617a8bb65e306b28186d5bf2aa/>
+
+### Chore (BREAKING)
+
+ - <csr-id-c647cae108696d617a8bb65e306b28186d5bf2aa/> bump substrait from `0.33.0` to `0.34.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `51765cc` to `dacc5a9`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 12 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#126](https://github.com/substrait-io/substrait-rs/issues/126)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#126](https://github.com/substrait-io/substrait-rs/issues/126)**
+    - Bump substrait from `0.33.0` to `0.34.0` ([`c647cae`](https://github.com/substrait-io/substrait-rs/commit/c647cae108696d617a8bb65e306b28186d5bf2aa))
+ * **Uncategorized**
+    - Release substrait v0.14.0 ([`6faf5d3`](https://github.com/substrait-io/substrait-rs/commit/6faf5d3d24c36d646d314edda3d655942e5aebeb))
+</details>
+
+## 0.13.2 (2023-09-05)
+
+<csr-id-96dbe1791a6411a35db1cc1fcf7d05800c6a7e0f/>
+
+### Chore
+
+ - <csr-id-96dbe1791a6411a35db1cc1fcf7d05800c6a7e0f/> bump actions/checkout from 3 to 4
+   Bumps [actions/checkout](https://github.com/actions/checkout) from 3 to
+   4.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/checkout/releases">actions/checkout's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v4.0.0</h2>
+   <h2>What's Changed</h2>
+   <ul>
+   <li>Update default runtime to node20 by <a
+   href="https://github.com/takost"><code>@​takost</code></a> in <a
+   href="https://redirect.github.com/actions/checkout/pull/1436">actions/checkout#1436</a></li>
+   <li>Support fetching without the --progress option by <a
+   href="https://github.com/simonbaird"><code>@​simonbaird</code></a> in <a
+   href="https://redirect.github.com/actions/checkout/pull/1067">actions/checkout#1067</a></li>
+   <li>Release 4.0.0 by <a
+   href="https://github.com/takost"><code>@​takost</code></a> in <a
+   href="https://redirect.github.com/actions/checkout/pull/1447">actions/checkout#1447</a></li>
+   </ul>
+   <h2>New Contributors</h2>
+   <ul>
+   <li><a href="https://github.com/takost"><code>@​takost</code></a> made
+   their first contribution in <a
+   href="https://redirect.github.com/actions/checkout/pull/1436">actions/checkout#1436</a></li>
+   <li><a
+   href="https://github.com/simonbaird"><code>@​simonbaird</code></a> made
+   their first contribution in <a
+   href="https://redirect.github.com/actions/checkout/pull/1067">actions/checkout#1067</a></li>
+   </ul>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/actions/checkout/compare/v3...v4.0.0">https://github.com/actions/checkout/compare/v3...v4.0.0</a></p>
+   <h2>v3.6.0</h2>
+   <h2>What's Changed</h2>
+   <ul>
+   <li>Mark test scripts with Bash'isms to be run via Bash by <a
+   href="https://github.com/dscho"><code>@​dscho</code></a> in <a
+   href="https://redirect.github.com/actions/checkout/pull/1377">actions/checkout#1377</a></li>
+   <li>Add option to fetch tags even if fetch-depth &gt; 0 by <a
+   href="https://github.com/RobertWieczoreck"><code>@​RobertWieczoreck</code></a>
+   in <a
+   href="https://redirect.github.com/actions/checkout/pull/579">actions/checkout#579</a></li>
+   <li>Release 3.6.0 by <a
+   href="https://github.com/luketomlinson"><code>@​luketomlinson</code></a>
+   in <a
+   href="https://redirect.github.com/actions/checkout/pull/1437">actions/checkout#1437</a></li>
+   </ul>
+   <h2>New Contributors</h2>
+   <ul>
+   <li><a
+   href="https://github.com/RobertWieczoreck"><code>@​RobertWieczoreck</code></a>
+   made their first contribution in <a
+   href="https://redirect.github.com/actions/checkout/pull/579">actions/checkout#579</a></li>
+   <li><a
+   href="https://github.com/luketomlinson"><code>@​luketomlinson</code></a>
+   made their first contribution in <a
+   href="https://redirect.github.com/actions/checkout/pull/1437">actions/checkout#1437</a></li>
+   </ul>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/actions/checkout/compare/v3.5.3...v3.6.0">https://github.com/actions/checkout/compare/v3.5.3...v3.6.0</a></p>
+   <h2>v3.5.3</h2>
+   <h2>What's Changed</h2>
+   <ul>
+   <li>Fix: Checkout Issue in self hosted runner due to faulty submodule
+   check-ins by <a
+   href="https://github.com/megamanics"><code>@​megamanics</code></a> in <a
+   href="https://redirect.github.com/actions/checkout/pull/1196">actions/checkout#1196</a></li>
+   <li>Fix typos found by codespell by <a
+   href="https://github.com/DimitriPapadopoulos"><code>@​DimitriPapadopoulos</code></a>
+   in <a
+   href="https://redirect.github.com/actions/checkout/pull/1287">actions/checkout#1287</a></li>
+   <li>Add support for sparse checkouts by <a
+   href="https://github.com/dscho"><code>@​dscho</code></a> and <a
+   href="https://github.com/dfdez"><code>@​dfdez</code></a> in <a
+   href="https://redirect.github.com/actions/checkout/pull/1369">actions/checkout#1369</a></li>
+   <li>Release v3.5.3 by <a
+   href="https://github.com/TingluoHuang"><code>@​TingluoHuang</code></a>
+   in <a
+   href="https://redirect.github.com/actions/checkout/pull/1376">actions/checkout#1376</a></li>
+   </ul>
+   <h2>New Contributors</h2>
+   <ul>
+   <li><a
+   href="https://github.com/megamanics"><code>@​megamanics</code></a> made
+   their first contribution in <a
+   href="https://redirect.github.com/actions/checkout/pull/1196">actions/checkout#1196</a></li>
+   <li><a
+   href="https://github.com/DimitriPapadopoulos"><code>@​DimitriPapadopoulos</code></a>
+   made their first contribution in <a
+   href="https://redirect.github.com/actions/checkout/pull/1287">actions/checkout#1287</a></li>
+   <li><a href="https://github.com/dfdez"><code>@​dfdez</code></a> made
+   their first contribution in <a
+   href="https://redirect.github.com/actions/checkout/pull/1369">actions/checkout#1369</a></li>
+   </ul>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/actions/checkout/compare/v3...v3.5.3">https://github.com/actions/checkout/compare/v3...v3.5.3</a></p>
+   <h2>v3.5.2</h2>
+   <h2>What's Changed</h2>
+   <ul>
+   <li>Fix: Use correct API url / endpoint in GHES by <a
+   href="https://github.com/fhammerl"><code>@​fhammerl</code></a> in <a
+   href="https://redirect.github.com/actions/checkout/pull/1289">actions/checkout#1289</a>
+   based on <a
+   href="https://redirect.github.com/actions/checkout/issues/1286">#1286</a>
+   by <a href="https://github.com/1newsr"><code>@​1newsr</code></a></li>
+   </ul>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/actions/checkout/compare/v3.5.1...v3.5.2">https://github.com/actions/checkout/compare/v3.5.1...v3.5.2</a></p>
+   <h2>v3.5.1</h2>
+   <h2>What's Changed</h2>
+   <ul>
+   <li>Improve checkout performance on Windows runners by upgrading
+   <code>@​actions/github</code> dependency by <a
+   href="https://github.com/BrettDong"><code>@​BrettDong</code></a> in <a
+   href="https://redirect.github.com/actions/checkout/pull/1246">actions/checkout#1246</a></li>
+   </ul>
+   <h2>New Contributors</h2>
+   <ul>
+   <li><a href="https://github.com/BrettDong"><code>@​BrettDong</code></a>
+   made their first contribution in <a
+   href="https://redirect.github.com/actions/checkout/pull/1246">actions/checkout#1246</a></li>
+   </ul>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Changelog</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/checkout/blob/main/CHANGELOG.md">actions/checkout's
+   changelog</a>.</em></p>
+   <blockquote>
+   <h1>Changelog</h1>
+   <h2>v4.0.0</h2>
+   <ul>
+   <li><a
+   href="https://redirect.github.com/actions/checkout/pull/1067">Support
+   fetching without the --progress option</a></li>
+   <li><a
+   href="https://redirect.github.com/actions/checkout/pull/1436">Update to
+   node20</a></li>
+   </ul>
+   <h2>v3.6.0</h2>
+   <ul>
+   <li><a
+   href="https://redirect.github.com/actions/checkout/pull/1377">Fix: Mark
+   test scripts with Bash'isms to be run via Bash</a></li>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/579">Add
+   option to fetch tags even if fetch-depth &gt; 0</a></li>
+   </ul>
+   <h2>v3.5.3</h2>
+   <ul>
+   <li><a
+   href="https://redirect.github.com/actions/checkout/pull/1196">Fix:
+   Checkout fail in self-hosted runners when faulty submodule are
+   checked-in</a></li>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/1287">Fix
+   typos found by codespell</a></li>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/1369">Add
+   support for sparse checkouts</a></li>
+   </ul>
+   <h2>v3.5.2</h2>
+   <ul>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/1289">Fix
+   api endpoint for GHES</a></li>
+   </ul>
+   <h2>v3.5.1</h2>
+   <ul>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/1246">Fix
+   slow checkout on Windows</a></li>
+   </ul>
+   <h2>v3.5.0</h2>
+   <ul>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/1237">Add
+   new public key for known_hosts</a></li>
+   </ul>
+   <h2>v3.4.0</h2>
+   <ul>
+   <li><a
+   href="https://redirect.github.com/actions/checkout/pull/1209">Upgrade
+   codeql actions to v2</a></li>
+   <li><a
+   href="https://redirect.github.com/actions/checkout/pull/1210">Upgrade
+   dependencies</a></li>
+   <li><a
+   href="https://redirect.github.com/actions/checkout/pull/1225">Upgrade
+   <code>@​actions/io</code></a></li>
+   </ul>
+   <h2>v3.3.0</h2>
+   <ul>
+   <li><a
+   href="https://redirect.github.com/actions/checkout/pull/1045">Implement
+   branch list using callbacks from exec function</a></li>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/1050">Add
+   in explicit reference to private checkout options</a></li>
+   <li>[Fix comment typos (that got added in <a
+   href="https://redirect.github.com/actions/checkout/issues/770">#770</a>)](<a
+   href="https://redirect.github.com/actions/checkout/pull/1057">actions/checkout#1057</a>)</li>
+   </ul>
+   <h2>v3.2.0</h2>
+   <ul>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/942">Add
+   GitHub Action to perform release</a></li>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/967">Fix
+   status badge</a></li>
+   <li><a
+   href="https://redirect.github.com/actions/checkout/pull/1002">Replace
+   datadog/squid with ubuntu/squid Docker image</a></li>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/964">Wrap
+   pipeline commands for submoduleForeach in quotes</a></li>
+   <li><a
+   href="https://redirect.github.com/actions/checkout/pull/1029">Update
+   <code>@​actions/io</code> to 1.1.2</a></li>
+   <li><a
+   href="https://redirect.github.com/actions/checkout/pull/1039">Upgrading
+   version to 3.2.0</a></li>
+   </ul>
+   <h2>v3.1.0</h2>
+   <ul>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/939">Use
+   <code>@​actions/core</code> <code>saveState</code> and
+   <code>getState</code></a></li>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/922">Add
+   <code>github-server-url</code> input</a></li>
+   </ul>
+   <h2>v3.0.2</h2>
+   <ul>
+   <li><a href="https://redirect.github.com/actions/checkout/pull/770">Add
+   input <code>set-safe-directory</code></a></li>
+   </ul>
+   <h2>v3.0.1</h2>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/checkout/commit/3df4ab11eba7bda6032a0b82a6bb43b11571feac"><code>3df4ab1</code></a>
+   Release 4.0.0 (<a
+   href="https://redirect.github.com/actions/checkout/issues/1447">#1447</a>)</li>
+   <li><a
+   href="https://github.com/actions/checkout/commit/8b5e8b768746b50394015010d25e690bfab9dfbc"><code>8b5e8b7</code></a>
+   Support fetching without the --progress option (<a
+   href="https://redirect.github.com/actions/checkout/issues/1067">#1067</a>)</li>
+   <li><a
+   href="https://github.com/actions/checkout/commit/97a652b80035363df47baee5031ec8670b8878ac"><code>97a652b</code></a>
+   Update default runtime to node20 (<a
+   href="https://redirect.github.com/actions/checkout/issues/1436">#1436</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/actions/checkout/compare/v3...v4">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/checkout&package-manager=github_actions&previous-version=3&new-version=4)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 7 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#124](https://github.com/substrait-io/substrait-rs/issues/124)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#124](https://github.com/substrait-io/substrait-rs/issues/124)**
+    - Bump actions/checkout from 3 to 4 ([`96dbe17`](https://github.com/substrait-io/substrait-rs/commit/96dbe1791a6411a35db1cc1fcf7d05800c6a7e0f))
+ * **Uncategorized**
+    - Release substrait v0.13.2 ([`32575ad`](https://github.com/substrait-io/substrait-rs/commit/32575adc0400e41f8db37f4e78c40aa31ae09467))
+</details>
+
+## 0.13.1 (2023-08-29)
+
+<csr-id-d8636e4809639c2b7b61fb0bba6d674935648e17/>
+
+### Chore
+
+ - <csr-id-d8636e4809639c2b7b61fb0bba6d674935648e17/> update git2 requirement from 0.17.1 to 0.18.0
+   Updates the requirements on [git2](https://github.com/rust-lang/git2-rs)
+   to permit the latest version.
+   <details>
+   <summary>Changelog</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/rust-lang/git2-rs/blob/master/CHANGELOG.md">git2's
+   changelog</a>.</em></p>
+   <blockquote>
+   <h2>0.18.0 - 2023-08-28</h2>
+   <p><a
+   href="https://github.com/rust-lang/git2-rs/compare/0.17.2...git2-0.18.0">0.17.2...0.18.0</a></p>
+   <h3>Added</h3>
+   <ul>
+   <li>Added <code>Blame::blame_buffer</code> for getting blame data for a
+   file that has been modified in memory.
+   <a
+   href="https://redirect.github.com/rust-lang/git2-rs/pull/981">#981</a></li>
+   </ul>
+   <h3>Changed</h3>
+   <ul>
+   <li>Updated to libgit2 <a
+   href="https://github.com/libgit2/libgit2/releases/tag/v1.7.0">1.7.0</a>.
+   <a
+   href="https://redirect.github.com/rust-lang/git2-rs/pull/968">#968</a></li>
+   <li>Updated to libgit2 <a
+   href="https://github.com/libgit2/libgit2/releases/tag/v1.7.1">1.7.1</a>.
+   <a
+   href="https://redirect.github.com/rust-lang/git2-rs/pull/982">#982</a></li>
+   <li>Switched from bitflags 1.x to 2.1. This brings some small changes to
+   types generated by bitflags.
+   <a
+   href="https://redirect.github.com/rust-lang/git2-rs/pull/973">#973</a></li>
+   <li>Changed <code>Revwalk::with_hide_callback</code> to take a mutable
+   reference to its callback to enforce type safety.
+   <a
+   href="https://redirect.github.com/rust-lang/git2-rs/pull/970">#970</a></li>
+   <li>Implemented <code>FusedIterator</code> for many iterators that can
+   support it.
+   <a
+   href="https://redirect.github.com/rust-lang/git2-rs/pull/955">#955</a></li>
+   </ul>
+   <h3>Fixed</h3>
+   <ul>
+   <li>Fixed builds with cargo's <code>-Zminimal-versions</code>.
+   <a
+   href="https://redirect.github.com/rust-lang/git2-rs/pull/960">#960</a></li>
+   </ul>
+   <h2>0.17.2 - 2023-05-27</h2>
+   <p><a
+   href="https://github.com/rust-lang/git2-rs/compare/0.17.1...0.17.2">0.17.1...0.17.2</a></p>
+   <h3>Added</h3>
+   <ul>
+   <li>Added support for stashing with options (which can support partial
+   stashing).
+   <a
+   href="https://redirect.github.com/rust-lang/git2-rs/pull/930">#930</a></li>
+   </ul>
+   <h2>0.17.1 - 2023-04-13</h2>
+   <p><a
+   href="https://github.com/rust-lang/git2-rs/compare/0.17.0...0.17.1">0.17.0...0.17.1</a></p>
+   <h3>Changed</h3>
+   <ul>
+   <li>Updated to libgit2 <a
+   href="https://github.com/libgit2/libgit2/releases/tag/v1.6.4">1.6.4</a>.
+   <a
+   href="https://redirect.github.com/rust-lang/git2-rs/pull/948">#948</a></li>
+   </ul>
+   <h2>0.17.0 - 2023-04-02</h2>
+   <p><a
+   href="https://github.com/rust-lang/git2-rs/compare/0.16.1...0.17.0">0.16.1...0.17.0</a></p>
+   <h3>Added</h3>
+   <ul>
+   <li>Added <code>IntoIterator</code> implementation for
+   <code>Statuses</code>.
+   <a
+   href="https://redirect.github.com/rust-lang/git2-rs/pull/880">#880</a></li>
+   <li>Added <code>Reference::symbolic_set_target</code>
+   <a
+   href="https://redirect.github.com/rust-lang/git2-rs/pull/893">#893</a></li>
+   </ul>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/rust-lang/git2-rs/commit/69eea9137ae3dba7b0d72e369d0f241731493aea"><code>69eea91</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/rust-lang/git2-rs/issues/984">#984</a>
+   from ehuss/update-changelog</li>
+   <li><a
+   href="https://github.com/rust-lang/git2-rs/commit/2aafd803fb40bb0c37b028a6b1d44d811274fc02"><code>2aafd80</code></a>
+   Fix html_root_url for next release</li>
+   <li><a
+   href="https://github.com/rust-lang/git2-rs/commit/e22951ccda903e505b98fcf642d03754c1210485"><code>e22951c</code></a>
+   Update changelog for next release.</li>
+   <li><a
+   href="https://github.com/rust-lang/git2-rs/commit/4570c391e1954776ac84747ddde2dcd66213d277"><code>4570c39</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/rust-lang/git2-rs/issues/981">#981</a>
+   from paulvandermeijs/add-git_blame_buffer</li>
+   <li><a
+   href="https://github.com/rust-lang/git2-rs/commit/19b6d056bfbfb86c21b494a9974e02e7c329d760"><code>19b6d05</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/rust-lang/git2-rs/issues/982">#982</a>
+   from ehuss/update-libgit2</li>
+   <li><a
+   href="https://github.com/rust-lang/git2-rs/commit/390c6d6cdfa3a64f21cf92bbd00f7717d1f6c460"><code>390c6d6</code></a>
+   Systest no longer requires stable.</li>
+   <li><a
+   href="https://github.com/rust-lang/git2-rs/commit/e0a329eed1a59668352dfc59cb5008b2576d3eca"><code>e0a329e</code></a>
+   Update to libgit2 1.7.1</li>
+   <li><a
+   href="https://github.com/rust-lang/git2-rs/commit/18f8ad16b6fccd79d80b6d7ccd93fc6ba8e1f969"><code>18f8ad1</code></a>
+   Add binding for <code>git_blame_buffer</code></li>
+   <li><a
+   href="https://github.com/rust-lang/git2-rs/commit/7f2118185d6fc8a9a17048ad22f4d810679ee988"><code>7f21181</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/rust-lang/git2-rs/issues/955">#955</a>
+   from vallentin/fused</li>
+   <li><a
+   href="https://github.com/rust-lang/git2-rs/commit/f0d52d3127ca1bbf6300b097f6c776c8e42e3a05"><code>f0d52d3</code></a>
+   Implemented FusedIterator for various iterators</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/rust-lang/git2-rs/compare/0.17.1...git2-0.18.0">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   You can trigger a rebase of this PR by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#120](https://github.com/substrait-io/substrait-rs/issues/120)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#120](https://github.com/substrait-io/substrait-rs/issues/120)**
+    - Update git2 requirement from 0.17.1 to 0.18.0 ([`d8636e4`](https://github.com/substrait-io/substrait-rs/commit/d8636e4809639c2b7b61fb0bba6d674935648e17))
+ * **Uncategorized**
+    - Release substrait v0.13.1 ([`c07cb27`](https://github.com/substrait-io/substrait-rs/commit/c07cb278a1f494a68df86295836a241cd3c1ad13))
+</details>
+
+## 0.13.0 (2023-08-28)
+
+<csr-id-920ba0d9ad7a385eea443b4ea4b173ed02b87303/>
+
+### Chore (BREAKING)
+
+ - <csr-id-920ba0d9ad7a385eea443b4ea4b173ed02b87303/> bump substrait from `0.31.0` to `0.33.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `e486775` to `51765cc`.
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/51765cccd92fa0014e9cf077cc8cc952731f33d0"><code>51765cc</code></a>
+   chore(release): 0.33.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/2da2afad579a428bb8f7460a153a1799af5c6ee3"><code>2da2afa</code></a>
+   feat: add radians and degrees functions (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/544">#544</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/8969a40832c64a4a85ff14e61f5f22374506b161"><code>8969a40</code></a>
+   docs: clarify compound extension signature naming for bools (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/545">#545</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/31b999060a6e014717f9ae3e6716986ad3066aaf"><code>31b9990</code></a>
+   chore(release): 0.32.0</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/bd14e0e40782dbd0fa49de597ec30217b48961f2"><code>bd14e0e</code></a>
+   feat: add windowrel support in proto (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/399">#399</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/90780416e36003b885437b4922c0aa6194ba834d"><code>9078041</code></a>
+   ci: pre-commit updates (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/542">#542</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/ede90abba5d4ef02da97ba618ccbd85de963c2e1"><code>ede90ab</code></a>
+   chore(deps): bump bufbuild/buf-setup-action from 1.26.0 to 1.26.1 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/541">#541</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/65c96636bf60f166802cd60ab4a36734e0cc7f22"><code>65c9663</code></a>
+   chore(deps): bump bufbuild/buf-setup-action from 1.16.0 to 1.26.0 (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/539">#539</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/98380b0dd1dd9eb30457800ec49d7912b5dce11f"><code>98380b0</code></a>
+   feat: add expand rel (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/368">#368</a>)</li>
+   <li><a
+   href="https://github.com/substrait-io/substrait/commit/2503beb3c872928483c05f76bf74d18188c84798"><code>2503beb</code></a>
+   feat!: require compound functions names in extension references (<a
+   href="https://redirect.github.com/substrait-io/substrait/issues/537">#537</a>)</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/substrait-io/substrait/compare/e486775009c40e1a010dc54776b976b1eddea7ca...51765cccd92fa0014e9cf077cc8cc952731f33d0">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 25 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#119](https://github.com/substrait-io/substrait-rs/issues/119)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#119](https://github.com/substrait-io/substrait-rs/issues/119)**
+    - Bump substrait from `0.31.0` to `0.33.0` ([`920ba0d`](https://github.com/substrait-io/substrait-rs/commit/920ba0d9ad7a385eea443b4ea4b173ed02b87303))
+ * **Uncategorized**
+    - Release substrait v0.13.0 ([`38f14d4`](https://github.com/substrait-io/substrait-rs/commit/38f14d4662749e7e7fe61b4199abd0f6e4caa219))
+</details>
+
+## 0.12.4 (2023-08-02)
+
+<csr-id-e68707c74066bd0c1069d6fc135336edc2cd26d7/>
+
+### Chore
+
+ - <csr-id-e68707c74066bd0c1069d6fc135336edc2cd26d7/> bump arduino/setup-protoc from 1 to 2
+   Bumps [arduino/setup-protoc](https://github.com/arduino/setup-protoc)
+   from 1 to 2.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/arduino/setup-protoc/releases">arduino/setup-protoc's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v2.0.0</h2>
+   <h2>Changelog</h2>
+   <p>Adding support for the <code>MINOR.PATCH</code> tag naming</p>
+   <h3>Breaking</h3>
+   <ul>
+   <li>Support only the new protobuf versioning scheme <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/78">arduino/setup-protoc#78</a></li>
+   </ul>
+   <p><strong>Full Changelog</strong>: <a
+   href="https://github.com/arduino/setup-protoc/compare/v1.3.0...v2.0.0">https://github.com/arduino/setup-protoc/compare/v1.3.0...v2.0.0</a></p>
+   <h2>Contributors</h2>
+   <ul>
+   <li><a href="https://github.com/ajasmin"><code>@​ajasmin</code></a></li>
+   <li><a
+   href="https://github.com/woodruffw"><code>@​woodruffw</code></a></li>
+   <li><a href="https://github.com/zeisss"><code>@​zeisss</code></a></li>
+   </ul>
+   <h2>v1.3.0</h2>
+   <h2>Changelog</h2>
+   <h3>Enhancement</h3>
+   <ul>
+   <li>Support ARM64 and other platforms (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/44">#44</a>
+   )</li>
+   </ul>
+   <h2>Full Changeset</h2>
+   <p><a
+   href="https://github.com/arduino/setup-protoc/compare/v1.2.0...v1.3.0">https://github.com/arduino/setup-protoc/compare/v1.2.0...v1.3.0</a></p>
+   <h2>Contributors</h2>
+   <ul>
+   <li><a
+   href="https://github.com/adamchalmers"><code>@​adamchalmers</code></a></li>
+   <li><a href="https://github.com/nbaztec"><code>@​nbaztec</code></a></li>
+   </ul>
+   <h2>v1.2.0</h2>
+   <h2>Changelog</h2>
+   <h3>Enhancement</h3>
+   <ul>
+   <li>Add security policy link to readme (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/19">#19</a>)
+   in <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/19">arduino/setup-protoc#19</a></li>
+   <li>Bump Node version to 16 (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/48">#48</a>)
+   <a
+   href="https://redirect.github.com/arduino/setup-protoc/pull/48">arduino/setup-protoc#48</a></li>
+   </ul>
+   <h3>Full Changeset</h3>
+   <p><a
+   href="https://github.com/arduino/setup-protoc/compare/v1.1.2...v1.2.0">https://github.com/arduino/setup-protoc/compare/v1.1.2...v1.2.0</a></p>
+   <h2>v1.1.2</h2>
+   <ul>
+   <li>Bump lodash from 4.17.15 to 4.17.19 <a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/8">#8</a></li>
+   <li>Bump <code>@​actions/core</code> from 1.0.0 to 1.2.6 <a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/12">#12</a></li>
+   <li>Add pagination logic when checking for versions <a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/1">#1</a></li>
+   </ul>
+   <h2>v1.1.1</h2>
+   <ul>
+   <li>Define <code>repo-token</code> input in metadata</li>
+   </ul>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/arduino/setup-protoc/commit/9b1ee5b22b0a3f1feb8c2ff99b32c89b3c3191e9"><code>9b1ee5b</code></a>
+   v2 release note (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/82">#82</a>)</li>
+   <li><a
+   href="https://github.com/arduino/setup-protoc/commit/28fd3e5ddcc4ae8820e0c2085bfea8ab68f631e3"><code>28fd3e5</code></a>
+   Support only the new protobuf versioning scheme (<a
+   href="https://redirect.github.com/arduino/setup-protoc/issues/78">#78</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/arduino/setup-protoc/compare/v1...v2">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=arduino/setup-protoc&package-manager=github_actions&previous-version=1&new-version=2)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 14 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#116](https://github.com/substrait-io/substrait-rs/issues/116)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#116](https://github.com/substrait-io/substrait-rs/issues/116)**
+    - Bump arduino/setup-protoc from 1 to 2 ([`e68707c`](https://github.com/substrait-io/substrait-rs/commit/e68707c74066bd0c1069d6fc135336edc2cd26d7))
+ * **Uncategorized**
+    - Release substrait v0.12.4 ([`27bad38`](https://github.com/substrait-io/substrait-rs/commit/27bad38ce578f02bd66951901732920b734a0762))
+</details>
+
+## 0.12.3 (2023-07-18)
+
+<csr-id-59644c4b9cab3f0330372dd7883805c0627f02c1/>
+
+### Chore
+
+ - <csr-id-59644c4b9cab3f0330372dd7883805c0627f02c1/> bump actions/upload-pages-artifact from 1 to 2
+   Bumps
+   [actions/upload-pages-artifact](https://github.com/actions/upload-pages-artifact)
+   from 1 to 2.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/upload-pages-artifact/releases">actions/upload-pages-artifact's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v2.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>:warning: <strong>BREAKING CHANGE:</strong> Remove built-in
+   <code>chmod</code> commands for <code>v2</code> <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/69">#69</a>)</li>
+   <li>Update README for <code>v2</code> <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/70">#70</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v1.0.10...v2.0.0">all
+   code changes</a> since previous release.</p>
+   <h2>v1.0.10</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>readme: fix/improve note about permissions <a
+   href="https://github.com/tshepang"><code>@​tshepang</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/65">#65</a>)</li>
+   <li>Revert <code>chmod</code> removal for <code>v1</code> <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/68">#68</a>)</li>
+   <li>Add file perms handling <a
+   href="https://github.com/tsusdere"><code>@​tsusdere</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/64">#64</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v1.0.9...v1.0.10">all
+   code changes</a> since previous release.</p>
+   <h2>v1.0.9</h2>
+   <p>Removed <code>chmod</code> as we moved towards trusting correct file
+   permissions have been set. In the event this isn't the case then we
+   raise an error in the action related to the file permissions.</p>
+   <h2>v1.0.8</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Fail if no artifact file is found to upload <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/55">#55</a>)</li>
+   <li>Fix link to releases in README <a
+   href="https://github.com/waldyrious"><code>@​waldyrious</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/53">#53</a>)</li>
+   <li>Bump actions/publish-action from 0.2.1 to 0.2.2 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/47">#47</a>)</li>
+   <li>Add Dependabot config for Actions usage updates <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/46">#46</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v1.0.7...v1.0.8">all
+   code changes</a> since previous release.</p>
+   <h2>v1.0.7</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Don't change file permissions of other files <a
+   href="https://github.com/KyeRussell"><code>@​KyeRussell</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/44">#44</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v1.0.6...v1.0.7">all
+   code changes</a> since previous release.</p>
+   <h2>v1.0.6</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Customize artifact name <a
+   href="https://github.com/yuradanyliuk"><code>@​yuradanyliuk</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/41">#41</a>)</li>
+   <li>Fix permissions <a
+   href="https://github.com/yoannchaudet"><code>@​yoannchaudet</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/42">#42</a>)</li>
+   <li>Print warnings about changed file permissions in bulk <a
+   href="https://github.com/TooManyBees"><code>@​TooManyBees</code></a> (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/38">#38</a>)</li>
+   <li>Update to latest <code>actions/publish-action</code> <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/36">#36</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v1.0.5...v1.0.6">all
+   code changes</a> since previous release.</p>
+   <h2>v1.0.5</h2>
+   <h1>Changelog</h1>
+   <!-- raw HTML omitted -->
+   </blockquote>
+   <p>... (truncated)</p>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/a753861a5debcf57bf8b404356158c8e1e33150c"><code>a753861</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/69">#69</a>
+   from actions/reapply-chmod-removal-for-v2</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/dca6bac0e5d658c10e82a0e89fa26dd05f9ef2e3"><code>dca6bac</code></a>
+   Merge branch 'main' into reapply-chmod-removal-for-v2</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/3138c054964e4f34b7f958dc2ae603b51877d906"><code>3138c05</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/70">#70</a>
+   from actions/v2-docs-improvements</li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/07f501f6a0ff8cef2d64e4037d704f79061a4bd5"><code>07f501f</code></a>
+   Update README for <code>v2</code></li>
+   <li><a
+   href="https://github.com/actions/upload-pages-artifact/commit/9c071e6bed590ca0b53a706c2d01ad1c39faf659"><code>9c071e6</code></a>
+   Reapply PR <a
+   href="https://redirect.github.com/actions/upload-pages-artifact/issues/63">#63</a>
+   for v2</li>
+   <li>See full diff in <a
+   href="https://github.com/actions/upload-pages-artifact/compare/v1...v2">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/upload-pages-artifact&package-manager=github_actions&previous-version=1&new-version=2)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 15 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#113](https://github.com/substrait-io/substrait-rs/issues/113)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#113](https://github.com/substrait-io/substrait-rs/issues/113)**
+    - Bump actions/upload-pages-artifact from 1 to 2 ([`59644c4`](https://github.com/substrait-io/substrait-rs/commit/59644c4b9cab3f0330372dd7883805c0627f02c1))
+ * **Uncategorized**
+    - Release substrait v0.12.3 ([`40a5c29`](https://github.com/substrait-io/substrait-rs/commit/40a5c296c2bb12e673d5920340e1bd46b4cd8195))
+</details>
+
 ## 0.12.2 (2023-07-03)
 
 <csr-id-9d6609152046771cdaee6b2cd4dba39d37dbec36/>
@@ -14,7 +2932,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#109](https://github.com/substrait-io/substrait-rs/issues/109)
 
@@ -26,6 +2944,8 @@
 
  * **[#109](https://github.com/substrait-io/substrait-rs/issues/109)**
     - Update `CONTRIBUTING.md` to reflect workflow changes ([`9d66091`](https://github.com/substrait-io/substrait-rs/commit/9d6609152046771cdaee6b2cd4dba39d37dbec36))
+ * **Uncategorized**
+    - Release substrait v0.12.2 ([`5da1b55`](https://github.com/substrait-io/substrait-rs/commit/5da1b555e2d67bd2a6b9a50b56d2037bd501120a))
 </details>
 
 ## 0.12.1 (2023-07-03)

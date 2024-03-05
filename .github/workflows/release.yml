@@ -24,7 +24,7 @@ jobs:
         feature:
           - full
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
@@ -44,10 +44,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: arduino/setup-protoc@v1
+      - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo install cargo-smart-release --locked
+      - run: cargo install cargo-smart-release --debug --locked
       - run: cargo check --features ${{ matrix.feature }}
       - run: cargo changelog --execute substrait
       - run: |
