@@ -18,6 +18,20 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
+        id: rust-toolchain
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-release-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-release-
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
+            ${{ runner.os }}-cargo-
       - run: cargo install cargo-smart-release --debug --locked
       - run: cargo check --all-features
       - run: cargo changelog --execute substrait

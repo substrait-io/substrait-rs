@@ -14,6 +14,20 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
+        id: rust-toolchain
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-check-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-check-
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
+            ${{ runner.os }}-cargo-
       - run: cargo check --all-targets --all-features
 
   test:
@@ -25,6 +39,20 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
+        id: rust-toolchain
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-test-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-test-
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
+            ${{ runner.os }}-cargo-
       - run: cargo test --all-targets --all-features
       - run: cargo test --doc --all-features
 
@@ -47,8 +75,22 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
+        id: rust-toolchain
         with:
           components: clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-clippy-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-clippy-
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
+            ${{ runner.os }}-cargo-
       - run: cargo clippy --all-targets --all-features -- -Dwarnings
 
   package:
@@ -60,5 +102,19 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
+        id: rust-toolchain
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-package-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-package-
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
+            ${{ runner.os }}-cargo-
       - run: cargo build --all-features
       - run: cargo package --all-features --allow-dirty
