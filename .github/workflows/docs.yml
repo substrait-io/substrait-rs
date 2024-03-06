@@ -22,10 +22,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@nightly
-      - uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo rustdoc --features semver -- --cfg docsrs
+      - run: cargo rustdoc --all-features -- --cfg docsrs
       - run: chmod -c -R +rX "target/doc"
       - run: echo "<meta http-equiv=refresh content=0;url=substrait>" > target/doc/index.html
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'

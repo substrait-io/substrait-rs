@@ -34,56 +34,14 @@
 //!
 //! ### Serde support
 //!
-//! There are two (non-default) features available that provide derived
-//! [Deserialize](serde::Deserialize) and [Serialize](serde::Serialize)
-//! implementations for the generated types.
-//!
-//! Note that these features are mutually exclusive. The main difference between
-//! those implementations are the field name case convention and field value
-//! encoding. The examples below show how the `minor_number` field name in
-//! [Version](proto::Version) matches the Protobuf field name with the `serde`
-//! feature whereas it expects a lower camel case `minorNumber` field name with
-//! the `pbjson` feature enabled. Please refer to the [Protobuf JSON Mapping]
-//! documentation for more details.
-//!
-//! #### `serde`
-//!
-//! This adds `#[serde(Deserialize, Serialize)]` to all generated Protobuf
-//! types. In addition, to match Protobuf defaults for missing optional data,
-//! this adds `[serde(default)]` to all messages.
+//! The `serde` feature generates serde implementations that match the [Protobuf JSON Mapping]
+//! via [pbjson].
 //!
 //! ##### Example
 //! ###### Deserialize a plan version using the `serde` feature
 //! ```rust
 //! # fn main() -> Result<(), serde_json::Error> {
 //! # #[cfg(feature="serde")] {
-//! use substrait::proto::Version;
-//!
-//! let version_json = r#"{
-//!   "minor_number": 21
-//! }"#;
-//!
-//! let version = serde_json::from_str::<Version>(version_json)?;
-//! assert_eq!(
-//!   version,
-//!   Version {
-//!     minor_number: 21,
-//!     ..Default::default()
-//!   }
-//! );
-//! # } Ok(()) }
-//! ```
-//!
-//! #### `pbjson`
-//!
-//! This generates serde implementation that match the [Protobuf JSON Mapping]
-//! via [pbjson].
-//!
-//! ##### Example
-//! ###### Deserialize a plan version using the `pbjson` feature
-//! ```rust
-//! # fn main() -> Result<(), serde_json::Error> {
-//! # #[cfg(feature="pbjson")] {
 //! use substrait::proto::Version;
 //!
 //! let version_json = r#"{

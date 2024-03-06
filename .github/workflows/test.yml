@@ -8,46 +8,25 @@ jobs:
   check:
     name: Check
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        feature:
-          - default
-          - pbjson
-          - protoc
-          - semver,serde
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-      - uses: arduino/setup-protoc@v3
-        if: matrix.feature != 'protoc'
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo check --features ${{ matrix.feature }}
+      - run: cargo check --all-targets --all-features
 
   test:
     name: Test
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        feature:
-          - default
-          - pbjson
-          - semver,serde
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-      - uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo test --features ${{ matrix.feature }}
+      - run: cargo test --all-targets --all-features
+      - run: cargo test --doc --all-features
 
   rustfmt:
     name: Rustfmt
@@ -62,13 +41,6 @@ jobs:
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        feature:
-          - default
-          - pbjson
-          - semver,serde
     steps:
       - uses: actions/checkout@v4
         with:
@@ -77,10 +49,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo clippy --features ${{ matrix.feature }} -- -Dwarnings
+      - run: cargo clippy --all-targets --all-features -- -Dwarnings
 
   package:
     name: Package
@@ -91,8 +60,5 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-      - uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo build
+      - run: cargo build --all-features
       - run: cargo package --allow-dirty
