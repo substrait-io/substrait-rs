@@ -61,4 +61,4 @@ jobs:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo build --all-features
-      - run: cargo package --allow-dirty
+      - run: cargo package --all-features --allow-dirty
