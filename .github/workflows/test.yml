@@ -8,46 +8,53 @@ jobs:
   check:
     name: Check
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        feature:
-          - default
-          - pbjson
-          - protoc
-          - semver,serde
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-      - uses: arduino/setup-protoc@v3
-        if: matrix.feature != 'protoc'
+        id: rust-toolchain
+      - uses: actions/cache@v4
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo check --features ${{ matrix.feature }}
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-check-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-check-
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
+            ${{ runner.os }}-cargo-
+      - run: cargo check --all-targets --all-features
 
   test:
     name: Test
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        feature:
-          - default
-          - pbjson
-          - semver,serde
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-      - uses: arduino/setup-protoc@v3
+        id: rust-toolchain
+      - uses: actions/cache@v4
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo test --features ${{ matrix.feature }}
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-test-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-test-
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
+            ${{ runner.os }}-cargo-
+      - run: cargo test --all-targets --all-features
+      - run: cargo test --doc --all-features
 
   rustfmt:
     name: Rustfmt
@@ -62,25 +69,29 @@ jobs:
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        feature:
-          - default
-          - pbjson
-          - semver,serde
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
+        id: rust-toolchain
         with:
           components: clippy
-      - uses: arduino/setup-protoc@v3
+      - uses: actions/cache@v4
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo clippy --features ${{ matrix.feature }} -- -Dwarnings
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-clippy-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-clippy-
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
+            ${{ runner.os }}-cargo-
+      - run: cargo clippy --all-targets --all-features -- -Dwarnings
 
   package:
     name: Package
@@ -91,8 +102,19 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-      - uses: arduino/setup-protoc@v3
+        id: rust-toolchain
+      - uses: actions/cache@v4
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo build
-      - run: cargo package --allow-dirty
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-package-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-package-
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
+            ${{ runner.os }}-cargo-
+      - run: cargo build --all-features
+      - run: cargo package --all-features --allow-dirty

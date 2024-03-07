@@ -13,9 +13,6 @@ use walkdir::{DirEntry, WalkDir};
 const PROTO_ROOT: &str = "substrait/proto";
 const TEXT_ROOT: &str = "substrait/text";
 
-#[cfg(all(feature = "serde", feature = "pbjson"))]
-compile_error!("Either feature `serde` or `pbjson` can be enabled");
-
 /// Add Substrait version information to the build
 fn substrait_version() -> Result<(), Box<dyn Error>> {
     use git2::{DescribeFormatOptions, DescribeOptions, Repository};
@@ -84,7 +81,7 @@ pub const SUBSTRAIT_GIT_SHA: &str = "{git_hash}";
 /// crate
 pub const SUBSTRAIT_GIT_DESCRIBE: &str = "{git_describe}";
 
-/// The amount of commits between the latest tag and this version of the 
+/// The amount of commits between the latest tag and this version of the
 /// Substrait module used to build this crate
 pub const SUBSTRAIT_GIT_DEPTH: u32 = {git_depth};
 
@@ -168,49 +165,8 @@ pub mod {title} {{
 }
 
 #[cfg(feature = "serde")]
-/// Serialize deserialize implementations for proto types using `serde`
-fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
-    use prost_types::DescriptorProto;
-    use prost_wkt_build::{FileDescriptorSet, Message};
-
-    let descriptor_path = out_dir.join("proto_descriptor.bin");
-
-    fn serde_default(cfg: &mut Config, dp: Vec<DescriptorProto>, path: String) {
-        dp.into_iter().for_each(move |descriptor| {
-            let name = descriptor.name().to_string();
-            cfg.type_attribute(format!("{path}.{name}"), "#[serde(default)]");
-            serde_default(cfg, descriptor.nested_type, format!("{path}.{name}"))
-        });
-    }
-
-    let mut cfg = Config::new();
-    cfg.file_descriptor_set_path(&descriptor_path)
-        .type_attribute(".", "#[derive(serde::Deserialize, serde::Serialize)]")
-        .extern_path(".google.protobuf.Any", "::prost_wkt_types::Any")
-        .compile_protos(protos, &[PROTO_ROOT])?;
-
-    FileDescriptorSet::decode(&mut fs::read(&descriptor_path)?.as_slice())?
-        .file
-        .into_iter()
-        .for_each(|fdp| {
-            let package = fdp.package().into();
-            serde_default(&mut cfg, fdp.message_type, package)
-        });
-
-    cfg.skip_protoc_run()
-        .compile_protos(protos, &[PROTO_ROOT])?;
-
-    prost_wkt_build::add_serde(
-        out_dir,
-        FileDescriptorSet::decode(fs::read(descriptor_path)?.as_slice())?,
-    );
-
-    Ok(())
-}
-
-#[cfg(feature = "pbjson")]
 /// Serialize and deserialize implementations for proto types using `pbjson`
-fn pbjson(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
+fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
     use pbjson_build::Builder;
 
     let descriptor_path = out_dir.join("proto_descriptor.bin");
@@ -257,13 +213,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .collect::<Vec<_>>();
 
-    #[cfg(feature = "pbjson")]
-    pbjson(&protos, out_dir)?;
-
     #[cfg(feature = "serde")]
     serde(&protos, out_dir)?;
 
-    #[cfg(not(any(feature = "serde", feature = "pbjson")))]
+    #[cfg(not(feature = "serde"))]
     Config::new().compile_protos(&protos, &[PROTO_ROOT])?;
 
     Ok(())

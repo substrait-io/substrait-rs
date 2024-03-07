@@ -18,11 +18,22 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install cargo-smart-release --debug --locked
-      - uses: arduino/setup-protoc@v3
+        id: rust-toolchain
+      - uses: actions/cache@v4
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo check
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-release-${{ hashFiles('**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-release-
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
+            ${{ runner.os }}-cargo-
+      - run: cargo install cargo-smart-release --debug --locked
+      - run: cargo check --all-features
       - run: cargo changelog --execute substrait
       - run: |
           git config user.name github-actions[bot]

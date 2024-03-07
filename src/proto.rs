@@ -12,18 +12,18 @@
 pub mod extensions {
     include!(concat!(env!("OUT_DIR"), "/substrait.extensions.rs"));
 
-    #[cfg(feature = "pbjson")]
+    #[cfg(feature = "serde")]
     include!(concat!(env!("OUT_DIR"), "/substrait.extensions.serde.rs"));
 }
 
 include!(concat!(env!("OUT_DIR"), "/substrait.rs"));
 
-#[cfg(feature = "pbjson")]
+#[cfg(feature = "serde")]
 include!(concat!(env!("OUT_DIR"), "/substrait.serde.rs"));
 
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "pbjson")]
+    #[cfg(feature = "serde")]
     #[test]
     fn pbjson_serde() -> Result<(), Box<dyn std::error::Error>> {
         let plan = serde_json::from_str::<super::Plan>(
