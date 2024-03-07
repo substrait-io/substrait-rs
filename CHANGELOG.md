@@ -1,5 +1,41 @@
 
 
+## 0.27.0 (2024-03-07)
+
+<csr-id-72e75894cea1bf4afbb90178d8c7a5119367d15e/>
+
+### Bug Fixes
+
+ - <csr-id-ec8854428f2f633912e532c3f2f328b2bdc4d910/> release job needs `protoc`
+
+### Refactor (BREAKING)
+
+ - <csr-id-72e75894cea1bf4afbb90178d8c7a5119367d15e/> remove `serde` support for `proto` types
+   - Removes `serde` support for the generated proto types
+   - Uses `pbjson` ser/de when the `serde` feature is enabled.
+   - Removes the `pbjson` feature.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 2 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#159](https://github.com/substrait-io/substrait-rs/issues/159), [#160](https://github.com/substrait-io/substrait-rs/issues/160)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#159](https://github.com/substrait-io/substrait-rs/issues/159)**
+    - Remove `serde` support for `proto` types ([`72e7589`](https://github.com/substrait-io/substrait-rs/commit/72e75894cea1bf4afbb90178d8c7a5119367d15e))
+ * **[#160](https://github.com/substrait-io/substrait-rs/issues/160)**
+    - Release job needs `protoc` ([`ec88544`](https://github.com/substrait-io/substrait-rs/commit/ec8854428f2f633912e532c3f2f328b2bdc4d910))
+</details>
+
 ## 0.26.0 (2024-03-04)
 
 <csr-id-3c17273258101f7b228b953a4409fa09718ddbd5/>
@@ -39,7 +75,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 3 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#156](https://github.com/substrait-io/substrait-rs/issues/156)
@@ -52,6 +88,8 @@
 
  * **[#156](https://github.com/substrait-io/substrait-rs/issues/156)**
     - Bump substrait from `0.43.0` to `0.44.0` ([`3c17273`](https://github.com/substrait-io/substrait-rs/commit/3c17273258101f7b228b953a4409fa09718ddbd5))
+ * **Uncategorized**
+    - Release substrait v0.26.0 ([`d8b73ee`](https://github.com/substrait-io/substrait-rs/commit/d8b73eeb72874d5e0795b996bda7c45e16b21956))
 </details>
 
 ## 0.25.1 (2024-02-29)
