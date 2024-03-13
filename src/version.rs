@@ -53,6 +53,12 @@ pub fn semver() -> semver::Version {
     }
 }
 
+/// Returns the requirement of this crate for other Substrait versions.
+#[cfg(feature = "semver")]
+pub fn semver_req() -> semver::VersionReq {
+    semver::VersionReq::parse(&format!("^{}", semver())).unwrap()
+}
+
 #[cfg(test)]
 // These tests ensure this crate uses a tagged Substrait release.
 mod tests {
