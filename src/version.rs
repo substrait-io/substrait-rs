@@ -16,9 +16,9 @@ include!("version.in");
 /// [version_with_producer].
 pub fn version() -> Version {
     Version {
-        major_number: SUBSTRAIT_MAJOR_VERSION.try_into().unwrap(),
-        minor_number: SUBSTRAIT_MINOR_VERSION.try_into().unwrap(),
-        patch_number: SUBSTRAIT_PATCH_VERSION.try_into().unwrap(),
+        major_number: SUBSTRAIT_MAJOR_VERSION,
+        minor_number: SUBSTRAIT_MINOR_VERSION,
+        patch_number: SUBSTRAIT_PATCH_VERSION,
         git_hash: if SUBSTRAIT_GIT_DEPTH != 0 {
             String::from(SUBSTRAIT_GIT_SHA)
         } else {
@@ -41,9 +41,9 @@ pub fn version_with_producer(producer: impl Into<String>) -> Version {
 #[cfg(feature = "semver")]
 pub fn semver() -> semver::Version {
     semver::Version {
-        major: SUBSTRAIT_MAJOR_VERSION,
-        minor: SUBSTRAIT_MINOR_VERSION,
-        patch: SUBSTRAIT_PATCH_VERSION,
+        major: SUBSTRAIT_MAJOR_VERSION as _,
+        minor: SUBSTRAIT_MINOR_VERSION as _,
+        patch: SUBSTRAIT_PATCH_VERSION as _,
         pre: if SUBSTRAIT_GIT_DEPTH != 0 {
             semver::Prerelease::new(&SUBSTRAIT_GIT_DEPTH.to_string()).unwrap()
         } else {
