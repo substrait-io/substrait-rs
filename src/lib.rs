@@ -109,7 +109,13 @@
     html_favicon_url = "https://raw.githubusercontent.com/substrait-io/substrait/main/site/docs/img/logo.svg"
 )]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![deny(missing_docs)]
 
+#[allow(missing_docs)]
 pub mod proto;
+#[allow(missing_docs)]
 pub mod text;
 pub mod version;
+
+#[cfg(feature = "parse")]
+pub mod parse;
