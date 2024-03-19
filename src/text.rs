@@ -7,7 +7,7 @@
     unused_variables
 )]
 
-//! Generated types for text-based definitions
+//! Generated types for text-based definitions.
 
 // https://github.com/oxidecomputer/typify/issues/245
 include!(concat!(env!("OUT_DIR"), "/substrait_text.rs"));

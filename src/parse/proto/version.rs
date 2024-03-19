@@ -2,8 +2,10 @@
 
 //! Parsing of [proto::Version].
 
-use crate::parse::{context::Context, Parse};
-use crate::{proto, version};
+use crate::{
+    parse::{context::Context, Parse},
+    proto, version,
+};
 use hex::FromHex;
 use thiserror::Error;
 
@@ -22,16 +24,23 @@ pub struct Version {
 
 impl Version {
     /// Returns the semantic version of this version.
+    ///
+    /// See [proto::Version::major_number], [proto::Version::minor_number] and
+    /// [proto::Version::patch_number].
     pub fn version(&self) -> &semver::Version {
         &self.version
     }
 
     /// Returns the git hash of this version.
+    ///
+    /// See [proto::Version::git_hash].
     pub fn git_hash(&self) -> Option<&[u8; 20]> {
         self.git_hash.as_ref()
     }
 
     /// Returns the producer of this version.
+    ///
+    /// See [proto::Version::producer].
     pub fn producer(&self) -> Option<&str> {
         self.producer.as_deref()
     }
