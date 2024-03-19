@@ -6,7 +6,7 @@
     clippy::needless_borrows_for_generic_args
 )]
 
-//! Generated types for the protobuf `substrait` package
+//! Generated types for the protobuf `substrait` package.
 
 /// Generated types for the protobuf `substrait.extensions` package
 pub mod extensions {
