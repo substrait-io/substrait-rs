@@ -35,7 +35,7 @@ jobs:
             ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-release-
             ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
             ${{ runner.os }}-cargo-
-      - run: cargo-smart-release --debug --locked || true
+      - run: cargo install cargo-smart-release --locked || true
       - run: cargo check --all-features
       - run: |
           git config user.name github-actions[bot]
