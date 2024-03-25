@@ -1,5 +1,64 @@
 
 
+## 0.28.0 (2024-03-25)
+
+### Chore
+
+ - <csr-id-c3ba665f78036a830ee38266ed8ca01c2ed18086/> update heck requirement from 0.4.1 to 0.5.0
+
+### New Features
+
+ - <csr-id-8b648c9309792ade059aba0ede9b635dcf21cf3e/> add `proto::PlanVersion` parser
+   A parser for `proto::PlanVersion`, it parses iff the version is not
+   missing and the version parses.
+
+### Bug Fixes
+
+ - <csr-id-2c5543ece1f451c315703cb721a191bf07af72d2/> `cargo-smart-release` install
+ - <csr-id-fb7f50a5adf8568a9ea0180070426cbf2e4f6d1b/> release job cargo install cache hit
+   With the addition of a cache in the release workflow we need to handle
+   the case where the tool is already installed.
+
+### Chore (BREAKING)
+
+ - <csr-id-12945c54c10f82d8eabb775691bb5348de39306e/> bump substrait from `0.44.0` to `0.45.0`
+
+### New Features (BREAKING)
+
+ - <csr-id-6f3eb949021b80e68d7d042e96d98a59655bf277/> add `parse` module and `proto::Version` parser
+   This adds the `parse` module with the `Parse` and `Context` traits, and
+   a parser for `proto::Version`. The `Context` trait will be extended when
+   needed for the specific parsers that require it.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 6 commits contributed to the release over the course of 11 calendar days.
+ - 17 days passed between releases.
+ - 6 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 5 unique issues were worked on: [#162](https://github.com/substrait-io/substrait-rs/issues/162), [#163](https://github.com/substrait-io/substrait-rs/issues/163), [#164](https://github.com/substrait-io/substrait-rs/issues/164), [#165](https://github.com/substrait-io/substrait-rs/issues/165), [#166](https://github.com/substrait-io/substrait-rs/issues/166)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#162](https://github.com/substrait-io/substrait-rs/issues/162)**
+    - Update heck requirement from 0.4.1 to 0.5.0 ([`c3ba665`](https://github.com/substrait-io/substrait-rs/commit/c3ba665f78036a830ee38266ed8ca01c2ed18086))
+ * **[#163](https://github.com/substrait-io/substrait-rs/issues/163)**
+    - Release job cargo install cache hit ([`fb7f50a`](https://github.com/substrait-io/substrait-rs/commit/fb7f50a5adf8568a9ea0180070426cbf2e4f6d1b))
+ * **[#164](https://github.com/substrait-io/substrait-rs/issues/164)**
+    - Add `parse` module and `proto::Version` parser ([`6f3eb94`](https://github.com/substrait-io/substrait-rs/commit/6f3eb949021b80e68d7d042e96d98a59655bf277))
+ * **[#165](https://github.com/substrait-io/substrait-rs/issues/165)**
+    - Add `proto::PlanVersion` parser ([`8b648c9`](https://github.com/substrait-io/substrait-rs/commit/8b648c9309792ade059aba0ede9b635dcf21cf3e))
+ * **[#166](https://github.com/substrait-io/substrait-rs/issues/166)**
+    - Bump substrait from `0.44.0` to `0.45.0` ([`12945c5`](https://github.com/substrait-io/substrait-rs/commit/12945c54c10f82d8eabb775691bb5348de39306e))
+ * **Uncategorized**
+    - `cargo-smart-release` install ([`2c5543e`](https://github.com/substrait-io/substrait-rs/commit/2c5543ece1f451c315703cb721a191bf07af72d2))
+</details>
+
 ## 0.27.0 (2024-03-07)
 
 <csr-id-72e75894cea1bf4afbb90178d8c7a5119367d15e/>
@@ -19,7 +78,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 2 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#159](https://github.com/substrait-io/substrait-rs/issues/159), [#160](https://github.com/substrait-io/substrait-rs/issues/160)
@@ -34,6 +93,8 @@
     - Remove `serde` support for `proto` types ([`72e7589`](https://github.com/substrait-io/substrait-rs/commit/72e75894cea1bf4afbb90178d8c7a5119367d15e))
  * **[#160](https://github.com/substrait-io/substrait-rs/issues/160)**
     - Release job needs `protoc` ([`ec88544`](https://github.com/substrait-io/substrait-rs/commit/ec8854428f2f633912e532c3f2f328b2bdc4d910))
+ * **Uncategorized**
+    - Release substrait v0.27.0 ([`b3fc579`](https://github.com/substrait-io/substrait-rs/commit/b3fc579b5cf8621f3cc6a9b43eb633fe80c96769))
 </details>
 
 ## 0.26.0 (2024-03-04)
