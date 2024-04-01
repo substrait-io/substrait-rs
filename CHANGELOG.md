@@ -1,6 +1,145 @@
 
 
+## 0.28.1 (2024-04-01)
+
+### Chore
+
+ - <csr-id-7d80f71db452297292f5c39f36824923d48e6692/> bump actions/configure-pages from 4 to 5
+   Bumps
+   [actions/configure-pages](https://github.com/actions/configure-pages)
+   from 4 to 5.
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/actions/configure-pages/releases">actions/configure-pages's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v5.0.0</h2>
+   <h1>Changelog</h1>
+   <ul>
+   <li>Attempt to auto-detect configuration files with varying file
+   extensions <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/139">#139</a>)</li>
+   <li>Convert errors into Actions-compatible logging with annotations <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/138">#138</a>)</li>
+   <li>Bump <code>@​actions/github</code> from 5.1.1 to 6.0.0 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/123">#123</a>)</li>
+   <li>Bump the non-breaking-changes group with 2 updates <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/136">#136</a>)</li>
+   <li>Update the Next.js configuration for v14 <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/137">#137</a>)</li>
+   <li>Bump the non-breaking-changes group with 3 updates <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/132">#132</a>)</li>
+   <li>Bump release-drafter/release-drafter from 5 to 6 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/133">#133</a>)</li>
+   <li>Bump github/codeql-action from 2 to 3 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/127">#127</a>)</li>
+   <li>Bump actions/checkout from 3 to 4 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/120">#120</a>)</li>
+   <li>Bump actions/setup-node from 3 to 4 <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/118">#118</a>)</li>
+   <li>Bump the non-breaking-changes group with 1 update <a
+   href="https://github.com/dependabot"><code>@​dependabot</code></a> (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/131">#131</a>)</li>
+   <li>Update Dependabot config to group non-breaking changes <a
+   href="https://github.com/JamesMGreene"><code>@​JamesMGreene</code></a>
+   (<a
+   href="https://redirect.github.com/actions/configure-pages/issues/130">#130</a>)</li>
+   </ul>
+   <p>See details of <a
+   href="https://github.com/actions/configure-pages/compare/v4.0.0...v5.0.0">all
+   code changes</a> since previous release.</p>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/983d7736d9b0ae728b81ab479565c72886d7745b"><code>983d773</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/configure-pages/issues/139">#139</a>
+   from actions/config-auto-detect</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/9cf6e24f7417e4d116f9cbeee49e71d810373617"><code>9cf6e24</code></a>
+   Tweak comment</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/f304bd89be34aba4128f07b2fd86bc4e34fbabd7"><code>f304bd8</code></a>
+   Update distributables</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/215cd51eb0b4014b08466bdaaf323d9243321eb0"><code>215cd51</code></a>
+   Attempt to detect existing config files matching the expected basename
+   plus o...</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/e9382ac9ad54dcf5ba213056a0506fb85da7ca52"><code>e9382ac</code></a>
+   Front-load the file extension warning</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/7781abd34b2650ee39f68c3023a1198b1a3e7b78"><code>7781abd</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/actions/configure-pages/issues/138">#138</a>
+   from actions/error-utils</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/fc47e3c8386fa64ae7a2419b64710d432c7a3b90"><code>fc47e3c</code></a>
+   Update distributables</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/9c9f8a266f2316434daa266bf75396b5e7d1e058"><code>9c9f8a2</code></a>
+   Update tests to use the Octokit RequestError class</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/9a4705d6535eae096428426648f242b5ae07ef81"><code>9a4705d</code></a>
+   Update distributables</li>
+   <li><a
+   href="https://github.com/actions/configure-pages/commit/f6ded38287437661b636a27f136e14b1b2e46064"><code>f6ded38</code></a>
+   Fix syntax error and formatting</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/actions/configure-pages/compare/v4...v5">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=actions/configure-pages&package-manager=github_actions&previous-version=4&new-version=5)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   Dependabot will resolve any conflicts with this PR as long as you don't
+   alter it yourself. You can also trigger a rebase manually by commenting
+   `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 7 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#168](https://github.com/substrait-io/substrait-rs/issues/168)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#168](https://github.com/substrait-io/substrait-rs/issues/168)**
+    - Bump actions/configure-pages from 4 to 5 ([`7d80f71`](https://github.com/substrait-io/substrait-rs/commit/7d80f71db452297292f5c39f36824923d48e6692))
+</details>
+
 ## 0.28.0 (2024-03-25)
+
+<csr-id-c3ba665f78036a830ee38266ed8ca01c2ed18086/>
+<csr-id-12945c54c10f82d8eabb775691bb5348de39306e/>
 
 ### Chore
 
@@ -34,7 +173,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 6 commits contributed to the release over the course of 11 calendar days.
+ - 7 commits contributed to the release over the course of 12 calendar days.
  - 17 days passed between releases.
  - 6 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 5 unique issues were worked on: [#162](https://github.com/substrait-io/substrait-rs/issues/162), [#163](https://github.com/substrait-io/substrait-rs/issues/163), [#164](https://github.com/substrait-io/substrait-rs/issues/164), [#165](https://github.com/substrait-io/substrait-rs/issues/165), [#166](https://github.com/substrait-io/substrait-rs/issues/166)
@@ -56,6 +195,7 @@
  * **[#166](https://github.com/substrait-io/substrait-rs/issues/166)**
     - Bump substrait from `0.44.0` to `0.45.0` ([`12945c5`](https://github.com/substrait-io/substrait-rs/commit/12945c54c10f82d8eabb775691bb5348de39306e))
  * **Uncategorized**
+    - Release substrait v0.28.0 ([`f4a175e`](https://github.com/substrait-io/substrait-rs/commit/f4a175e9e4f1bdffdee15c30a78f130445da366a))
     - `cargo-smart-release` install ([`2c5543e`](https://github.com/substrait-io/substrait-rs/commit/2c5543ece1f451c315703cb721a191bf07af72d2))
 </details>
 
