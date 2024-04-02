@@ -145,7 +145,7 @@ mod tests {
     use crate::parse::context::tests::Context;
 
     #[test]
-    fn version() {
+    fn version() -> Result<(), VersionError> {
         let version = proto::Version::default();
         assert_eq!(
             version.parse(&mut Context::default()),
@@ -153,7 +153,8 @@ mod tests {
         );
 
         let version = version::version();
-        assert!(version.parse(&mut Context::default()).is_ok());
+        version.parse(&mut Context::default())?;
+        Ok(())
     }
 
     #[test]
@@ -217,7 +218,8 @@ mod tests {
             producer: String::from(""),
             ..version::version()
         };
-        assert!(version.parse(&mut Context::default())?.producer.is_none());
+        let version = version.parse(&mut Context::default())?;
+        assert!(version.producer.is_none());
         Ok(())
     }
 

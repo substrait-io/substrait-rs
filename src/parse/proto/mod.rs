@@ -7,3 +7,5 @@ pub use version::{Version, VersionError};
 
 mod plan_version;
 pub use plan_version::{PlanVersion, PlanVersionError};
+
+pub mod extensions;
