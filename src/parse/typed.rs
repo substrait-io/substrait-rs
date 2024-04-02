@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 //! A generic new type wrapper.
 
 use std::{any, fmt, hash, marker::PhantomData};
