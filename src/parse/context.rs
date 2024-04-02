@@ -67,8 +67,8 @@ pub(crate) mod tests {
 
     /// A test context.
     ///
-    /// This currently mocks support for simple extensions (always returns an
-    /// empty simple extensions).
+    /// This currently mocks support for simple extensions (does not resolve or
+    /// parse).
     pub struct Context {
         empty_simple_extensions: SimpleExtensions,
         simple_extensions: HashMap<Anchor<SimpleExtensionUri>, SimpleExtensionUri>,
