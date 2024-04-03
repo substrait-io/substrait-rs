@@ -1,6 +1,44 @@
 
 
+## 0.29.0 (2024-04-03)
+
+### New Features (BREAKING)
+
+ - <csr-id-332d60786f1753dc08b865df1be0bbe3b16bb3d9/> add `proto::extensions::SimpleExtensionUri` parser
+   Adds a parser for `proto::extensions::SimpleExtensionUri` that parses
+   the uri and adds the extension to the parse context.
+   
+   Breaking change because the parse `Context` trait gets two new functions
+   to support this:
+   - `add_simple_extension_uri`: this is used to add a simple extensions,
+   the parse context must directly resolve the uri and return the parsed
+   simple extensions - struct stub for that is added in this PR (the parser
+   is TODO).
+   - `simple_extensions`: given an reference (anchor) to a simple
+   extensions - check if this was added to the parse context and return it
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#169](https://github.com/substrait-io/substrait-rs/issues/169)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#169](https://github.com/substrait-io/substrait-rs/issues/169)**
+    - Add `proto::extensions::SimpleExtensionUri` parser ([`332d607`](https://github.com/substrait-io/substrait-rs/commit/332d60786f1753dc08b865df1be0bbe3b16bb3d9))
+</details>
+
 ## 0.28.1 (2024-04-01)
+
+<csr-id-7d80f71db452297292f5c39f36824923d48e6692/>
 
 ### Chore
 
@@ -121,7 +159,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#168](https://github.com/substrait-io/substrait-rs/issues/168)
@@ -134,6 +172,8 @@
 
  * **[#168](https://github.com/substrait-io/substrait-rs/issues/168)**
     - Bump actions/configure-pages from 4 to 5 ([`7d80f71`](https://github.com/substrait-io/substrait-rs/commit/7d80f71db452297292f5c39f36824923d48e6692))
+ * **Uncategorized**
+    - Release substrait v0.28.1 ([`cddc53d`](https://github.com/substrait-io/substrait-rs/commit/cddc53dd93b144e4c1d5200b6eeb51099e5142f2))
 </details>
 
 ## 0.28.0 (2024-03-25)
