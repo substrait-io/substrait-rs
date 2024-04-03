@@ -76,11 +76,12 @@ mod tests {
     };
 
     #[test]
-    fn parse() {
+    fn parse() -> Result<(), PlanVersionError> {
         let plan_version = proto::PlanVersion {
             version: Some(version::version()),
         };
-        assert!(plan_version.parse(&mut Context::default()).is_ok());
+        plan_version.parse(&mut Context::default())?;
+        Ok(())
     }
 
     #[test]
