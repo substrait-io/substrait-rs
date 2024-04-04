@@ -2,5 +2,7 @@
 
 //! Parsing of [proto::extensions] types.
 
+mod simple_extension_declaration;
 mod simple_extension_uri;
+
 pub use simple_extension_uri::SimpleExtensionUri;
