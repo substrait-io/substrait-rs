@@ -28,8 +28,8 @@ fn substrait_version() -> Result<(), Box<dyn Error>> {
 /// Add Substrait version information to the build
 #[cfg(feature = "git2")]
 fn substrait_version() -> Result<(), Box<dyn Error>> {
-    use fs;
     use git2::{DescribeFormatOptions, DescribeOptions, Repository};
+    use std::fs;
 
     let substrait_version_file =
         PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("src/version.in");
