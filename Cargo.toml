@@ -25,7 +25,8 @@ include = [
 ]
 
 [features]
-default = []
+default = ["git2"]
+git2 = ["dep:git2"]
 parse = ["dep:hex", "dep:thiserror", "dep:url", "semver"]
 protoc = ["dep:protobuf-src"]
 semver = ["dep:semver"]
@@ -44,7 +45,7 @@ serde_json = "1.0.114"
 thiserror = { version = "1.0.57", optional = true }
 
 [build-dependencies]
-git2 = { version = "0.18.2", default-features = false }
+git2 = { version = "0.18.2", default-features = false, optional = true }
 heck = "0.5.0"
 pbjson-build = { version = "0.6.2", optional = true }
 prettyplease = "0.2.4"

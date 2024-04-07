@@ -4,7 +4,7 @@ use prost_build::Config;
 use std::{
     env,
     error::Error,
-    fs::{self, File},
+    fs::File,
     io::Write,
     path::{Path, PathBuf},
 };
@@ -13,8 +13,22 @@ use walkdir::{DirEntry, WalkDir};
 const PROTO_ROOT: &str = "substrait/proto";
 const TEXT_ROOT: &str = "substrait/text";
 
-/// Add Substrait version information to the build
+// Release builds should already have the substrait version file generated.
+// We don't want to require git2 in those cases
+#[cfg(not(feature = "git2"))]
 fn substrait_version() -> Result<(), Box<dyn Error>> {
+    let substrait_version_file =
+        PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("src/version.in");
+    if !substrait_version_file.exists() {
+        panic!("Couldn't open any pre-calculated substrait version file.  If this is a development build then please enable the git2 feature.")
+    }
+    Ok(())
+}
+
+/// Add Substrait version information to the build
+#[cfg(feature = "git2")]
+fn substrait_version() -> Result<(), Box<dyn Error>> {
+    use fs;
     use git2::{DescribeFormatOptions, DescribeOptions, Repository};
 
     let substrait_version_file =
