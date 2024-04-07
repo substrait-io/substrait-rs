@@ -182,6 +182,7 @@ pub mod {title} {{
 /// Serialize and deserialize implementations for proto types using `pbjson`
 fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
     use pbjson_build::Builder;
+    use std::fs;
 
     let descriptor_path = out_dir.join("proto_descriptor.bin");
     let mut cfg = Config::new();
