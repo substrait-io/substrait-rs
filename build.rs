@@ -40,7 +40,7 @@ fn substrait_version() -> Result<(), Box<dyn Error>> {
         // Get the version of the submodule by directly calling `git describe`.
         let version = String::from_utf8(
             Command::new("git")
-                .current_dir("substrait")
+                .current_dir(SUBMODULE_ROOT)
                 .arg("describe")
                 .arg("--tags")
                 .arg("--long")
