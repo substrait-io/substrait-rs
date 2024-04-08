@@ -10,17 +10,15 @@ use std::{
 };
 use walkdir::{DirEntry, WalkDir};
 
-const SUBMODULE_ROOT: &str = "substrait";
 const PROTO_ROOT: &str = "substrait/proto";
 const TEXT_ROOT: &str = "substrait/text";
-const GEN_ROOT: &str = "gen";
 
 /// Add Substrait version information to the build
 fn substrait_version() -> Result<(), Box<dyn Error>> {
-    let gen_dir = Path::new(GEN_ROOT);
-    fs::create_dir_all(gen_dir)?;
+    use git2::{DescribeFormatOptions, DescribeOptions, Repository};
 
-    let version_in_file = gen_dir.join("version.in");
+    let substrait_version_file =
+        PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("src/version.in");
 
     // Rerun if the Substrait submodule changed (to allow setting `dirty`)
     println!(
@@ -28,38 +26,41 @@ fn substrait_version() -> Result<(), Box<dyn Error>> {
         Path::new("substrait").display()
     );
 
-    // Check if there is a submodule. This file is not included in the packaged crate.
-    if Path::new(SUBMODULE_ROOT).join(".git").exists() {
-        // Rerun if the Substrait submodule HEAD changed (when there is a submodule)
-        println!(
-            "cargo:rerun-if-changed={}",
-            Path::new(".git/modules/substrait/HEAD").display()
-        );
+    // Get the version from the submodule
+    match Repository::open("substrait") {
+        Ok(repo) => {
+            // Rerun if the Substrait submodule HEAD changed (when there is a submodule)
+            println!(
+                "cargo:rerun-if-changed={}",
+                Path::new(".git/modules/substrait/HEAD").display()
+            );
 
-        // Get the version of the submodule. The fallback is needed for the package build.
-        const VERSION: &str = git_version::git_submodule_versions!(
-            args = ["--tags", "--long", "--dirty=-dirty", "--abbrev=40"],
-            fallback = ""
-        )[0]
-        .1;
-        let mut split = VERSION.split('-');
-        let git_version = split.next().unwrap_or_default();
-        let git_depth = split.next().unwrap_or_default();
-        let git_hash = split.next().unwrap_or_default();
-        let git_dirty = VERSION.ends_with("dirty");
-        let version = semver::Version::parse(git_version.trim_start_matches('v'))?;
+            // Get describe output
+            let mut describe_options = DescribeOptions::default();
+            describe_options.describe_tags();
+            let mut describe_format_options = DescribeFormatOptions::default();
+            describe_format_options.always_use_long_format(true);
+            describe_format_options.dirty_suffix("-dirty");
+            let git_describe = repo
+                .describe(&describe_options)?
+                .format(Some(&describe_format_options))?;
 
-        let &semver::Version {
-            major,
-            minor,
-            patch,
-            ..
-        } = &version;
+            let mut split = git_describe.split('-');
+            let git_version = split.next().unwrap_or_default();
+            let git_depth = split.next().unwrap_or_default();
+            let git_dirty = git_describe.ends_with("dirty");
+            let git_hash = repo.head()?.peel_to_commit()?.id().to_string();
+            let semver::Version {
+                major,
+                minor,
+                patch,
+                ..
+            } = semver::Version::parse(git_version.trim_start_matches('v'))?;
 
-        fs::write(
-            version_in_file,
-            format!(
-                r#"// SPDX-License-Identifier: Apache-2.0
+            fs::write(
+                substrait_version_file,
+                format!(
+                    r#"// SPDX-License-Identifier: Apache-2.0
 
 // Note that this file is auto-generated and auto-synced using `build.rs`. It is
 // included in `version.rs`.
@@ -78,23 +79,27 @@ pub const SUBSTRAIT_GIT_SHA: &str = "{git_hash}";
 
 /// The `git describe` output of the Substrait submodule used to build this
 /// crate
-pub const SUBSTRAIT_GIT_DESCRIBE: &str = "{VERSION}";
+pub const SUBSTRAIT_GIT_DESCRIBE: &str = "{git_describe}";
 
-/// The amount of commits between the latest tag and the version of the
-/// Substrait submodule used to build this crate
+/// The amount of commits between the latest tag and this version of the
+/// Substrait module used to build this crate
 pub const SUBSTRAIT_GIT_DEPTH: u32 = {git_depth};
 
 /// The dirty state of the Substrait submodule used to build this crate
 pub const SUBSTRAIT_GIT_DIRTY: bool = {git_dirty};
 "#
-            ),
-        )?;
-    } else {
-        // If we don't have a version file yet we fail the build.
-        if !version_in_file.exists() {
-            panic!("Couldn't find the substrait submodule. Please clone the submodule: `git submodule update --init`.")
+                ),
+            )?;
         }
-    }
+        Err(e) => {
+            // If this is a package build the `substrait_version_file` should
+            // exist. If it does not, it means this is probably a Git build that
+            // did not clone the substrait submodule.
+            if !substrait_version_file.exists() {
+                panic!("Couldn't open the substrait submodule: {e}")
+            }
+        }
+    };
 
     Ok(())
 }

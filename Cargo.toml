@@ -15,8 +15,8 @@ build = "build.rs"
 include = [
     "LICENSE",
     "build.rs",
-    "gen/",
     "src/**/*.rs",
+    "src/version.in",
     "substrait/LICENSE",
     "substrait/README.md",
     "substrait/extensions/**/*.yaml",
@@ -44,7 +44,7 @@ serde_json = "1.0.114"
 thiserror = { version = "1.0.57", optional = true }
 
 [build-dependencies]
-git-version = "0.3.9"
+git2 = { version = "0.18.2", default-features = false }
 heck = "0.5.0"
 pbjson-build = { version = "0.6.2", optional = true }
 prettyplease = "0.2.4"
