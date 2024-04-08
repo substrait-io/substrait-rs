@@ -6,7 +6,7 @@ use super::simple_extension_declaration::SimpleExtensionDeclarationError;
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExtensionType {
     anchor: Anchor<Self>,
-    name: String,
+    name: Name<Self>,
     extension_uri_reference: Anchor<Self>,
 }
 
