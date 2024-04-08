@@ -7,6 +7,7 @@ use std::{
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
+    process::Command,
 };
 use walkdir::{DirEntry, WalkDir};
 
@@ -36,17 +37,25 @@ fn substrait_version() -> Result<(), Box<dyn Error>> {
             Path::new(".git/modules/substrait/HEAD").display()
         );
 
-        // Get the version of the submodule. The fallback is needed for the package build.
-        const VERSION: &str = git_version::git_submodule_versions!(
-            args = ["--tags", "--long", "--dirty=-dirty", "--abbrev=40"],
-            fallback = ""
-        )[0]
-        .1;
-        let mut split = VERSION.split('-');
+        // Get the version of the submodule by directly calling `git describe`.
+        let version = String::from_utf8(
+            Command::new("git")
+                .current_dir("substrait")
+                .arg("describe")
+                .arg("--tags")
+                .arg("--long")
+                .arg("--dirty=-dirty")
+                .arg("--abbrev=40")
+                .output()?
+                .stdout,
+        )?;
+
+        // Extract the parts.
+        let mut split = version.split('-');
         let git_version = split.next().unwrap_or_default();
         let git_depth = split.next().unwrap_or_default();
-        let git_hash = split.next().unwrap_or_default();
-        let git_dirty = VERSION.ends_with("dirty");
+        let git_hash = split.next().unwrap_or_default().trim_end();
+        let git_dirty = version.ends_with("dirty");
         let version = semver::Version::parse(git_version.trim_start_matches('v'))?;
 
         let &semver::Version {
@@ -78,7 +87,7 @@ pub const SUBSTRAIT_GIT_SHA: &str = "{git_hash}";
 
 /// The `git describe` output of the Substrait submodule used to build this
 /// crate
-pub const SUBSTRAIT_GIT_DESCRIBE: &str = "{VERSION}";
+pub const SUBSTRAIT_GIT_DESCRIBE: &str = "{version}";
 
 /// The amount of commits between the latest tag and the version of the
 /// Substrait submodule used to build this crate

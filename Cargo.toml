@@ -44,7 +44,6 @@ serde_json = "1.0.114"
 thiserror = { version = "1.0.57", optional = true }
 
 [build-dependencies]
-git-version = "0.3.9"
 heck = "0.5.0"
 pbjson-build = { version = "0.6.2", optional = true }
 prettyplease = "0.2.4"
