@@ -1,5 +1,45 @@
 
 
+## 0.29.1 (2024-04-08)
+
+### New Features
+
+ - <csr-id-22d6df794f4d00a8e0f2fcd6e60cf8e4d18192b9/> use `git-version` instead of `git2`
+   An alternative approach for #172. This replaces the `git2` dependency
+   with `git-version` which uses the `git` binary directly at compile time.
+   This means that:
+   
+   For dev builds, needs `git` binary:
+   - There is a submodule checked out: version file is written to the `gen`
+   folder.
+   - There is no submodule checked out: the build fails with a hint to
+   clone the submodule.
+   
+   For packaged builds (substrait is not included as a git submodule, see
+   `Cargo.toml` includes), don't need a `git` binary:
+   - The version file is in the `gen` folder: the build script skips the
+   version generation part
+   - The version file is missing: the build fails - the package is broken
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 5 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#173](https://github.com/substrait-io/substrait-rs/issues/173)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#173](https://github.com/substrait-io/substrait-rs/issues/173)**
+    - Use `git-version` instead of `git2` ([`22d6df7`](https://github.com/substrait-io/substrait-rs/commit/22d6df794f4d00a8e0f2fcd6e60cf8e4d18192b9))
+</details>
+
 ## 0.29.0 (2024-04-03)
 
 ### New Features (BREAKING)
@@ -14,14 +54,14 @@
    the parse context must directly resolve the uri and return the parsed
    simple extensions - struct stub for that is added in this PR (the parser
    is TODO).
-   - `simple_extensions`: given an reference (anchor) to a simple
+- `simple_extensions`: given an reference (anchor) to a simple
    extensions - check if this was added to the parse context and return it
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#169](https://github.com/substrait-io/substrait-rs/issues/169)
@@ -34,6 +74,8 @@
 
  * **[#169](https://github.com/substrait-io/substrait-rs/issues/169)**
     - Add `proto::extensions::SimpleExtensionUri` parser ([`332d607`](https://github.com/substrait-io/substrait-rs/commit/332d60786f1753dc08b865df1be0bbe3b16bb3d9))
+ * **Uncategorized**
+    - Release substrait v0.29.0 ([`f19ebc2`](https://github.com/substrait-io/substrait-rs/commit/f19ebc2530b34305ecda8252d244e28c9337b0f9))
 </details>
 
 ## 0.28.1 (2024-04-01)
