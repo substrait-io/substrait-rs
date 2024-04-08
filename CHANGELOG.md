@@ -1,5 +1,29 @@
 
 
+## 0.29.4 (2024-04-08)
+
+### Bug Fixes
+
+ - <csr-id-06825985589a95d74e20a47ee17cfa428e113413/> fix `SUBSTRAIT_GIT_DESCRIBE` value
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#176](https://github.com/substrait-io/substrait-rs/issues/176)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#176](https://github.com/substrait-io/substrait-rs/issues/176)**
+    - Fix `SUBSTRAIT_GIT_DESCRIBE` value ([`0682598`](https://github.com/substrait-io/substrait-rs/commit/06825985589a95d74e20a47ee17cfa428e113413))
+</details>
+
 ## 0.29.3 (2024-04-08)
 
 ### New Features
@@ -12,7 +36,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#175](https://github.com/substrait-io/substrait-rs/issues/175)
 
@@ -24,6 +48,8 @@
 
  * **[#175](https://github.com/substrait-io/substrait-rs/issues/175)**
     - Directly call `git` to get substrait submodule version ([`7799179`](https://github.com/substrait-io/substrait-rs/commit/7799179f4df91f5ab52a9294805bdd09984f8f88))
+ * **Uncategorized**
+    - Release substrait v0.29.3 ([`fddba13`](https://github.com/substrait-io/substrait-rs/commit/fddba137fa62b466c720b98f6c8ea4d39cc985ba))
 </details>
 
 ## 0.29.2 (2024-04-08)
@@ -87,9 +113,6 @@
  * **Uncategorized**
     - Release substrait v0.29.1 ([`09ee158`](https://github.com/substrait-io/substrait-rs/commit/09ee15861130256c4593477a99242e588bfdbc9b))
 </details>
-
-<csr-unknown>
-There is no submodule checked out: the build fails with a hint toclone the submodule.The version file is in the gen folder: the build script skips theversion generation partThe version file is missing: the build fails - the package is broken<csr-unknown/>
 
 ## 0.29.0 (2024-04-03)
 
