@@ -33,17 +33,17 @@ impl From<MappingType> for proto::extensions::simple_extension_declaration::Mapp
     fn from(value: MappingType) -> Self {
         match value {
             MappingType::ExtensionFunction(inner) => {
-                proto::extensions::simple_extension_declaration::MappingType::ExtensionFunction(
+                Self::ExtensionFunction(
                     inner.into(),
                 )
             }
             MappingType::ExtensionType(inner) => {
-                proto::extensions::simple_extension_declaration::MappingType::ExtensionType(
+                Self::ExtensionType(
                     inner.into(),
                 )
             }
             MappingType::ExtensionTypeVariation(inner) => {
-                proto::extensions::simple_extension_declaration::MappingType::ExtensionTypeVariation(
+                Self::ExtensionTypeVariation(
                     inner.into(),
                 )
             }
