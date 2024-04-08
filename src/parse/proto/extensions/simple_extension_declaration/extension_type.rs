@@ -7,7 +7,7 @@ use super::simple_extension_declaration::SimpleExtensionDeclarationError;
 pub struct ExtensionType {
     anchor: Anchor<Self>,
     name: Name<Self>,
-    extension_uri_reference: Anchor<Self>,
+    extension_uri_reference: Anchor<SimpleExtensionUri>,
 }
 
 impl<C: Context> Parse<C> for proto::extensions::simple_extension_declaration::ExtensionType {
