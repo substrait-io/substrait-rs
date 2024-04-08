@@ -1,5 +1,8 @@
 use super::simple_extension_declaration::SimpleExtensionDeclarationError;
-use crate::{parse::{Anchor, Context, Parse}, proto};
+use crate::{
+    parse::{Anchor, Context, Parse},
+    proto,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExtensionFunction {
@@ -19,12 +22,15 @@ impl<C: Context> Parse<C> for proto::extensions::simple_extension_declaration::E
             name,
         } = self;
 
-        // Construct the parsed ExtensionFunction
+        // Construct the parsed ExtensionFunction.
         let extension_function = ExtensionFunction {
             extension_uri_reference: Anchor::new(extension_uri_reference),
             name,
             anchor: Anchor::new(function_anchor),
         };
+
+        // Add the ExtensionFunction to the given context.
+        ctx.add_extension_function(&extension_function)?;
 
         Ok(extension_function)
     }

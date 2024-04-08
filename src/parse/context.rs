@@ -38,6 +38,36 @@ pub trait Context {
         &self,
         anchor: &Anchor<SimpleExtensionUri>,
     ) -> Result<&SimpleExtensions, ContextError>;
+
+    /// Add a [ExtensionFunction] to this context. Must return an error for duplicate
+    /// anchors, when the URI is not supported or if the definition does not contain a matching function with the given name.
+    ///
+    /// This function must eagerly resolve and parse the simple extension, returning an
+    /// error if either fails.
+    fn add_extension_function(
+        &mut self,
+        extension_function: &ExtensionFunction,
+    ) -> Result<&SimpleExtensions, ContextError>;
+
+    /// Add an [ExtensionType] to this context. Must return an error for duplicate
+    /// anchors, when the URI is not supported or if the definition does not contain a matching function with the given name.
+    ///
+    /// This function must eagerly resolve and parse the simple extension, returning an
+    /// error if either fails.
+    fn add_extension_type(
+        &mut self,
+        extension: &ExtensionType,
+    ) -> Result<&SimpleExtensions, ContextError>;
+
+    /// Add a [ExtensionTypeVariation] to this context. Must return an error for duplicate
+    /// anchors, when the URI is not supported or if the definition does not contain a matching function with the given name.
+    ///
+    /// This function must eagerly resolve and parse the simple extension, returning an
+    /// error if either fails.
+    fn add_extension_type_variation(
+        &mut self,
+        extension_type_variation: &ExtensionTypeVariation,
+    ) -> Result<&SimpleExtensions, ContextError>;
 }
 
 /// Parse context errors.

@@ -9,11 +9,18 @@ use super::mapping_type::MappingType;
 // SimpleExtensionDeclaration
 #[derive(Clone, Debug, PartialEq)]
 pub struct SimpleExtensionDeclaration {
-    mapping_type: MappingType,
+    pub mapping_type: Option<MappingType>,
 }
 
 #[derive(Debug, PartialEq, Error)]
-pub enum SimpleExtensionDeclarationError {}
+pub enum SimpleExtensionDeclarationError {
+    #[error("No Mapping Type specified on Extension Declaration.")]
+    MissingMappingType,
+
+    /// Context error
+    #[error(transparent)]
+    Context(#[from] ContextError),
+}
 
 impl<C: Context> Parse<C> for proto::extensions::SimpleExtensionDeclaration {
     type Parsed = SimpleExtensionDeclaration;
@@ -23,9 +30,11 @@ impl<C: Context> Parse<C> for proto::extensions::SimpleExtensionDeclaration {
         let proto::extensions::SimpleExtensionDeclaration { mapping_type } = self;
 
         Ok(SimpleExtensionDeclaration {
-            mapping_type: mapping_type
-                .map(|mapping_type| mapping_type.parse(ctx).ok())
-                .flatten(),
+            mapping_type: Some(
+                mapping_type
+                    .ok_or(SimpleExtensionDeclarationError::MissingMappingType)?
+                    .parse(ctx)?,
+            ),
         })
     }
 }

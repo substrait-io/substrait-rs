@@ -21,12 +21,15 @@ impl<C: Context> Parse<C> for proto::extensions::simple_extension_declaration::E
             name,
         } = self;
 
-        // Construct the parsed ExtensionType
+        // Construct the parsed ExtensionType.
         let extension_type_variation = ExtensionType {
             extension_uri_reference: Anchor::new(extension_uri_reference),
             name,
             anchor: Anchor::new(type_anchor),
         };
+
+        // Add the ExtensionType to the given context.
+        ctx.add_extension_type();
 
         Ok(extension_type_variation)
     }

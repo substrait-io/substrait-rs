@@ -32,20 +32,10 @@ impl<C: Context> Parse<C> for proto::extensions::simple_extension_declaration::M
 impl From<MappingType> for proto::extensions::simple_extension_declaration::MappingType {
     fn from(value: MappingType) -> Self {
         match value {
-            MappingType::ExtensionFunction(inner) => {
-                Self::ExtensionFunction(
-                    inner.into(),
-                )
-            }
-            MappingType::ExtensionType(inner) => {
-                Self::ExtensionType(
-                    inner.into(),
-                )
-            }
+            MappingType::ExtensionFunction(inner) => Self::ExtensionFunction(inner.into()),
+            MappingType::ExtensionType(inner) => Self::ExtensionType(inner.into()),
             MappingType::ExtensionTypeVariation(inner) => {
-                Self::ExtensionTypeVariation(
-                    inner.into(),
-                )
+                Self::ExtensionTypeVariation(inner.into())
             }
         }
     }

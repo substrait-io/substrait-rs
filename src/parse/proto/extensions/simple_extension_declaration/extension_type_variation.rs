@@ -23,12 +23,15 @@ impl<C: Context> Parse<C>
             name,
         } = self;
 
-        // Construct the parsed ExtensionTypeVariation
+        // Construct the parsed ExtensionTypeVariation.
         let extension_type_variation = ExtensionTypeVariation {
             extension_uri_reference: Anchor::new(extension_uri_reference),
             name,
             anchor: Anchor::new(type_variation_anchor),
         };
+
+        // Add the ExtensionTypeVariation to the given context.
+        ctx.add_extension_type_variation(&extension_type_variation)?;
 
         Ok(extension_type_variation)
     }
