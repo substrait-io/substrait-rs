@@ -1,6 +1,5 @@
 use super::simple_extension_declaration::SimpleExtensionDeclarationError;
-use crate::parse::{Anchor, Context, Parse};
-use crate::proto;
+use crate::{parse::{Anchor, Context, Parse}, proto};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExtensionFunction {
