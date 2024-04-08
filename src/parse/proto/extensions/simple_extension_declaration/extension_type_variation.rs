@@ -7,7 +7,7 @@ use super::simple_extension_declaration::SimpleExtensionDeclarationError;
 pub struct ExtensionTypeVariation {
     anchor: Anchor<Self>,
     name: String,
-    extension_uri_reference: Anchor<Self>,
+    extension_uri_reference: Anchor<SimpleExtensionUri>,
 }
 
 impl<C: Context> Parse<C>
