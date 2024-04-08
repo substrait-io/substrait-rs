@@ -38,7 +38,7 @@ fn substrait_version() -> Result<(), Box<dyn Error>> {
         );
 
         // Get the version of the submodule by directly calling `git describe`.
-        let version = String::from_utf8(
+        let git_describe = String::from_utf8(
             Command::new("git")
                 .current_dir(SUBMODULE_ROOT)
                 .arg("describe")
@@ -51,11 +51,11 @@ fn substrait_version() -> Result<(), Box<dyn Error>> {
         )?;
 
         // Extract the parts.
-        let mut split = version.split('-');
+        let mut split = git_describe.split('-');
         let git_version = split.next().unwrap_or_default();
         let git_depth = split.next().unwrap_or_default();
         let git_hash = split.next().unwrap_or_default().trim_end();
-        let git_dirty = version.ends_with("dirty");
+        let git_dirty = git_describe.ends_with("dirty");
         let version = semver::Version::parse(git_version.trim_start_matches('v'))?;
 
         let &semver::Version {
@@ -87,7 +87,7 @@ pub const SUBSTRAIT_GIT_SHA: &str = "{git_hash}";
 
 /// The `git describe` output of the Substrait submodule used to build this
 /// crate
-pub const SUBSTRAIT_GIT_DESCRIBE: &str = "{version}";
+pub const SUBSTRAIT_GIT_DESCRIBE: &str = "{git_describe}";
 
 /// The amount of commits between the latest tag and the version of the
 /// Substrait submodule used to build this crate
