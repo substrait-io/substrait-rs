@@ -4,7 +4,7 @@ use crate::{parse::{Anchor, Context, Parse}, proto};
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExtensionFunction {
     anchor: Anchor<Self>,
-    name: String,
+    name: Name<Self>,
     extension_uri_reference: Anchor<SimpleExtensionUri>,
 }
 
