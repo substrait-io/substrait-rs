@@ -1,5 +1,31 @@
 
 
+## 0.29.2 (2024-04-08)
+
+### Bug Fixes
+
+ - <csr-id-09832a0db1807ffb865dafbe6f49bf472d3aa026/> revert #173
+   Reverts substrait-io/substrait-rs#173, to fix the broken `0.29.1`
+   release.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#174](https://github.com/substrait-io/substrait-rs/issues/174)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#174](https://github.com/substrait-io/substrait-rs/issues/174)**
+    - Revert #173 ([`09832a0`](https://github.com/substrait-io/substrait-rs/commit/09832a0db1807ffb865dafbe6f49bf472d3aa026))
+</details>
+
 ## 0.29.1 (2024-04-08)
 
 ### New Features
@@ -12,20 +38,17 @@
    For dev builds, needs `git` binary:
    - There is a submodule checked out: version file is written to the `gen`
    folder.
-   - There is no submodule checked out: the build fails with a hint to
+- There is no submodule checked out: the build fails with a hint to
    clone the submodule.
-   
-   For packaged builds (substrait is not included as a git submodule, see
-   `Cargo.toml` includes), don't need a `git` binary:
-   - The version file is in the `gen` folder: the build script skips the
+- The version file is in the `gen` folder: the build script skips the
    version generation part
-   - The version file is missing: the build fails - the package is broken
+- The version file is missing: the build fails - the package is broken
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 5 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#173](https://github.com/substrait-io/substrait-rs/issues/173)
@@ -38,7 +61,12 @@
 
  * **[#173](https://github.com/substrait-io/substrait-rs/issues/173)**
     - Use `git-version` instead of `git2` ([`22d6df7`](https://github.com/substrait-io/substrait-rs/commit/22d6df794f4d00a8e0f2fcd6e60cf8e4d18192b9))
+ * **Uncategorized**
+    - Release substrait v0.29.1 ([`09ee158`](https://github.com/substrait-io/substrait-rs/commit/09ee15861130256c4593477a99242e588bfdbc9b))
 </details>
+
+<csr-unknown>
+For packaged builds (substrait is not included as a git submodule, seeCargo.toml includes), don’t need a git binary:<csr-unknown/>
 
 ## 0.29.0 (2024-04-03)
 
@@ -54,8 +82,6 @@
    the parse context must directly resolve the uri and return the parsed
    simple extensions - struct stub for that is added in this PR (the parser
    is TODO).
-- `simple_extensions`: given an reference (anchor) to a simple
-   extensions - check if this was added to the parse context and return it
 
 ### Commit Statistics
 
@@ -77,6 +103,9 @@
  * **Uncategorized**
     - Release substrait v0.29.0 ([`f19ebc2`](https://github.com/substrait-io/substrait-rs/commit/f19ebc2530b34305ecda8252d244e28c9337b0f9))
 </details>
+
+<csr-unknown>
+simple_extensions: given an reference (anchor) to a simpleextensions - check if this was added to the parse context and return it<csr-unknown/>
 
 ## 0.28.1 (2024-04-01)
 
