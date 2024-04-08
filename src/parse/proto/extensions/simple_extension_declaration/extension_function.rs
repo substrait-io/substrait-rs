@@ -5,7 +5,7 @@ use crate::{parse::{Anchor, Context, Parse}, proto};
 pub struct ExtensionFunction {
     anchor: Anchor<Self>,
     name: String,
-    extension_uri_reference: Anchor<Self>,
+    extension_uri_reference: Anchor<SimpleExtensionUri>,
 }
 
 impl<C: Context> Parse<C> for proto::extensions::simple_extension_declaration::ExtensionFunction {
