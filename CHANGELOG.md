@@ -1,5 +1,31 @@
 
 
+## 0.29.3 (2024-04-08)
+
+### New Features
+
+ - <csr-id-7799179f4df91f5ab52a9294805bdd09984f8f88/> directly call `git` to get substrait submodule version
+   Same idea as #173, except this directly calls `git describe` at build
+   time (when there is a submodule).
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#175](https://github.com/substrait-io/substrait-rs/issues/175)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#175](https://github.com/substrait-io/substrait-rs/issues/175)**
+    - Directly call `git` to get substrait submodule version ([`7799179`](https://github.com/substrait-io/substrait-rs/commit/7799179f4df91f5ab52a9294805bdd09984f8f88))
+</details>
+
 ## 0.29.2 (2024-04-08)
 
 ### Bug Fixes
@@ -12,7 +38,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#174](https://github.com/substrait-io/substrait-rs/issues/174)
 
@@ -24,6 +50,8 @@
 
  * **[#174](https://github.com/substrait-io/substrait-rs/issues/174)**
     - Revert #173 ([`09832a0`](https://github.com/substrait-io/substrait-rs/commit/09832a0db1807ffb865dafbe6f49bf472d3aa026))
+ * **Uncategorized**
+    - Release substrait v0.29.2 ([`07a9dfe`](https://github.com/substrait-io/substrait-rs/commit/07a9dfefb169d31ce567867afcd1c08289720d99))
 </details>
 
 ## 0.29.1 (2024-04-08)
@@ -38,11 +66,6 @@
    For dev builds, needs `git` binary:
    - There is a submodule checked out: version file is written to the `gen`
    folder.
-- There is no submodule checked out: the build fails with a hint to
-   clone the submodule.
-- The version file is in the `gen` folder: the build script skips the
-   version generation part
-- The version file is missing: the build fails - the package is broken
 
 ### Commit Statistics
 
@@ -66,7 +89,7 @@
 </details>
 
 <csr-unknown>
-For packaged builds (substrait is not included as a git submodule, seeCargo.toml includes), don’t need a git binary:<csr-unknown/>
+There is no submodule checked out: the build fails with a hint toclone the submodule.The version file is in the gen folder: the build script skips theversion generation partThe version file is missing: the build fails - the package is broken<csr-unknown/>
 
 ## 0.29.0 (2024-04-03)
 
@@ -103,9 +126,6 @@ For packaged builds (substrait is not included as a git submodule, seeCargo.toml
  * **Uncategorized**
     - Release substrait v0.29.0 ([`f19ebc2`](https://github.com/substrait-io/substrait-rs/commit/f19ebc2530b34305ecda8252d244e28c9337b0f9))
 </details>
-
-<csr-unknown>
-simple_extensions: given an reference (anchor) to a simpleextensions - check if this was added to the parse context and return it<csr-unknown/>
 
 ## 0.28.1 (2024-04-01)
 
