@@ -8,7 +8,7 @@
 
 use crate::proto::Version;
 
-include!("version.in");
+include!("../gen/version.in");
 
 /// Returns the version of Substrait used to build this crate.
 ///
