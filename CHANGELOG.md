@@ -1,5 +1,119 @@
 
 
+## 0.29.4 (2024-04-08)
+
+### Bug Fixes
+
+ - <csr-id-06825985589a95d74e20a47ee17cfa428e113413/> fix `SUBSTRAIT_GIT_DESCRIBE` value
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#176](https://github.com/substrait-io/substrait-rs/issues/176)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#176](https://github.com/substrait-io/substrait-rs/issues/176)**
+    - Fix `SUBSTRAIT_GIT_DESCRIBE` value ([`0682598`](https://github.com/substrait-io/substrait-rs/commit/06825985589a95d74e20a47ee17cfa428e113413))
+</details>
+
+## 0.29.3 (2024-04-08)
+
+### New Features
+
+ - <csr-id-7799179f4df91f5ab52a9294805bdd09984f8f88/> directly call `git` to get substrait submodule version
+   Same idea as #173, except this directly calls `git describe` at build
+   time (when there is a submodule).
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#175](https://github.com/substrait-io/substrait-rs/issues/175)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#175](https://github.com/substrait-io/substrait-rs/issues/175)**
+    - Directly call `git` to get substrait submodule version ([`7799179`](https://github.com/substrait-io/substrait-rs/commit/7799179f4df91f5ab52a9294805bdd09984f8f88))
+ * **Uncategorized**
+    - Release substrait v0.29.3 ([`fddba13`](https://github.com/substrait-io/substrait-rs/commit/fddba137fa62b466c720b98f6c8ea4d39cc985ba))
+</details>
+
+## 0.29.2 (2024-04-08)
+
+### Bug Fixes
+
+ - <csr-id-09832a0db1807ffb865dafbe6f49bf472d3aa026/> revert #173
+   Reverts substrait-io/substrait-rs#173, to fix the broken `0.29.1`
+   release.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#174](https://github.com/substrait-io/substrait-rs/issues/174)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#174](https://github.com/substrait-io/substrait-rs/issues/174)**
+    - Revert #173 ([`09832a0`](https://github.com/substrait-io/substrait-rs/commit/09832a0db1807ffb865dafbe6f49bf472d3aa026))
+ * **Uncategorized**
+    - Release substrait v0.29.2 ([`07a9dfe`](https://github.com/substrait-io/substrait-rs/commit/07a9dfefb169d31ce567867afcd1c08289720d99))
+</details>
+
+## 0.29.1 (2024-04-08)
+
+### New Features
+
+ - <csr-id-22d6df794f4d00a8e0f2fcd6e60cf8e4d18192b9/> use `git-version` instead of `git2`
+   An alternative approach for #172. This replaces the `git2` dependency
+   with `git-version` which uses the `git` binary directly at compile time.
+   This means that:
+   
+   For dev builds, needs `git` binary:
+   - There is a submodule checked out: version file is written to the `gen`
+   folder.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 5 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#173](https://github.com/substrait-io/substrait-rs/issues/173)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#173](https://github.com/substrait-io/substrait-rs/issues/173)**
+    - Use `git-version` instead of `git2` ([`22d6df7`](https://github.com/substrait-io/substrait-rs/commit/22d6df794f4d00a8e0f2fcd6e60cf8e4d18192b9))
+ * **Uncategorized**
+    - Release substrait v0.29.1 ([`09ee158`](https://github.com/substrait-io/substrait-rs/commit/09ee15861130256c4593477a99242e588bfdbc9b))
+</details>
+
 ## 0.29.0 (2024-04-03)
 
 ### New Features (BREAKING)
@@ -14,14 +128,12 @@
    the parse context must directly resolve the uri and return the parsed
    simple extensions - struct stub for that is added in this PR (the parser
    is TODO).
-   - `simple_extensions`: given an reference (anchor) to a simple
-   extensions - check if this was added to the parse context and return it
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#169](https://github.com/substrait-io/substrait-rs/issues/169)
@@ -34,6 +146,8 @@
 
  * **[#169](https://github.com/substrait-io/substrait-rs/issues/169)**
     - Add `proto::extensions::SimpleExtensionUri` parser ([`332d607`](https://github.com/substrait-io/substrait-rs/commit/332d60786f1753dc08b865df1be0bbe3b16bb3d9))
+ * **Uncategorized**
+    - Release substrait v0.29.0 ([`f19ebc2`](https://github.com/substrait-io/substrait-rs/commit/f19ebc2530b34305ecda8252d244e28c9337b0f9))
 </details>
 
 ## 0.28.1 (2024-04-01)
