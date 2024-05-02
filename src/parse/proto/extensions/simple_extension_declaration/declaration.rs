@@ -1,14 +1,15 @@
 use crate::{
-    parse::{Context, Parse},
+    parse::{context::ContextError, Context, Parse},
     proto,
 };
 use thiserror::Error;
 
 use super::mapping_type::MappingType;
 
-// SimpleExtensionDeclaration
+/// A parsed [`SimpleExtensionDeclaration`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct SimpleExtensionDeclaration {
+    /// The underlying mapping type of this extension declaration
     pub mapping_type: MappingType,
 }
 
@@ -30,11 +31,9 @@ impl<C: Context> Parse<C> for proto::extensions::SimpleExtensionDeclaration {
         let proto::extensions::SimpleExtensionDeclaration { mapping_type } = self;
 
         Ok(SimpleExtensionDeclaration {
-            mapping_type: Some(
-                mapping_type
-                    .ok_or(SimpleExtensionDeclarationError::MissingMappingType)?
-                    .parse(ctx)?,
-            ),
+            mapping_type: mapping_type
+                .ok_or(SimpleExtensionDeclarationError::MissingMappingType)?
+                .parse(ctx)?,
         })
     }
 }

@@ -1,12 +1,18 @@
+use crate::parse::proto::extensions::SimpleExtensionUri;
+use crate::parse::typed::Name;
 use crate::parse::{Anchor, Context, Parse};
 use crate::proto;
 
-use super::simple_extension_declaration::SimpleExtensionDeclarationError;
+use super::declaration::SimpleExtensionDeclarationError;
 
+/// A parsed [`ExtensionType`]
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExtensionType {
+    /// The parsed [`Anchor`] for this [`ExtensionType`]
     anchor: Anchor<Self>,
+    /// The parsed [`Name`] for this [`ExtensionType`]
     name: Name<Self>,
+    /// The parsed [`SimpleExtensionUri`] for this [`ExtensionType`]
     extension_uri_reference: Anchor<SimpleExtensionUri>,
 }
 
@@ -14,7 +20,7 @@ impl<C: Context> Parse<C> for proto::extensions::simple_extension_declaration::E
     type Parsed = ExtensionType;
     type Error = SimpleExtensionDeclarationError;
 
-    fn parse(self, _ctx: &mut C) -> Result<Self::Parsed, Self::Error> {
+    fn parse(self, ctx: &mut C) -> Result<Self::Parsed, Self::Error> {
         let proto::extensions::simple_extension_declaration::ExtensionType {
             extension_uri_reference,
             type_anchor,
@@ -22,16 +28,16 @@ impl<C: Context> Parse<C> for proto::extensions::simple_extension_declaration::E
         } = self;
 
         // Construct the parsed ExtensionType.
-        let extension_type_variation = ExtensionType {
+        let extension_type = ExtensionType {
             extension_uri_reference: Anchor::new(extension_uri_reference),
-            name,
+            name: Name::new(name),
             anchor: Anchor::new(type_anchor),
         };
 
         // Add the ExtensionType to the given context.
-        ctx.add_extension_type();
+        ctx.add_extension_type(&extension_type)?;
 
-        Ok(extension_type_variation)
+        Ok(extension_type)
     }
 }
 
@@ -46,7 +52,7 @@ impl From<ExtensionType> for proto::extensions::simple_extension_declaration::Ex
         Self {
             extension_uri_reference: extension_uri_reference.into_inner(),
             type_anchor: anchor.into_inner(),
-            name: name,
+            name: name.into_inner(),
         }
     }
 }

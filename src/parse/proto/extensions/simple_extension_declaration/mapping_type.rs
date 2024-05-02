@@ -4,15 +4,18 @@ use crate::{
 };
 
 use super::{
-    extension_function, extension_type, extension_type_variation,
-    simple_extension_declaration::SimpleExtensionDeclarationError,
+    declaration::SimpleExtensionDeclarationError, extension_function, extension_type,
+    extension_type_variation,
 };
 
-/// MappingType
+/// A parse [`MappingType`]
 #[derive(Clone, Debug, PartialEq)]
 pub enum MappingType {
+    /// A parsed [`ExtensionType`]
     ExtensionType(extension_type::ExtensionType),
+    /// A parsed [`ExtensionTypeVariation`]
     ExtensionTypeVariation(extension_type_variation::ExtensionTypeVariation),
+    /// A parsed [`ExtensionFunction`]
     ExtensionFunction(extension_function::ExtensionFunction),
 }
 

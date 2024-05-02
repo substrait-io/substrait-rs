@@ -1,13 +1,17 @@
-use super::simple_extension_declaration::SimpleExtensionDeclarationError;
+use super::declaration::SimpleExtensionDeclarationError;
 use crate::{
-    parse::{Anchor, Context, Parse},
+    parse::{proto::extensions::SimpleExtensionUri, typed::Name, Anchor, Context, Parse},
     proto,
 };
 
+/// A parsed [`ExtensionFunction`]
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExtensionFunction {
+    /// The parsed [`Anchor`] for this [`ExtensionFunction`]
     anchor: Anchor<Self>,
+    /// The parsed [`Name`] for this [`ExtensionFunction`]
     name: Name<Self>,
+    /// The parsed [`SimpleExtensionUri`] for this [`ExtensionFunction`]
     extension_uri_reference: Anchor<SimpleExtensionUri>,
 }
 
@@ -15,7 +19,7 @@ impl<C: Context> Parse<C> for proto::extensions::simple_extension_declaration::E
     type Parsed = ExtensionFunction;
     type Error = SimpleExtensionDeclarationError;
 
-    fn parse(self, _ctx: &mut C) -> Result<Self::Parsed, Self::Error> {
+    fn parse(self, ctx: &mut C) -> Result<Self::Parsed, Self::Error> {
         let proto::extensions::simple_extension_declaration::ExtensionFunction {
             extension_uri_reference,
             function_anchor,
@@ -25,7 +29,7 @@ impl<C: Context> Parse<C> for proto::extensions::simple_extension_declaration::E
         // Construct the parsed ExtensionFunction.
         let extension_function = ExtensionFunction {
             extension_uri_reference: Anchor::new(extension_uri_reference),
-            name,
+            name: Name::new(name),
             anchor: Anchor::new(function_anchor),
         };
 
@@ -49,7 +53,7 @@ impl From<ExtensionFunction>
         Self {
             extension_uri_reference: extension_uri_reference.into_inner(),
             function_anchor: anchor.into_inner(),
-            name: name,
+            name: name.into_inner(),
         }
     }
 }

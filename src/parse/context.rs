@@ -5,7 +5,11 @@
 use thiserror::Error;
 
 use crate::parse::{
-    proto::extensions::SimpleExtensionUri, text::simple_extensions::SimpleExtensions, Anchor, Parse,
+    proto::extensions::{
+        ExtensionFunction, ExtensionType, ExtensionTypeVariation, SimpleExtensionUri,
+    },
+    text::simple_extensions::SimpleExtensions,
+    Anchor, Parse,
 };
 
 /// A parse context.
@@ -147,6 +151,27 @@ pub(crate) mod tests {
                 .contains_key(anchor)
                 .then_some(&self.empty_simple_extensions)
                 .ok_or(ContextError::UndefinedSimpleExtension(*anchor))
+        }
+
+        fn add_extension_function(
+            &mut self,
+            _extension_function: &crate::parse::proto::extensions::ExtensionFunction,
+        ) -> Result<&SimpleExtensions, ContextError> {
+            todo!()
+        }
+
+        fn add_extension_type(
+            &mut self,
+            _extension: &crate::parse::proto::extensions::ExtensionType,
+        ) -> Result<&SimpleExtensions, ContextError> {
+            todo!()
+        }
+
+        fn add_extension_type_variation(
+            &mut self,
+            _extension_type_variation: &crate::parse::proto::extensions::ExtensionTypeVariation,
+        ) -> Result<&SimpleExtensions, ContextError> {
+            todo!()
         }
     }
 }
