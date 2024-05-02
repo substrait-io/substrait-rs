@@ -44,7 +44,7 @@ impl From<SimpleExtensionDeclaration> for proto::extensions::SimpleExtensionDecl
         let SimpleExtensionDeclaration { mapping_type } = declaration;
 
         proto::extensions::SimpleExtensionDeclaration {
-            mapping_type: mapping_type.map(|mapping_type| mapping_type.into()),
+            mapping_type: Some(mapping_type.into()),
         }
     }
 }
