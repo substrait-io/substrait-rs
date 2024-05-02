@@ -9,7 +9,7 @@ use super::mapping_type::MappingType;
 // SimpleExtensionDeclaration
 #[derive(Clone, Debug, PartialEq)]
 pub struct SimpleExtensionDeclaration {
-    pub mapping_type: Option<MappingType>,
+    pub mapping_type: MappingType,
 }
 
 #[derive(Debug, PartialEq, Error)]
