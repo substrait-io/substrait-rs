@@ -5,12 +5,10 @@
 use thiserror::Error;
 
 use crate::parse::{
-    proto::extensions::{
-        ExtensionFunction, ExtensionType, ExtensionTypeVariation, SimpleExtensionUri,
-    },
-    text::simple_extensions::SimpleExtensions,
-    Anchor, Parse,
+    proto::extensions::SimpleExtensionUri, text::simple_extensions::SimpleExtensions, Anchor, Parse,
 };
+
+use super::proto::extensions::{ExtensionFunction, ExtensionType, ExtensionTypeVariation};
 
 /// A parse context.
 ///
@@ -51,17 +49,14 @@ pub trait Context {
     fn add_extension_function(
         &mut self,
         extension_function: &ExtensionFunction,
-    ) -> Result<&SimpleExtensions, ContextError>;
+    ) -> Result<(), ContextError>;
 
     /// Add an [ExtensionType] to this context. Must return an error for duplicate
     /// anchors, when the URI is not supported or if the definition does not contain a matching function with the given name.
     ///
     /// This function must eagerly resolve and parse the simple extension, returning an
     /// error if either fails.
-    fn add_extension_type(
-        &mut self,
-        extension: &ExtensionType,
-    ) -> Result<&SimpleExtensions, ContextError>;
+    fn add_extension_type(&mut self, extension: &ExtensionType) -> Result<(), ContextError>;
 
     /// Add a [ExtensionTypeVariation] to this context. Must return an error for duplicate
     /// anchors, when the URI is not supported or if the definition does not contain a matching function with the given name.
@@ -71,7 +66,7 @@ pub trait Context {
     fn add_extension_type_variation(
         &mut self,
         extension_type_variation: &ExtensionTypeVariation,
-    ) -> Result<&SimpleExtensions, ContextError>;
+    ) -> Result<(), ContextError>;
 }
 
 /// Parse context errors.
@@ -85,6 +80,18 @@ pub enum ContextError {
     #[error("duplicate anchor `{0}` for simple extension")]
     DuplicateSimpleExtension(Anchor<SimpleExtensionUri>),
 
+    /// Duplicate anchor for [ExtensionType].
+    #[error("duplicate anchor `{0}` for extension_type")]
+    DuplicateExtensionType(Anchor<ExtensionType>),
+
+    /// Duplicate anchor for [ExtensionFunction].
+    #[error("duplicate anchor `{0}` for extension_function")]
+    DuplicateExtensionFunction(Anchor<ExtensionFunction>),
+
+    /// Duplicate anchor for [ExtensionTypeVariation].
+    #[error("duplicate anchor `{0}` for extension_type_variation")]
+    DuplicateExtensionTypeVariation(Anchor<ExtensionTypeVariation>),
+
     /// Unsupported simple extension URI.
     #[error("unsupported simple extension URI: {0}")]
     UnsupportedURI(String),
@@ -95,8 +102,12 @@ pub(crate) mod tests {
     use std::collections::{hash_map::Entry, HashMap};
 
     use crate::parse::{
-        context::ContextError, proto::extensions::SimpleExtensionUri,
-        text::simple_extensions::SimpleExtensions, Anchor,
+        context::ContextError,
+        proto::extensions::{
+            ExtensionFunction, ExtensionType, ExtensionTypeVariation, SimpleExtensionUri,
+        },
+        text::simple_extensions::SimpleExtensions,
+        Anchor,
     };
 
     /// A test context.
@@ -106,6 +117,9 @@ pub(crate) mod tests {
     pub struct Context {
         empty_simple_extensions: SimpleExtensions,
         simple_extensions: HashMap<Anchor<SimpleExtensionUri>, SimpleExtensionUri>,
+        extension_types: HashMap<Anchor<ExtensionType>, ExtensionType>,
+        extension_functions: HashMap<Anchor<ExtensionFunction>, ExtensionFunction>,
+        extension_type_variations: HashMap<Anchor<ExtensionTypeVariation>, ExtensionTypeVariation>,
     }
 
     impl Default for Context {
@@ -113,6 +127,9 @@ pub(crate) mod tests {
             Self {
                 empty_simple_extensions: SimpleExtensions {},
                 simple_extensions: Default::default(),
+                extension_types: Default::default(),
+                extension_functions: Default::default(),
+                extension_type_variations: Default::default(),
             }
         }
     }
@@ -155,23 +172,53 @@ pub(crate) mod tests {
 
         fn add_extension_function(
             &mut self,
-            _extension_function: &crate::parse::proto::extensions::ExtensionFunction,
-        ) -> Result<&SimpleExtensions, ContextError> {
-            todo!()
+            extension_function: &crate::parse::proto::extensions::ExtensionFunction,
+        ) -> Result<(), ContextError> {
+            match self.extension_functions.entry(extension_function.anchor()) {
+                Entry::Occupied(_) => Err(ContextError::DuplicateExtensionFunction(
+                    extension_function.anchor(),
+                )),
+                Entry::Vacant(entry) => {
+                    entry.insert(extension_function.clone());
+
+                    Ok(())
+                }
+            }
         }
 
         fn add_extension_type(
             &mut self,
-            _extension: &crate::parse::proto::extensions::ExtensionType,
-        ) -> Result<&SimpleExtensions, ContextError> {
-            todo!()
+            extension_type: &crate::parse::proto::extensions::ExtensionType,
+        ) -> Result<(), ContextError> {
+            match self.extension_types.entry(extension_type.anchor()) {
+                Entry::Occupied(_) => Err(ContextError::DuplicateExtensionType(
+                    extension_type.anchor(),
+                )),
+                Entry::Vacant(entry) => {
+                    entry.insert(extension_type.clone());
+
+                    Ok(())
+                }
+            }
         }
 
         fn add_extension_type_variation(
             &mut self,
-            _extension_type_variation: &crate::parse::proto::extensions::ExtensionTypeVariation,
-        ) -> Result<&SimpleExtensions, ContextError> {
-            todo!()
+            extension_type_variation: &crate::parse::proto::extensions::ExtensionTypeVariation,
+        ) -> Result<(), ContextError> {
+            match self
+                .extension_type_variations
+                .entry(extension_type_variation.anchor())
+            {
+                Entry::Occupied(_) => Err(ContextError::DuplicateExtensionTypeVariation(
+                    extension_type_variation.anchor(),
+                )),
+                Entry::Vacant(entry) => {
+                    entry.insert(extension_type_variation.clone());
+
+                    Ok(())
+                }
+            }
         }
     }
 }

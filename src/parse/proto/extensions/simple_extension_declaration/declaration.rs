@@ -47,3 +47,55 @@ impl From<SimpleExtensionDeclaration> for proto::extensions::SimpleExtensionDecl
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+    use crate::parse::{
+        context::tests::Context, proto::extensions::ExtensionFunction, typed::Name, Anchor,
+    };
+
+    #[test]
+    fn parse_from_protobuf() -> Result<(), SimpleExtensionDeclarationError> {
+        let declaration = proto::extensions::SimpleExtensionDeclaration {
+            mapping_type: Some(
+                proto::extensions::simple_extension_declaration::MappingType::ExtensionFunction(
+                    proto::extensions::simple_extension_declaration::ExtensionFunction {
+                        extension_uri_reference: 1,
+                        function_anchor: 1,
+                        name: "test_name".to_string(),
+                    },
+                ),
+            ),
+        };
+        let simple_extension = declaration.parse(&mut Context::default())?;
+
+        assert!(matches!(
+            simple_extension.mapping_type,
+            MappingType::ExtensionFunction(_)
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn convert_from_parsed() {
+        let declaration = SimpleExtensionDeclaration {
+            mapping_type: MappingType::ExtensionFunction(ExtensionFunction {
+                anchor: Anchor::new(1),
+                name: Name::new("test".to_string()),
+                extension_uri_reference: Anchor::new(1),
+            }),
+        };
+
+        let protobuf_declaration = proto::extensions::SimpleExtensionDeclaration::from(declaration);
+
+        assert!(matches!(
+            protobuf_declaration
+                .mapping_type
+                .expect("No mapping_type returned from declaration conversion."),
+            proto::extensions::simple_extension_declaration::MappingType::ExtensionFunction(_)
+        ));
+    }
+}
