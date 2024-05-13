@@ -3,13 +3,13 @@
 #![allow(
     clippy::clone_on_copy,
     clippy::derivable_impls,
+    clippy::to_string_trait_impl,
     clippy::uninlined_format_args,
     unused_variables
 )]
 
 //! Generated types for text-based definitions.
 
-// https://github.com/oxidecomputer/typify/issues/245
 include!(concat!(env!("OUT_DIR"), "/substrait_text.rs"));
 
 #[cfg(test)]

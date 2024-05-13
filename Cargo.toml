@@ -3,7 +3,7 @@
 name = "substrait"
 version = "0.32.0"
 edition = "2021"
-rust-version = "1.60"
+rust-version = "1.62"
 description = "Cross-Language Serialization for Relational Algebra"
 documentation = "https://docs.rs/substrait"
 readme = "README.md"
