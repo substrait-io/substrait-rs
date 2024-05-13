@@ -1,6 +1,34 @@
 
 
+## 0.33.0 (2024-05-13)
+
+### Bug Fixes (BREAKING)
+
+ - <csr-id-4e8927da6a60742318cbb0a80e57f265d7beedb6/> bump and check `MSRV` in CI, fix `clippy` warnings
+   Bumps `MSRV` from `1.60` to `1.70`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 17 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#182](https://github.com/substrait-io/substrait-rs/issues/182)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#182](https://github.com/substrait-io/substrait-rs/issues/182)**
+    - Bump and check `MSRV` in CI, fix `clippy` warnings ([`4e8927d`](https://github.com/substrait-io/substrait-rs/commit/4e8927da6a60742318cbb0a80e57f265d7beedb6))
+</details>
+
 ## 0.32.0 (2024-04-26)
+
+<csr-id-90241f5e0e962395b3d1721bc83a07aef1de317b/>
 
 ### Chore (BREAKING)
 
@@ -12,7 +40,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#179](https://github.com/substrait-io/substrait-rs/issues/179)
@@ -25,6 +53,8 @@
 
  * **[#179](https://github.com/substrait-io/substrait-rs/issues/179)**
     - Bump substrait from `0.47.0` to `0.48.0` ([`90241f5`](https://github.com/substrait-io/substrait-rs/commit/90241f5e0e962395b3d1721bc83a07aef1de317b))
+ * **Uncategorized**
+    - Release substrait v0.32.0 ([`904f9ce`](https://github.com/substrait-io/substrait-rs/commit/904f9ce4e653682ecbc335281aed2d23f03e2810))
 </details>
 
 ## 0.31.0 (2024-04-18)
