@@ -119,7 +119,7 @@ fn text(out_dir: &Path) -> Result<(), Box<dyn Error>> {
     for schema_path in WalkDir::new(TEXT_ROOT)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_file())
+        .filter(|entry| entry.file_type().is_file() || entry.file_type().is_symlink())
         .filter(|entry| {
             entry
                 .path()
@@ -203,7 +203,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let protos = WalkDir::new(PROTO_ROOT)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_file())
+        .filter(|entry| entry.file_type().is_file() || entry.file_type().is_symlink())
         .filter(|entry| {
             entry
                 .path()
