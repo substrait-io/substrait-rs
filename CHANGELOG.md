@@ -1,5 +1,29 @@
 
 
+## 0.33.1 (2024-05-13)
+
+### Bug Fixes
+
+ - <csr-id-fe432b6ee54715ca93c9c010197fb2dfe08a5996/> support generating protos from symlinks
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#181](https://github.com/substrait-io/substrait-rs/issues/181)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#181](https://github.com/substrait-io/substrait-rs/issues/181)**
+    - Support generating protos from symlinks ([`fe432b6`](https://github.com/substrait-io/substrait-rs/commit/fe432b6ee54715ca93c9c010197fb2dfe08a5996))
+</details>
+
 ## 0.33.0 (2024-05-13)
 
 ### Bug Fixes (BREAKING)
@@ -11,7 +35,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 17 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#182](https://github.com/substrait-io/substrait-rs/issues/182)
@@ -24,6 +48,8 @@
 
  * **[#182](https://github.com/substrait-io/substrait-rs/issues/182)**
     - Bump and check `MSRV` in CI, fix `clippy` warnings ([`4e8927d`](https://github.com/substrait-io/substrait-rs/commit/4e8927da6a60742318cbb0a80e57f265d7beedb6))
+ * **Uncategorized**
+    - Release substrait v0.33.0 ([`5a794e5`](https://github.com/substrait-io/substrait-rs/commit/5a794e597fbf06b97851548a8ae46d0c16d9f9f2))
 </details>
 
 ## 0.32.0 (2024-04-26)
