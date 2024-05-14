@@ -1,5 +1,29 @@
 
 
+## 0.33.2 (2024-05-14)
+
+### Chore
+
+ - <csr-id-421fdf4375403e64f56ba627f12c952c498aca93/> update typify requirement from 0.0.16 to 0.1.0
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#183](https://github.com/substrait-io/substrait-rs/issues/183)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#183](https://github.com/substrait-io/substrait-rs/issues/183)**
+    - Update typify requirement from 0.0.16 to 0.1.0 ([`421fdf4`](https://github.com/substrait-io/substrait-rs/commit/421fdf4375403e64f56ba627f12c952c498aca93))
+</details>
+
 ## 0.33.1 (2024-05-13)
 
 ### Bug Fixes
@@ -10,7 +34,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#181](https://github.com/substrait-io/substrait-rs/issues/181)
 
@@ -22,6 +46,8 @@
 
  * **[#181](https://github.com/substrait-io/substrait-rs/issues/181)**
     - Support generating protos from symlinks ([`fe432b6`](https://github.com/substrait-io/substrait-rs/commit/fe432b6ee54715ca93c9c010197fb2dfe08a5996))
+ * **Uncategorized**
+    - Release substrait v0.33.1 ([`fdf85cf`](https://github.com/substrait-io/substrait-rs/commit/fdf85cf4f382747190e7823b8fdd034b0f5e8d5d))
 </details>
 
 ## 0.33.0 (2024-05-13)
