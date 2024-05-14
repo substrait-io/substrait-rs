@@ -1,6 +1,32 @@
 
 
+## 0.33.3 (2024-05-14)
+
+### Chore
+
+ - <csr-id-f21e7a31f9f6a45a0f9d09f968b23960d1da7ff8/> update protobuf-src requirement from 1.1.0 to 2.0.0
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#184](https://github.com/substrait-io/substrait-rs/issues/184)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#184](https://github.com/substrait-io/substrait-rs/issues/184)**
+    - Update protobuf-src requirement from 1.1.0 to 2.0.0 ([`f21e7a3`](https://github.com/substrait-io/substrait-rs/commit/f21e7a31f9f6a45a0f9d09f968b23960d1da7ff8))
+</details>
+
 ## 0.33.2 (2024-05-14)
+
+<csr-id-421fdf4375403e64f56ba627f12c952c498aca93/>
 
 ### Chore
 
@@ -10,7 +36,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#183](https://github.com/substrait-io/substrait-rs/issues/183)
 
@@ -22,6 +48,8 @@
 
  * **[#183](https://github.com/substrait-io/substrait-rs/issues/183)**
     - Update typify requirement from 0.0.16 to 0.1.0 ([`421fdf4`](https://github.com/substrait-io/substrait-rs/commit/421fdf4375403e64f56ba627f12c952c498aca93))
+ * **Uncategorized**
+    - Release substrait v0.33.2 ([`ba2a846`](https://github.com/substrait-io/substrait-rs/commit/ba2a846fe412835eab7a38cc8090d8e95685e102))
 </details>
 
 ## 0.33.1 (2024-05-13)
