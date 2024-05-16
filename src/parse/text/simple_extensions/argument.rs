@@ -24,7 +24,9 @@ impl ArgumentsItem {
     #[inline]
     fn parse_name(name: Option<String>) -> Result<String, ArgumentsItemError> {
         match name {
-            Some(s) if s == "" => Err(ArgumentsItemError::EmptyOptionalField("name".to_string())),
+            Some(s) if s.is_empty() => {
+                Err(ArgumentsItemError::EmptyOptionalField("name".to_string()))
+            }
             _ => Ok(name.unwrap_or_default()),
         }
     }
@@ -32,7 +34,7 @@ impl ArgumentsItem {
     #[inline]
     fn parse_description(description: Option<String>) -> Result<String, ArgumentsItemError> {
         match description {
-            Some(s) if s == "" => Err(ArgumentsItemError::EmptyOptionalField(
+            Some(s) if s.is_empty() => Err(ArgumentsItemError::EmptyOptionalField(
                 "description".to_string(),
             )),
             _ => Ok(description.unwrap_or_default()),
@@ -187,7 +189,7 @@ impl ValueArgument {
         Ok(ValueArgument {
             name: ArgumentsItem::parse_name(name)?,
             description: ArgumentsItem::parse_description(description)?,
-            value: value,
+            value,
             constant: constant.unwrap_or_default(),
         })
     }
@@ -298,11 +300,10 @@ mod tests {
             }) => {
                 assert_eq!(name, "arg");
                 assert_eq!(description, "desc");
-                assert_eq!(
-                    matches!(value, text::simple_extensions::Type::Variant0(type_) if type_ == ""),
-                    true
+                assert!(
+                    matches!(value, text::simple_extensions::Type::Variant0(type_) if type_.is_empty())
                 );
-                assert_eq!(constant, true);
+                assert!(constant);
             }
             _ => unreachable!(),
         };
@@ -476,9 +477,8 @@ mod tests {
             } => {
                 assert_eq!(name, Some("arg".to_string()));
                 assert_eq!(description, Some("desc".to_string()));
-                assert_eq!(
-                    matches!(value, text::simple_extensions::Type::Variant0(type_) if type_ == ""),
-                    true
+                assert!(
+                    matches!(value, text::simple_extensions::Type::Variant0(type_) if type_.is_empty())
                 );
                 assert_eq!(constant, Some(true));
             }
