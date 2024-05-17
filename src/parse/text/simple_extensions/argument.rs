@@ -22,22 +22,24 @@ pub enum ArgumentsItem {
 
 impl ArgumentsItem {
     #[inline]
-    fn parse_name(name: Option<String>) -> Result<String, ArgumentsItemError> {
+    fn parse_name(name: Option<String>) -> Result<Option<String>, ArgumentsItemError> {
         match name {
             Some(s) if s.is_empty() => {
                 Err(ArgumentsItemError::EmptyOptionalField("name".to_string()))
             }
-            _ => Ok(name.unwrap_or_default()),
+            _ => Ok(name),
         }
     }
 
     #[inline]
-    fn parse_description(description: Option<String>) -> Result<String, ArgumentsItemError> {
+    fn parse_description(
+        description: Option<String>,
+    ) -> Result<Option<String>, ArgumentsItemError> {
         match description {
             Some(s) if s.is_empty() => Err(ArgumentsItemError::EmptyOptionalField(
                 "description".to_string(),
             )),
-            _ => Ok(description.unwrap_or_default()),
+            _ => Ok(description),
         }
     }
 }
@@ -78,8 +80,8 @@ impl From<ArgumentsItem> for simple_extensions::ArgumentsItem {
                 description,
                 options,
             }) => simple_extensions::ArgumentsItem::Variant0 {
-                name: Some(name),
-                description: Some(description),
+                name,
+                description,
                 options,
             },
 
@@ -89,10 +91,10 @@ impl From<ArgumentsItem> for simple_extensions::ArgumentsItem {
                 value,
                 constant,
             }) => simple_extensions::ArgumentsItem::Variant1 {
-                name: Some(name),
-                description: Some(description),
+                name,
+                description,
                 value,
-                constant: Some(constant),
+                constant,
             },
 
             ArgumentsItem::TypeArgument(TypeArgument {
@@ -100,8 +102,8 @@ impl From<ArgumentsItem> for simple_extensions::ArgumentsItem {
                 description,
                 type_,
             }) => simple_extensions::ArgumentsItem::Variant2 {
-                name: Some(name),
-                description: Some(description),
+                name,
+                description,
                 type_,
             },
         }
@@ -124,10 +126,10 @@ pub enum ArgumentsItemError {
 #[derive(Clone, Debug, PartialEq)]
 pub struct EnumArgument {
     /// A human-readable name for this argument to help clarify use.
-    name: String,
+    name: Option<String>,
 
     /// Additional description for this argument.
-    description: String,
+    description: Option<String>,
 
     /// List of valid string options for this argument.
     options: Vec<String>,
@@ -161,10 +163,10 @@ impl From<EnumArgument> for ArgumentsItem {
 #[derive(Clone, Debug)]
 pub struct ValueArgument {
     /// A human-readable name for this argument to help clarify use.
-    name: String,
+    name: Option<String>,
 
     /// Additional description for this argument.
-    description: String,
+    description: Option<String>,
 
     /// A fully defined type or a type expression.
     ///
@@ -174,7 +176,7 @@ pub struct ValueArgument {
     /// Whether this argument is required to be a constant for invocation.
     /// For example, in some system a regular expression pattern would only be accepted as a literal
     /// and not a column value reference.
-    constant: bool,
+    constant: Option<bool>,
 }
 
 impl ValueArgument {
@@ -190,7 +192,7 @@ impl ValueArgument {
             name: ArgumentsItem::parse_name(name)?,
             description: ArgumentsItem::parse_description(description)?,
             value,
-            constant: constant.unwrap_or_default(),
+            constant,
         })
     }
 }
@@ -205,10 +207,10 @@ impl From<ValueArgument> for ArgumentsItem {
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeArgument {
     /// A human-readable name for this argument to help clarify use.
-    name: String,
+    name: Option<String>,
 
     /// Additional description for this argument.
-    description: String,
+    description: Option<String>,
 
     /// A partially or completely parameterized type. E.g. `List<K>` or `K`.
     ///
@@ -259,8 +261,8 @@ mod tests {
         assert_eq!(
             enum_argument,
             EnumArgument {
-                name: "arg".to_string(),
-                description: "desc".to_string(),
+                name: Some("arg".to_string()),
+                description: Some("desc".to_string()),
                 options: vec!["OVERFLOW".to_string()],
             }
         );
@@ -298,12 +300,12 @@ mod tests {
                 value,
                 constant,
             }) => {
-                assert_eq!(name, "arg");
-                assert_eq!(description, "desc");
+                assert_eq!(name, Some("arg".to_string()));
+                assert_eq!(description, Some("desc".to_string()));
                 assert!(
                     matches!(value, text::simple_extensions::Type::Variant0(type_) if type_.is_empty())
                 );
-                assert!(constant);
+                assert_eq!(constant, Some(true));
             }
             _ => unreachable!(),
         };
@@ -324,8 +326,8 @@ mod tests {
                 description,
                 type_,
             }) => {
-                assert_eq!(name, "arg");
-                assert_eq!(description, "desc");
+                assert_eq!(name, Some("arg".to_string()));
+                assert_eq!(description, Some("desc".to_string()));
                 assert_eq!(type_, "");
             }
             _ => unreachable!(),
@@ -345,7 +347,7 @@ mod tests {
                 name: None,
                 description: None,
                 value: text::simple_extensions::Type::Variant0("".to_string()),
-                constant: Some(true),
+                constant: None,
             },
             simple_extensions::ArgumentsItem::Variant2 {
                 name: None,
@@ -362,15 +364,21 @@ mod tests {
                 }) => (name, description),
 
                 ArgumentsItem::ValueArgument(ValueArgument {
-                    name, description, ..
-                }) => (name, description),
+                    name,
+                    description,
+                    constant,
+                    ..
+                }) => {
+                    assert!(constant.is_none());
+                    (name, description)
+                }
 
                 ArgumentsItem::TypeArgument(TypeArgument {
                     name, description, ..
                 }) => (name, description),
             };
-            assert_eq!(name, "");
-            assert_eq!(description, "");
+            assert!(name.is_none());
+            assert!(description.is_none());
         }
 
         Ok(())
@@ -436,8 +444,8 @@ mod tests {
     #[test]
     fn from_enum_argument() {
         let item: ArgumentsItem = EnumArgument {
-            name: "arg".to_string(),
-            description: "desc".to_string(),
+            name: Some("arg".to_string()),
+            description: Some("desc".to_string()),
             options: vec!["OVERFLOW".to_string()],
         }
         .into();
@@ -460,10 +468,10 @@ mod tests {
     #[test]
     fn from_value_argument() {
         let item: ArgumentsItem = ValueArgument {
-            name: "arg".to_string(),
-            description: "desc".to_string(),
+            name: Some("arg".to_string()),
+            description: Some("desc".to_string()),
             value: text::simple_extensions::Type::Variant0("".to_string()),
-            constant: true,
+            constant: Some(true),
         }
         .into();
 
@@ -489,8 +497,8 @@ mod tests {
     #[test]
     fn from_type_argument() {
         let item: ArgumentsItem = TypeArgument {
-            name: "arg".to_string(),
-            description: "desc".to_string(),
+            name: Some("arg".to_string()),
+            description: Some("desc".to_string()),
             type_: "".to_string(),
         }
         .into();
