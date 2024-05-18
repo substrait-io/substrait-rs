@@ -26,6 +26,7 @@ include = [
 
 [features]
 default = []
+extensions = ["dep:serde_yaml"]
 parse = ["dep:hex", "dep:thiserror", "dep:url", "semver"]
 protoc = ["dep:protobuf-src"]
 semver = ["dep:semver"]
@@ -41,6 +42,7 @@ url = { version = "2.5.0", optional = true }
 semver = { version = "1.0.22", optional = true }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
+serde_yaml = { version = "0.9.32", optional = true }
 thiserror = { version = "1.0.57", optional = true }
 
 [build-dependencies]
@@ -54,10 +56,6 @@ semver = "1.0.22"
 serde_yaml = "0.9.32"
 syn = "2.0.11"
 typify = "0.1.0"
-walkdir = "2.5.0"
-
-[dev-dependencies]
-serde_yaml = "0.9.32"
 walkdir = "2.5.0"
 
 [package.metadata.docs.rs]

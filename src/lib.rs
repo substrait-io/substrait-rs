@@ -111,6 +111,8 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![deny(missing_docs)]
 
+#[cfg(feature = "extensions")]
+pub mod extensions;
 #[allow(missing_docs)]
 pub mod proto;
 #[allow(missing_docs)]
