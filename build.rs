@@ -241,13 +241,14 @@ pub static EXTENSIONS: Lazy<HashMap<Url, SimpleExtensions>> = Lazy::new(|| {
     );
 
     for (url, var_name) in map {
-        output.push_str(&format!(r#"map.insert(Url::from_str("{url}").expect("a valid url"), serde_yaml::from_str({var_name}).expect("a valid core extension"));"#));
+        output.push_str(&format!(r#"
+    map.insert(Url::from_str("{url}").expect("a valid url"), serde_yaml::from_str({var_name}).expect("a valid core extension"));"#));
     }
 
     output.push_str(
         r#"
-        map
-    });"#,
+    map
+});"#,
     );
 
     // Write the file.
