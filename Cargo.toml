@@ -26,7 +26,7 @@ include = [
 
 [features]
 default = []
-extensions = ["dep:serde_yaml"]
+extensions = ["dep:once_cell", "dep:serde_yaml"]
 parse = ["dep:hex", "dep:thiserror", "dep:url", "semver"]
 protoc = ["dep:protobuf-src"]
 semver = ["dep:semver"]
@@ -34,6 +34,7 @@ serde = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
 
 [dependencies]
 hex = { version = "0.4.3", optional = true }
+once_cell = { version = "1.19.0", optional = true }
 pbjson = { version = "0.6.0", optional = true }
 pbjson-types = { version = "0.6.0", optional = true }
 prost = "0.12.3"

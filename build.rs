@@ -219,7 +219,7 @@ fn extensions(version: semver::Version, out_dir: &Path) -> Result<(), Box<dyn Er
         output.push_str(&format!(
             r#"
 /// Included source of [`{name}`]({url}).
-pub const {var_name}: &str = include_str!("{}/{}");
+const {var_name}: &str = include_str!("{}/{}");
 "#,
             PathBuf::from(dbg!(env::var("CARGO_MANIFEST_DIR").unwrap())).display(),
             extension.display()
@@ -230,24 +230,24 @@ pub const {var_name}: &str = include_str!("{}/{}");
     output.push_str(
         r#"
 use std::collections::HashMap;
-use std::sync::OnceLock;
-/// Map with Substrait core extensions. Maps URIs to included extension source strings.
-fn raw_extensions() -> &'static HashMap<&'static str, &'static str> {
-    static RAW_EXNTENSIONS: OnceLock<HashMap<&'static str, &'static str>> = OnceLock::new();
-    RAW_EXNTENSIONS.get_or_init(|| {
-        let mut map = HashMap::new();"#,
+use std::str::FromStr;
+use once_cell::sync::Lazy;
+use crate::text::simple_extensions::SimpleExtensions;
+use url::Url;
+
+/// Map with Substrait core extensions. Maps URIs to included extensions.
+pub static EXTENSIONS: Lazy<HashMap<Url, SimpleExtensions>> = Lazy::new(|| {
+    let mut map = HashMap::new();"#,
     );
+
     for (url, var_name) in map {
-        output.push_str(&format!(
-            r#"
-        map.insert("{url}", {var_name});"#,
-        ));
+        output.push_str(&format!(r#"map.insert(Url::from_str("{url}").expect("a valid url"), serde_yaml::from_str({var_name}).expect("a valid core extension"));"#));
     }
+
     output.push_str(
         r#"
         map
-    })
-}"#,
+    });"#,
     );
 
     // Write the file.
