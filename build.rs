@@ -12,16 +12,19 @@ use std::{
 use walkdir::{DirEntry, WalkDir};
 
 const SUBMODULE_ROOT: &str = "substrait";
+#[cfg(feature = "extensions")]
+const EXTENSIONS_ROOT: &str = "substrait/extensions";
 const PROTO_ROOT: &str = "substrait/proto";
 const TEXT_ROOT: &str = "substrait/text";
 const GEN_ROOT: &str = "gen";
 
 /// Add Substrait version information to the build
-fn substrait_version() -> Result<(), Box<dyn Error>> {
+fn substrait_version() -> Result<semver::Version, Box<dyn Error>> {
     let gen_dir = Path::new(GEN_ROOT);
     fs::create_dir_all(gen_dir)?;
 
     let version_in_file = gen_dir.join("version.in");
+    let substrait_version_file = gen_dir.join("version");
 
     // Rerun if the Substrait submodule changed (to allow setting `dirty`)
     println!(
@@ -98,14 +101,22 @@ pub const SUBSTRAIT_GIT_DIRTY: bool = {git_dirty};
 "#
             ),
         )?;
+
+        // Also write the version to a file
+        fs::write(substrait_version_file, version.to_string())?;
+
+        Ok(version)
     } else {
         // If we don't have a version file yet we fail the build.
         if !version_in_file.exists() {
             panic!("Couldn't find the substrait submodule. Please clone the submodule: `git submodule update --init`.")
         }
-    }
 
-    Ok(())
+        // File exists we should get the version and return it.
+        Ok(semver::Version::parse(&fs::read_to_string(
+            substrait_version_file,
+        )?)?)
+    }
 }
 
 /// `text` type generation
@@ -168,6 +179,84 @@ pub mod {title} {{
     Ok(())
 }
 
+#[cfg(feature = "extensions")]
+/// Add Substrait core extensions
+fn extensions(version: semver::Version, out_dir: &Path) -> Result<(), Box<dyn Error>> {
+    use std::collections::HashMap;
+
+    let substrait_extensions_file = out_dir.join("extensions.in");
+
+    let mut output = String::from(
+        r#"// SPDX-License-Identifier: Apache-2.0
+// Note that this file is auto-generated and auto-synced using `build.rs`. It is
+// included in `extensions.rs`.
+"#,
+    );
+    let mut map = HashMap::<String, String>::default();
+    for extension in WalkDir::new(EXTENSIONS_ROOT)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| entry.file_type().is_file())
+        .filter(|entry| {
+            entry
+                .path()
+                .extension()
+                .filter(|&extension| extension == "yaml")
+                .is_some()
+        })
+        .map(DirEntry::into_path)
+        .inspect(|entry| {
+            println!("cargo:rerun-if-changed={}", entry.display());
+        })
+    {
+        let name = extension.file_stem().unwrap_or_default().to_string_lossy();
+        let url = format!(
+            "https://github.com/substrait-io/substrait/raw/v{}/extensions/{}",
+            version,
+            extension.file_name().unwrap_or_default().to_string_lossy()
+        );
+        let var_name = name.to_uppercase();
+        output.push_str(&format!(
+            r#"
+/// Included source of [`{name}`]({url}).
+const {var_name}: &str = include_str!("{}/{}");
+"#,
+            PathBuf::from(dbg!(env::var("CARGO_MANIFEST_DIR").unwrap())).display(),
+            extension.display()
+        ));
+        map.insert(url, var_name);
+    }
+    // Add static lookup map.
+    output.push_str(
+        r#"
+use std::collections::HashMap;
+use std::str::FromStr;
+use once_cell::sync::Lazy;
+use crate::text::simple_extensions::SimpleExtensions;
+use url::Url;
+
+/// Map with Substrait core extensions. Maps URIs to included extensions.
+pub static EXTENSIONS: Lazy<HashMap<Url, SimpleExtensions>> = Lazy::new(|| {
+    let mut map = HashMap::new();"#,
+    );
+
+    for (url, var_name) in map {
+        output.push_str(&format!(r#"
+    map.insert(Url::from_str("{url}").expect("a valid url"), serde_yaml::from_str({var_name}).expect("a valid core extension"));"#));
+    }
+
+    output.push_str(
+        r#"
+    map
+});"#,
+    );
+
+    // Write the file.
+    fs::write(substrait_extensions_file, output)?;
+
+    Ok(())
+}
+
 #[cfg(feature = "serde")]
 /// Serialize and deserialize implementations for proto types using `pbjson`
 fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
@@ -191,7 +280,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // for use in docker build where file changes can be wonky
     println!("cargo:rerun-if-env-changed=FORCE_REBUILD");
 
-    substrait_version()?;
+    let version = substrait_version()?;
 
     #[cfg(feature = "protoc")]
     std::env::set_var("PROTOC", protobuf_src::protoc());
@@ -199,6 +288,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     text(out_dir.as_path())?;
+
+    #[cfg(feature = "extensions")]
+    extensions(version, out_dir.as_path())?;
 
     let protos = WalkDir::new(PROTO_ROOT)
         .into_iter()
