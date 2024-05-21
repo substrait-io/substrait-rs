@@ -1,6 +1,36 @@
 
 
+## 0.33.4 (2024-05-21)
+
+### New Features
+
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 7 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#187](https://github.com/substrait-io/substrait-rs/issues/187)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#187](https://github.com/substrait-io/substrait-rs/issues/187)**
+    - Include Substrait core extensions ([`b9fba0f`](https://github.com/substrait-io/substrait-rs/commit/b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288))
+</details>
+
 ## 0.33.3 (2024-05-14)
+
+<csr-id-f21e7a31f9f6a45a0f9d09f968b23960d1da7ff8/>
 
 ### Chore
 
@@ -10,7 +40,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#184](https://github.com/substrait-io/substrait-rs/issues/184)
 
@@ -22,6 +52,8 @@
 
  * **[#184](https://github.com/substrait-io/substrait-rs/issues/184)**
     - Update protobuf-src requirement from 1.1.0 to 2.0.0 ([`f21e7a3`](https://github.com/substrait-io/substrait-rs/commit/f21e7a31f9f6a45a0f9d09f968b23960d1da7ff8))
+ * **Uncategorized**
+    - Release substrait v0.33.3 ([`d1c7318`](https://github.com/substrait-io/substrait-rs/commit/d1c7318ffcb4e5f8ec0fe3072481af47f08675cc))
 </details>
 
 ## 0.33.2 (2024-05-14)
