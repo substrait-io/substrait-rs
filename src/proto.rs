@@ -3,7 +3,8 @@
 #![allow(
     clippy::large_enum_variant,
     clippy::needless_borrow,
-    clippy::needless_borrows_for_generic_args
+    clippy::needless_borrows_for_generic_args,
+    rustdoc::invalid_html_tags
 )]
 
 //! Generated types for the protobuf `substrait` package.

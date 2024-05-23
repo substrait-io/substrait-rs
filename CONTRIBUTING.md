@@ -87,6 +87,12 @@ Or to enable automatic feature information (requires a nightly toolchain):
 cargo +nightly rustdoc -- --cfg docsrs
 ```
 
+Or use [cargo-doc-rs](https://crates.io/crates/cargo-docs-rs):
+
+```
+cargo +nightly docs-rs
+```
+
 ### Formatting
 
 All Rust code is formatted using [rustfmt](https://github.com/rust-lang/rustfmt):
