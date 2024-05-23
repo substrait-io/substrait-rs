@@ -1,9 +1,40 @@
 
 
+## 0.34.0 (2024-05-23)
+
+### Chore (BREAKING)
+
+ - <csr-id-3351284ddc96906cf8e589c998c74e98c7babbf6/> bump substrait from `0.48.0` to `0.49.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `3dc77ae` to `fcf0f76`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#189](https://github.com/substrait-io/substrait-rs/issues/189)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#189](https://github.com/substrait-io/substrait-rs/issues/189)**
+    - Bump substrait from `0.48.0` to `0.49.0` ([`3351284`](https://github.com/substrait-io/substrait-rs/commit/3351284ddc96906cf8e589c998c74e98c7babbf6))
+</details>
+
 ## 0.33.4 (2024-05-21)
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
@@ -13,7 +44,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#187](https://github.com/substrait-io/substrait-rs/issues/187)
@@ -26,6 +57,8 @@
 
  * **[#187](https://github.com/substrait-io/substrait-rs/issues/187)**
     - Include Substrait core extensions ([`b9fba0f`](https://github.com/substrait-io/substrait-rs/commit/b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288))
+ * **Uncategorized**
+    - Release substrait v0.33.4 ([`0dd56f3`](https://github.com/substrait-io/substrait-rs/commit/0dd56f39e2cc32d1047acc1fd097bf6c13117007))
 </details>
 
 ## 0.33.3 (2024-05-14)
