@@ -593,4 +593,41 @@ mod tests {
             _ => unreachable!(),
         }
     }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn parse_extensions() {
+        use crate::extensions::EXTENSIONS;
+        use crate::parse::context::tests::Context;
+
+        macro_rules! parse_arguments {
+            ($url:expr, $fns:expr) => {
+                $fns.iter().for_each(|f| {
+                    f.impls
+                        .iter()
+                        .filter_map(|i| i.args.as_ref())
+                        .flat_map(|a| &a.0)
+                        .for_each(|item| {
+                            item.clone()
+                                .parse(&mut Context::default())
+                                .unwrap_or_else(|err| {
+                                    panic!(
+                                        "found an invalid argument: {}, (url: {}, function: {}, arg: {:?})",
+                                        err,
+                                        $url.to_string(),
+                                        f.name,
+                                        item
+                                    );
+                                });
+                        })
+                });
+            };
+        }
+
+        EXTENSIONS.iter().for_each(|(url, ext)| {
+            parse_arguments!(url, ext.scalar_functions);
+            parse_arguments!(url, ext.aggregate_functions);
+            parse_arguments!(url, ext.window_functions);
+        });
+    }
 }
