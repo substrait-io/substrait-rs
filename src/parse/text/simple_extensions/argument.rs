@@ -230,6 +230,29 @@ pub struct ValueArg {
     constant: Option<bool>,
 }
 
+impl ValueArg {
+    /// Returns the name of this argument.
+    ///
+    /// See [simple_extensions::ValueArg::name].
+    pub fn name(&self) -> Option<&String> {
+        self.name.as_ref()
+    }
+
+    /// Returns the description of this argument.
+    ///
+    /// See [simple_extensions::ValueArg::description].
+    pub fn description(&self) -> Option<&String> {
+        self.description.as_ref()
+    }
+
+    /// Returns the constant of this argument.
+    ///
+    /// See [simple_extensions::ValueArg::constant].
+    pub fn constant(&self) -> bool {
+        self.constant.unwrap_or(false)
+    }
+}
+
 impl<C: Context> Parse<C> for simple_extensions::ValueArg {
     type Parsed = ValueArg;
 
