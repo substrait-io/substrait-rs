@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+//! Parsing of [simple_extensions::ArgumentsItem].
+
 use thiserror::Error;
 
 use crate::{

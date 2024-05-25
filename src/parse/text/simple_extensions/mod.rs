@@ -9,7 +9,6 @@ use crate::{
     text,
 };
 
-#[allow(missing_docs)]
 pub mod argument;
 
 /// A parsed [text::simple_extensions::SimpleExtensions].
