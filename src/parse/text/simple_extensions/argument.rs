@@ -306,6 +306,22 @@ pub struct TypeArg {
     type_: String,
 }
 
+impl TypeArg {
+    /// Returns the name of this argument.
+    ///
+    /// See [simple_extensions::TypeArg::name].
+    pub fn name(&self) -> Option<&String> {
+        self.name.as_ref()
+    }
+
+    /// Returns the description of this argument.
+    ///
+    /// See [simple_extensions::TypeArg::description].
+    pub fn description(&self) -> Option<&String> {
+        self.description.as_ref()
+    }
+}
+
 impl<C: Context> Parse<C> for simple_extensions::TypeArg {
     type Parsed = TypeArg;
 
