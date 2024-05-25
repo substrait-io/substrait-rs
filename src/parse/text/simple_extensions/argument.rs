@@ -254,6 +254,7 @@ impl ValueArg {
     }
 
     /// Returns the constant of this argument.
+    /// Defaults to `false` if the underlying value is `None`.
     ///
     /// See [simple_extensions::ValueArg::constant].
     pub fn constant(&self) -> bool {
