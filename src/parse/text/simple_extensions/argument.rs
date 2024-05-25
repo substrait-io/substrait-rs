@@ -98,6 +98,29 @@ pub struct EnumerationArg {
     options: EnumOptions,
 }
 
+impl EnumerationArg {
+    /// Returns the name of this argument.
+    ///
+    /// See [simple_extensions::EnumerationArg::name].
+    pub fn name(&self) -> Option<&String> {
+        self.name.as_ref()
+    }
+
+    /// Returns the description of this argument.
+    ///
+    /// See [simple_extensions::EnumerationArg::description].
+    pub fn description(&self) -> Option<&String> {
+        self.description.as_ref()
+    }
+
+    /// Returns the options of this argument.
+    ///
+    /// See [simple_extensions::EnumerationArg::options].
+    pub fn options(&self) -> &EnumOptions {
+        &self.options
+    }
+}
+
 impl<C: Context> Parse<C> for simple_extensions::EnumerationArg {
     type Parsed = EnumerationArg;
 
