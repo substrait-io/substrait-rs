@@ -23,26 +23,30 @@ pub enum ArgumentsItem {
 }
 
 impl ArgumentsItem {
+    /// Parses an `Option<String>` field, rejecting it if an empty string is provided.
+    #[inline]
+    fn parse_optinal_string(
+        name: &str,
+        value: Option<String>,
+    ) -> Result<Option<String>, ArgumentsItemError> {
+        match value {
+            Some(s) if s.is_empty() => {
+                Err(ArgumentsItemError::EmptyOptionalField(name.to_string()))
+            }
+            _ => Ok(value),
+        }
+    }
+
     #[inline]
     fn parse_name(name: Option<String>) -> Result<Option<String>, ArgumentsItemError> {
-        match name {
-            Some(s) if s.is_empty() => {
-                Err(ArgumentsItemError::EmptyOptionalField("name".to_string()))
-            }
-            _ => Ok(name),
-        }
+        ArgumentsItem::parse_optinal_string("name", name)
     }
 
     #[inline]
     fn parse_description(
         description: Option<String>,
     ) -> Result<Option<String>, ArgumentsItemError> {
-        match description {
-            Some(s) if s.is_empty() => Err(ArgumentsItemError::EmptyOptionalField(
-                "description".to_string(),
-            )),
-            _ => Ok(description),
-        }
+        ArgumentsItem::parse_optinal_string("description", description)
     }
 }
 
