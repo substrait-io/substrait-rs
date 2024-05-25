@@ -2,6 +2,8 @@
 
 //! Parsing of [simple_extensions::ArgumentsItem].
 
+use std::collections::HashSet;
+
 use thiserror::Error;
 
 use crate::{
@@ -94,7 +96,7 @@ pub struct EnumerationArg {
     /// Additional description for this argument.
     description: Option<String>,
 
-    /// List of valid string options for this argument.
+    /// Set of valid string options for this argument.
     options: EnumOptions,
 }
 
@@ -157,9 +159,9 @@ impl From<EnumerationArg> for ArgumentsItem {
     }
 }
 
-/// List of valid string options
+/// Set of valid string options
 #[derive(Clone, Debug, PartialEq)]
-pub struct EnumOptions(Vec<String>);
+pub struct EnumOptions(HashSet<String>);
 
 impl<C: Context> Parse<C> for simple_extensions::EnumOptions {
     type Parsed = EnumOptions;
@@ -172,23 +174,23 @@ impl<C: Context> Parse<C> for simple_extensions::EnumOptions {
             return Err(EnumOptionsError::EmptyList);
         }
 
-        let mut unique_set = std::collections::HashSet::new();
+        let mut unique_options = HashSet::new();
         for option in options.iter() {
             if option.is_empty() {
                 return Err(EnumOptionsError::EmptyOption);
             }
-            if !unique_set.insert(option) {
+            if !unique_options.insert(option.clone()) {
                 return Err(EnumOptionsError::DuplicatedOption(option.clone()));
             }
         }
 
-        Ok(EnumOptions(options))
+        Ok(EnumOptions(unique_options))
     }
 }
 
 impl From<EnumOptions> for simple_extensions::EnumOptions {
     fn from(value: EnumOptions) -> Self {
-        simple_extensions::EnumOptions(value.0)
+        simple_extensions::EnumOptions(Vec::from_iter(value.0))
     }
 }
 
@@ -341,7 +343,7 @@ mod tests {
             EnumerationArg {
                 name: Some("arg".to_string()),
                 description: Some("desc".to_string()),
-                options: EnumOptions(vec!["OVERFLOW".to_string()]),
+                options: EnumOptions(HashSet::from(["OVERFLOW".to_string()])),
             }
         );
         Ok(())
@@ -549,7 +551,7 @@ mod tests {
         let item: ArgumentsItem = EnumerationArg {
             name: Some("arg".to_string()),
             description: Some("desc".to_string()),
-            options: EnumOptions(vec!["OVERFLOW".to_string()]),
+            options: EnumOptions(HashSet::from(["OVERFLOW".to_string()])),
         }
         .into();
 
