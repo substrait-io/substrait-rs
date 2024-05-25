@@ -2,7 +2,7 @@
 
 //! Parsing of [simple_extensions::ArgumentsItem].
 
-use std::collections::HashSet;
+use std::{collections::HashSet, ops::Deref};
 
 use thiserror::Error;
 
@@ -162,6 +162,14 @@ impl From<EnumerationArg> for ArgumentsItem {
 /// Set of valid string options
 #[derive(Clone, Debug, PartialEq)]
 pub struct EnumOptions(HashSet<String>);
+
+impl Deref for EnumOptions {
+    type Target = HashSet<String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl<C: Context> Parse<C> for simple_extensions::EnumOptions {
     type Parsed = EnumOptions;
