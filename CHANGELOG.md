@@ -1,6 +1,33 @@
 
 
+## 0.34.1 (2024-05-28)
+
+### New Features
+
+ - <csr-id-3409b793176237f19fd408c787dcf5f006f9e772/> add `text::simple_extensions::ArgumentsItem` parser
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 4 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#185](https://github.com/substrait-io/substrait-rs/issues/185)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#185](https://github.com/substrait-io/substrait-rs/issues/185)**
+    - Add `text::simple_extensions::ArgumentsItem` parser ([`3409b79`](https://github.com/substrait-io/substrait-rs/commit/3409b793176237f19fd408c787dcf5f006f9e772))
+</details>
+
 ## 0.34.0 (2024-05-23)
+
+<csr-id-3351284ddc96906cf8e589c998c74e98c7babbf6/>
 
 ### Chore (BREAKING)
 
@@ -12,7 +39,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#189](https://github.com/substrait-io/substrait-rs/issues/189)
@@ -25,12 +52,18 @@
 
  * **[#189](https://github.com/substrait-io/substrait-rs/issues/189)**
     - Bump substrait from `0.48.0` to `0.49.0` ([`3351284`](https://github.com/substrait-io/substrait-rs/commit/3351284ddc96906cf8e589c998c74e98c7babbf6))
+ * **Uncategorized**
+    - Release substrait v0.34.0 ([`88d84c9`](https://github.com/substrait-io/substrait-rs/commit/88d84c994cf00ef7a8dbbb7ad13acfbb33cca00c))
 </details>
 
 ## 0.33.4 (2024-05-21)
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
