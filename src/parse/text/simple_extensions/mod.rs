@@ -9,6 +9,8 @@ use crate::{
     text,
 };
 
+pub mod argument;
+
 /// A parsed [text::simple_extensions::SimpleExtensions].
 pub struct SimpleExtensions {
     // TODO
