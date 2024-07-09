@@ -69,6 +69,7 @@
 //!
 //! #### Read a simple extension
 //! ```rust
+//! # #[cfg(feature="extensions")]
 //! # fn main() -> Result<(), serde_yaml::Error> {
 //! use substrait::text::simple_extensions::SimpleExtensions;
 //!
@@ -96,6 +97,8 @@
 //! assert_eq!(simple_extension.scalar_functions.len(), 1);
 //! assert_eq!(simple_extension.scalar_functions[0].name, "add");
 //! # Ok(()) }
+//! # #[cfg(not(feature="extensions"))]
+//! # fn main() {}
 //! ```
 //!
 //! [pbjson]: https://docs.rs/pbjson
