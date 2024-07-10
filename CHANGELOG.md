@@ -1,5 +1,30 @@
 
 
+## 0.37.3 (2024-07-10)
+
+### Chore
+
+ - <csr-id-0752984cdc8ff51fbe019e5aaae1aba6fd1e1a5d/> fix build script warning, fix doctest with default features
+   Also tests without default features in CI.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#200](https://github.com/substrait-io/substrait-rs/issues/200)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#200](https://github.com/substrait-io/substrait-rs/issues/200)**
+    - Fix build script warning, fix doctest with default features ([`0752984`](https://github.com/substrait-io/substrait-rs/commit/0752984cdc8ff51fbe019e5aaae1aba6fd1e1a5d))
+</details>
+
 ## 0.37.2 (2024-07-10)
 
 ### Documentation
@@ -11,7 +36,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#190](https://github.com/substrait-io/substrait-rs/issues/190)
 
@@ -23,6 +48,8 @@
 
  * **[#190](https://github.com/substrait-io/substrait-rs/issues/190)**
     - `--cfg=docsrs` is now a default set by docs.rs ([`e56e646`](https://github.com/substrait-io/substrait-rs/commit/e56e646c3c672daaf39d3ce7676acbbbfc4e0d84))
+ * **Uncategorized**
+    - Release substrait v0.37.2 ([`c67f7e0`](https://github.com/substrait-io/substrait-rs/commit/c67f7e090f11222304c199440eb95e78f55c1788))
 </details>
 
 ## 0.37.1 (2024-07-10)
@@ -209,6 +236,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
