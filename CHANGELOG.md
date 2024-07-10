@@ -1,6 +1,33 @@
 
 
+## 0.37.1 (2024-07-10)
+
+### Chore
+
+ - <csr-id-1ac5042667bba8ca3c634bd688979ad5f67f655b/> add `prost` and `pbjson` dependabot groups
+   This groups the dependabot updates of these packages together.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#199](https://github.com/substrait-io/substrait-rs/issues/199)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#199](https://github.com/substrait-io/substrait-rs/issues/199)**
+    - Add `prost` and `pbjson` dependabot groups ([`1ac5042`](https://github.com/substrait-io/substrait-rs/commit/1ac5042667bba8ca3c634bd688979ad5f67f655b))
+</details>
+
 ## 0.37.0 (2024-07-09)
+
+<csr-id-16ead9630ca2618e8931584c9d88c50ade94e2ff/>
 
 ### Other (BREAKING)
 
@@ -13,7 +40,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#195](https://github.com/substrait-io/substrait-rs/issues/195)
@@ -26,6 +53,8 @@
 
  * **[#195](https://github.com/substrait-io/substrait-rs/issues/195)**
     - Upgrade prost to 0.13 for hyper 1.x ([`16ead96`](https://github.com/substrait-io/substrait-rs/commit/16ead9630ca2618e8931584c9d88c50ade94e2ff))
+ * **Uncategorized**
+    - Release substrait v0.37.0 ([`7f9a76a`](https://github.com/substrait-io/substrait-rs/commit/7f9a76ab3df206d3341a87a46b26b5204dcd6c5d))
 </details>
 
 ## 0.36.0 (2024-07-08)
@@ -151,6 +180,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
