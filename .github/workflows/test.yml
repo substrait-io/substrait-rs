@@ -28,6 +28,7 @@ jobs:
             ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-check-
             ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
             ${{ runner.os }}-cargo-
+      - run: cargo check --all-targets --no-default-features --features protoc
       - run: cargo check --all-targets --all-features
 
   check:
@@ -53,6 +54,7 @@ jobs:
             ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-check-
             ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
             ${{ runner.os }}-cargo-
+      - run: cargo check --all-targets --no-default-features --features protoc
       - run: cargo check --all-targets --all-features
 
   test:
@@ -78,8 +80,10 @@ jobs:
             ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-test-
             ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
             ${{ runner.os }}-cargo-
+      - run: cargo test --all-targets --no-default-features --features protoc
       - run: cargo test --all-targets --all-features
       - run: cargo test --doc --all-features
+      - run: cargo test --doc --no-default-features --features protoc
 
   rustfmt:
     name: Rustfmt
@@ -116,6 +120,7 @@ jobs:
             ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-clippy-
             ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
             ${{ runner.os }}-cargo-
+      - run: cargo clippy --all-targets --no-default-features --features  protoc -- -Dwarnings
       - run: cargo clippy --all-targets --all-features -- -Dwarnings
 
   package:

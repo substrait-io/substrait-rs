@@ -280,7 +280,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // for use in docker build where file changes can be wonky
     println!("cargo:rerun-if-env-changed=FORCE_REBUILD");
 
-    let version = substrait_version()?;
+    let _version = substrait_version()?;
 
     #[cfg(feature = "protoc")]
     std::env::set_var("PROTOC", protobuf_src::protoc());
@@ -290,7 +290,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     text(out_dir.as_path())?;
 
     #[cfg(feature = "extensions")]
-    extensions(version, out_dir.as_path())?;
+    extensions(_version, out_dir.as_path())?;
 
     let protos = WalkDir::new(PROTO_ROOT)
         .into_iter()
