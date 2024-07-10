@@ -1,6 +1,33 @@
 
 
+## 0.37.2 (2024-07-10)
+
+### Documentation
+
+ - <csr-id-e56e646c3c672daaf39d3ce7676acbbbfc4e0d84/> `--cfg=docsrs` is now a default set by docs.rs
+   It's no longer required to specify this in our package metadata.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#190](https://github.com/substrait-io/substrait-rs/issues/190)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#190](https://github.com/substrait-io/substrait-rs/issues/190)**
+    - `--cfg=docsrs` is now a default set by docs.rs ([`e56e646`](https://github.com/substrait-io/substrait-rs/commit/e56e646c3c672daaf39d3ce7676acbbbfc4e0d84))
+</details>
+
 ## 0.37.1 (2024-07-10)
+
+<csr-id-1ac5042667bba8ca3c634bd688979ad5f67f655b/>
 
 ### Chore
 
@@ -11,7 +38,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#199](https://github.com/substrait-io/substrait-rs/issues/199)
 
@@ -23,6 +50,8 @@
 
  * **[#199](https://github.com/substrait-io/substrait-rs/issues/199)**
     - Add `prost` and `pbjson` dependabot groups ([`1ac5042`](https://github.com/substrait-io/substrait-rs/commit/1ac5042667bba8ca3c634bd688979ad5f67f655b))
+ * **Uncategorized**
+    - Release substrait v0.37.1 ([`53cb477`](https://github.com/substrait-io/substrait-rs/commit/53cb477da03c4519c0d494a3dabb91a43f164a87))
 </details>
 
 ## 0.37.0 (2024-07-09)
@@ -180,6 +209,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
