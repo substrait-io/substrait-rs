@@ -16,6 +16,8 @@ jobs:
   rustdoc:
     name: Rustdoc
     runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -Dwarnings
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,20 +25,9 @@ jobs:
           submodules: recursive
       - uses: dtolnay/rust-toolchain@nightly
         id: rust-toolchain
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-rustdoc-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-rustdoc-
-            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
-            ${{ runner.os }}-cargo-
-      - run: cargo rustdoc --all-features -- --cfg docsrs
+      - uses: dtolnay/install@cargo-docs-rs
+      - run: cargo docs-rs
+      - run: mv "target/$(rustc -vV | awk '/^host/ { print $2 }')/doc" "target/doc"
       - run: chmod -c -R +rX "target/doc"
       - run: echo "<meta http-equiv=refresh content=0;url=substrait>" > target/doc/index.html
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
