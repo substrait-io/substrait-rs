@@ -1,6 +1,33 @@
 
 
+## 0.38.0 (2024-07-22)
+
+### Chore (BREAKING)
+
+ - <csr-id-2ee4f6576f216b36989b572f555da8d9b20ba311/> bump substrait from `0.51.0` to `0.52.0`
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 12 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#201](https://github.com/substrait-io/substrait-rs/issues/201)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#201](https://github.com/substrait-io/substrait-rs/issues/201)**
+    - Bump substrait from `0.51.0` to `0.52.0` ([`2ee4f65`](https://github.com/substrait-io/substrait-rs/commit/2ee4f6576f216b36989b572f555da8d9b20ba311))
+</details>
+
 ## 0.37.3 (2024-07-10)
+
+<csr-id-0752984cdc8ff51fbe019e5aaae1aba6fd1e1a5d/>
 
 ### Chore
 
@@ -11,7 +38,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#200](https://github.com/substrait-io/substrait-rs/issues/200)
 
@@ -23,6 +50,8 @@
 
  * **[#200](https://github.com/substrait-io/substrait-rs/issues/200)**
     - Fix build script warning, fix doctest with default features ([`0752984`](https://github.com/substrait-io/substrait-rs/commit/0752984cdc8ff51fbe019e5aaae1aba6fd1e1a5d))
+ * **Uncategorized**
+    - Release substrait v0.37.3 ([`9d3b09f`](https://github.com/substrait-io/substrait-rs/commit/9d3b09f4856f1289c7477242353a62aee60ded37))
 </details>
 
 ## 0.37.2 (2024-07-10)
@@ -236,6 +265,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
