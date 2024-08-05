@@ -20,7 +20,7 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.79 # revert to stable on next smart-release release
         id: rust-toolchain
       - uses: actions/cache@v4
         with:
