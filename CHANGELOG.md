@@ -1,6 +1,44 @@
 
 
+## 0.39.0 (2024-08-05)
+
+### Other
+
+ - <csr-id-0ac026f0d5cb1363c1a64612291bf5a976b91e96/> use previous rust release to build smart release with lock file
+   The smart-release lock file is pointing to an outdated version of `time`
+   that fails to build on the latest stable rustc. Reverting to the
+   previous stable release until the next smart-release release.
+
+### Chore (BREAKING)
+
+ - <csr-id-83c1fc416f41313c78407c46051be62211453b5f/> bump substrait from `0.52.0` to `0.53.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `a68c1ac` to `5fe2a16`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 13 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#203](https://github.com/substrait-io/substrait-rs/issues/203), [#204](https://github.com/substrait-io/substrait-rs/issues/204)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#203](https://github.com/substrait-io/substrait-rs/issues/203)**
+    - Bump substrait from `0.52.0` to `0.53.0` ([`83c1fc4`](https://github.com/substrait-io/substrait-rs/commit/83c1fc416f41313c78407c46051be62211453b5f))
+ * **[#204](https://github.com/substrait-io/substrait-rs/issues/204)**
+    - Use previous rust release to build smart release with lock file ([`0ac026f`](https://github.com/substrait-io/substrait-rs/commit/0ac026f0d5cb1363c1a64612291bf5a976b91e96))
+</details>
+
 ## 0.38.0 (2024-07-22)
+
+<csr-id-2ee4f6576f216b36989b572f555da8d9b20ba311/>
 
 ### Chore (BREAKING)
 
@@ -10,7 +48,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 12 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#201](https://github.com/substrait-io/substrait-rs/issues/201)
@@ -23,6 +61,8 @@
 
  * **[#201](https://github.com/substrait-io/substrait-rs/issues/201)**
     - Bump substrait from `0.51.0` to `0.52.0` ([`2ee4f65`](https://github.com/substrait-io/substrait-rs/commit/2ee4f6576f216b36989b572f555da8d9b20ba311))
+ * **Uncategorized**
+    - Release substrait v0.38.0 ([`87096e2`](https://github.com/substrait-io/substrait-rs/commit/87096e2ce2d41681bcbda1eda3abfd48e358d852))
 </details>
 
 ## 0.37.3 (2024-07-10)
@@ -265,6 +305,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
