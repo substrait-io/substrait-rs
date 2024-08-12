@@ -1,6 +1,36 @@
 
 
+## 0.40.0 (2024-08-12)
+
+### Chore (BREAKING)
+
+ - <csr-id-01d706cbaf9c189b299a8dd719e607dd0679fbd7/> bump substrait from `0.53.0` to `0.54.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `5fe2a16` to `93c8339`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 6 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#205](https://github.com/substrait-io/substrait-rs/issues/205)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#205](https://github.com/substrait-io/substrait-rs/issues/205)**
+    - Bump substrait from `0.53.0` to `0.54.0` ([`01d706c`](https://github.com/substrait-io/substrait-rs/commit/01d706cbaf9c189b299a8dd719e607dd0679fbd7))
+</details>
+
 ## 0.39.0 (2024-08-05)
+
+<csr-id-0ac026f0d5cb1363c1a64612291bf5a976b91e96/>
+<csr-id-83c1fc416f41313c78407c46051be62211453b5f/>
 
 ### Other
 
@@ -19,7 +49,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 13 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#203](https://github.com/substrait-io/substrait-rs/issues/203), [#204](https://github.com/substrait-io/substrait-rs/issues/204)
@@ -34,6 +64,8 @@
     - Bump substrait from `0.52.0` to `0.53.0` ([`83c1fc4`](https://github.com/substrait-io/substrait-rs/commit/83c1fc416f41313c78407c46051be62211453b5f))
  * **[#204](https://github.com/substrait-io/substrait-rs/issues/204)**
     - Use previous rust release to build smart release with lock file ([`0ac026f`](https://github.com/substrait-io/substrait-rs/commit/0ac026f0d5cb1363c1a64612291bf5a976b91e96))
+ * **Uncategorized**
+    - Release substrait v0.39.0 ([`e6e87fb`](https://github.com/substrait-io/substrait-rs/commit/e6e87fb03e9efe4db66c24ba22bf8bfa0544726d))
 </details>
 
 ## 0.38.0 (2024-07-22)
@@ -305,6 +337,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
