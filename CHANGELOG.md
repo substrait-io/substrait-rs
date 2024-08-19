@@ -1,6 +1,837 @@
 
 
+## 0.41.3 (2024-08-19)
+
+### Chore
+
+ - <csr-id-6bb79fbaba920a875e56fe4f0d10a4a68e88be68/> bump the cargo group with 10 updates
+   Bumps the cargo group with 10 updates:
+   
+   | Package | From | To |
+   | --- | --- | --- |
+   | [url](https://github.com/servo/rust-url) | `2.5.0` | `2.5.2` |
+   | [semver](https://github.com/dtolnay/semver) | `1.0.22` | `1.0.23` |
+   | [serde](https://github.com/serde-rs/serde) | `1.0.202` | `1.0.208` |
+   | [serde_json](https://github.com/serde-rs/json) | `1.0.117` | `1.0.125`
+   |
+   | [serde_yaml](https://github.com/dtolnay/serde-yaml) | `0.9.32` |
+   `0.9.34+deprecated` |
+   | [thiserror](https://github.com/dtolnay/thiserror) | `1.0.61` |
+   `1.0.63` |
+   | [prettyplease](https://github.com/dtolnay/prettyplease) | `0.2.9` |
+   `0.2.20` |
+   | [protobuf-src](https://github.com/MaterializeInc/rust-protobuf-native)
+   | `2.0.0+26.1` | `2.1.0+27.1` |
+   | [schemars](https://github.com/GREsau/schemars) | `0.8.20` | `0.8.21` |
+   | [syn](https://github.com/dtolnay/syn) | `2.0.65` | `2.0.75` |
+   
+   Updates `url` from 2.5.0 to 2.5.2
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/servo/rust-url/commit/54346fa288e16b25b71c45149d7067c752b450e0"><code>54346fa</code></a>
+   Revert &quot;Reimplement idna on top of ICU4X&quot; (<a
+   href="https://redirect.github.com/servo/rust-url/issues/946">#946</a>)</li>
+   <li><a
+   href="https://github.com/servo/rust-url/commit/dcfbed3e90b4bbbb70f121f802f1d9b25adb8f89"><code>dcfbed3</code></a>
+   Update idna to 1.0.1 (<a
+   href="https://redirect.github.com/servo/rust-url/issues/945">#945</a>)</li>
+   <li><a
+   href="https://github.com/servo/rust-url/commit/467ef63969f477ee44b7456bb450fba95af25780"><code>467ef63</code></a>
+   fix panic on <code>xn--55555577</code> (<a
+   href="https://redirect.github.com/servo/rust-url/issues/940">#940</a>)</li>
+   <li><a
+   href="https://github.com/servo/rust-url/commit/3d6dbbb1dfc64c597745d5d6b97f2a8dd543c42b"><code>3d6dbbb</code></a>
+   Reimplement idna on top of ICU4X (<a
+   href="https://redirect.github.com/servo/rust-url/issues/923">#923</a>)</li>
+   <li><a
+   href="https://github.com/servo/rust-url/commit/de947abf896f44efc5f0fe382064fd95363dff37"><code>de947ab</code></a>
+   Document possible replacements of the base URL (<a
+   href="https://redirect.github.com/servo/rust-url/issues/926">#926</a>)</li>
+   <li><a
+   href="https://github.com/servo/rust-url/commit/8b8431bbe10d0f06c53885d5ba2602d69f61888f"><code>8b8431b</code></a>
+   docs: document SyntaxViolation variants, remove bare URLs (<a
+   href="https://redirect.github.com/servo/rust-url/issues/924">#924</a>)</li>
+   <li><a
+   href="https://github.com/servo/rust-url/commit/fd042e003fe583426454001554542ef95538d794"><code>fd042e0</code></a>
+   Non-special URLs can have their paths erased (<a
+   href="https://redirect.github.com/servo/rust-url/issues/921">#921</a>)</li>
+   <li><a
+   href="https://github.com/servo/rust-url/commit/49eea1c2eb3bb7259e3f8e15ace5f86990adb0bd"><code>49eea1c</code></a>
+   Fix multiple issues on wasm32: (<a
+   href="https://redirect.github.com/servo/rust-url/issues/886">#886</a>)</li>
+   <li><a
+   href="https://github.com/servo/rust-url/commit/a4dd58be5989afedddec023174b2cdcd81912239"><code>a4dd58b</code></a>
+   Fix lint (<a
+   href="https://redirect.github.com/servo/rust-url/issues/920">#920</a>)</li>
+   <li><a
+   href="https://github.com/servo/rust-url/commit/73803fa780c8890e0b40cd01fbbd5362fbe4c9e0"><code>73803fa</code></a>
+   Update URLs (<a
+   href="https://redirect.github.com/servo/rust-url/issues/916">#916</a>)</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/servo/rust-url/compare/v2.5.0...v2.5.2">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   Updates `semver` from 1.0.22 to 1.0.23
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/dtolnay/semver/releases">semver's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>1.0.23</h2>
+   <ul>
+   <li>Resolve unexpected_cfgs warning (<a
+   href="https://redirect.github.com/dtolnay/semver/issues/318">#318</a>)</li>
+   </ul>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/dtolnay/semver/commit/69efd3cc770ead273a06ad1788477b3092996d29"><code>69efd3c</code></a>
+   Release 1.0.23</li>
+   <li><a
+   href="https://github.com/dtolnay/semver/commit/451b41962b90a3c05836537fa5865d288d7590db"><code>451b419</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/dtolnay/semver/issues/318">#318</a>
+   from dtolnay/checkcfg</li>
+   <li><a
+   href="https://github.com/dtolnay/semver/commit/5b714857ac382ce3166aaf1f58d9c0eec5666c1d"><code>5b71485</code></a>
+   Resolve unexpected_cfgs warning</li>
+   <li><a
+   href="https://github.com/dtolnay/semver/commit/c520af7e3cdd4c949b40dc20c945b525f34a2dc5"><code>c520af7</code></a>
+   Revert &quot;Temporarily disable miri on doctests&quot;</li>
+   <li><a
+   href="https://github.com/dtolnay/semver/commit/73b5d9e5898499d36e51e2a8242d0a117ee05fc0"><code>73b5d9e</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/dtolnay/semver/issues/313">#313</a>
+   from Saecki/patch-1</li>
+   <li><a
+   href="https://github.com/dtolnay/semver/commit/e8d61deb8911d62c37908946bdec730c0fe5fc4f"><code>e8d61de</code></a>
+   chore: fix typo in safety comment</li>
+   <li><a
+   href="https://github.com/dtolnay/semver/commit/d282d48b501f9ea9a0b555941c120e0470d638c0"><code>d282d48</code></a>
+   Explicitly install a Rust toolchain for cargo-outdated job</li>
+   <li><a
+   href="https://github.com/dtolnay/semver/commit/6e6ba222fd9f6ca47cc5cc2b483d9cca413a524f"><code>6e6ba22</code></a>
+   Temporarily disable miri on doctests</li>
+   <li>See full diff in <a
+   href="https://github.com/dtolnay/semver/compare/1.0.22...1.0.23">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   Updates `serde` from 1.0.202 to 1.0.208
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/serde-rs/serde/releases">serde's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v1.0.208</h2>
+   <ul>
+   <li>Support serializing and deserializing unit structs in a
+   <code>flatten</code> field (<a
+   href="https://redirect.github.com/serde-rs/serde/issues/2802">#2802</a>,
+   thanks <a
+   href="https://github.com/jonhoo"><code>@​jonhoo</code></a>)</li>
+   </ul>
+   <h2>v1.0.207</h2>
+   <ul>
+   <li>Improve interactions between <code>flatten</code> attribute and
+   <code>skip_serializing</code>/<code>skip_deserializing</code> (<a
+   href="https://redirect.github.com/serde-rs/serde/issues/2795">#2795</a>,
+   thanks <a
+   href="https://github.com/Mingun"><code>@​Mingun</code></a>)</li>
+   </ul>
+   <h2>v1.0.206</h2>
+   <ul>
+   <li>Improve support for <code>flatten</code> attribute inside of enums
+   (<a
+   href="https://redirect.github.com/serde-rs/serde/issues/2567">#2567</a>,
+   thanks <a
+   href="https://github.com/Mingun"><code>@​Mingun</code></a>)</li>
+   </ul>
+   <h2>v1.0.205</h2>
+   <ul>
+   <li>Use serialize_entry instead of serialize_key + serialize_value when
+   serialize flattened newtype enum variants (<a
+   href="https://redirect.github.com/serde-rs/serde/issues/2785">#2785</a>,
+   thanks <a
+   href="https://github.com/Mingun"><code>@​Mingun</code></a>)</li>
+   <li>Avoid triggering a collection_is_never_read lint in the
+   deserialization of enums containing flattened fields (<a
+   href="https://redirect.github.com/serde-rs/serde/issues/2791">#2791</a>)</li>
+   </ul>
+   <h2>v1.0.204</h2>
+   <ul>
+   <li>Apply #[diagnostic::on_unimplemented] attribute on Rust 1.78+ to
+   suggest adding serde derive or enabling a &quot;serde&quot; feature flag
+   in dependencies (<a
+   href="https://redirect.github.com/serde-rs/serde/issues/2767">#2767</a>,
+   thanks <a
+   href="https://github.com/weiznich"><code>@​weiznich</code></a>)</li>
+   </ul>
+   <h2>v1.0.203</h2>
+   <ul>
+   <li>Documentation improvements (<a
+   href="https://redirect.github.com/serde-rs/serde/issues/2747">#2747</a>)</li>
+   </ul>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/serde-rs/serde/commit/026e91a68cdb00ed89bae5f566852ecbd7525315"><code>026e91a</code></a>
+   Release 1.0.208</li>
+   <li><a
+   href="https://github.com/serde-rs/serde/commit/bfbedac91940b7cbe268bf686b93812b3020129c"><code>bfbedac</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/serde-rs/serde/issues/2802">#2802</a>
+   from jonhoo/flatten-unit-struct</li>
+   <li><a
+   href="https://github.com/serde-rs/serde/commit/4036ff88edc2ee85f288e8c9bc6d9a0f393cf96e"><code>4036ff8</code></a>
+   Support (de-)serializing flattened unit struct</li>
+   <li><a
+   href="https://github.com/serde-rs/serde/commit/1b4da41f970555e111f471633205bbcb4dadbc63"><code>1b4da41</code></a>
+   Release 1.0.207</li>
+   <li><a
+   href="https://github.com/serde-rs/serde/commit/f61d452814d6c7bf32d139e747d18c21592d702a"><code>f61d452</code></a>
+   Touch up PR 2795</li>
+   <li><a
+   href="https://github.com/serde-rs/serde/commit/f9866097a084e2e549e40c4d47f7ee171e0a6aaf"><code>f986609</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/serde-rs/serde/issues/2795">#2795</a>
+   from Mingun/has-flatten-rework</li>
+   <li><a
+   href="https://github.com/serde-rs/serde/commit/77a6a9d4e193c82439aa0c35dfdbbb34fafdf38e"><code>77a6a9d</code></a>
+   Take into account only not skipped flatten fields when choose
+   serialization form</li>
+   <li><a
+   href="https://github.com/serde-rs/serde/commit/547d843ccaa1349b074991f5ceeda722cf245824"><code>547d843</code></a>
+   Remove dead code - serialize_struct_as_map always called when
+   cattrs.has_flat...</li>
+   <li><a
+   href="https://github.com/serde-rs/serde/commit/005cb84593e73cb3ba263232cc5f09b77859ec5b"><code>005cb84</code></a>
+   Fail with an understandable message is number of fields for
+   serialization is ...</li>
+   <li><a
+   href="https://github.com/serde-rs/serde/commit/fd5b5e9aa561e29d9312ecef2019ec670b4bc334"><code>fd5b5e9</code></a>
+   Correctly calculate <code>has_flatten</code> attribute in all cases for
+   deserialization</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/serde-rs/serde/compare/v1.0.202...v1.0.208">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   Updates `serde_json` from 1.0.117 to 1.0.125
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/serde-rs/json/releases">serde_json's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>1.0.125</h2>
+   <ul>
+   <li>Speed up \uXXXX parsing and improve handling of unpaired surrogates
+   when deserializing to bytes (<a
+   href="https://redirect.github.com/serde-rs/json/issues/1172">#1172</a>,
+   <a
+   href="https://redirect.github.com/serde-rs/json/issues/1175">#1175</a>,
+   thanks <a
+   href="https://github.com/purplesyringa"><code>@​purplesyringa</code></a>)</li>
+   </ul>
+   <h2>v1.0.124</h2>
+   <ul>
+   <li>Fix a bug in processing string escapes in big-endian architectures
+   (<a
+   href="https://redirect.github.com/serde-rs/json/issues/1173">#1173</a>,
+   thanks <a
+   href="https://github.com/purplesyringa"><code>@​purplesyringa</code></a>)</li>
+   </ul>
+   <h2>v1.0.123</h2>
+   <ul>
+   <li>Optimize string parsing by applying SIMD-within-a-register: 30.3%
+   improvement on <a
+   href="https://github.com/miloyip/nativejson-benchmark/blob/v1.0.0/data/twitter.json">twitter.json</a>
+   from 613 MB/s to 799 MB/s (<a
+   href="https://redirect.github.com/serde-rs/json/issues/1161">#1161</a>,
+   thanks <a
+   href="https://github.com/purplesyringa"><code>@​purplesyringa</code></a>)</li>
+   </ul>
+   <h2>v1.0.122</h2>
+   <ul>
+   <li>Support using <code>json!</code> in no-std crates (<a
+   href="https://redirect.github.com/serde-rs/json/issues/1166">#1166</a>)</li>
+   </ul>
+   <h2>v1.0.121</h2>
+   <ul>
+   <li>Optimize position search in error path (<a
+   href="https://redirect.github.com/serde-rs/json/issues/1160">#1160</a>,
+   thanks <a
+   href="https://github.com/purplesyringa"><code>@​purplesyringa</code></a>)</li>
+   </ul>
+   <h2>v1.0.120</h2>
+   <ul>
+   <li>Correctly specify required version of <code>indexmap</code>
+   dependency (<a
+   href="https://redirect.github.com/serde-rs/json/issues/1152">#1152</a>,
+   thanks <a
+   href="https://github.com/cforycki"><code>@​cforycki</code></a>)</li>
+   </ul>
+   <h2>v1.0.119</h2>
+   <ul>
+   <li>Add <code>serde_json::Map::shift_insert</code> (<a
+   href="https://redirect.github.com/serde-rs/json/issues/1149">#1149</a>,
+   thanks <a
+   href="https://github.com/joshka"><code>@​joshka</code></a>)</li>
+   </ul>
+   <h2>v1.0.118</h2>
+   <ul>
+   <li>Implement Hash for serde_json::Value (<a
+   href="https://redirect.github.com/serde-rs/json/issues/1127">#1127</a>,
+   thanks <a
+   href="https://github.com/edwardycl"><code>@​edwardycl</code></a>)</li>
+   </ul>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/serde-rs/json/commit/6130f9b358dea483f10e671343f0098fbe55611b"><code>6130f9b</code></a>
+   Release 1.0.125</li>
+   <li><a
+   href="https://github.com/serde-rs/json/commit/cc7a1608c9bb7736c884926e016421af41a1ebe7"><code>cc7a160</code></a>
+   Touch up PR 1175</li>
+   <li><a
+   href="https://github.com/serde-rs/json/commit/0f942e5b5235a3b586e20e4c00bfe5b1a56f16d8"><code>0f942e5</code></a>
+   Merge pull request 1175 from iex-rs/faster-backslash-u</li>
+   <li><a
+   href="https://github.com/serde-rs/json/commit/d8921cd29b5eef6263c20cf87eab25d961237f94"><code>d8921cd</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/serde-rs/json/issues/1172">#1172</a>
+   from iex-rs/faster-hex</li>
+   <li><a
+   href="https://github.com/serde-rs/json/commit/b4bc6436acdf874729a7b425b3c2e48f8b16b398"><code>b4bc643</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/serde-rs/json/issues/1176">#1176</a>
+   from dtolnay/miriname</li>
+   <li><a
+   href="https://github.com/serde-rs/json/commit/94a2aad7b79543454da3ecdb2e6170b98773ccc2"><code>94a2aad</code></a>
+   Improve job names for miri jobs</li>
+   <li><a
+   href="https://github.com/serde-rs/json/commit/8073fc16b89f508f2443b95d925ce59dca745d43"><code>8073fc1</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/serde-rs/json/issues/1174">#1174</a>
+   from iex-rs/miri-on-ci</li>
+   <li><a
+   href="https://github.com/serde-rs/json/commit/96ae60445df67f6903b53b2fcfe1d60f3bd8f778"><code>96ae604</code></a>
+   Correct WTF-8 parsing</li>
+   <li><a
+   href="https://github.com/serde-rs/json/commit/236cc8247d32a5cb337850d75f68265fdb4bc14e"><code>236cc82</code></a>
+   Simplify unicode escape handling</li>
+   <li><a
+   href="https://github.com/serde-rs/json/commit/2f28d106e68e214cfa19043e65b1bd178b3c2ced"><code>2f28d10</code></a>
+   Use the same UTF-8/WTF-8 impl for surrogates</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/serde-rs/json/compare/v1.0.117...1.0.125">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   Updates `serde_yaml` from 0.9.32 to 0.9.34+deprecated
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/dtolnay/serde-yaml/releases">serde_yaml's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>0.9.34</h2>
+   <p>As of this release, I am not planning to publish further versions of
+   <code>serde_yaml</code> as none of my projects have been using YAML for
+   a long time, so I have archived the GitHub repo and marked the crate
+   deprecated in the version number. An official replacement isn't
+   designated for those who still need to work with YAML, but <a
+   href="https://crates.io/search?q=yaml&amp;sort=relevance">https://crates.io/search?q=yaml&amp;sort=relevance</a>
+   and <a
+   href="https://crates.io/keywords/yaml">https://crates.io/keywords/yaml</a>
+   has a number of reasonable-looking options available.</p>
+   <h2>0.9.33</h2>
+   <ul>
+   <li>Fix quadratic parse time for YAML containing deeply nested flow
+   collections (<a
+   href="https://redirect.github.com/dtolnay/unsafe-libyaml/issues/26">dtolnay/unsafe-libyaml#26</a>)</li>
+   </ul>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/dtolnay/serde-yaml/commit/2009506d33767dfc88e979d6bc0d53d09f941c94"><code>2009506</code></a>
+   Release 0.9.34</li>
+   <li><a
+   href="https://github.com/dtolnay/serde-yaml/commit/3ba8462f7d3b603d832e0daeb6cfc7168a673d7a"><code>3ba8462</code></a>
+   Add unmaintained note</li>
+   <li><a
+   href="https://github.com/dtolnay/serde-yaml/commit/77236b0d50f6fb670fefe8146aba02f1eab211f3"><code>77236b0</code></a>
+   Ignore dead code lint in tests</li>
+   <li><a
+   href="https://github.com/dtolnay/serde-yaml/commit/f4c9ed92385c827a677dae60c2b5a894e24709f0"><code>f4c9ed9</code></a>
+   Release 0.9.33</li>
+   <li><a
+   href="https://github.com/dtolnay/serde-yaml/commit/b4edaee907373ee69c6389687a35fced63d8addf"><code>b4edaee</code></a>
+   Pull in yaml_parser_fetch_more_tokens fix from libyaml</li>
+   <li><a
+   href="https://github.com/dtolnay/serde-yaml/commit/8a5542ced61ae21d0772e504fac01bd1dbfaaa6b"><code>8a5542c</code></a>
+   Resolve non_local_definitions warning in test</li>
+   <li>See full diff in <a
+   href="https://github.com/dtolnay/serde-yaml/compare/0.9.32...0.9.34">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   Updates `thiserror` from 1.0.61 to 1.0.63
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/dtolnay/thiserror/releases">thiserror's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>1.0.63</h2>
+   <ul>
+   <li>Documentation improvements</li>
+   </ul>
+   <h2>1.0.62</h2>
+   <ul>
+   <li>Support referring to nested tuple struct fields inside
+   <code>#[error(&quot;…&quot;, …)]</code> attribute (<a
+   href="https://redirect.github.com/dtolnay/thiserror/issues/309">#309</a>)</li>
+   </ul>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/915c75e8a3b679588e6eac03dccbba5d38c764a8"><code>915c75e</code></a>
+   Release 1.0.63</li>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/3d5ec25464d2d71f09f480666e240d3446a44a19"><code>3d5ec25</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/dtolnay/thiserror/issues/312">#312</a>
+   from dtolnay/backtracedoc</li>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/de8a1e54d420514250d9d4081d41723192cf0dfa"><code>de8a1e5</code></a>
+   Update documentation of #[from] and #[backtrace] attributes</li>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/0bf6e3dd781409b62cbcf0816ffa1bb970d24833"><code>0bf6e3d</code></a>
+   Release 1.0.62</li>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/497793283934d9e514d903a14278af6babbfbb65"><code>4977932</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/dtolnay/thiserror/issues/310">#310</a>
+   from dtolnay/nestedtuple</li>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/40a7779b1793f2dce5f85abe8c03486cdb5eb640"><code>40a7779</code></a>
+   Support .0.0 nested tuple index</li>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/f1ca210cc4772f198af91886e3849dac68114f97"><code>f1ca210</code></a>
+   Add regression test for issue 309</li>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/479744ec288f9183b8849f013dcee226ac6588ee"><code>479744e</code></a>
+   No need for dead code if struct fields are public</li>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/4db08b10a39cfd189a36a88dee0fad578ac11cbe"><code>4db08b1</code></a>
+   Ignore warning on unused struct in test</li>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/f2824ae379ac2edee1fd687b9e56f18c048086cd"><code>f2824ae</code></a>
+   Fill in ignore reasons in all #[ignore] attributes</li>
+   <li>See full diff in <a
+   href="https://github.com/dtolnay/thiserror/compare/1.0.61...1.0.63">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   Updates `prettyplease` from 0.2.9 to 0.2.20
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/dtolnay/prettyplease/releases">prettyplease's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>0.2.20</h2>
+   <ul>
+   <li>Resolve unexpected_cfgs warning (<a
+   href="https://redirect.github.com/dtolnay/prettyplease/issues/73">#73</a>)</li>
+   </ul>
+   <h2>0.2.19</h2>
+   <ul>
+   <li>Improve line placement for field assignment with multiline value (<a
+   href="https://redirect.github.com/dtolnay/prettyplease/issues/68">#68</a>)</li>
+   </ul>
+   <h2>0.2.18</h2>
+   <ul>
+   <li>Support Rust 1.77's C-string literal syntax</li>
+   </ul>
+   <h2>0.2.17</h2>
+   <ul>
+   <li>Fix formatting of imports that contain <code>::{self as</code> (<a
+   href="https://redirect.github.com/dtolnay/prettyplease/issues/70">#70</a>)</li>
+   </ul>
+   <h2>0.2.16</h2>
+   <ul>
+   <li>Update proc-macro2 to fix caching issue when using a rustc-wrapper
+   such as sccache</li>
+   </ul>
+   <h2>0.2.15</h2>
+   <ul>
+   <li>Improve indentation of if-let and while-let expressions (<a
+   href="https://redirect.github.com/dtolnay/prettyplease/issues/60">#60</a>)</li>
+   </ul>
+   <h2>0.2.14</h2>
+   <ul>
+   <li>Support generics and where-clause on const items (<a
+   href="https://redirect.github.com/rust-lang/rust/issues/113521">rust-lang/rust#113521</a>)</li>
+   </ul>
+   <h2>0.2.13</h2>
+   <ul>
+   <li>Support unnamed struct/union type syntax (<a
+   href="https://redirect.github.com/rust-lang/rust/issues/49804">rust-lang/rust#49804</a>)</li>
+   </ul>
+   <h2>0.2.12</h2>
+   <ul>
+   <li>Documentation improvements</li>
+   </ul>
+   <h2>0.2.11</h2>
+   <ul>
+   <li>Improve let-else formatting (<a
+   href="https://redirect.github.com/dtolnay/prettyplease/issues/56">#56</a>)</li>
+   </ul>
+   <h2>0.2.10</h2>
+   <ul>
+   <li>Preserve attributes on verbatim Expr (<a
+   href="https://redirect.github.com/dtolnay/prettyplease/issues/54">#54</a>)</li>
+   </ul>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/dtolnay/prettyplease/commit/179974cc93c8d54894483463c1eea4df9e70a694"><code>179974c</code></a>
+   Release 0.2.20</li>
+   <li><a
+   href="https://github.com/dtolnay/prettyplease/commit/13214049289ff36efcb87af6c7a3e0d6ad269fd4"><code>1321404</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/dtolnay/prettyplease/issues/73">#73</a>
+   from dtolnay/checkcfg</li>
+   <li><a
+   href="https://github.com/dtolnay/prettyplease/commit/c24065683d574ff8aa1baccadaa4449e9b281cd8"><code>c240656</code></a>
+   Resolve unexpected_cfgs warning</li>
+   <li><a
+   href="https://github.com/dtolnay/prettyplease/commit/096eac9c626d8fbf733761144d8ee9238ea173cd"><code>096eac9</code></a>
+   Update rustc initialization to nightly-2024-04-17</li>
+   <li><a
+   href="https://github.com/dtolnay/prettyplease/commit/e0d74e690006a2cdc89db8c45091ae123bf41c53"><code>e0d74e6</code></a>
+   Release 0.2.19</li>
+   <li><a
+   href="https://github.com/dtolnay/prettyplease/commit/8e800f6fd41f0d30d79d7a210ccce91822b4df6a"><code>8e800f6</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/dtolnay/prettyplease/issues/72">#72</a>
+   from dtolnay/assign</li>
+   <li><a
+   href="https://github.com/dtolnay/prettyplease/commit/a6aa3903d68cc994f19cf5e1ceb47de02823a689"><code>a6aa390</code></a>
+   Fix line placement for field assignment with multiline value</li>
+   <li><a
+   href="https://github.com/dtolnay/prettyplease/commit/659fde697c1e1912a50fd90a4773e740045fca16"><code>659fde6</code></a>
+   Release 0.2.18</li>
+   <li><a
+   href="https://github.com/dtolnay/prettyplease/commit/fadd0dfa9a6aca98ff7d29fca12e338236b8b13c"><code>fadd0df</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/dtolnay/prettyplease/issues/71">#71</a>
+   from dtolnay/cstr</li>
+   <li><a
+   href="https://github.com/dtolnay/prettyplease/commit/1ad491d8201e5f5bed6812f857086e1f2ef53c62"><code>1ad491d</code></a>
+   Support C-string literal syntax</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/dtolnay/prettyplease/compare/0.2.9...0.2.20">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   Updates `protobuf-src` from 2.0.0+26.1 to 2.1.0+27.1
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/MaterializeInc/rust-protobuf-native/commit/7e87f0f4725ff74d5c8a0b313119b8f1e7e6e52f"><code>7e87f0f</code></a>
+   protobuf-src: release 2.1.0</li>
+   <li><a
+   href="https://github.com/MaterializeInc/rust-protobuf-native/commit/698cf0a33e101d985654d4a1ada4451349a0ae12"><code>698cf0a</code></a>
+   MAINTAINERS: add instructions for upgrading libprotobuf/Abseil</li>
+   <li><a
+   href="https://github.com/MaterializeInc/rust-protobuf-native/commit/511ef7b8bd2bea2d262391d93d012fd8d455d5cc"><code>511ef7b</code></a>
+   Upgrade to Abseil 3.30</li>
+   <li><a
+   href="https://github.com/MaterializeInc/rust-protobuf-native/commit/4e20544144e0ff596f4e32f5ac8abb2e03990c92"><code>4e20544</code></a>
+   Upgrade to protobuf v27.2</li>
+   <li><a
+   href="https://github.com/MaterializeInc/rust-protobuf-native/commit/95b1efd6bb165e894b353aa642b33280ec3a1cce"><code>95b1efd</code></a>
+   protobuf-native: release 0.3.1</li>
+   <li><a
+   href="https://github.com/MaterializeInc/rust-protobuf-native/commit/ffcb2b784fc4ed3fb29188885a1d56a7095df3a9"><code>ffcb2b7</code></a>
+   add new entry to CHANGELOG</li>
+   <li><a
+   href="https://github.com/MaterializeInc/rust-protobuf-native/commit/1a01d55484b31f23e8d2c0d1e63dd3766d83159b"><code>1a01d55</code></a>
+   Change C <code>include</code> statements to use <code>&quot;</code>
+   instead of <code>&lt;</code> (<a
+   href="https://redirect.github.com/MaterializeInc/rust-protobuf-native/issues/16">#16</a>)</li>
+   <li><a
+   href="https://github.com/MaterializeInc/rust-protobuf-native/commit/e44609993b78c7e6d751e080cb8d3387929ea76e"><code>e446099</code></a>
+   protobuf-src: release 2.0.1</li>
+   <li><a
+   href="https://github.com/MaterializeInc/rust-protobuf-native/commit/1fb8ba8a27ef475951d125f18ef685bd19392fbd"><code>1fb8ba8</code></a>
+   protobuf-src: add CHANGELOG entry for lib64 fix</li>
+   <li><a
+   href="https://github.com/MaterializeInc/rust-protobuf-native/commit/741443078b764145c5bb08128abd66e5dd3c8251"><code>7414430</code></a>
+   cargo fmt</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/MaterializeInc/rust-protobuf-native/compare/protobuf-src-v2.0.0...protobuf-src-v2.1.0">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   Updates `schemars` from 0.8.20 to 0.8.21
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/GREsau/schemars/releases">schemars's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>v0.8.21</h2>
+   <h3>Fixed:</h3>
+   <ul>
+   <li>Fix <code>null</code> default not being set on generated schemas (<a
+   href="https://redirect.github.com/GREsau/schemars/issues/295">GREsau/schemars#295</a>
+   / <a
+   href="https://redirect.github.com/GREsau/schemars/pull/296">GREsau/schemars#296</a>)</li>
+   </ul>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Changelog</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/GREsau/schemars/blob/master/CHANGELOG.md">schemars's
+   changelog</a>.</em></p>
+   <blockquote>
+   <h2>[0.8.21] - 2024-05-23</h2>
+   <h3>Fixed:</h3>
+   <ul>
+   <li>Fix <code>null</code> default not being set on generated schemas (<a
+   href="https://redirect.github.com/GREsau/schemars/issues/295">GREsau/schemars#295</a>
+   / <a
+   href="https://redirect.github.com/GREsau/schemars/pull/296">GREsau/schemars#296</a>)</li>
+   </ul>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/GREsau/schemars/commit/5e20a37a1aca1cac04bb3afcbef13ddcbaff7218"><code>5e20a37</code></a>
+   v0.8.21</li>
+   <li><a
+   href="https://github.com/GREsau/schemars/commit/a9a9c7e8ed3c637b0e52b82e4cc572eccd81fd96"><code>a9a9c7e</code></a>
+   Fix &quot;null&quot; default not being set on schema (<a
+   href="https://redirect.github.com/GREsau/schemars/issues/296">#296</a>)</li>
+   <li>See full diff in <a
+   href="https://github.com/GREsau/schemars/compare/v0.8.20...v0.8.21">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   Updates `syn` from 2.0.65 to 2.0.75
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/dtolnay/syn/releases">syn's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>2.0.75</h2>
+   <ul>
+   <li>Automatically fill in missing turbofish when printing ExprPath and
+   other paths in expression position (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1722">#1722</a>)</li>
+   </ul>
+   <h2>2.0.74</h2>
+   <ul>
+   <li>Fix <em>&quot;temporary is dropped and runs the destructor for type
+   `impl Iterator`&quot;</em> regression affecting certain use of
+   <code>Generics</code> iterator methods (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1719">#1719</a>)</li>
+   </ul>
+   <h2>2.0.73</h2>
+   <ul>
+   <li>Support parsing unnamed C varargs within function pointer types (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1711">#1711</a>)</li>
+   <li>Improve synthesized error message on unexpected tokens at the end of
+   the expected contents of a delimited group (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1713">#1713</a>)</li>
+   <li>Support parsing unstable tail call syntax (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1714">#1714</a>, <a
+   href="https://redirect.github.com/rust-lang/rust/issues/112788">rust-lang/rust#112788</a>)</li>
+   <li>Add <a
+   href="https://docs.rs/syn/2.0.73/syn/enum.Fields.html#method.members"><code>Fields::members</code></a>
+   iterator (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1716">#1716</a>,
+   thanks <a
+   href="https://github.com/Fancyflame"><code>@​Fancyflame</code></a>)</li>
+   </ul>
+   <h2>2.0.72</h2>
+   <ul>
+   <li>Parse <code>use&lt;'a, T&gt;</code> precise capturing bounds (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1707">#1707</a>,
+   thanks <a
+   href="https://github.com/compiler-errors"><code>@​compiler-errors</code></a>)</li>
+   </ul>
+   <h2>2.0.71</h2>
+   <ul>
+   <li>Do not require mutable borrow in Punctuated::get() (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1706">#1706</a>,
+   thanks <a
+   href="https://github.com/lemunozm"><code>@​lemunozm</code></a>)</li>
+   </ul>
+   <h2>2.0.70</h2>
+   <ul>
+   <li>Improve parenthesization of closures, jumps, ranges, chained
+   comparisons, and let (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1694">#1694</a>, <a
+   href="https://redirect.github.com/dtolnay/syn/issues/1695">#1695</a>, <a
+   href="https://redirect.github.com/dtolnay/syn/issues/1698">#1698</a>, <a
+   href="https://redirect.github.com/dtolnay/syn/issues/1699">#1699</a>, <a
+   href="https://redirect.github.com/dtolnay/syn/issues/1700">#1700</a>)</li>
+   </ul>
+   <h2>2.0.69</h2>
+   <ul>
+   <li>Correctly parenthesize labeled loops inside a break value (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1692">#1692</a>)</li>
+   <li>Add <code>Punctuated::get</code> and <code>get_mut</code> (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1693">#1693</a>)</li>
+   </ul>
+   <h2>2.0.68</h2>
+   <ul>
+   <li>Improve panic location when <code>parse_quote!</code> parses invalid
+   syntax (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1690">#1690</a>,
+   thanks <a
+   href="https://github.com/stepancheg"><code>@​stepancheg</code></a>)</li>
+   <li>More efficient peek implementation for <code>Group</code> and
+   <code>Lifetime</code> (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1687">#1687</a>)</li>
+   </ul>
+   <h2>2.0.67</h2>
+   <ul>
+   <li>Produce more accurate error message locations for errors located at
+   the end of a nested group (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1679">#1679</a>, <a
+   href="https://redirect.github.com/dtolnay/syn/issues/1680">#1680</a>)</li>
+   <li>Support peeking <code>LitCStr</code> in ParseStream::peek (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1682">#1682</a>)</li>
+   </ul>
+   <h2>2.0.66</h2>
+   <ul>
+   <li>Allow braced structs when parsing ExprLet (<a
+   href="https://redirect.github.com/dtolnay/syn/issues/1671">#1671</a>)</li>
+   </ul>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/dtolnay/syn/commit/d1746fe29d18ca704ed285844c365a14a77e8757"><code>d1746fe</code></a>
+   Release 2.0.75</li>
+   <li><a
+   href="https://github.com/dtolnay/syn/commit/b6936825a637376dd7584653e13776034759d3fd"><code>b693682</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/dtolnay/syn/issues/1722">#1722</a>
+   from dtolnay/exprpath</li>
+   <li><a
+   href="https://github.com/dtolnay/syn/commit/e459ee75bb60f54ce3ca1fb42f515936c06582a4"><code>e459ee7</code></a>
+   Insert turbofish into paths in expression position</li>
+   <li><a
+   href="https://github.com/dtolnay/syn/commit/3bb65aaae153130c3053bc691080aad9eb60a55c"><code>3bb65aa</code></a>
+   Add mod-style printing for paths that cannot contain generic args</li>
+   <li><a
+   href="https://github.com/dtolnay/syn/commit/ae8c84ab744b8c95d6b2607d3987590c12ef5280"><code>ae8c84a</code></a>
+   Handwrite ToTokens impl for Meta</li>
+   <li><a
+   href="https://github.com/dtolnay/syn/commit/5dbfeae027d3d5356289bbd37f5daede30a838cc"><code>5dbfeae</code></a>
+   Name the expr_style argument at all call sites of
+   path::parsing::qpath</li>
+   <li><a
+   href="https://github.com/dtolnay/syn/commit/b15ae2840910cb6102d4d23d8b1e7bcb91304b23"><code>b15ae28</code></a>
+   Release 2.0.74</li>
+   <li><a
+   href="https://github.com/dtolnay/syn/commit/6cf234444021eb753af7a26f8122c28ce9d84935"><code>6cf2344</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/dtolnay/syn/issues/1719">#1719</a>
+   from dtolnay/iterators</li>
+   <li><a
+   href="https://github.com/dtolnay/syn/commit/2955ac55b70952e2114e559d1cd61267225152e8"><code>2955ac5</code></a>
+   Expose non-impl-Trait iterator return types</li>
+   <li><a
+   href="https://github.com/dtolnay/syn/commit/7dc05a564398eabc552a2d46bb580f9a60d410fb"><code>7dc05a5</code></a>
+   Add regression test for issue 1718</li>
+   <li>Additional commits viewable in <a
+   href="https://github.com/dtolnay/syn/compare/2.0.65...2.0.75">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   You can trigger a rebase of this PR by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#215](https://github.com/substrait-io/substrait-rs/issues/215)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#215](https://github.com/substrait-io/substrait-rs/issues/215)**
+    - Bump the cargo group with 10 updates ([`6bb79fb`](https://github.com/substrait-io/substrait-rs/commit/6bb79fbaba920a875e56fe4f0d10a4a68e88be68))
+</details>
+
 ## 0.41.2 (2024-08-19)
+
+<csr-id-1bdd0026af1e1cf77533bc16b791df4e04aaec85/>
 
 ### Chore
 
@@ -10,7 +841,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#213](https://github.com/substrait-io/substrait-rs/issues/213)
 
@@ -22,6 +853,8 @@
 
  * **[#213](https://github.com/substrait-io/substrait-rs/issues/213)**
     - Group `cargo` updates ([`1bdd002`](https://github.com/substrait-io/substrait-rs/commit/1bdd0026af1e1cf77533bc16b791df4e04aaec85))
+ * **Uncategorized**
+    - Release substrait v0.41.2 ([`9680366`](https://github.com/substrait-io/substrait-rs/commit/96803667a6008b71b56ed438a5884e0baa4e4d2d))
 </details>
 
 ## 0.41.1 (2024-08-19)
@@ -426,6 +1259,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
