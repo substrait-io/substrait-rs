@@ -10,14 +10,15 @@ updates:
     commit-message:
       prefix: "chore(deps,cargo)"
     groups:
-      prost:
+      proto:
         applies-to: version-updates
         patterns:
           - "prost*"
-      pbjson:
+          - "pbjson*"
+      cargo:
         applies-to: version-updates
         patterns:
-          - "pbjson*"
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
