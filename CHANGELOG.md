@@ -1,6 +1,32 @@
 
 
+## 0.41.2 (2024-08-19)
+
+### Chore
+
+ - <csr-id-1bdd0026af1e1cf77533bc16b791df4e04aaec85/> group `cargo` updates
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#213](https://github.com/substrait-io/substrait-rs/issues/213)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#213](https://github.com/substrait-io/substrait-rs/issues/213)**
+    - Group `cargo` updates ([`1bdd002`](https://github.com/substrait-io/substrait-rs/commit/1bdd0026af1e1cf77533bc16b791df4e04aaec85))
+</details>
+
 ## 0.41.1 (2024-08-19)
+
+<csr-id-fa7eb2b6e9780e419edca1b30965a6c778faab70/>
 
 ### Chore
 
@@ -12,7 +38,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#207](https://github.com/substrait-io/substrait-rs/issues/207)
 
@@ -24,6 +50,8 @@
 
  * **[#207](https://github.com/substrait-io/substrait-rs/issues/207)**
     - Bump rustix from 0.37.22 to 0.37.27 in the cargo group ([`fa7eb2b`](https://github.com/substrait-io/substrait-rs/commit/fa7eb2b6e9780e419edca1b30965a6c778faab70))
+ * **Uncategorized**
+    - Release substrait v0.41.1 ([`8789d83`](https://github.com/substrait-io/substrait-rs/commit/8789d831670f1d34de83f2eabe6b66caf829cbb0))
 </details>
 
 ## 0.41.0 (2024-08-19)
@@ -398,6 +426,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
