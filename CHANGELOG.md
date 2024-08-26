@@ -1,6 +1,40 @@
 
 
+## 0.41.4 (2024-08-26)
+
+### Chore
+
+ - <csr-id-4a63d96c21f5588400e58bca05cb2937f786a417/> bump the cargo group with 3 updates
+   Bumps the cargo group with 3 updates:
+   [serde](https://github.com/serde-rs/serde),
+   [serde_json](https://github.com/serde-rs/json) and
+   [syn](https://github.com/dtolnay/syn).
+   
+   Updates `serde` from 1.0.208 to 1.0.209
+   Updates `serde_json` from 1.0.125 to 1.0.127
+   Updates `syn` from 2.0.75 to 2.0.76
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#217](https://github.com/substrait-io/substrait-rs/issues/217)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#217](https://github.com/substrait-io/substrait-rs/issues/217)**
+    - Bump the cargo group with 3 updates ([`4a63d96`](https://github.com/substrait-io/substrait-rs/commit/4a63d96c21f5588400e58bca05cb2937f786a417))
+</details>
+
 ## 0.41.3 (2024-08-19)
+
+<csr-id-6bb79fbaba920a875e56fe4f0d10a4a68e88be68/>
 
 ### Chore
 
@@ -815,7 +849,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#215](https://github.com/substrait-io/substrait-rs/issues/215)
 
@@ -827,6 +861,8 @@
 
  * **[#215](https://github.com/substrait-io/substrait-rs/issues/215)**
     - Bump the cargo group with 10 updates ([`6bb79fb`](https://github.com/substrait-io/substrait-rs/commit/6bb79fbaba920a875e56fe4f0d10a4a68e88be68))
+ * **Uncategorized**
+    - Release substrait v0.41.3 ([`cff1cf6`](https://github.com/substrait-io/substrait-rs/commit/cff1cf6094d056445bae29a368d76d377d5d6550))
 </details>
 
 ## 0.41.2 (2024-08-19)
@@ -902,7 +938,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#206](https://github.com/substrait-io/substrait-rs/issues/206)
 
@@ -933,7 +968,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 6 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#205](https://github.com/substrait-io/substrait-rs/issues/205)
 
@@ -972,7 +1006,6 @@
 <csr-read-only-do-not-edit/>
 
  - 3 commits contributed to the release.
- - 13 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#203](https://github.com/substrait-io/substrait-rs/issues/203), [#204](https://github.com/substrait-io/substrait-rs/issues/204)
 
@@ -1003,7 +1036,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 12 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#201](https://github.com/substrait-io/substrait-rs/issues/201)
 
@@ -1120,7 +1152,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#195](https://github.com/substrait-io/substrait-rs/issues/195)
 
@@ -1150,7 +1181,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 6 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#194](https://github.com/substrait-io/substrait-rs/issues/194)
 
@@ -1181,7 +1211,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 34 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#193](https://github.com/substrait-io/substrait-rs/issues/193)
 
@@ -1208,7 +1237,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 4 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#185](https://github.com/substrait-io/substrait-rs/issues/185)
 
@@ -1239,7 +1267,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#189](https://github.com/substrait-io/substrait-rs/issues/189)
 
@@ -1323,13 +1350,16 @@
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
    ---------
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#187](https://github.com/substrait-io/substrait-rs/issues/187)
 
@@ -1439,7 +1469,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 17 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#182](https://github.com/substrait-io/substrait-rs/issues/182)
 
@@ -1470,7 +1499,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#179](https://github.com/substrait-io/substrait-rs/issues/179)
 
@@ -1501,7 +1529,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 3 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#178](https://github.com/substrait-io/substrait-rs/issues/178)
 
@@ -1532,7 +1559,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 6 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#177](https://github.com/substrait-io/substrait-rs/issues/177)
 
@@ -1648,7 +1674,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 5 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#173](https://github.com/substrait-io/substrait-rs/issues/173)
 
@@ -1684,7 +1709,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#169](https://github.com/substrait-io/substrait-rs/issues/169)
 
@@ -1824,7 +1848,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#168](https://github.com/substrait-io/substrait-rs/issues/168)
 
@@ -1877,8 +1900,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 7 commits contributed to the release over the course of 12 calendar days.
- - 17 days passed between releases.
+ - 7 commits contributed to the release.
  - 6 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 5 unique issues were worked on: [#162](https://github.com/substrait-io/substrait-rs/issues/162), [#163](https://github.com/substrait-io/substrait-rs/issues/163), [#164](https://github.com/substrait-io/substrait-rs/issues/164), [#165](https://github.com/substrait-io/substrait-rs/issues/165), [#166](https://github.com/substrait-io/substrait-rs/issues/166)
 
@@ -1923,7 +1945,6 @@
 <csr-read-only-do-not-edit/>
 
  - 3 commits contributed to the release.
- - 2 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#159](https://github.com/substrait-io/substrait-rs/issues/159), [#160](https://github.com/substrait-io/substrait-rs/issues/160)
 
@@ -1981,7 +2002,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 3 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#156](https://github.com/substrait-io/substrait-rs/issues/156)
 
@@ -2150,7 +2170,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 2 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#155](https://github.com/substrait-io/substrait-rs/issues/155)
 
@@ -2214,7 +2233,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 13 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#154](https://github.com/substrait-io/substrait-rs/issues/154)
 
@@ -2241,7 +2259,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 11 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#153](https://github.com/substrait-io/substrait-rs/issues/153)
 
@@ -2360,7 +2377,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 2 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#151](https://github.com/substrait-io/substrait-rs/issues/151)
 
@@ -2429,7 +2445,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#150](https://github.com/substrait-io/substrait-rs/issues/150)
 
@@ -2646,8 +2661,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release over the course of 13 calendar days.
- - 13 days passed between releases.
+ - 4 commits contributed to the release.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 3 unique issues were worked on: [#145](https://github.com/substrait-io/substrait-rs/issues/145), [#146](https://github.com/substrait-io/substrait-rs/issues/146), [#149](https://github.com/substrait-io/substrait-rs/issues/149)
 
@@ -2703,7 +2717,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 22 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#147](https://github.com/substrait-io/substrait-rs/issues/147)
 
@@ -2732,7 +2745,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#144](https://github.com/substrait-io/substrait-rs/issues/144)
 
@@ -2902,7 +2914,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 9 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#143](https://github.com/substrait-io/substrait-rs/issues/143)
 
@@ -3257,7 +3268,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#140](https://github.com/substrait-io/substrait-rs/issues/140)
 
@@ -3290,7 +3300,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 20 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#139](https://github.com/substrait-io/substrait-rs/issues/139)
 
@@ -3350,7 +3359,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 13 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#137](https://github.com/substrait-io/substrait-rs/issues/137)
 
@@ -3532,7 +3540,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#135](https://github.com/substrait-io/substrait-rs/issues/135)
 
@@ -3749,7 +3756,6 @@
 <csr-read-only-do-not-edit/>
 
  - 3 commits contributed to the release.
- - 11 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#132](https://github.com/substrait-io/substrait-rs/issues/132), [#134](https://github.com/substrait-io/substrait-rs/issues/134)
 
@@ -3837,7 +3843,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 2 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#121](https://github.com/substrait-io/substrait-rs/issues/121)
 
@@ -3889,7 +3894,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#131](https://github.com/substrait-io/substrait-rs/issues/131)
 
@@ -3973,7 +3977,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 13 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#130](https://github.com/substrait-io/substrait-rs/issues/130)
 
@@ -4004,7 +4007,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 12 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#126](https://github.com/substrait-io/substrait-rs/issues/126)
 
@@ -4298,7 +4300,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 7 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#124](https://github.com/substrait-io/substrait-rs/issues/124)
 
@@ -4461,7 +4462,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#120](https://github.com/substrait-io/substrait-rs/issues/120)
 
@@ -4544,7 +4544,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 25 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#119](https://github.com/substrait-io/substrait-rs/issues/119)
 
@@ -4673,7 +4672,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 14 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#116](https://github.com/substrait-io/substrait-rs/issues/116)
 
@@ -4845,7 +4843,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 15 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#113](https://github.com/substrait-io/substrait-rs/issues/113)
 
@@ -4977,7 +4974,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 26 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#111](https://github.com/substrait-io/substrait-rs/issues/111)
 
@@ -5183,8 +5179,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 10 commits contributed to the release over the course of 28 calendar days.
- - 29 days passed between releases.
+ - 10 commits contributed to the release.
  - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 9 unique issues were worked on: [#102](https://github.com/substrait-io/substrait-rs/issues/102), [#104](https://github.com/substrait-io/substrait-rs/issues/104), [#105](https://github.com/substrait-io/substrait-rs/issues/105), [#106](https://github.com/substrait-io/substrait-rs/issues/106), [#107](https://github.com/substrait-io/substrait-rs/issues/107), [#108](https://github.com/substrait-io/substrait-rs/issues/108), [#58](https://github.com/substrait-io/substrait-rs/issues/58), [#87](https://github.com/substrait-io/substrait-rs/issues/87), [#90](https://github.com/substrait-io/substrait-rs/issues/90)
 
@@ -5300,7 +5295,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 10 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#101](https://github.com/substrait-io/substrait-rs/issues/101)
 
@@ -5331,7 +5325,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 3 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#97](https://github.com/substrait-io/substrait-rs/issues/97)
 
@@ -5374,7 +5367,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 6 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#96](https://github.com/substrait-io/substrait-rs/issues/96)
 
@@ -5442,7 +5434,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 8 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#93](https://github.com/substrait-io/substrait-rs/issues/93)
 
@@ -5487,7 +5478,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 3 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#91](https://github.com/substrait-io/substrait-rs/issues/91)
 
@@ -5516,7 +5506,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#88](https://github.com/substrait-io/substrait-rs/issues/88)
 
@@ -5543,7 +5532,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 2 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#78](https://github.com/substrait-io/substrait-rs/issues/78)
 
@@ -5873,7 +5861,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 2 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#60](https://github.com/substrait-io/substrait-rs/issues/60)
 
@@ -5930,7 +5917,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#81](https://github.com/substrait-io/substrait-rs/issues/81)
 
@@ -6005,7 +5991,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 4 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#73](https://github.com/substrait-io/substrait-rs/issues/73)
 
@@ -6035,7 +6020,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#77](https://github.com/substrait-io/substrait-rs/issues/77)
 
@@ -6066,7 +6050,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 6 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#46](https://github.com/substrait-io/substrait-rs/issues/46)
 
@@ -6095,7 +6078,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#59](https://github.com/substrait-io/substrait-rs/issues/59)
 
@@ -6140,7 +6122,6 @@
 <csr-read-only-do-not-edit/>
 
  - 3 commits contributed to the release.
- - 6 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#57](https://github.com/substrait-io/substrait-rs/issues/57), [#72](https://github.com/substrait-io/substrait-rs/issues/72)
 
@@ -6174,7 +6155,6 @@
 <csr-read-only-do-not-edit/>
 
  - 2 commits contributed to the release.
- - 53 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#69](https://github.com/substrait-io/substrait-rs/issues/69)
 
@@ -6200,7 +6180,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 28 commits contributed to the release over the course of 268 calendar days.
+ - 28 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 23 unique issues were worked on: [#1](https://github.com/substrait-io/substrait-rs/issues/1), [#10](https://github.com/substrait-io/substrait-rs/issues/10), [#11](https://github.com/substrait-io/substrait-rs/issues/11), [#14](https://github.com/substrait-io/substrait-rs/issues/14), [#2](https://github.com/substrait-io/substrait-rs/issues/2), [#23](https://github.com/substrait-io/substrait-rs/issues/23), [#26](https://github.com/substrait-io/substrait-rs/issues/26), [#27](https://github.com/substrait-io/substrait-rs/issues/27), [#29](https://github.com/substrait-io/substrait-rs/issues/29), [#30](https://github.com/substrait-io/substrait-rs/issues/30), [#31](https://github.com/substrait-io/substrait-rs/issues/31), [#32](https://github.com/substrait-io/substrait-rs/issues/32), [#33](https://github.com/substrait-io/substrait-rs/issues/33), [#35](https://github.com/substrait-io/substrait-rs/issues/35), [#37](https://github.com/substrait-io/substrait-rs/issues/37), [#39](https://github.com/substrait-io/substrait-rs/issues/39), [#4](https://github.com/substrait-io/substrait-rs/issues/4), [#40](https://github.com/substrait-io/substrait-rs/issues/40), [#41](https://github.com/substrait-io/substrait-rs/issues/41), [#42](https://github.com/substrait-io/substrait-rs/issues/42), [#48](https://github.com/substrait-io/substrait-rs/issues/48), [#5](https://github.com/substrait-io/substrait-rs/issues/5), [#6](https://github.com/substrait-io/substrait-rs/issues/6)
 
