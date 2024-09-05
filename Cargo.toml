@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 [package]
 name = "substrait"
-version = "0.41.7"
+version = "0.41.8"
 edition = "2021"
 rust-version = "1.70"
 description = "Cross-Language Serialization for Relational Algebra"
