@@ -1,6 +1,37 @@
 
 
+## 0.41.9 (2024-09-09)
+
+### Chore
+
+ - <csr-id-c919cba9c8a6e146f54ec05e10cfce44a7846f1b/> bump serde from 1.0.209 to 1.0.210 in the cargo group
+   Bumps the cargo group with 1 update:
+   [serde](https://github.com/serde-rs/serde).
+   
+   Updates `serde` from 1.0.209 to 1.0.210
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 4 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#224](https://github.com/substrait-io/substrait-rs/issues/224)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#224](https://github.com/substrait-io/substrait-rs/issues/224)**
+    - Bump serde from 1.0.209 to 1.0.210 in the cargo group ([`c919cba`](https://github.com/substrait-io/substrait-rs/commit/c919cba9c8a6e146f54ec05e10cfce44a7846f1b))
+</details>
+
 ## 0.41.8 (2024-09-05)
+
+<csr-id-0447cc3ffa511de87bd4a4ea21455d0377173d16/>
 
 ### Chore
 
@@ -14,7 +45,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 2 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#222](https://github.com/substrait-io/substrait-rs/issues/222)
@@ -27,6 +58,8 @@
 
  * **[#222](https://github.com/substrait-io/substrait-rs/issues/222)**
     - Bump serde_json from 1.0.127 to 1.0.128 in the cargo group ([`0447cc3`](https://github.com/substrait-io/substrait-rs/commit/0447cc3ffa511de87bd4a4ea21455d0377173d16))
+ * **Uncategorized**
+    - Release substrait v0.41.8 ([`d793b47`](https://github.com/substrait-io/substrait-rs/commit/d793b47a78f6c8c03e6ec6545f3640c7d6012ad4))
 </details>
 
 ## 0.41.7 (2024-09-02)
@@ -1426,6 +1459,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
