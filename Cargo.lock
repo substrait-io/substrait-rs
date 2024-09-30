@@ -621,6 +621,7 @@ dependencies = [
  "prost-build",
  "prost-types",
  "protobuf-src",
+ "regress",
  "schemars",
  "semver",
  "serde",
