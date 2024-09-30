@@ -170,7 +170,6 @@ fn text(out_dir: &Path) -> Result<(), Box<dyn Error>> {
             r#"
 #[doc = "Generated types for `{id}`"]
 pub mod {title} {{
-    use serde::{{Deserialize, Serialize}};
     {}
 }}"#,
             prettyplease::unparse(&syn::parse2::<syn::File>(type_space.to_stream())?),
