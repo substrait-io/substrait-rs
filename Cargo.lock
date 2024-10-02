@@ -608,7 +608,7 @@ dependencies = [
 
 [[package]]
 name = "substrait"
-version = "0.42.5"
+version = "0.43.0"
 dependencies = [
  "heck",
  "hex",
