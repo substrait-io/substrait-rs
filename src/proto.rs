@@ -4,6 +4,7 @@
     clippy::large_enum_variant,
     clippy::needless_borrow,
     clippy::needless_borrows_for_generic_args,
+    clippy::needless_lifetimes,
     rustdoc::invalid_html_tags
 )]
 
