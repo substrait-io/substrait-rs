@@ -1,6 +1,33 @@
 
 
+## 0.49.2 (2024-12-02)
+
+### Chore
+
+ - <csr-id-89672a7b39455721f9da5720584c4be7346d9321/> fix 1.83 clippy warnings
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 6 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#257](https://github.com/substrait-io/substrait-rs/issues/257)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#257](https://github.com/substrait-io/substrait-rs/issues/257)**
+    - Fix 1.83 clippy warnings ([`89672a7`](https://github.com/substrait-io/substrait-rs/commit/89672a7b39455721f9da5720584c4be7346d9321))
+</details>
+
 ## 0.49.1 (2024-11-25)
+
+<csr-id-f263f6e0b92b3f8ca23de3bd84bd84f53beeda57/>
 
 ### Chore
 
@@ -14,7 +41,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#256](https://github.com/substrait-io/substrait-rs/issues/256)
 
@@ -26,6 +53,8 @@
 
  * **[#256](https://github.com/substrait-io/substrait-rs/issues/256)**
     - Bump url from 2.5.3 to 2.5.4 in the cargo group ([`f263f6e`](https://github.com/substrait-io/substrait-rs/commit/f263f6e0b92b3f8ca23de3bd84bd84f53beeda57))
+ * **Uncategorized**
+    - Release substrait v0.49.1 ([`73dd171`](https://github.com/substrait-io/substrait-rs/commit/73dd1714f4b2829be1ed3d894a21c087c4b62fe1))
 </details>
 
 ## 0.49.0 (2024-11-24)
@@ -2342,6 +2371,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
