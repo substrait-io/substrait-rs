@@ -1,6 +1,82 @@
 
 
+## 0.49.4 (2024-12-04)
+
+### Chore
+
+ - <csr-id-c7b582ff64ac5cb01d2824fb34aab9370b3d0a3c/> bump thiserror from 2.0.3 to 2.0.4 in the cargo group
+   Bumps the cargo group with 1 update:
+   [thiserror](https://github.com/dtolnay/thiserror).
+   
+   Updates `thiserror` from 2.0.3 to 2.0.4
+   <details>
+   <summary>Release notes</summary>
+   <p><em>Sourced from <a
+   href="https://github.com/dtolnay/thiserror/releases">thiserror's
+   releases</a>.</em></p>
+   <blockquote>
+   <h2>2.0.4</h2>
+   <ul>
+   <li>Eliminate needless_lifetimes clippy lint in generated
+   <code>From</code> impls (<a
+   href="https://redirect.github.com/dtolnay/thiserror/issues/391">#391</a>,
+   thanks <a
+   href="https://github.com/matt-phylum"><code>@​matt-phylum</code></a>)</li>
+   </ul>
+   </blockquote>
+   </details>
+   <details>
+   <summary>Commits</summary>
+   <ul>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/70a12613ef6459c90ea69e22cdb41ec20c98e038"><code>70a1261</code></a>
+   Release 2.0.4</li>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/4fde2846c888d4954ab1a17cd2efba9cf24d30e7"><code>4fde284</code></a>
+   Merge pull request <a
+   href="https://redirect.github.com/dtolnay/thiserror/issues/391">#391</a>
+   from matt-phylum/needless-lifetimes</li>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/aa19b7cfce13336cb171ad6e8cdb9b50cc1c9dd5"><code>aa19b7c</code></a>
+   suppress needless_lifetimes lints from clippy 0.1.83</li>
+   <li><a
+   href="https://github.com/dtolnay/thiserror/commit/ad2f20b9f72d2ad998727c7ed1c1d4fc8b7c805a"><code>ad2f20b</code></a>
+   Use ui test syntax that does not interfere with rustfmt</li>
+   <li>See full diff in <a
+   href="https://github.com/dtolnay/thiserror/compare/2.0.3...2.0.4">compare
+   view</a></li>
+   </ul>
+   </details>
+   <br />
+   
+   
+   [![Dependabot compatibility
+   score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=thiserror&package-manager=cargo&previous-version=2.0.3&new-version=2.0.4)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
+   
+   You can trigger a rebase of this PR by commenting `@dependabot rebase`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#260](https://github.com/substrait-io/substrait-rs/issues/260)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#260](https://github.com/substrait-io/substrait-rs/issues/260)**
+    - Bump thiserror from 2.0.3 to 2.0.4 in the cargo group ([`c7b582f`](https://github.com/substrait-io/substrait-rs/commit/c7b582ff64ac5cb01d2824fb34aab9370b3d0a3c))
+</details>
+
 ## 0.49.3 (2024-12-02)
+
+<csr-id-cbc82eac7cfd7f166f9ca25d0c03741dcf485f1e/>
 
 ### Chore
 
@@ -14,7 +90,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#259](https://github.com/substrait-io/substrait-rs/issues/259)
 
@@ -26,6 +102,8 @@
 
  * **[#259](https://github.com/substrait-io/substrait-rs/issues/259)**
     - Bump syn from 2.0.89 to 2.0.90 in the cargo group ([`cbc82ea`](https://github.com/substrait-io/substrait-rs/commit/cbc82eac7cfd7f166f9ca25d0c03741dcf485f1e))
+ * **Uncategorized**
+    - Release substrait v0.49.3 ([`03ef749`](https://github.com/substrait-io/substrait-rs/commit/03ef749f749c7dd5027f20bd3e9958bcd785c9f2))
 </details>
 
 ## 0.49.2 (2024-12-02)
@@ -2403,6 +2481,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
