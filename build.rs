@@ -230,12 +230,12 @@ const {var_name}: &str = include_str!("{}/{}");
         r#"
 use std::collections::HashMap;
 use std::str::FromStr;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use crate::text::simple_extensions::SimpleExtensions;
 use url::Url;
 
 /// Map with Substrait core extensions. Maps URIs to included extensions.
-pub static EXTENSIONS: Lazy<HashMap<Url, SimpleExtensions>> = Lazy::new(|| {
+pub static EXTENSIONS: LazyLock<HashMap<Url, SimpleExtensions>> = LazyLock::new(|| {
     let mut map = HashMap::new();"#,
     );
 
