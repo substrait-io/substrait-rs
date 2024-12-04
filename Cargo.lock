@@ -761,7 +761,6 @@ version = "0.49.4"
 dependencies = [
  "heck",
  "hex",
- "once_cell",
  "pbjson",
  "pbjson-build",
  "pbjson-types",

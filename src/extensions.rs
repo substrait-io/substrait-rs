@@ -12,11 +12,11 @@ include!(concat!(env!("OUT_DIR"), "/extensions.in"));
 mod tests {
     use super::*;
 
-    use once_cell::sync::Lazy;
+    use std::sync::LazyLock;
 
     #[test]
     fn core_extensions() {
         // Force evaluation of core extensions.
-        Lazy::force(&EXTENSIONS);
+        LazyLock::force(&EXTENSIONS);
     }
 }
