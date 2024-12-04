@@ -1,6 +1,38 @@
 
 
+## 0.49.5 (2024-12-04)
+
+### Chore
+
+ - <csr-id-a1a52c9b48c22252d4d3a891667bd0f99b6a0aad/> bump release job rust version
+
+### Refactor
+
+ - <csr-id-816a6e26a4851f552cbae1fb6ad14c914fc256ec/> replace `once_cell` with `std::sync::LazyLock`, bumping msrv to `1.80.1`
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#261](https://github.com/substrait-io/substrait-rs/issues/261), [#262](https://github.com/substrait-io/substrait-rs/issues/262)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#261](https://github.com/substrait-io/substrait-rs/issues/261)**
+    - Replace `once_cell` with `std::sync::LazyLock`, bumping msrv to `1.80.1` ([`816a6e2`](https://github.com/substrait-io/substrait-rs/commit/816a6e26a4851f552cbae1fb6ad14c914fc256ec))
+ * **[#262](https://github.com/substrait-io/substrait-rs/issues/262)**
+    - Bump release job rust version ([`a1a52c9`](https://github.com/substrait-io/substrait-rs/commit/a1a52c9b48c22252d4d3a891667bd0f99b6a0aad))
+</details>
+
 ## 0.49.4 (2024-12-04)
+
+<csr-id-c7b582ff64ac5cb01d2824fb34aab9370b3d0a3c/>
 
 ### Chore
 
@@ -59,7 +91,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#260](https://github.com/substrait-io/substrait-rs/issues/260)
@@ -72,6 +104,8 @@
 
  * **[#260](https://github.com/substrait-io/substrait-rs/issues/260)**
     - Bump thiserror from 2.0.3 to 2.0.4 in the cargo group ([`c7b582f`](https://github.com/substrait-io/substrait-rs/commit/c7b582ff64ac5cb01d2824fb34aab9370b3d0a3c))
+ * **Uncategorized**
+    - Release substrait v0.49.4 ([`ebd0bcf`](https://github.com/substrait-io/substrait-rs/commit/ebd0bcf2d9b63eb6ea1b7b1c6325aad152792299))
 </details>
 
 ## 0.49.3 (2024-12-02)
@@ -2481,6 +2515,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
