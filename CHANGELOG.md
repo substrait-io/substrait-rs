@@ -1,6 +1,42 @@
 
 
+## 0.49.6 (2024-12-09)
+
+### Chore
+
+ - <csr-id-048adf88834e9963b641fa56d5751d5b611da78a/> bump the proto group with 3 updates
+   Bumps the proto group with 3 updates:
+   [prost](https://github.com/tokio-rs/prost),
+   [prost-types](https://github.com/tokio-rs/prost) and
+   [prost-build](https://github.com/tokio-rs/prost).
+   
+   Updates `prost` from 0.13.3 to 0.13.4
+   Updates `prost-types` from 0.13.3 to 0.13.4
+   Updates `prost-build` from 0.13.3 to 0.13.4
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 4 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#265](https://github.com/substrait-io/substrait-rs/issues/265)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#265](https://github.com/substrait-io/substrait-rs/issues/265)**
+    - Bump the proto group with 3 updates ([`048adf8`](https://github.com/substrait-io/substrait-rs/commit/048adf88834e9963b641fa56d5751d5b611da78a))
+</details>
+
 ## 0.49.5 (2024-12-04)
+
+<csr-id-a1a52c9b48c22252d4d3a891667bd0f99b6a0aad/>
+<csr-id-816a6e26a4851f552cbae1fb6ad14c914fc256ec/>
 
 ### Chore
 
@@ -14,7 +50,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#261](https://github.com/substrait-io/substrait-rs/issues/261), [#262](https://github.com/substrait-io/substrait-rs/issues/262)
 
@@ -28,6 +64,8 @@
     - Replace `once_cell` with `std::sync::LazyLock`, bumping msrv to `1.80.1` ([`816a6e2`](https://github.com/substrait-io/substrait-rs/commit/816a6e26a4851f552cbae1fb6ad14c914fc256ec))
  * **[#262](https://github.com/substrait-io/substrait-rs/issues/262)**
     - Bump release job rust version ([`a1a52c9`](https://github.com/substrait-io/substrait-rs/commit/a1a52c9b48c22252d4d3a891667bd0f99b6a0aad))
+ * **Uncategorized**
+    - Release substrait v0.49.5 ([`ed61a7d`](https://github.com/substrait-io/substrait-rs/commit/ed61a7d6536bad6c4354bc3c3c61704ce01e86ba))
 </details>
 
 ## 0.49.4 (2024-12-04)
@@ -2515,6 +2553,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
