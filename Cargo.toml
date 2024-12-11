@@ -41,7 +41,7 @@ prost-types = "0.13.4"
 url = { version = "2.5.4", optional = true }
 regress = "0.10.1"
 semver = { version = "1.0.23", optional = true }
-serde = { version = "1.0.215", features = ["derive"] }
+serde = { version = "1.0.216", features = ["derive"] }
 serde_json = "1.0.133"
 serde_yaml = { version = "0.9.34", optional = true }
 thiserror = { version = "2.0.6", optional = true }
