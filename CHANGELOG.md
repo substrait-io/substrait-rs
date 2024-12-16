@@ -1,6 +1,78 @@
 
 
+## 0.50.0 (2024-12-16)
+
+### Chore
+
+ - <csr-id-6fcc5a5834fdd2dd1bf0f2c87f161ba182bc365b/> bump thiserror from 2.0.6 to 2.0.7 in the cargo group
+   Bumps the cargo group with 1 update:
+   [thiserror](https://github.com/dtolnay/thiserror).
+   
+   Updates `thiserror` from 2.0.6 to 2.0.7
+ - <csr-id-3915637bd60e3835b276bc710be8da6acfb78e0b/> bump semver from 1.0.23 to 1.0.24 in the cargo group
+   Bumps the cargo group with 1 update:
+   [semver](https://github.com/dtolnay/semver).
+   
+   Updates `semver` from 1.0.23 to 1.0.24
+ - <csr-id-0c347921dcbf0a6ca38a570bcecd76e998a04785/> bump serde from 1.0.215 to 1.0.216 in the cargo group
+   Bumps the cargo group with 1 update:
+   [serde](https://github.com/serde-rs/serde).
+   
+   Updates `serde` from 1.0.215 to 1.0.216
+ - <csr-id-4d6833f945397456a519e6815c1d8c646d5dfa5c/> bump thiserror from 2.0.4 to 2.0.6 in the cargo group
+   Bumps the cargo group with 1 update:
+   [thiserror](https://github.com/dtolnay/thiserror).
+   
+   Updates `thiserror` from 2.0.4 to 2.0.6
+ - <csr-id-048adf88834e9963b641fa56d5751d5b611da78a/> bump the proto group with 3 updates
+   Bumps the proto group with 3 updates:
+   [prost](https://github.com/tokio-rs/prost),
+   [prost-types](https://github.com/tokio-rs/prost) and
+   [prost-build](https://github.com/tokio-rs/prost).
+   
+   Updates `prost` from 0.13.3 to 0.13.4
+   Updates `prost-types` from 0.13.3 to 0.13.4
+   Updates `prost-build` from 0.13.3 to 0.13.4
+
+### Chore (BREAKING)
+
+ - <csr-id-01c8aec03e7f039b8b8a5e9903ce7b6c85554f46/> bump substrait from `0.62.0` to `0.63.0`
+   Bumps [substrait](https://github.com/substrait-io/substrait) from
+   `eec1c18` to `6d481e1`.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 6 commits contributed to the release.
+ - 11 days passed between releases.
+ - 6 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 6 unique issues were worked on: [#265](https://github.com/substrait-io/substrait-rs/issues/265), [#266](https://github.com/substrait-io/substrait-rs/issues/266), [#267](https://github.com/substrait-io/substrait-rs/issues/267), [#268](https://github.com/substrait-io/substrait-rs/issues/268), [#269](https://github.com/substrait-io/substrait-rs/issues/269), [#270](https://github.com/substrait-io/substrait-rs/issues/270)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#265](https://github.com/substrait-io/substrait-rs/issues/265)**
+    - Bump the proto group with 3 updates ([`048adf8`](https://github.com/substrait-io/substrait-rs/commit/048adf88834e9963b641fa56d5751d5b611da78a))
+ * **[#266](https://github.com/substrait-io/substrait-rs/issues/266)**
+    - Bump thiserror from 2.0.4 to 2.0.6 in the cargo group ([`4d6833f`](https://github.com/substrait-io/substrait-rs/commit/4d6833f945397456a519e6815c1d8c646d5dfa5c))
+ * **[#267](https://github.com/substrait-io/substrait-rs/issues/267)**
+    - Bump serde from 1.0.215 to 1.0.216 in the cargo group ([`0c34792`](https://github.com/substrait-io/substrait-rs/commit/0c347921dcbf0a6ca38a570bcecd76e998a04785))
+ * **[#268](https://github.com/substrait-io/substrait-rs/issues/268)**
+    - Bump semver from 1.0.23 to 1.0.24 in the cargo group ([`3915637`](https://github.com/substrait-io/substrait-rs/commit/3915637bd60e3835b276bc710be8da6acfb78e0b))
+ * **[#269](https://github.com/substrait-io/substrait-rs/issues/269)**
+    - Bump substrait from `0.62.0` to `0.63.0` ([`01c8aec`](https://github.com/substrait-io/substrait-rs/commit/01c8aec03e7f039b8b8a5e9903ce7b6c85554f46))
+ * **[#270](https://github.com/substrait-io/substrait-rs/issues/270)**
+    - Bump thiserror from 2.0.6 to 2.0.7 in the cargo group ([`6fcc5a5`](https://github.com/substrait-io/substrait-rs/commit/6fcc5a5834fdd2dd1bf0f2c87f161ba182bc365b))
+</details>
+
 ## 0.49.5 (2024-12-04)
+
+<csr-id-a1a52c9b48c22252d4d3a891667bd0f99b6a0aad/>
+<csr-id-816a6e26a4851f552cbae1fb6ad14c914fc256ec/>
 
 ### Chore
 
@@ -14,7 +86,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#261](https://github.com/substrait-io/substrait-rs/issues/261), [#262](https://github.com/substrait-io/substrait-rs/issues/262)
 
@@ -28,6 +100,8 @@
     - Replace `once_cell` with `std::sync::LazyLock`, bumping msrv to `1.80.1` ([`816a6e2`](https://github.com/substrait-io/substrait-rs/commit/816a6e26a4851f552cbae1fb6ad14c914fc256ec))
  * **[#262](https://github.com/substrait-io/substrait-rs/issues/262)**
     - Bump release job rust version ([`a1a52c9`](https://github.com/substrait-io/substrait-rs/commit/a1a52c9b48c22252d4d3a891667bd0f99b6a0aad))
+ * **Uncategorized**
+    - Release substrait v0.49.5 ([`ed61a7d`](https://github.com/substrait-io/substrait-rs/commit/ed61a7d6536bad6c4354bc3c3c61704ce01e86ba))
 </details>
 
 ## 0.49.4 (2024-12-04)
@@ -2515,6 +2589,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
