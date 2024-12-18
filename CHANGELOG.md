@@ -1,6 +1,42 @@
 
 
+## 0.50.1 (2024-12-18)
+
+### Chore
+
+ - <csr-id-c6a1a70b0f5d201af6e8aa4938a088740ea8eb7c/> bump thiserror from 2.0.7 to 2.0.8 in the cargo group
+   Bumps the cargo group with 1 update:
+   [thiserror](https://github.com/dtolnay/thiserror).
+   
+   Updates `thiserror` from 2.0.7 to 2.0.8
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#271](https://github.com/substrait-io/substrait-rs/issues/271)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#271](https://github.com/substrait-io/substrait-rs/issues/271)**
+    - Bump thiserror from 2.0.7 to 2.0.8 in the cargo group ([`c6a1a70`](https://github.com/substrait-io/substrait-rs/commit/c6a1a70b0f5d201af6e8aa4938a088740ea8eb7c))
+</details>
+
 ## 0.50.0 (2024-12-16)
+
+<csr-id-6fcc5a5834fdd2dd1bf0f2c87f161ba182bc365b/>
+<csr-id-3915637bd60e3835b276bc710be8da6acfb78e0b/>
+<csr-id-0c347921dcbf0a6ca38a570bcecd76e998a04785/>
+<csr-id-4d6833f945397456a519e6815c1d8c646d5dfa5c/>
+<csr-id-048adf88834e9963b641fa56d5751d5b611da78a/>
+<csr-id-01c8aec03e7f039b8b8a5e9903ce7b6c85554f46/>
 
 ### Chore
 
@@ -44,7 +80,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 6 commits contributed to the release.
+ - 7 commits contributed to the release.
  - 11 days passed between releases.
  - 6 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 6 unique issues were worked on: [#265](https://github.com/substrait-io/substrait-rs/issues/265), [#266](https://github.com/substrait-io/substrait-rs/issues/266), [#267](https://github.com/substrait-io/substrait-rs/issues/267), [#268](https://github.com/substrait-io/substrait-rs/issues/268), [#269](https://github.com/substrait-io/substrait-rs/issues/269), [#270](https://github.com/substrait-io/substrait-rs/issues/270)
@@ -67,6 +103,8 @@
     - Bump substrait from `0.62.0` to `0.63.0` ([`01c8aec`](https://github.com/substrait-io/substrait-rs/commit/01c8aec03e7f039b8b8a5e9903ce7b6c85554f46))
  * **[#270](https://github.com/substrait-io/substrait-rs/issues/270)**
     - Bump thiserror from 2.0.6 to 2.0.7 in the cargo group ([`6fcc5a5`](https://github.com/substrait-io/substrait-rs/commit/6fcc5a5834fdd2dd1bf0f2c87f161ba182bc365b))
+ * **Uncategorized**
+    - Release substrait v0.50.0 ([`26450f1`](https://github.com/substrait-io/substrait-rs/commit/26450f1ac3156ce44e773d7c93c4cce117e3e979))
 </details>
 
 ## 0.49.5 (2024-12-04)
@@ -2589,6 +2627,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
