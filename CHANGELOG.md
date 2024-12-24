@@ -1,6 +1,40 @@
 
 
+## 0.50.3 (2024-12-24)
+
+### Chore
+
+ - <csr-id-8feb652625a25cf24197a188cc0390f52b5351ec/> bump the cargo group with 3 updates
+   Bumps the cargo group with 3 updates:
+   [serde_json](https://github.com/serde-rs/json),
+   [thiserror](https://github.com/dtolnay/thiserror) and
+   [syn](https://github.com/dtolnay/syn).
+   
+   Updates `serde_json` from 1.0.133 to 1.0.134
+   Updates `thiserror` from 2.0.8 to 2.0.9
+   Updates `syn` from 2.0.90 to 2.0.91
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#273](https://github.com/substrait-io/substrait-rs/issues/273)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#273](https://github.com/substrait-io/substrait-rs/issues/273)**
+    - Bump the cargo group with 3 updates ([`8feb652`](https://github.com/substrait-io/substrait-rs/commit/8feb652625a25cf24197a188cc0390f52b5351ec))
+</details>
+
 ## 0.50.2 (2024-12-22)
+
+<csr-id-b6cee52b525a01de89ca0262898c2006f60221f0/>
 
 ### Chore
 
@@ -12,7 +46,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 4 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#272](https://github.com/substrait-io/substrait-rs/issues/272)
@@ -25,6 +59,8 @@
 
  * **[#272](https://github.com/substrait-io/substrait-rs/issues/272)**
     - Bump substrait from `0.63.0` to `0.63.1` ([`b6cee52`](https://github.com/substrait-io/substrait-rs/commit/b6cee52b525a01de89ca0262898c2006f60221f0))
+ * **Uncategorized**
+    - Release substrait v0.50.2 ([`311d073`](https://github.com/substrait-io/substrait-rs/commit/311d07324a24d42189146066966fc8b121ee3db1))
 </details>
 
 ## 0.50.1 (2024-12-18)
@@ -2658,6 +2694,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
@@ -6742,7 +6782,7 @@
 
 <csr-read-only-do-not-edit/>
 
- - 10 commits contributed to the release.
+ - 10 commits contributed to the release over the course of 28 calendar days.
  - 29 days passed between releases.
  - 7 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 9 unique issues were worked on: [#102](https://github.com/substrait-io/substrait-rs/issues/102), [#104](https://github.com/substrait-io/substrait-rs/issues/104), [#105](https://github.com/substrait-io/substrait-rs/issues/105), [#106](https://github.com/substrait-io/substrait-rs/issues/106), [#107](https://github.com/substrait-io/substrait-rs/issues/107), [#108](https://github.com/substrait-io/substrait-rs/issues/108), [#58](https://github.com/substrait-io/substrait-rs/issues/58), [#87](https://github.com/substrait-io/substrait-rs/issues/87), [#90](https://github.com/substrait-io/substrait-rs/issues/90)
