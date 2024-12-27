@@ -1,6 +1,32 @@
 
 
+## 0.50.4 (2024-12-27)
+
+### Chore
+
+ - <csr-id-70706b2378e0c258b14d5b6c7b360df78ba78e1f/> bump syn from 2.0.91 to 2.0.92 in the cargo group
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#274](https://github.com/substrait-io/substrait-rs/issues/274)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#274](https://github.com/substrait-io/substrait-rs/issues/274)**
+    - Bump syn from 2.0.91 to 2.0.92 in the cargo group ([`70706b2`](https://github.com/substrait-io/substrait-rs/commit/70706b2378e0c258b14d5b6c7b360df78ba78e1f))
+</details>
+
 ## 0.50.3 (2024-12-24)
+
+<csr-id-8feb652625a25cf24197a188cc0390f52b5351ec/>
 
 ### Chore
 
@@ -18,7 +44,8 @@
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
+ - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#273](https://github.com/substrait-io/substrait-rs/issues/273)
 
@@ -30,6 +57,8 @@
 
  * **[#273](https://github.com/substrait-io/substrait-rs/issues/273)**
     - Bump the cargo group with 3 updates ([`8feb652`](https://github.com/substrait-io/substrait-rs/commit/8feb652625a25cf24197a188cc0390f52b5351ec))
+ * **Uncategorized**
+    - Release substrait v0.50.3 ([`c91db97`](https://github.com/substrait-io/substrait-rs/commit/c91db9727b937acffdb911c3df78d193ee119fee))
 </details>
 
 ## 0.50.2 (2024-12-22)
@@ -2694,6 +2723,10 @@
 
 ### New Features
 
+ - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
+   Include core extensions from `Subtrait`.
+   The majority of the code originates from the un-merged pr #89.
+   ---------
  - <csr-id-b9fba0f41fa9f9f43cb731c0637fe9bc36d5c288/> include Substrait core extensions
    Include core extensions from `Subtrait`.
    The majority of the code originates from the un-merged pr #89.
