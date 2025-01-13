@@ -39,17 +39,17 @@ pbjson-types = { version = "0.7.0", optional = true }
 prost = "0.13.4"
 prost-types = "0.13.4"
 url = { version = "2.5.4", optional = true }
-regress = "0.10.1"
+regress = "0.10.2"
 semver = { version = "1.0.24", optional = true }
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.135"
 serde_yaml = { version = "0.9.34", optional = true }
-thiserror = { version = "2.0.10", optional = true }
+thiserror = { version = "2.0.11", optional = true }
 
 [build-dependencies]
 heck = "0.5.0"
 pbjson-build = { version = "0.7.0", optional = true }
-prettyplease = "0.2.27"
+prettyplease = "0.2.29"
 prost-build = { version = "0.13.4", default-features = false }
 protobuf-src = { version = "2.1.0", optional = true }
 schemars = "0.8.21"
