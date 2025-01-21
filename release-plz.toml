@@ -1,0 +1,5 @@
+[workspace]
+release_always = false
+
+[[package]]
+name = "substrait"
