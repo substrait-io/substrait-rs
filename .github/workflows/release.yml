@@ -28,7 +28,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: dtolnay/rust-toolchain@stable
-      - uses: MarcoIeni/release-plz-action@v0.5.88
+      - uses: MarcoIeni/release-plz-action@v0.5.89
         with:
           command: release
         env:
@@ -47,7 +47,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-      - uses: MarcoIeni/release-plz-action@v0.5.88
+      - uses: MarcoIeni/release-plz-action@v0.5.89
         with:
           command: release-pr
         env:
