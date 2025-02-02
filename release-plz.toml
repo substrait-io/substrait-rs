@@ -3,3 +3,4 @@ release_always = false
 
 [[package]]
 name = "substrait"
+publish_allow_dirty = true
