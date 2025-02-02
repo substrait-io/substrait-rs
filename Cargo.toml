@@ -55,7 +55,7 @@ protobuf-src = { version = "2.1.1", optional = true }
 schemars = "0.8.21"
 semver = "1.0.25"
 serde_yaml = "0.9.34"
-syn = "2.0.96"
+syn = "2.0.98"
 typify = "0.3.0"
 walkdir = "2.5.0"
 
