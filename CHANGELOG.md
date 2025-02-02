@@ -1,18 +1,3 @@
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
-
-## [0.53.0](https://github.com/substrait-io/substrait-rs/compare/v0.52.3...v0.53.0) - 2025-02-02
-
-### Other
-
-- *(deps,cargo)* bump protobuf-src from 2.1.0+27.1 to 2.1.1+27.1 in the cargo group (#289)
-- *(deps,cargo)* bump serde_json from 1.0.137 to 1.0.138 in the cargo group (#287)
 
 
 ## 0.52.3 (2025-01-21)
