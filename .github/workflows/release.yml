@@ -30,7 +30,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       # Trigger build script to generate version info
       - run: cargo build
-      - uses: MarcoIeni/release-plz-action@v0.5.90
+      - uses: MarcoIeni/release-plz-action@v0.5.94
         with:
           command: release
         env:
@@ -49,7 +49,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
-      - uses: MarcoIeni/release-plz-action@v0.5.90
+      - uses: MarcoIeni/release-plz-action@v0.5.94
         with:
           command: release-pr
         env:
