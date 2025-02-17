@@ -15,6 +15,8 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    environment:
+      name: crates-io
     permissions:
       contents: write
     steps:
@@ -35,26 +37,26 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
 
-  # pr:
-  #   name: PR
-  #   runs-on: ubuntu-latest
-  #   concurrency:
-  #     group: release-${{ github.ref }}
-  #     cancel-in-progress: false
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-  #         submodules: recursive
-  #     - uses: dtolnay/rust-toolchain@stable
-  #     - uses: arduino/setup-protoc@v3
-  #       with:
-  #         repo-token: ${{ secrets.GITHUB_TOKEN }}
-  #     - run: cargo build
-  #     - uses: MarcoIeni/release-plz-action@v0.5.94
-  #       with:
-  #         command: release-pr
-  #       env:
-  #         RUST_LOG: debug
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #         CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+  pr:
+    name: PR
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: cargo build
+      - uses: MarcoIeni/release-plz-action@v0.5.94
+        with:
+          command: release-pr
+        env:
+          RUST_LOG: debug
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
