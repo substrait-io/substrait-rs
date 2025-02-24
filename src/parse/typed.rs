@@ -79,3 +79,6 @@ impl<T: hash::Hash, U> hash::Hash for Typed<T, U> {
 
 /// A generic anchor new type for the anchor mechanism used in Substrait data.
 pub type Anchor<T> = Typed<u32, T>;
+
+/// A generic Name type for the named things inside of Substrait.
+pub type Name<T> = Typed<String, T>;
