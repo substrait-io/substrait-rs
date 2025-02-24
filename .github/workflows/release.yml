@@ -30,7 +30,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       # Trigger build script to generate version info
       - run: cargo build
-      - uses: MarcoIeni/release-plz-action@v0.5.94
+      - uses: MarcoIeni/release-plz-action@v0.5.96
         with:
           command: release
         env:
@@ -53,7 +53,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo build
-      - uses: MarcoIeni/release-plz-action@v0.5.94
+      - uses: MarcoIeni/release-plz-action@v0.5.96
         with:
           command: release-pr
         env:
