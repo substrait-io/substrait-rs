@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.54.1](https://github.com/substrait-io/substrait-rs/compare/v0.54.0...v0.54.1) - 2025-03-10
+
+### Other
+
+- *(deps,cargo)* bump the cargo group with 2 updates ([#316](https://github.com/substrait-io/substrait-rs/pull/316))
+- *(deps,cargo)* bump the cargo group with 2 updates ([#314](https://github.com/substrait-io/substrait-rs/pull/314))
+- *(deps,cargo)* bump the cargo group with 3 updates ([#312](https://github.com/substrait-io/substrait-rs/pull/312))
+- *(deps,cargo)* bump schemars from 0.8.21 to 0.8.22 in the cargo group ([#308](https://github.com/substrait-io/substrait-rs/pull/308))
+
 ## [0.54.0](https://github.com/substrait-io/substrait-rs/compare/v0.53.2...v0.54.0) - 2025-02-20
 
 ### Other
