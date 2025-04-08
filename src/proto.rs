@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![allow(
+    clippy::doc_overindented_list_items,
     clippy::large_enum_variant,
     clippy::needless_borrow,
     clippy::needless_borrows_for_generic_args,
