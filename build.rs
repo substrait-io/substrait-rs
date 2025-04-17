@@ -98,6 +98,11 @@ pub const SUBSTRAIT_GIT_DEPTH: u32 = {git_depth};
 
 /// The dirty state of the Substrait submodule used to build this crate
 pub const SUBSTRAIT_GIT_DIRTY: bool = {git_dirty};
+
+/// A constant with the Substrait version as name, to trigger semver bumps when
+/// the Substrait version changes.
+#[doc(hidden)]
+pub const SUBSTRAIT_{major}_{minor}_{patch}: () = ();
 "#
             ),
         )?;
