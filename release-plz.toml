@@ -1,5 +1,6 @@
 [workspace]
 release_always = false
+semver_check = false
 
 [[package]]
 name = "substrait"
