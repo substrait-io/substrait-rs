@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.56.0](https://github.com/substrait-io/substrait-rs/compare/v0.55.1...v0.56.0) - 2025-04-17
+
+### Added
+
+- [**breaking**] add substrait version const to trigger semver check on substrait update ([#332](https://github.com/substrait-io/substrait-rs/pull/332))
+
+### Other
+
+- *(deps,cargo)* bump typify from 0.3.0 to 0.4.0 in the cargo group ([#329](https://github.com/substrait-io/substrait-rs/pull/329))
+
 ## [0.55.1](https://github.com/substrait-io/substrait-rs/compare/v0.55.0...v0.55.1) - 2025-04-08
 
 ### Other
