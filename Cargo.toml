@@ -56,7 +56,7 @@ schemars = "0.8.22"
 semver = "1.0.26"
 serde_yaml = "0.9.34"
 syn = "2.0.101"
-typify = "0.4.0"
+typify = "0.4.1"
 walkdir = "2.5.0"
 
 [package.metadata.docs.rs]
