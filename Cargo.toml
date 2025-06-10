@@ -49,14 +49,14 @@ thiserror = { version = "2.0.12", optional = true }
 [build-dependencies]
 heck = "0.5.0"
 pbjson-build = { version = "0.7.0", optional = true }
-prettyplease = "0.2.32"
+prettyplease = "0.2.33"
 prost-build = { version = "0.13.5", default-features = false }
 protobuf-src = { version = "2.1.1", optional = true }
 schemars = "0.8.22"
 semver = "1.0.26"
 serde_yaml = "0.9.34"
-syn = "2.0.101"
-typify = "0.4.1"
+syn = "2.0.102"
+typify = "0.4.2"
 walkdir = "2.5.0"
 
 [package.metadata.docs.rs]
