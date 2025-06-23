@@ -56,6 +56,11 @@ jobs:
             ${{ runner.os }}-cargo-
       - run: cargo check --all-targets --no-default-features --features protoc
       - run: cargo check --all-targets --all-features
+      # Check that each feature compiles. Note that we use protoc everywhere because its necessary for CI.
+      - run: cargo check --all-targets --no-default-features --features protoc,extensions
+      - run: cargo check --all-targets --no-default-features --features protoc,semver
+      - run: cargo check --all-targets --no-default-features --features protoc,serde
+      - run: cargo check --all-targets --no-default-features --features protoc,parse
 
   test:
     name: Test
