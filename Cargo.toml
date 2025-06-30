@@ -26,7 +26,7 @@ include = [
 
 [features]
 default = []
-extensions = ["dep:serde_yaml"]
+extensions = ["dep:serde_yaml", "dep:url"]
 parse = ["dep:hex", "dep:thiserror", "dep:url", "semver"]
 protoc = ["dep:protobuf-src"]
 semver = ["dep:semver"]
