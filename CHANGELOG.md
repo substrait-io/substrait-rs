@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.0](https://github.com/substrait-io/substrait-rs/compare/v0.58.0...v0.59.0) - 2025-07-16
+
+### Other
+
+- *(deps,cargo)* [**breaking**] bump msrv to 1.85.1 and cargo group across 1 directory with 7 updates ([#358](https://github.com/substrait-io/substrait-rs/pull/358))
+
 ## [0.58.0](https://github.com/substrait-io/substrait-rs/compare/v0.57.0...v0.58.0) - 2025-06-30
 
 ### Fixed
