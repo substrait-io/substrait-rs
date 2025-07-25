@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.1](https://github.com/substrait-io/substrait-rs/compare/v0.59.0...v0.59.1) - 2025-07-25
+
+### Other
+
+- *(deps,cargo)* bump prettyplease from 0.2.35 to 0.2.36 in the cargo group ([#363](https://github.com/substrait-io/substrait-rs/pull/363))
+- *(deps,cargo)* bump serde_json from 1.0.140 to 1.0.141 in the cargo group ([#361](https://github.com/substrait-io/substrait-rs/pull/361))
+
 ## [0.59.0](https://github.com/substrait-io/substrait-rs/compare/v0.58.0...v0.59.0) - 2025-07-16
 
 ### Other
