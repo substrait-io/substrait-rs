@@ -35,7 +35,7 @@ mod tests {
   "extensionUris": [
     {
       "extensionUriAnchor": 1,
-      "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_string.yaml"
+      "uri": "urn:substrait:functions_string"
     }
   ]
 }"#,

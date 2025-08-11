@@ -95,7 +95,7 @@ pub(crate) mod tests {
                 Entry::Vacant(entry) => {
                     // This is where we would resolve and then parse.
                     // This check shows the use of the unsupported uri error.
-                    if let "http" | "https" | "file" = simple_extension_uri.uri().scheme() {
+                    if let "http" | "https" | "file" | "urn" = simple_extension_uri.uri().scheme() {
                         entry.insert(simple_extension_uri.clone());
                         // Here we just return an empty simple extensions.
                         Ok(&self.empty_simple_extensions)

@@ -152,4 +152,19 @@ mod tests {
             ))
         );
     }
+    #[test]
+    fn supported_urn() -> Result<(), SimpleExtensionUriError> {
+        let simple_extension_uri = proto::extensions::SimpleExtensionUri {
+            extension_uri_anchor: 1,
+            // A made-up extension meant to model the canonical URI of the default extensions
+            uri: "urn:substrait:extension".to_string(),
+        };
+        let simple_extension_uri = simple_extension_uri.parse(&mut Context::default())?;
+        assert_eq!(simple_extension_uri.anchor(), Anchor::new(1));
+        assert_eq!(
+            simple_extension_uri.uri().as_str(),
+            "urn:substrait:extension.yaml"
+        );
+        Ok(())
+    }
 }
