@@ -18,5 +18,6 @@ mod tests {
     fn core_extensions() {
         // Force evaluation of core extensions.
         LazyLock::force(&EXTENSIONS);
+        println!("Core extensions: {:#?}", EXTENSIONS);
     }
 }
