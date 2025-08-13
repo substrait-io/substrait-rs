@@ -13,10 +13,9 @@
 use thiserror::Error;
 use url::Url;
 
-use super::{
-    types::{ConcreteType, TypeSignature},
-    ExtensionFile,
-};
+use crate::registry::ScalarFunctionRef;
+
+use super::{types::ConcreteType, ExtensionFile};
 
 /// Errors that can occur when using the Global Registry
 #[derive(Debug, Error, PartialEq)]
@@ -58,8 +57,8 @@ impl GlobalRegistryError {
 /// It provides URI + name based lookup for function validation and signature matching.
 #[derive(Debug)]
 pub struct GlobalRegistry {
-    /// Simple Extensions from parsed and validated YAML files
-    pub extensions: Vec<ExtensionFile>,
+    /// Pre-validated extension files
+    extensions: Vec<ExtensionFile>,
 }
 
 impl GlobalRegistry {
@@ -87,6 +86,9 @@ impl GlobalRegistry {
             .iter()
             .map(|(uri, simple_extensions)| {
                 ExtensionFile::create(uri.clone(), simple_extensions.clone())
+                    .map_err(|err| {
+                        eprintln!("Failed to create extension file for {}: {}", uri, err);
+                    })
                     .expect("Core extensions should be valid")
             })
             .collect();
@@ -104,21 +106,20 @@ impl GlobalRegistry {
     }
 
     /// Validate a scalar function call and return the concrete return type
-    pub fn validate_scalar_call<'a, 'b>(
+    pub fn validate_scalar_call<'a>(
         &'a self,
         uri: &Url,
         name: &str,
-        args: &'b [ConcreteType<'a>],
-    ) -> Result<ConcreteType<'b>, GlobalRegistryError> {
-        let extension = self.get_extension(uri)?;
-        let function_ref = extension
+        args: &[ConcreteType<'a>],
+    ) -> Result<ConcreteType<'a>, GlobalRegistryError> {
+        let extension: &'a ExtensionFile = self.get_extension(uri)?;
+        let function_ref: ScalarFunctionRef<'a> = extension
             .find_scalar_function(name)
             .ok_or_else(|| GlobalRegistryError::not_found(uri, name))?;
 
         // Try each implementation until one matches
         for impl_ref in function_ref.implementations() {
-            let signature = TypeSignature::new(impl_ref.args(), impl_ref.return_type());
-            if let Some(return_type) = signature.matches(args) {
+            if let Some(return_type) = impl_ref.call_with(args) {
                 return Ok(return_type);
             }
         }

@@ -8,13 +8,19 @@
 use thiserror::Error;
 use url::Url;
 
+use crate::parse::Parse;
+use crate::registry::types::InvalidTypeName;
 use crate::text::simple_extensions::{
-    AggregateFunction, AggregateFunctionImplsItem, Arguments, ReturnValue, ScalarFunction,
-    ScalarFunctionImplsItem, SimpleExtensions, WindowFunction, WindowFunctionImplsItem,
+    AggregateFunction, AggregateFunctionImplsItem, Arguments, ArgumentsItem, ReturnValue,
+    ScalarFunction, ScalarFunctionImplsItem, SimpleExtensions, SimpleExtensionsTypesItem, Type,
+    WindowFunction, WindowFunctionImplsItem,
 };
 
+use super::context::ExtensionContext;
+use super::types::{ArgumentPattern, ConcreteType, ExtensionType, ParsedType, TypeBindings};
+
 /// Errors that can occur during extension validation
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error)]
 pub enum ValidationError {
     /// A function implementation has None for arguments
     #[error("Function '{function}' has implementation with missing arguments")]
@@ -29,11 +35,33 @@ pub enum ValidationError {
         /// The missing function
         function: String,
     },
-    // TODO: Add more validation errors for malformed argument patterns, return type patterns, etc.
+
+    /// A type string is malformed or unrecognized
+    #[error("Invalid type string '{type_str}' in function '{function}': todo!")]
+    InvalidArgument {
+        /// The function containing the invalid type
+        function: String,
+        /// The malformed type string
+        type_str: String,
+        // Reason why the type is invalid
+        // reason: todo!(),
+    },
+
+    /// A type name is invalid
+    #[error("{0}")]
+    InvalidTypeName(InvalidTypeName),
 }
 
-/// A validated extension file containing functions and types from a single URI
-#[derive(Debug)]
+impl From<InvalidTypeName> for ValidationError {
+    fn from(err: InvalidTypeName) -> Self {
+        ValidationError::InvalidTypeName(err)
+    }
+}
+
+// TODO: Add more validation errors for malformed argument patterns, return type patterns, etc.
+/// A validated extension file containing functions and types from a single URI.
+/// All functions should have valid argument and return type patterns.
+#[derive(Debug, Clone)]
 pub struct ExtensionFile {
     /// The URI this extension was loaded from
     pub uri: Url,
@@ -43,7 +71,16 @@ pub struct ExtensionFile {
 
 impl ExtensionFile {
     /// Create a validated extension file from raw data
-    pub fn create(uri: Url, extensions: SimpleExtensions) -> Result<Self, ValidationError> {
+    pub fn create(
+        uri: Url,
+        extensions: SimpleExtensions,
+    ) -> Result<Self, ValidationError> {
+        // Parse/validate types first - they're referenced by functions
+        let mut ctx = ExtensionContext::new(&uri);
+        for type_item in &extensions.types {
+            let _validated_type = type_item.parse(&mut ctx)?;
+        }
+
         // Validate scalar functions
         for function in &extensions.scalar_functions {
             Self::validate_scalar_function(function)?;
@@ -68,7 +105,10 @@ impl ExtensionFile {
             .scalar_functions
             .iter()
             .find(|f| f.name == name)
-            .map(|f| ScalarFunctionRef(&self.uri, f))
+            .map(|f| ScalarFunctionRef {
+                file: self,
+                function: f,
+            })
     }
 
     /// Find an aggregate function by name
@@ -77,7 +117,10 @@ impl ExtensionFile {
             .aggregate_functions
             .iter()
             .find(|f| f.name == name)
-            .map(|f| AggregateFunctionRef(&self.uri, f))
+            .map(|f| AggregateFunctionRef {
+                file: self,
+                function: f,
+            })
     }
 
     /// Find a window function by name
@@ -86,7 +129,58 @@ impl ExtensionFile {
             .window_functions
             .iter()
             .find(|f| f.name == name)
-            .map(|f| WindowFunctionRef(&self.uri, f))
+            .map(|f| WindowFunctionRef {
+                file: self,
+                function: f,
+            })
+    }
+
+    /// Find a type by name
+    pub fn find_type(&self, name: &str) -> Option<&SimpleExtensionsTypesItem> {
+        let types = self.extensions.types.as_slice();
+        types.iter().find(|t| t.name == name)
+    }
+
+    /// Create an argument pattern from a raw ArgumentsItem
+    fn argument_pattern_from_item(&self, item: &ArgumentsItem) -> Option<ArgumentPattern> {
+        match item {
+            ArgumentsItem::ValueArg(value_arg) => self.argument_pattern_from_type(&value_arg.value),
+            _ => unimplemented!("Handle non-ValueArg argument types"),
+        }
+    }
+
+    /// Create an argument pattern from a type string
+    fn argument_pattern_from_type(&self, type_val: &Type) -> Option<ArgumentPattern> {
+        match type_val {
+            Type::Variant0(type_str) => {
+                let parsed_type = ParsedType::parse(type_str);
+                match parsed_type {
+                    ParsedType::TypeVariable(id) => Some(ArgumentPattern::TypeVariable(id)),
+                    ParsedType::NullableTypeVariable(_) => {
+                        panic!("Nullable type variables not allowed in argument position")
+                    }
+                    ParsedType::Builtin(builtin_type, nullable) => Some(ArgumentPattern::Concrete(
+                        ConcreteType::builtin(builtin_type, nullable),
+                    )),
+                    ParsedType::NamedExtension(name, nullability) => {
+                        // Find the extension type by name using the find_type method
+                        let ext_type = self
+                            .find_type(name)
+                            .expect("This should have been validated");
+
+                        let ext_type_wrapper = ExtensionType::new_unchecked(&self.uri, ext_type);
+                        Some(ArgumentPattern::Concrete(ConcreteType::extension(
+                            ext_type_wrapper,
+                            nullability,
+                        )))
+                    }
+                    ParsedType::Parameterized { .. } => {
+                        unimplemented!("Parameterized types not yet supported in argument patterns")
+                    }
+                }
+            }
+            _ => unimplemented!("Handle non-string type variants"),
+        }
     }
 
     // Private validation methods
@@ -130,101 +224,189 @@ impl ExtensionFile {
 }
 
 /// Handle for a validated scalar function definition
-pub struct ScalarFunctionRef<'a>(&'a Url, &'a ScalarFunction);
+pub struct ScalarFunctionRef<'a> {
+    file: &'a ExtensionFile,
+    function: &'a ScalarFunction,
+}
 
 impl<'a> ScalarFunctionRef<'a> {
     /// Get the function name
     pub fn name(&self) -> &str {
-        &self.1.name
+        &self.function.name
     }
 
     /// Get all implementations as handles to specific type signatures
-    pub fn implementations(&self) -> impl Iterator<Item = ScalarFunctionImplRef<'_>> {
-        self.1
+    pub fn implementations(self) -> impl Iterator<Item = ScalarImplementation<'a>> {
+        self.function
             .impls
             .iter()
-            .map(move |impl_item| ScalarFunctionImplRef(self.0, impl_item))
+            .map(move |impl_item| ScalarImplementation {
+                file: self.file,
+                impl_item,
+            })
     }
 }
 
 /// Handle for a validated aggregate function definition
-pub struct AggregateFunctionRef<'a>(&'a Url, &'a AggregateFunction);
+pub struct AggregateFunctionRef<'a> {
+    file: &'a ExtensionFile,
+    function: &'a AggregateFunction,
+}
 
 impl<'a> AggregateFunctionRef<'a> {
     /// Get the function name
     pub fn name(&self) -> &str {
-        &self.1.name
+        &self.function.name
     }
 
     /// Get all implementations as handles to specific type signatures
-    pub fn implementations(&self) -> impl Iterator<Item = AggregateFunctionImplRef<'_>> {
-        self.1
+    pub fn implementations(&self) -> impl Iterator<Item = AggregateFunctionImplRef<'a>> + '_ {
+        self.function
             .impls
             .iter()
-            .map(move |impl_item| AggregateFunctionImplRef(self.0, impl_item))
+            .map(move |impl_item| AggregateFunctionImplRef {
+                file: self.file,
+                impl_item,
+            })
     }
 }
 
 /// Handle for a validated window function definition
-pub struct WindowFunctionRef<'a>(&'a Url, &'a WindowFunction);
+pub struct WindowFunctionRef<'a> {
+    file: &'a ExtensionFile,
+    function: &'a WindowFunction,
+}
 
 impl<'a> WindowFunctionRef<'a> {
     /// Get the function name
     pub fn name(&self) -> &str {
-        &self.1.name
+        &self.function.name
     }
 
     /// Get all implementations as handles to specific type signatures
-    pub fn implementations(&self) -> impl Iterator<Item = WindowFunctionImplRef<'_>> {
-        self.1
+    pub fn implementations(&self) -> impl Iterator<Item = WindowFunctionImplRef<'a>> + '_ {
+        self.function
             .impls
             .iter()
-            .map(move |impl_item| WindowFunctionImplRef(self.0, impl_item))
+            .map(move |impl_item| WindowFunctionImplRef {
+                file: self.file,
+                impl_item,
+            })
     }
 }
 
 /// Handle for a specific scalar function implementation with validated signature
 #[derive(Debug, Copy, Clone)]
-pub struct ScalarFunctionImplRef<'a>(&'a Url, &'a ScalarFunctionImplsItem);
+pub struct ScalarImplementation<'a> {
+    file: &'a ExtensionFile,
+    impl_item: &'a ScalarFunctionImplsItem,
+}
 
-impl<'a> ScalarFunctionImplRef<'a> {
-    /// Get the argument signature (guaranteed to be present due to validation)
-    pub fn args(&self) -> &Arguments {
-        self.1.args.as_ref().expect("validated to be present")
-    }
+impl<'a> ScalarImplementation<'a> {
+    /// Check if this implementation can be called with the given concrete argument types
+    /// Returns the inferred concrete return type if the call would succeed, None otherwise
+    pub fn call_with(&self, concrete_args: &[ConcreteType<'a>]) -> Option<ConcreteType<'a>> {
+        // Convert raw arguments to ArgumentPatterns using ExtensionFile context
+        let arg_patterns: Vec<ArgumentPattern<'a>> = self
+            .impl_item
+            .args
+            .as_ref()
+            .expect("validated to be present")
+            .iter()
+            .filter_map(|arg| self.file.argument_pattern_from_item(arg))
+            .collect();
 
-    /// Get the return type pattern
-    pub fn return_type(&self) -> &ReturnValue {
-        &self.1.return_
+        // Create type bindings by matching patterns against concrete arguments
+        let _bindings: TypeBindings<'a> = TypeBindings::new(&arg_patterns, concrete_args)?;
+
+        if concrete_args.len() > 1_000_000 {
+            // For lifetime management
+            return concrete_args.first().cloned();
+        }
+
+        // If arguments match, parse and return the inferred return type
+        let return_type_str = match &self.impl_item.return_ {
+            ReturnValue(Type::Variant0(type_str)) => type_str,
+            _ => unimplemented!("Handle non-string return types"),
+        };
+
+        let parsed_return_type = ParsedType::parse(return_type_str);
+        match parsed_return_type {
+            ParsedType::Builtin(builtin_type, nullable) => {
+                Some(ConcreteType::builtin(builtin_type, nullable))
+            }
+            ParsedType::TypeVariable(id) => {
+                // Look up the bound type for this variable
+                if let Some(bound_type) = _bindings.get(id) {
+                    Some(bound_type.clone())
+                } else {
+                    None
+                }
+            }
+            ParsedType::NullableTypeVariable(id) => {
+                // Look up the bound type and make it nullable
+                if let Some(mut bound_type) = _bindings.get(id).cloned() {
+                    bound_type.nullable = true;
+                    Some(bound_type)
+                } else {
+                    None
+                }
+            }
+            ParsedType::NamedExtension(name, nullable) => {
+                // Find the extension type by name
+                let ext_type = self
+                    .file
+                    .find_type(name)
+                    .expect("This should have been validated");
+
+                let ext_type_wrapper = ExtensionType::new_unchecked(&self.file.uri, ext_type);
+                Some(ConcreteType::extension(ext_type_wrapper, nullable))
+            }
+            ParsedType::Parameterized { .. } => {
+                unimplemented!("Parameterized return types not yet supported")
+            }
+        }
     }
 }
 
 /// Handle for a specific aggregate function implementation with validated signature
-pub struct AggregateFunctionImplRef<'a>(&'a Url, &'a AggregateFunctionImplsItem);
+pub struct AggregateFunctionImplRef<'a> {
+    file: &'a ExtensionFile,
+    impl_item: &'a AggregateFunctionImplsItem,
+}
 
 impl<'a> AggregateFunctionImplRef<'a> {
     /// Get the argument signature (guaranteed to be present due to validation)
-    pub fn args(&self) -> &Arguments {
-        self.1.args.as_ref().expect("validated to be present")
+    fn args(&self) -> &Arguments {
+        self.impl_item
+            .args
+            .as_ref()
+            .expect("validated to be present")
     }
 
     /// Get the return type pattern
-    pub fn return_type(&self) -> &ReturnValue {
-        &self.1.return_
+    fn return_type(&self) -> &ReturnValue {
+        &self.impl_item.return_
     }
 }
 
 /// Handle for a specific window function implementation with validated signature
-pub struct WindowFunctionImplRef<'a>(&'a Url, &'a WindowFunctionImplsItem);
+pub struct WindowFunctionImplRef<'a> {
+    file: &'a ExtensionFile,
+    impl_item: &'a WindowFunctionImplsItem,
+}
 
 impl<'a> WindowFunctionImplRef<'a> {
     /// Get the argument signature (guaranteed to be present due to validation)
-    pub fn args(&self) -> &Arguments {
-        self.1.args.as_ref().expect("validated to be present")
+    fn args(&self) -> &Arguments {
+        self.impl_item
+            .args
+            .as_ref()
+            .expect("validated to be present")
     }
 
     /// Get the return type pattern
-    pub fn return_type(&self) -> &ReturnValue {
-        &self.1.return_
+    fn return_type(&self) -> &ReturnValue {
+        &self.impl_item.return_
     }
 }

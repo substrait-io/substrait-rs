@@ -5,9 +5,9 @@
 //! This module provides a clean, type-safe wrapper around Substrait extension types,
 //! separating function signature patterns from concrete argument types.
 
-use crate::text::simple_extensions::{
-    Arguments, ArgumentsItem, ReturnValue, SimpleExtensionsTypesItem, Type,
-};
+use crate::parse::Parse;
+use crate::registry::context::ExtensionContext;
+use crate::text::simple_extensions::SimpleExtensionsTypesItem;
 use std::collections::HashMap;
 use std::str::FromStr;
 use url::Url;
@@ -115,28 +115,65 @@ impl FromStr for BuiltinType {
         }
     }
 }
+/// A validated extension type definition
+#[derive(Clone, Debug)]
+pub struct ExtensionType<'a> {
+    /// The URI of the extension defining this type
+    pub uri: &'a Url,
+    item: &'a SimpleExtensionsTypesItem,
+}
+
+impl<'a> ExtensionType<'a> {
+    /// Create a new ExtensionType wrapper from already-validated data
+    pub(crate) fn new_unchecked(uri: &'a Url, item: &'a SimpleExtensionsTypesItem) -> Self {
+        Self { uri, item }
+    }
+
+    /// Get the name of this extension type
+    pub fn name(&self) -> &str {
+        &self.item.name
+    }
+}
+
+impl<'a> From<ExtensionType<'a>> for &'a SimpleExtensionsTypesItem {
+    fn from(ext_type: ExtensionType<'a>) -> Self {
+        ext_type.item
+    }
+}
+
+impl PartialEq for ExtensionType<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        // There should only be one type of a given name per file
+        self.uri == other.uri && self.item.name == other.item.name
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("Invalid type name: {0}")]
+/// Error for invalid type names in extension definitions
+pub struct InvalidTypeName(String);
+
+impl<'a> Parse<ExtensionContext<'a>> for &'a SimpleExtensionsTypesItem {
+    type Parsed = ExtensionType<'a>;
+    // TODO: Not all names are valid for types, we should validate that
+    type Error = InvalidTypeName;
+
+    fn parse(self, ctx: &mut ExtensionContext<'a>) -> Result<Self::Parsed, Self::Error> {
+        ctx.add_type(self);
+        Ok(ExtensionType {
+            uri: ctx.uri,
+            item: &self,
+        })
+    }
+}
 
 /// Represents a known, specific type, either builtin or extension
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum KnownType<'a> {
     /// Built-in primitive types
     Builtin(BuiltinType),
     /// Custom types defined in extension YAML files
-    Extension(&'a Url, &'a SimpleExtensionsTypesItem),
-}
-
-impl<'a> PartialEq for KnownType<'a> {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (KnownType::Builtin(a), KnownType::Builtin(b)) => a == b,
-            // For extension types, compare by URI and name
-            (KnownType::Extension(au, a), KnownType::Extension(bu, b)) => {
-                // There should only be one type with a given name per URI
-                a.name == b.name && au == bu
-            }
-            _ => false,
-        }
-    }
+    Extension(ExtensionType<'a>),
 }
 
 /// A concrete type, fully specified with nullability and parameters
@@ -162,13 +199,9 @@ impl<'a> ConcreteType<'a> {
     }
 
     /// Create a concrete type from an extension type
-    pub fn extension(
-        uri: &'a Url,
-        ext_type: &'a SimpleExtensionsTypesItem,
-        nullable: bool,
-    ) -> Self {
+    pub fn extension(t: ExtensionType<'a>, nullable: bool) -> Self {
         Self {
-            base: KnownType::Extension(uri, ext_type),
+            base: KnownType::Extension(t),
             nullable,
             parameters: Vec::new(),
         }
@@ -197,7 +230,7 @@ pub enum ParsedType<'a> {
     NullableTypeVariable(u32),
     /// Built-in primitive type, with nullability
     Builtin(BuiltinType, bool),
-    /// Extension type from a specific URI, with nullability
+    /// Extension type for the given name, with nullability. URI not known at this level.
     NamedExtension(&'a str, bool),
     /// Parameterized type
     Parameterized {
@@ -248,43 +281,6 @@ impl<'a> ParsedType<'a> {
     }
 }
 
-/// Wrapper around function signature patterns with smart matching
-pub struct TypeSignature<'a> {
-    args: &'a Arguments,
-    return_type: &'a ReturnValue,
-    variadic: bool,
-}
-
-impl<'a> TypeSignature<'a> {
-    /// Create a new type signature from function definition parts
-    pub(crate) fn new(args: &'a Arguments, return_type: &'a ReturnValue) -> Self {
-        Self {
-            args,
-            return_type,
-            variadic: false, // TODO: Extract from function impl
-        }
-    }
-
-    /// Check if concrete argument types match this signature pattern
-    pub fn matches<'b: 'a>(
-        &'a self,
-        concrete_args: &'b [ConcreteType],
-    ) -> Option<ConcreteType<'b>> {
-        // Convert raw arguments to ArgumentPatterns
-        let arg_patterns: Vec<ArgumentPattern> = self
-            .args
-            .iter()
-            .filter_map(|arg| ArgumentPattern::from_argument_item(arg))
-            .collect();
-
-        // Create type bindings by matching patterns against concrete arguments
-        let _bindings = TypeBindings::new(&arg_patterns, concrete_args)?;
-
-        // If arguments match, return the inferred return type
-        unimplemented!("Return type inference not yet implemented")
-    }
-}
-
 /// A pattern for function arguments that can match concrete types or type variables
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArgumentPattern<'a> {
@@ -306,39 +302,6 @@ pub enum Match<'a> {
 }
 
 impl<'a> ArgumentPattern<'a> {
-    /// Create an argument pattern from a raw ArgumentsItem
-    pub fn from_argument_item(item: &ArgumentsItem) -> Option<ArgumentPattern<'a>> {
-        match item {
-            ArgumentsItem::ValueArg(value_arg) => ArgumentPattern::from_type(&value_arg.value),
-            _ => unimplemented!("Handle non-ValueArg argument types"),
-        }
-    }
-
-    /// Create an argument pattern from a type string
-    fn from_type(type_val: &Type) -> Option<ArgumentPattern<'a>> {
-        match type_val {
-            Type::Variant0(type_str) => {
-                let parsed_type = ParsedType::parse(type_str);
-                match parsed_type {
-                    ParsedType::TypeVariable(id) => Some(ArgumentPattern::TypeVariable(id)),
-                    ParsedType::NullableTypeVariable(_) => {
-                        panic!("Nullable type variables not allowed in argument position")
-                    }
-                    ParsedType::Builtin(builtin_type, nullable) => Some(ArgumentPattern::Concrete(
-                        ConcreteType::builtin(builtin_type, nullable),
-                    )),
-                    ParsedType::NamedExtension(_, _) => {
-                        unimplemented!("Extension types not yet supported in argument patterns")
-                    }
-                    ParsedType::Parameterized { .. } => {
-                        unimplemented!("Parameterized types not yet supported in argument patterns")
-                    }
-                }
-            }
-            _ => unimplemented!("Handle non-string type variants"),
-        }
-    }
-
     /// Check if this pattern matches the given concrete type
     pub fn matches(&self, concrete: &ConcreteType<'a>) -> Match<'a> {
         match self {

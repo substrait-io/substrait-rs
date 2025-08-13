@@ -6,7 +6,10 @@ use thiserror::Error;
 use url::Url;
 
 use crate::{
-    parse::{context::ContextError, Anchor, Context, Parse},
+    parse::{
+        context::{ContextError, ProtoContext},
+        Anchor, Context, Parse,
+    },
     proto,
 };
 
@@ -48,7 +51,7 @@ pub enum SimpleExtensionUriError {
     Context(#[from] ContextError),
 }
 
-impl<C: Context> Parse<C> for proto::extensions::SimpleExtensionUri {
+impl<C: ProtoContext> Parse<C> for proto::extensions::SimpleExtensionUri {
     type Parsed = SimpleExtensionUri;
     type Error = SimpleExtensionUriError;
 

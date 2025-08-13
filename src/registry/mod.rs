@@ -10,28 +10,27 @@
 //! interface that hides those internal details and presents methods where
 //! extensions are validated on creation and then assumed valid thereafter.
 //!
-//! This "validate once, assume valid" approach allows for:
-//! - **Type safety**: Invalid extensions are caught at construction time
-//! - **Performance**: No repeated validation during registry operations
-//! - **Clean APIs**: Methods can focus on logic rather than error handling
-//! - **Reliability**: Once constructed, registry operations won't fail due to
-//!   malformed data
+//! This allows for a clean API that externally follows the "parse don't
+//! validate" principle, with an API that encourages users to work with
+//! validated extensions without worrying about their internal structure,
+//! without needing to add entirely new parse trees - the type tree can be
+//! recreated on-demand.
 //!
 //! ## Core Types
 //!
 //! - [`ExtensionFile`]: Validated wrapper around a SimpleExtensions + URI
 //! - [`ConcreteType`]: Fully-specified types for function arguments and return
 //!       values
-//! - [`TypeSignature`]: Pattern matching for function signatures
 //! - [`GlobalRegistry`]: Immutable registry for URI+name based function lookup
 
+mod context;
 mod extension;
 mod registry;
 pub mod types;
 
 pub use extension::{
-    ExtensionFile, ValidationError,
-    ScalarFunctionRef, AggregateFunctionRef, WindowFunctionRef,
-    ScalarFunctionImplRef, AggregateFunctionImplRef, WindowFunctionImplRef,
+    AggregateFunctionImplRef, AggregateFunctionRef, ExtensionFile, ScalarFunctionRef,
+    ScalarImplementation, ValidationError, WindowFunctionImplRef, WindowFunctionRef,
 };
 pub use registry::GlobalRegistry;
+pub use types::ConcreteType;

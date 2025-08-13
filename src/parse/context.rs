@@ -22,7 +22,9 @@ pub trait Context {
     {
         item.parse(self)
     }
+}
 
+pub trait ProtoContext: Context {
     /// Add a [SimpleExtensionUri] to this context. Must return an error for duplicate
     /// anchors or when the URI is not supported.
     ///
@@ -83,7 +85,9 @@ pub(crate) mod tests {
         }
     }
 
-    impl super::Context for Context {
+    impl super::Context for Context {}
+
+    impl super::ProtoContext for Context {
         fn add_simple_extension_uri(
             &mut self,
             simple_extension_uri: &crate::parse::proto::extensions::SimpleExtensionUri,
