@@ -7,7 +7,8 @@
 
 use crate::parse::Parse;
 use crate::registry::context::ExtensionContext;
-use crate::text::simple_extensions::SimpleExtensionsTypesItem;
+use crate::text::simple_extensions::Type as extType;
+use crate::text::simple_extensions::{ArgumentsItem, SimpleExtensionsTypesItem};
 use std::collections::HashMap;
 use std::str::FromStr;
 use url::Url;
@@ -164,6 +165,152 @@ impl<'a> Parse<ExtensionContext<'a>> for &'a SimpleExtensionsTypesItem {
             uri: ctx.uri,
             item: &self,
         })
+    }
+}
+
+/// Error for invalid Type specifications
+#[derive(Debug, thiserror::Error)]
+pub enum TypeParseError {
+    /// Extension type name not found in context
+    #[error("Extension type '{name}' not found")]
+    ExtensionTypeNotFound {
+        /// The extension type name that was not found
+        name: String,
+    },
+    /// Type variable ID is invalid (must be >= 1)
+    #[error("Type variable 'any{id}' is invalid (must be >= 1)")]
+    InvalidTypeVariableId {
+        /// The invalid type variable ID
+        id: u32,
+    },
+    /// Unimplemented Type variant
+    #[error("Unimplemented Type variant")]
+    UnimplementedVariant,
+}
+
+/// A validated Type that wraps the original Type with its validated ParsedType representation
+#[derive(Debug, Clone)]
+pub struct ValidatedType<'a> {
+    /// The original Type from the YAML
+    original: &'a extType,
+    /// The validated, parsed representation
+    pub parsed: ParsedType<'a>,
+}
+
+impl<'a> ValidatedType<'a> {
+    /// Get the parsed type representation
+    pub fn parsed_type(&self) -> &ParsedType<'a> {
+        &self.parsed
+    }
+}
+
+impl<'a> From<ValidatedType<'a>> for &'a extType {
+    fn from(validated: ValidatedType<'a>) -> Self {
+        validated.original
+    }
+}
+
+impl<'a> Parse<ExtensionContext<'a>> for &'a extType {
+    type Parsed = ValidatedType<'a>;
+    type Error = TypeParseError;
+
+    fn parse(self, ctx: &mut ExtensionContext<'a>) -> Result<Self::Parsed, Self::Error> {
+        match self {
+            extType::Variant0(type_str) => {
+                // Parse the type string into ParsedType
+                let parsed_type = ParsedType::parse(type_str);
+
+                // Add context validation
+                match &parsed_type {
+                    ParsedType::NamedExtension(name, _nullable) => {
+                        // Verify the extension type exists in the context
+                        if !ctx.has_type(name) {
+                            return Err(TypeParseError::ExtensionTypeNotFound {
+                                name: name.to_string(),
+                            });
+                        }
+                    }
+                    ParsedType::TypeVariable(id) | ParsedType::NullableTypeVariable(id) => {
+                        // Validate type variable ID (must be >= 1)
+                        if *id == 0 {
+                            return Err(TypeParseError::InvalidTypeVariableId { id: *id });
+                        }
+                    }
+                    ParsedType::Builtin(_, _) => {
+                        // Builtin types are always valid
+                    }
+                    ParsedType::Parameterized { .. } => {
+                        // TODO: Add validation for parameterized types
+                        unimplemented!("Parameterized type validation not yet implemented")
+                    }
+                }
+
+                Ok(ValidatedType {
+                    original: self,
+                    parsed: parsed_type,
+                })
+            }
+            _ => Err(TypeParseError::UnimplementedVariant),
+        }
+    }
+}
+
+/// Error for invalid ArgumentsItem specifications
+#[derive(Debug, thiserror::Error)]
+pub enum ArgumentsItemError {
+    /// Type parsing failed
+    #[error("Type parsing failed: {0}")]
+    TypeParseError(#[from] TypeParseError),
+    /// Unsupported ArgumentsItem variant
+    #[error("Unimplemented ArgumentsItem variant: {variant}")]
+    UnimplementedVariant {
+        /// The unsupported variant name
+        variant: String,
+    },
+}
+
+impl<'a> Parse<ExtensionContext<'a>> for &'a ArgumentsItem {
+    type Parsed = ArgumentPattern<'a>;
+    type Error = ArgumentsItemError;
+
+    fn parse(self, ctx: &mut ExtensionContext<'a>) -> Result<Self::Parsed, Self::Error> {
+        match self {
+            ArgumentsItem::ValueArgument(value_arg) => {
+                // Parse the Type into ValidatedType, then convert to ArgumentPattern
+                let validated_type = value_arg.value.parse(ctx)?;
+                let parsed_type = &validated_type.parsed;
+
+                match parsed_type {
+                    ParsedType::TypeVariable(id) => Ok(ArgumentPattern::TypeVariable(*id)),
+                    ParsedType::NullableTypeVariable(_) => {
+                        panic!("Nullable type variables not allowed in argument position")
+                    }
+                    ParsedType::Builtin(builtin_type, nullable) => Ok(ArgumentPattern::Concrete(
+                        ConcreteType::builtin(*builtin_type, *nullable),
+                    )),
+                    ParsedType::NamedExtension(name, nullable) => {
+                        // Find the extension type by name using the context
+                        // We know it exists because Type parsing already validated it
+                        let ext_type = ctx
+                            .get_type(name)
+                            .expect("Extension type should exist after validation");
+
+                        Ok(ArgumentPattern::Concrete(ConcreteType::extension(
+                            ext_type, *nullable,
+                        )))
+                    }
+                    ParsedType::Parameterized { .. } => {
+                        unimplemented!("Parameterized types not yet supported in argument patterns")
+                    }
+                }
+            }
+            ArgumentsItem::EnumArgument(_) => Err(ArgumentsItemError::UnsupportedVariant {
+                variant: "EnumArgument".to_string(),
+            }),
+            ArgumentsItem::TypeArgument(_) => Err(ArgumentsItemError::UnsupportedVariant {
+                variant: "TypeArgument".to_string(),
+            }),
+        }
     }
 }
 

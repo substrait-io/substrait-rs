@@ -8,6 +8,7 @@ use url::Url;
 
 use crate::parse::Context;
 use crate::text::simple_extensions::SimpleExtensionsTypesItem;
+use super::types::ExtensionType;
 
 /// Context for parsing and validating extension definitions.
 ///
@@ -37,6 +38,13 @@ impl<'a> ExtensionContext<'a> {
     /// Add a type to the context after it has been validated
     pub(crate) fn add_type(&mut self, type_item: &'a SimpleExtensionsTypesItem) {
         self.types.insert(&type_item.name, type_item);
+    }
+
+    /// Get a type by name from the context, returning the ExtensionType handle
+    pub(crate) fn get_type(&self, name: &str) -> Option<ExtensionType<'a>> {
+        self.types.get(name).map(|&item| {
+            super::types::ExtensionType::new_unchecked(self.uri, item)
+        })
     }
 }
 
