@@ -42,9 +42,9 @@ url = { version = "2.5.4", optional = true }
 regress = "0.10.4"
 semver = { version = "1.0.26", optional = true }
 serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.141"
+serde_json = "1.0.142"
 serde_yaml = { version = "0.9.34", optional = true }
-thiserror = { version = "2.0.12", optional = true }
+thiserror = { version = "2.0.14", optional = true }
 
 [build-dependencies]
 heck = "0.5.0"
@@ -55,7 +55,7 @@ protobuf-src = { version = "2.1.1", optional = true }
 schemars = "0.8.22"
 semver = "1.0.26"
 serde_yaml = "0.9.34"
-syn = "2.0.104"
+syn = "2.0.105"
 typify = "0.4.2"
 walkdir = "2.5.0"
 
