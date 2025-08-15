@@ -7,23 +7,22 @@ use std::collections::HashMap;
 use url::Url;
 
 use crate::parse::Context;
-use crate::text::simple_extensions::SimpleExtensionsTypesItem;
-use super::types::ExtensionType;
+use super::types::CustomType;
 
 /// Context for parsing and validating extension definitions.
 ///
 /// This context accumulates validated types as they are parsed,
 /// allowing later elements to reference previously validated types.
-pub struct ExtensionContext<'a> {
+pub struct ExtensionContext {
     /// The URI of the extension being parsed.
-    pub uri: &'a Url,
-    /// Map of type names to their definitions
-    types: HashMap<&'a str, &'a SimpleExtensionsTypesItem>,
+    pub uri: Url,
+    /// Map of type names to their validated definitions
+    types: HashMap<String, CustomType>,
 }
 
-impl<'a> ExtensionContext<'a> {
+impl ExtensionContext {
     /// Create a new extension context for parsing.
-    pub fn new(uri: &'a Url) -> Self {
+    pub fn new(uri: Url) -> Self {
         Self {
             uri,
             types: HashMap::new(),
@@ -36,18 +35,16 @@ impl<'a> ExtensionContext<'a> {
     }
 
     /// Add a type to the context after it has been validated
-    pub(crate) fn add_type(&mut self, type_item: &'a SimpleExtensionsTypesItem) {
-        self.types.insert(&type_item.name, type_item);
+    pub(crate) fn add_type(&mut self, custom_type: &CustomType) {
+        self.types.insert(custom_type.name.clone(), custom_type.clone());
     }
 
-    /// Get a type by name from the context, returning the ExtensionType handle
-    pub(crate) fn get_type(&self, name: &str) -> Option<ExtensionType<'a>> {
-        self.types.get(name).map(|&item| {
-            super::types::ExtensionType::new_unchecked(self.uri, item)
-        })
+    /// Get a type by name from the context, returning the CustomType
+    pub(crate) fn get_type(&self, name: &str) -> Option<&CustomType> {
+        self.types.get(name)
     }
 }
 
-impl Context for ExtensionContext<'_> {
+impl Context for ExtensionContext {
     // Implementation required by the Context trait
 }

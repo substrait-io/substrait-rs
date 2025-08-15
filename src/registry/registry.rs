@@ -110,8 +110,8 @@ impl GlobalRegistry {
         &'a self,
         uri: &Url,
         name: &str,
-        args: &[ConcreteType<'a>],
-    ) -> Result<ConcreteType<'a>, GlobalRegistryError> {
+        args: &[ConcreteType],
+    ) -> Result<ConcreteType, GlobalRegistryError> {
         let extension: &'a ExtensionFile = self.get_extension(uri)?;
         let function_ref: ScalarFunctionRef<'a> = extension
             .find_scalar_function(name)

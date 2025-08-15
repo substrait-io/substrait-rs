@@ -27,9 +27,9 @@ include = [
 [features]
 default = []
 extensions = ["dep:serde_yaml", "dep:url"]
-parse = ["registry", "dep:hex", "semver"]
+parse = ["dep:hex", "semver"]
 protoc = ["dep:protobuf-src"]
-registry = ["dep:thiserror", "dep:url"]
+registry = ["dep:thiserror", "dep:url", "parse"]
 semver = ["dep:semver"]
 serde = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
 

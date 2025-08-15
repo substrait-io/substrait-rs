@@ -7,11 +7,13 @@
 
 use crate::parse::Parse;
 use crate::registry::context::ExtensionContext;
-use crate::text::simple_extensions::Type as extType;
-use crate::text::simple_extensions::{ArgumentsItem, SimpleExtensionsTypesItem};
+use crate::text::simple_extensions::{
+    EnumOptions, SimpleExtensionsTypesItem, TypeParamDefsItem,
+    TypeParamDefsItemType,
+};
 use std::collections::HashMap;
 use std::str::FromStr;
-use url::Url;
+use thiserror::Error;
 
 /// Substrait built-in primitive types
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -116,36 +118,284 @@ impl FromStr for BuiltinType {
         }
     }
 }
-/// A validated extension type definition
+/// Parameter type for extension type definitions
+#[derive(Clone, Debug, PartialEq)]
+pub enum ParameterType {
+    /// A type name
+    DataType,
+    /// True/False
+    Boolean,
+    /// Integer
+    Integer,
+    /// A particular enum
+    Enum,
+    /// A string
+    String,
+}
+
+/// What a type actually represents - either a reference to another type or a compound structure
 #[derive(Clone, Debug)]
-pub struct ExtensionType<'a> {
-    /// The URI of the extension defining this type
-    pub uri: &'a Url,
-    item: &'a SimpleExtensionsTypesItem,
+pub enum TypeDefinition {
+    /// Reference to another type by name (e.g., "i32", "string", or custom type name)
+    Reference(String),
+    /// Compound structure with named fields
+    Struct(HashMap<String, TypeDefinition>),
 }
 
-impl<'a> ExtensionType<'a> {
-    /// Create a new ExtensionType wrapper from already-validated data
-    pub(crate) fn new_unchecked(uri: &'a Url, item: &'a SimpleExtensionsTypesItem) -> Self {
-        Self { uri, item }
+/// Type-safe parameter constraints based on parameter kind
+#[derive(Clone, Debug)]
+pub enum ParamKind {
+    /// A type name parameter
+    DataType,
+    /// True/False parameter
+    Boolean,
+    /// Integer parameter with optional bounds
+    Integer { 
+        /// Minimum value constraint
+        min: Option<i64>, 
+        /// Maximum value constraint
+        max: Option<i64> 
+    },
+    /// Enumeration parameter with predefined options
+    Enumeration { 
+        /// Valid enumeration values
+        options: Vec<String> 
+    },
+    /// String parameter
+    String,
+}
+
+impl ParamKind {
+    fn get_integer_bounds(min: Option<f64>, max: Option<f64>) -> Result<(Option<i64>, Option<i64>), TypeParamError> {
+        // Convert float bounds to integers, validating they are whole numbers
+        let min_bound = if let Some(min_f) = min {
+            if min_f.fract() != 0.0 {
+                return Err(TypeParamError::InvalidIntegerBounds { min, max });
+            }
+            Some(min_f as i64)
+        } else {
+            None
+        };
+
+        let max_bound = if let Some(max_f) = max {
+            if max_f.fract() != 0.0 {
+                return Err(TypeParamError::InvalidIntegerBounds { min, max });
+            }
+            Some(max_f as i64)
+        } else {
+            None
+        };
+
+        Ok((min_bound, max_bound))
     }
 
-    /// Get the name of this extension type
-    pub fn name(&self) -> &str {
-        &self.item.name
+    /// Create a ParamKind from TypeParamDefsItemType and associated fields
+    fn try_from_item_parts(
+        item_type: TypeParamDefsItemType,
+        min: Option<f64>,
+        max: Option<f64>,
+        options: Option<EnumOptions>,
+    ) -> Result<Self, TypeParamError> {
+        match (item_type, min, max, options) {
+            // Valid cases - each type with its expected parameters
+            (TypeParamDefsItemType::DataType, None, None, None) => Ok(ParamKind::DataType),
+            (TypeParamDefsItemType::Boolean, None, None, None) => Ok(ParamKind::Boolean),
+            (TypeParamDefsItemType::Integer, min, max, None) => {
+                let (min_bound, max_bound) = Self::get_integer_bounds(min, max)?;
+                Ok(ParamKind::Integer { min: min_bound, max: max_bound })
+            }
+            (TypeParamDefsItemType::Enumeration, None, None, Some(enum_options)) => {
+                Ok(ParamKind::Enumeration { options: enum_options.0 })
+            }
+            (TypeParamDefsItemType::String, None, None, None) => Ok(ParamKind::String),
+            
+            // Error cases - DataType with unexpected parameters
+            (TypeParamDefsItemType::DataType, Some(_), _, _) | (TypeParamDefsItemType::DataType, _, Some(_), _) => {
+                Err(TypeParamError::UnexpectedMinMaxBounds { param_type: TypeParamDefsItemType::DataType })
+            }
+            (TypeParamDefsItemType::DataType, None, None, Some(_)) => {
+                Err(TypeParamError::UnexpectedEnumOptions { param_type: TypeParamDefsItemType::DataType })
+            }
+            
+            // Error cases - Boolean with unexpected parameters  
+            (TypeParamDefsItemType::Boolean, Some(_), _, _) | (TypeParamDefsItemType::Boolean, _, Some(_), _) => {
+                Err(TypeParamError::UnexpectedMinMaxBounds { param_type: TypeParamDefsItemType::Boolean })
+            }
+            (TypeParamDefsItemType::Boolean, None, None, Some(_)) => {
+                Err(TypeParamError::UnexpectedEnumOptions { param_type: TypeParamDefsItemType::Boolean })
+            }
+            
+            // Error cases - Integer with enum options
+            (TypeParamDefsItemType::Integer, _, _, Some(_)) => {
+                Err(TypeParamError::UnexpectedEnumOptions { param_type: TypeParamDefsItemType::Integer })
+            }
+            
+            // Error cases - Enumeration with unexpected parameters
+            (TypeParamDefsItemType::Enumeration, Some(_), _, _) | (TypeParamDefsItemType::Enumeration, _, Some(_), _) => {
+                Err(TypeParamError::UnexpectedMinMaxBounds { param_type: TypeParamDefsItemType::Enumeration })
+            }
+            (TypeParamDefsItemType::Enumeration, None, None, None) => {
+                Err(TypeParamError::MissingEnumOptions)
+            }
+            
+            // Error cases - String with unexpected parameters
+            (TypeParamDefsItemType::String, Some(_), _, _) | (TypeParamDefsItemType::String, _, Some(_), _) => {
+                Err(TypeParamError::UnexpectedMinMaxBounds { param_type: TypeParamDefsItemType::String })
+            }
+            (TypeParamDefsItemType::String, None, None, Some(_)) => {
+                Err(TypeParamError::UnexpectedEnumOptions { param_type: TypeParamDefsItemType::String })
+            }
+        }
     }
 }
 
-impl<'a> From<ExtensionType<'a>> for &'a SimpleExtensionsTypesItem {
-    fn from(ext_type: ExtensionType<'a>) -> Self {
-        ext_type.item
+/// Type parameter definition for custom types
+#[derive(Clone, Debug)]
+pub struct TypeParam {
+    /// Name of the parameter (required)
+    pub name: String,
+    /// Optional description of the parameter
+    pub description: Option<String>,
+    /// Type-safe parameter constraints
+    pub kind: ParamKind,
+}
+
+impl TryFrom<TypeParamDefsItem> for TypeParam {
+    type Error = TypeParamError;
+
+    fn try_from(item: TypeParamDefsItem) -> Result<Self, Self::Error> {
+        let name = item.name.ok_or(TypeParamError::MissingName)?;
+
+        let kind = ParamKind::try_from_item_parts(item.type_, item.min, item.max, item.options)?;
+
+        Ok(Self {
+            name,
+            description: item.description,
+            kind,
+        })
     }
 }
 
-impl PartialEq for ExtensionType<'_> {
+impl From<TypeParam> for TypeParamDefsItem {
+    fn from(param_def: TypeParam) -> Self {
+        let (param_type, min, max, options) = match param_def.kind {
+            ParamKind::DataType => (TypeParamDefsItemType::DataType, None, None, None),
+            ParamKind::Boolean => (TypeParamDefsItemType::Boolean, None, None, None),
+            ParamKind::Integer { min, max } => (
+                TypeParamDefsItemType::Integer,
+                min.map(|i| i as f64),
+                max.map(|i| i as f64),
+                None,
+            ),
+            ParamKind::Enumeration { options } => (
+                TypeParamDefsItemType::Enumeration,
+                None,
+                None,
+                Some(EnumOptions(options)),
+            ),
+            ParamKind::String => (TypeParamDefsItemType::String, None, None, None),
+        };
+
+        Self {
+            name: Some(param_def.name),
+            description: param_def.description,
+            type_: param_type,
+            min,
+            max,
+            optional: None, // Not needed for type definitions
+            options,
+        }
+    }
+}
+
+/// Error types for ExtensionType parsing
+#[derive(Debug, Error, PartialEq)]
+pub enum ExtensionTypeError {
+    /// Extension type name is invalid
+    #[error("Invalid extension type name: {name}")]
+    InvalidName {
+        /// The invalid name
+        name: String,
+    },
+    /// Parameter validation failed
+    #[error("Invalid parameter: {0}")]
+    InvalidParameter(#[from] TypeParamError),
+}
+
+/// Error types for TypeParam validation
+#[derive(Debug, Error, PartialEq)]
+pub enum TypeParamError {
+    /// Parameter name is missing
+    #[error("Parameter name is required")]
+    MissingName,
+    /// Integer parameter has non-integer min/max values
+    #[error("Integer parameter has invalid min/max values: min={min:?}, max={max:?}")]
+    InvalidIntegerBounds { 
+        /// The invalid minimum value
+        min: Option<f64>, 
+        /// The invalid maximum value
+        max: Option<f64> 
+    },
+    /// Parameter type cannot have min/max bounds
+    #[error("Parameter type '{param_type}' cannot have min/max bounds")]
+    UnexpectedMinMaxBounds { 
+        /// The parameter type that cannot have bounds
+        param_type: TypeParamDefsItemType 
+    },
+    /// Parameter type cannot have enumeration options
+    #[error("Parameter type '{param_type}' cannot have enumeration options")]
+    UnexpectedEnumOptions { 
+        /// The parameter type that cannot have options
+        param_type: TypeParamDefsItemType 
+    },
+    /// Enumeration parameter is missing required options
+    #[error("Enumeration parameter is missing required options")]
+    MissingEnumOptions,
+}
+
+/// A custom type definition
+#[derive(Clone, Debug)]
+pub struct CustomType {
+    /// The name of this custom type
+    pub name: String,
+    /// Optional description of this type
+    pub description: Option<String>,
+    /// What this type actually represents
+    pub definition: TypeDefinition,
+    /// Parameters for this type (empty if none)
+    pub parameters: Vec<TypeParam>,
+    // TODO: Add variadic field for variadic type support
+}
+
+impl PartialEq for CustomType {
     fn eq(&self, other: &Self) -> bool {
-        // There should only be one type of a given name per file
-        self.uri == other.uri && self.item.name == other.item.name
+        // Name should be unique for a given extension file
+        self.name == other.name
+    }
+}
+
+impl CustomType {
+    /// Get the name of this custom type
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl From<CustomType> for SimpleExtensionsTypesItem {
+    fn from(custom_type: CustomType) -> Self {
+        Self {
+            name: custom_type.name,
+            description: custom_type.description,
+            parameters: if custom_type.parameters.is_empty() {
+                None
+            } else {
+                Some(crate::text::simple_extensions::TypeParamDefs(
+                    custom_type.parameters.into_iter().map(Into::into).collect(),
+                ))
+            },
+            structure: None, // TODO: Add structure support
+            variadic: None,  // TODO: Add variadic support
+        }
     }
 }
 
@@ -154,17 +404,44 @@ impl PartialEq for ExtensionType<'_> {
 /// Error for invalid type names in extension definitions
 pub struct InvalidTypeName(String);
 
-impl<'a> Parse<ExtensionContext<'a>> for &'a SimpleExtensionsTypesItem {
-    type Parsed = ExtensionType<'a>;
-    // TODO: Not all names are valid for types, we should validate that
-    type Error = InvalidTypeName;
+impl Parse<ExtensionContext> for SimpleExtensionsTypesItem {
+    type Parsed = CustomType;
+    type Error = ExtensionTypeError;
 
-    fn parse(self, ctx: &mut ExtensionContext<'a>) -> Result<Self::Parsed, Self::Error> {
-        ctx.add_type(self);
-        Ok(ExtensionType {
-            uri: ctx.uri,
-            item: &self,
-        })
+    fn parse(self, ctx: &mut ExtensionContext) -> Result<Self::Parsed, Self::Error> {
+        let SimpleExtensionsTypesItem {
+            name,
+            description,
+            parameters,
+            structure: _, // TODO: Add structure support
+            variadic: _,  // TODO: Add variadic support
+        } = self;
+
+        // TODO: Not all names are valid for types, we should validate that
+        if name.is_empty() {
+            return Err(ExtensionTypeError::InvalidName { name });
+        }
+
+        let parameters = match parameters {
+            Some(type_param_defs) => {
+                let mut parsed_params = Vec::new();
+                for item in type_param_defs.0 {
+                    parsed_params.push(TypeParam::try_from(item)?);
+                }
+                parsed_params
+            }
+            None => Vec::new(),
+        };
+
+        let custom_type = CustomType {
+            name: name.clone(),
+            description,
+            definition: TypeDefinition::Reference(name), // TODO: Parse from structure field
+            parameters,
+        };
+
+        ctx.add_type(&custom_type);
+        Ok(custom_type)
     }
 }
 
@@ -188,74 +465,18 @@ pub enum TypeParseError {
     UnimplementedVariant,
 }
 
-/// A validated Type that wraps the original Type with its validated ParsedType representation
-#[derive(Debug, Clone)]
-pub struct ValidatedType<'a> {
-    /// The original Type from the YAML
-    original: &'a extType,
-    /// The validated, parsed representation
-    pub parsed: ParsedType<'a>,
-}
+// TODO: ValidatedType will be updated when we implement proper type validation
 
-impl<'a> ValidatedType<'a> {
-    /// Get the parsed type representation
-    pub fn parsed_type(&self) -> &ParsedType<'a> {
-        &self.parsed
-    }
-}
+// TODO: Update this Parse implementation when ValidatedType and ParsedType are converted to owned types
+// impl Parse<ExtensionContext> for &extType {
+//     type Parsed = ValidatedType;
+//     type Error = TypeParseError;
+//     fn parse(self, ctx: &mut ExtensionContext) -> Result<Self::Parsed, Self::Error> {
+//         todo!("Update when ValidatedType and ParsedType are owned")
+//     }
+// }
 
-impl<'a> From<ValidatedType<'a>> for &'a extType {
-    fn from(validated: ValidatedType<'a>) -> Self {
-        validated.original
-    }
-}
-
-impl<'a> Parse<ExtensionContext<'a>> for &'a extType {
-    type Parsed = ValidatedType<'a>;
-    type Error = TypeParseError;
-
-    fn parse(self, ctx: &mut ExtensionContext<'a>) -> Result<Self::Parsed, Self::Error> {
-        match self {
-            extType::Variant0(type_str) => {
-                // Parse the type string into ParsedType
-                let parsed_type = ParsedType::parse(type_str);
-
-                // Add context validation
-                match &parsed_type {
-                    ParsedType::NamedExtension(name, _nullable) => {
-                        // Verify the extension type exists in the context
-                        if !ctx.has_type(name) {
-                            return Err(TypeParseError::ExtensionTypeNotFound {
-                                name: name.to_string(),
-                            });
-                        }
-                    }
-                    ParsedType::TypeVariable(id) | ParsedType::NullableTypeVariable(id) => {
-                        // Validate type variable ID (must be >= 1)
-                        if *id == 0 {
-                            return Err(TypeParseError::InvalidTypeVariableId { id: *id });
-                        }
-                    }
-                    ParsedType::Builtin(_, _) => {
-                        // Builtin types are always valid
-                    }
-                    ParsedType::Parameterized { .. } => {
-                        // TODO: Add validation for parameterized types
-                        unimplemented!("Parameterized type validation not yet implemented")
-                    }
-                }
-
-                Ok(ValidatedType {
-                    original: self,
-                    parsed: parsed_type,
-                })
-            }
-            _ => Err(TypeParseError::UnimplementedVariant),
-        }
-    }
-}
-
-/// Error for invalid ArgumentsItem specifications
+/// Error for invalid ArgumentsItem specifications (TODO: Update when ArgumentPattern is owned)
 #[derive(Debug, thiserror::Error)]
 pub enum ArgumentsItemError {
     /// Type parsing failed
@@ -269,75 +490,39 @@ pub enum ArgumentsItemError {
     },
 }
 
-impl<'a> Parse<ExtensionContext<'a>> for &'a ArgumentsItem {
-    type Parsed = ArgumentPattern<'a>;
-    type Error = ArgumentsItemError;
-
-    fn parse(self, ctx: &mut ExtensionContext<'a>) -> Result<Self::Parsed, Self::Error> {
-        match self {
-            ArgumentsItem::ValueArgument(value_arg) => {
-                // Parse the Type into ValidatedType, then convert to ArgumentPattern
-                let validated_type = value_arg.value.parse(ctx)?;
-                let parsed_type = &validated_type.parsed;
-
-                match parsed_type {
-                    ParsedType::TypeVariable(id) => Ok(ArgumentPattern::TypeVariable(*id)),
-                    ParsedType::NullableTypeVariable(_) => {
-                        panic!("Nullable type variables not allowed in argument position")
-                    }
-                    ParsedType::Builtin(builtin_type, nullable) => Ok(ArgumentPattern::Concrete(
-                        ConcreteType::builtin(*builtin_type, *nullable),
-                    )),
-                    ParsedType::NamedExtension(name, nullable) => {
-                        // Find the extension type by name using the context
-                        // We know it exists because Type parsing already validated it
-                        let ext_type = ctx
-                            .get_type(name)
-                            .expect("Extension type should exist after validation");
-
-                        Ok(ArgumentPattern::Concrete(ConcreteType::extension(
-                            ext_type, *nullable,
-                        )))
-                    }
-                    ParsedType::Parameterized { .. } => {
-                        unimplemented!("Parameterized types not yet supported in argument patterns")
-                    }
-                }
-            }
-            ArgumentsItem::EnumArgument(_) => Err(ArgumentsItemError::UnsupportedVariant {
-                variant: "EnumArgument".to_string(),
-            }),
-            ArgumentsItem::TypeArgument(_) => Err(ArgumentsItemError::UnsupportedVariant {
-                variant: "TypeArgument".to_string(),
-            }),
-        }
-    }
-}
+// TODO: Update this Parse implementation when ArgumentPattern is converted to owned type
+// impl Parse<ExtensionContext> for &ArgumentsItem {
+//     type Parsed = ArgumentPattern;
+//     type Error = ArgumentsItemError;
+//     fn parse(self, ctx: &mut ExtensionContext) -> Result<Self::Parsed, Self::Error> {
+//         todo!("Update when ArgumentPattern is owned")
+//     }
+// }
 
 /// Represents a known, specific type, either builtin or extension
 #[derive(Clone, Debug, PartialEq)]
-pub enum KnownType<'a> {
+pub enum KnownType {
     /// Built-in primitive types
     Builtin(BuiltinType),
     /// Custom types defined in extension YAML files
-    Extension(ExtensionType<'a>),
+    Extension(CustomType),
 }
 
 /// A concrete type, fully specified with nullability and parameters
 #[derive(Clone, Debug, PartialEq)]
-pub struct ConcreteType<'a> {
+pub struct ConcreteType {
     /// Base type, can be builtin or extension
-    pub base: KnownType<'a>,
+    pub base: KnownType,
     /// Is the overall type nullable?
     pub nullable: bool,
     // TODO: Add non-type parameters (e.g. integers, enum, etc.)
     /// Parameters for the type, if there are any
-    pub parameters: Vec<ConcreteType<'a>>,
+    pub parameters: Vec<ConcreteType>,
 }
 
-impl<'a> ConcreteType<'a> {
+impl ConcreteType {
     /// Create a concrete type from a builtin type
-    pub fn builtin(builtin_type: BuiltinType, nullable: bool) -> ConcreteType<'static> {
+    pub fn builtin(builtin_type: BuiltinType, nullable: bool) -> ConcreteType {
         ConcreteType {
             base: KnownType::Builtin(builtin_type),
             nullable,
@@ -345,8 +530,8 @@ impl<'a> ConcreteType<'a> {
         }
     }
 
-    /// Create a concrete type from an extension type
-    pub fn extension(t: ExtensionType<'a>, nullable: bool) -> Self {
+    /// Create a concrete type from a custom type
+    pub fn extension(t: CustomType, nullable: bool) -> Self {
         Self {
             base: KnownType::Extension(t),
             nullable,
@@ -355,11 +540,7 @@ impl<'a> ConcreteType<'a> {
     }
 
     /// Create a parameterized concrete type
-    pub fn parameterized(
-        base: KnownType<'a>,
-        nullable: bool,
-        parameters: Vec<ConcreteType<'a>>,
-    ) -> Self {
+    pub fn parameterized(base: KnownType, nullable: bool, parameters: Vec<ConcreteType>) -> Self {
         Self {
             base,
             nullable,
@@ -428,29 +609,29 @@ impl<'a> ParsedType<'a> {
     }
 }
 
-/// A pattern for function arguments that can match concrete types or type variables
+/// A pattern for function arguments that can match concrete types or type variables (TODO: Remove lifetime when ArgumentPattern is owned)
 #[derive(Clone, Debug, PartialEq)]
-pub enum ArgumentPattern<'a> {
+pub enum ArgumentPattern {
     /// Type variable like any1, any2, etc.
     TypeVariable(u32),
     /// Concrete type pattern
-    Concrete(ConcreteType<'a>),
+    Concrete(ConcreteType),
 }
 
-/// Result of matching an argument pattern against a concrete type
+/// Result of matching an argument pattern against a concrete type (TODO: Remove lifetime when Match is owned)
 #[derive(Clone, Debug, PartialEq)]
-pub enum Match<'a> {
+pub enum Match {
     /// Pattern matched exactly (for concrete patterns)
     Concrete,
     /// Type variable bound to concrete type
-    Variable(u32, ConcreteType<'a>),
+    Variable(u32, ConcreteType),
     /// Match failed
     Fail,
 }
 
-impl<'a> ArgumentPattern<'a> {
+impl<'a> ArgumentPattern {
     /// Check if this pattern matches the given concrete type
-    pub fn matches(&self, concrete: &ConcreteType<'a>) -> Match<'a> {
+    pub fn matches(&self, concrete: &ConcreteType) -> Match {
         match self {
             ArgumentPattern::TypeVariable(id) => Match::Variable(*id, concrete.clone()),
             ArgumentPattern::Concrete(pattern_type) => {
@@ -464,16 +645,16 @@ impl<'a> ArgumentPattern<'a> {
     }
 }
 
-/// Type variable bindings from matching function arguments
+/// Type variable bindings from matching function arguments (TODO: Remove lifetime when TypeBindings is owned)
 #[derive(Debug, Clone, PartialEq)]
-pub struct TypeBindings<'a> {
+pub struct TypeBindings {
     /// Map of type variable IDs (e.g. 1 for 'any1') to their concrete types
-    pub vars: HashMap<u32, ConcreteType<'a>>,
+    pub vars: HashMap<u32, ConcreteType>,
 }
 
-impl<'a> TypeBindings<'a> {
+impl TypeBindings {
     /// Create type bindings by matching argument patterns against concrete arguments
-    pub fn new(patterns: &[ArgumentPattern<'a>], args: &[ConcreteType<'a>]) -> Option<Self> {
+    pub fn new(patterns: &[ArgumentPattern], args: &[ConcreteType]) -> Option<Self> {
         // Check length compatibility
         if patterns.len() != args.len() {
             unimplemented!("Handle variadic functions");
@@ -511,7 +692,172 @@ impl<'a> TypeBindings<'a> {
     }
 
     /// Get the bound type for a type variable, if any
-    pub fn get(&self, var_id: u32) -> Option<&ConcreteType<'a>> {
+    pub fn get(&self, var_id: u32) -> Option<&ConcreteType> {
         self.vars.get(&var_id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use url::Url;
+
+    #[test]
+    fn test_extension_type_parse_basic() {
+        let uri = Url::parse("https://example.com/test.yaml").unwrap();
+        let mut ctx = ExtensionContext::new(uri.clone());
+
+        let original_type_item = SimpleExtensionsTypesItem {
+            name: "MyType".to_string(),
+            description: Some("A test type".to_string()),
+            parameters: None,
+            structure: None,
+            variadic: None,
+        };
+
+        let result = original_type_item.clone().parse(&mut ctx);
+        assert!(result.is_ok());
+
+        let custom_type = result.unwrap();
+        assert_eq!(custom_type.name, "MyType");
+        assert_eq!(custom_type.description, Some("A test type".to_string()));
+        assert!(custom_type.parameters.is_empty());
+
+        // Test round-trip conversion
+        let converted_back: SimpleExtensionsTypesItem = custom_type.into();
+        assert_eq!(converted_back.name, original_type_item.name);
+        assert_eq!(converted_back.description, original_type_item.description);
+        // Note: structure and variadic are TODO fields
+    }
+
+    #[test]
+    fn test_extension_type_parse_with_parameters() {
+        let uri = Url::parse("https://example.com/test.yaml").unwrap();
+        let mut ctx = ExtensionContext::new(uri.clone());
+
+        let original_type_item = SimpleExtensionsTypesItem {
+            name: "ParameterizedType".to_string(),
+            description: None,
+            parameters: Some(crate::text::simple_extensions::TypeParamDefs(vec![
+                TypeParamDefsItem {
+                    name: Some("length".to_string()),
+                    description: Some("The length parameter".to_string()),
+                    type_: TypeParamDefsItemType::Integer,
+                    min: Some(1.0),
+                    max: Some(1000.0),
+                    optional: Some(false),
+                    options: None,
+                },
+            ])),
+            structure: None,
+            variadic: None,
+        };
+
+        let result = original_type_item.clone().parse(&mut ctx);
+        assert!(result.is_ok());
+
+        let custom_type = result.unwrap();
+        assert_eq!(custom_type.name, "ParameterizedType");
+        assert_eq!(custom_type.parameters.len(), 1);
+
+        let param = &custom_type.parameters[0];
+        assert_eq!(param.name, "length");
+        assert_eq!(param.description, Some("The length parameter".to_string()));
+        if let ParamKind::Integer { min, max } = &param.kind {
+            assert_eq!(*min, Some(1));
+            assert_eq!(*max, Some(1000));
+        } else {
+            panic!("Expected Integer parameter kind");
+        }
+
+        // Test round-trip conversion
+        let converted_back: SimpleExtensionsTypesItem = custom_type.into();
+        assert_eq!(converted_back.name, original_type_item.name);
+        assert_eq!(converted_back.description, original_type_item.description);
+        // Note: parameter and structure comparisons would require PartialEq implementations
+    }
+
+    #[test]
+    fn test_extension_type_parse_empty_name_error() {
+        let uri = Url::parse("https://example.com/test.yaml").unwrap();
+        let mut ctx = ExtensionContext::new(uri);
+
+        let type_item = SimpleExtensionsTypesItem {
+            name: "".to_string(), // Empty name should cause error
+            description: None,
+            parameters: None,
+            structure: None,
+            variadic: None,
+        };
+
+        let result = type_item.parse(&mut ctx);
+        assert!(result.is_err());
+
+        if let Err(ExtensionTypeError::InvalidName { name }) = result {
+            assert_eq!(name, "");
+        } else {
+            panic!("Expected InvalidName error");
+        }
+    }
+
+    #[test]
+    fn test_extension_context_type_tracking() {
+        let uri = Url::parse("https://example.com/test.yaml").unwrap();
+        let mut ctx = ExtensionContext::new(uri.clone());
+
+        // Initially no types
+        assert!(!ctx.has_type("MyType"));
+
+        let type_item = SimpleExtensionsTypesItem {
+            name: "MyType".to_string(),
+            description: None,
+            parameters: None,
+            structure: None,
+            variadic: None,
+        };
+
+        // Parse the type - this should add it to context
+        let _custom_type = type_item.parse(&mut ctx).unwrap();
+
+        // Now the context should have the type
+        assert!(ctx.has_type("MyType"));
+
+        let retrieved_type = ctx.get_type("MyType");
+        assert!(retrieved_type.is_some());
+        assert_eq!(retrieved_type.unwrap().name, "MyType");
+    }
+
+    #[test]
+    fn test_type_param_conversion() {
+        let original_param = TypeParamDefsItem {
+            name: Some("test_param".to_string()),
+            description: Some("A test parameter".to_string()),
+            type_: TypeParamDefsItemType::Integer,
+            min: Some(0.0),
+            max: Some(100.0),
+            optional: Some(true),
+            options: None,
+        };
+
+        // Convert to owned TypeParam
+        let type_param = TypeParam::try_from(original_param.clone()).unwrap();
+        assert_eq!(type_param.name, "test_param");
+        assert_eq!(type_param.description, Some("A test parameter".to_string()));
+        
+        if let ParamKind::Integer { min, max } = type_param.kind {
+            assert_eq!(min, Some(0));
+            assert_eq!(max, Some(100));
+        } else {
+            panic!("Expected Integer parameter kind");
+        }
+
+        // Convert back to original type
+        let converted_back = TypeParamDefsItem::from(type_param);
+        assert_eq!(converted_back.name, original_param.name);
+        assert_eq!(converted_back.description, original_param.description);
+        assert_eq!(converted_back.type_, original_param.type_);
+        assert_eq!(converted_back.min, original_param.min);
+        assert_eq!(converted_back.max, original_param.max);
+        // Note: optional field is not used in our new structure
     }
 }

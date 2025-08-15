@@ -9,7 +9,7 @@ use thiserror::Error;
 use url::Url;
 
 use crate::parse::Parse;
-use crate::registry::types::InvalidTypeName;
+use crate::registry::types::{ExtensionTypeError, InvalidTypeName};
 use crate::text::simple_extensions::{
     AggregateFunction, AggregateFunctionImplsItem, Arguments, ArgumentsItem, ReturnValue,
     ScalarFunction, ScalarFunctionImplsItem, SimpleExtensions, SimpleExtensionsTypesItem, Type,
@@ -17,7 +17,7 @@ use crate::text::simple_extensions::{
 };
 
 use super::context::ExtensionContext;
-use super::types::{ArgumentPattern, ConcreteType, ExtensionType, ParsedType, TypeBindings};
+use super::types::{ArgumentPattern, ConcreteType, ParsedType, TypeBindings};
 
 /// Errors that can occur during extension validation
 #[derive(Debug, Error)]
@@ -50,6 +50,10 @@ pub enum ValidationError {
     /// A type name is invalid
     #[error("{0}")]
     InvalidTypeName(InvalidTypeName),
+
+    /// Extension type error
+    #[error("Extension type error: {0}")]
+    ExtensionTypeError(#[from] ExtensionTypeError),
 }
 
 impl From<InvalidTypeName> for ValidationError {
@@ -71,14 +75,11 @@ pub struct ExtensionFile {
 
 impl ExtensionFile {
     /// Create a validated extension file from raw data
-    pub fn create(
-        uri: Url,
-        extensions: SimpleExtensions,
-    ) -> Result<Self, ValidationError> {
+    pub fn create(uri: Url, extensions: SimpleExtensions) -> Result<Self, ValidationError> {
         // Parse/validate types first - they're referenced by functions
-        let mut ctx = ExtensionContext::new(&uri);
+        let mut ctx = ExtensionContext::new(uri.clone());
         for type_item in &extensions.types {
-            let _validated_type = type_item.parse(&mut ctx)?;
+            let _validated_type = type_item.clone().parse(&mut ctx)?;
         }
 
         // Validate scalar functions
@@ -168,11 +169,8 @@ impl ExtensionFile {
                             .find_type(name)
                             .expect("This should have been validated");
 
-                        let ext_type_wrapper = ExtensionType::new_unchecked(&self.uri, ext_type);
-                        Some(ArgumentPattern::Concrete(ConcreteType::extension(
-                            ext_type_wrapper,
-                            nullability,
-                        )))
+                        // TODO: Update when ExtensionType is fully integrated and ArgumentPattern is owned
+                        todo!("Update when ExtensionType constructor is available")
                     }
                     ParsedType::Parameterized { .. } => {
                         unimplemented!("Parameterized types not yet supported in argument patterns")
@@ -201,24 +199,13 @@ impl ExtensionFile {
     }
 
     fn validate_aggregate_function(function: &AggregateFunction) -> Result<(), ValidationError> {
-        for impl_item in &function.impls {
-            if impl_item.args.is_none() {
-                return Err(ValidationError::MissingArguments {
-                    function: function.name.clone(),
-                });
-            }
-        }
+        // Note: args can legitimately be None for functions like count() that count records
+        // rather than field values, so we don't validate args presence here
         Ok(())
     }
 
     fn validate_window_function(function: &WindowFunction) -> Result<(), ValidationError> {
-        for impl_item in &function.impls {
-            if impl_item.args.is_none() {
-                return Err(ValidationError::MissingArguments {
-                    function: function.name.clone(),
-                });
-            }
-        }
+        // Note: args can legitimately be None for some window functions
         Ok(())
     }
 }
@@ -305,9 +292,9 @@ pub struct ScalarImplementation<'a> {
 impl<'a> ScalarImplementation<'a> {
     /// Check if this implementation can be called with the given concrete argument types
     /// Returns the inferred concrete return type if the call would succeed, None otherwise
-    pub fn call_with(&self, concrete_args: &[ConcreteType<'a>]) -> Option<ConcreteType<'a>> {
+    pub fn call_with(&self, concrete_args: &[ConcreteType]) -> Option<ConcreteType> {
         // Convert raw arguments to ArgumentPatterns using ExtensionFile context
-        let arg_patterns: Vec<ArgumentPattern<'a>> = self
+        let arg_patterns: Vec<ArgumentPattern> = self
             .impl_item
             .args
             .as_ref()
@@ -317,7 +304,7 @@ impl<'a> ScalarImplementation<'a> {
             .collect();
 
         // Create type bindings by matching patterns against concrete arguments
-        let _bindings: TypeBindings<'a> = TypeBindings::new(&arg_patterns, concrete_args)?;
+        let _bindings: TypeBindings = TypeBindings::new(&arg_patterns, concrete_args)?;
 
         if concrete_args.len() > 1_000_000 {
             // For lifetime management
@@ -359,8 +346,8 @@ impl<'a> ScalarImplementation<'a> {
                     .find_type(name)
                     .expect("This should have been validated");
 
-                let ext_type_wrapper = ExtensionType::new_unchecked(&self.file.uri, ext_type);
-                Some(ConcreteType::extension(ext_type_wrapper, nullable))
+                // TODO: Update when ExtensionType is fully integrated
+                todo!("Update when ExtensionType constructor is available")
             }
             ParsedType::Parameterized { .. } => {
                 unimplemented!("Parameterized return types not yet supported")
