@@ -8,9 +8,10 @@
 use crate::parse::Parse;
 use crate::registry::context::ExtensionContext;
 use crate::text::simple_extensions::{
-    EnumOptions, SimpleExtensionsTypesItem, TypeParamDefsItem,
+    EnumOptions, SimpleExtensionsTypesItem, Type as ExtType, TypeParamDefsItem,
     TypeParamDefsItemType,
 };
+use serde_json::Value;
 use std::collections::HashMap;
 use std::str::FromStr;
 use thiserror::Error;
@@ -133,15 +134,6 @@ pub enum ParameterType {
     String,
 }
 
-/// What a type actually represents - either a reference to another type or a compound structure
-#[derive(Clone, Debug)]
-pub enum TypeDefinition {
-    /// Reference to another type by name (e.g., "i32", "string", or custom type name)
-    Reference(String),
-    /// Compound structure with named fields
-    Struct(HashMap<String, TypeDefinition>),
-}
-
 /// Type-safe parameter constraints based on parameter kind
 #[derive(Clone, Debug)]
 pub enum ParamKind {
@@ -150,23 +142,26 @@ pub enum ParamKind {
     /// True/False parameter
     Boolean,
     /// Integer parameter with optional bounds
-    Integer { 
+    Integer {
         /// Minimum value constraint
-        min: Option<i64>, 
+        min: Option<i64>,
         /// Maximum value constraint
-        max: Option<i64> 
+        max: Option<i64>,
     },
     /// Enumeration parameter with predefined options
-    Enumeration { 
+    Enumeration {
         /// Valid enumeration values
-        options: Vec<String> 
+        options: Vec<String>,
     },
     /// String parameter
     String,
 }
 
 impl ParamKind {
-    fn get_integer_bounds(min: Option<f64>, max: Option<f64>) -> Result<(Option<i64>, Option<i64>), TypeParamError> {
+    fn get_integer_bounds(
+        min: Option<f64>,
+        max: Option<f64>,
+    ) -> Result<(Option<i64>, Option<i64>), TypeParamError> {
         // Convert float bounds to integers, validating they are whole numbers
         let min_bound = if let Some(min_f) = min {
             if min_f.fract() != 0.0 {
@@ -202,48 +197,73 @@ impl ParamKind {
             (TypeParamDefsItemType::Boolean, None, None, None) => Ok(ParamKind::Boolean),
             (TypeParamDefsItemType::Integer, min, max, None) => {
                 let (min_bound, max_bound) = Self::get_integer_bounds(min, max)?;
-                Ok(ParamKind::Integer { min: min_bound, max: max_bound })
+                Ok(ParamKind::Integer {
+                    min: min_bound,
+                    max: max_bound,
+                })
             }
             (TypeParamDefsItemType::Enumeration, None, None, Some(enum_options)) => {
-                Ok(ParamKind::Enumeration { options: enum_options.0 })
+                Ok(ParamKind::Enumeration {
+                    options: enum_options.0,
+                })
             }
             (TypeParamDefsItemType::String, None, None, None) => Ok(ParamKind::String),
-            
+
             // Error cases - DataType with unexpected parameters
-            (TypeParamDefsItemType::DataType, Some(_), _, _) | (TypeParamDefsItemType::DataType, _, Some(_), _) => {
-                Err(TypeParamError::UnexpectedMinMaxBounds { param_type: TypeParamDefsItemType::DataType })
+            (TypeParamDefsItemType::DataType, Some(_), _, _)
+            | (TypeParamDefsItemType::DataType, _, Some(_), _) => {
+                Err(TypeParamError::UnexpectedMinMaxBounds {
+                    param_type: TypeParamDefsItemType::DataType,
+                })
             }
             (TypeParamDefsItemType::DataType, None, None, Some(_)) => {
-                Err(TypeParamError::UnexpectedEnumOptions { param_type: TypeParamDefsItemType::DataType })
+                Err(TypeParamError::UnexpectedEnumOptions {
+                    param_type: TypeParamDefsItemType::DataType,
+                })
             }
-            
-            // Error cases - Boolean with unexpected parameters  
-            (TypeParamDefsItemType::Boolean, Some(_), _, _) | (TypeParamDefsItemType::Boolean, _, Some(_), _) => {
-                Err(TypeParamError::UnexpectedMinMaxBounds { param_type: TypeParamDefsItemType::Boolean })
+
+            // Error cases - Boolean with unexpected parameters
+            (TypeParamDefsItemType::Boolean, Some(_), _, _)
+            | (TypeParamDefsItemType::Boolean, _, Some(_), _) => {
+                Err(TypeParamError::UnexpectedMinMaxBounds {
+                    param_type: TypeParamDefsItemType::Boolean,
+                })
             }
             (TypeParamDefsItemType::Boolean, None, None, Some(_)) => {
-                Err(TypeParamError::UnexpectedEnumOptions { param_type: TypeParamDefsItemType::Boolean })
+                Err(TypeParamError::UnexpectedEnumOptions {
+                    param_type: TypeParamDefsItemType::Boolean,
+                })
             }
-            
+
             // Error cases - Integer with enum options
             (TypeParamDefsItemType::Integer, _, _, Some(_)) => {
-                Err(TypeParamError::UnexpectedEnumOptions { param_type: TypeParamDefsItemType::Integer })
+                Err(TypeParamError::UnexpectedEnumOptions {
+                    param_type: TypeParamDefsItemType::Integer,
+                })
             }
-            
+
             // Error cases - Enumeration with unexpected parameters
-            (TypeParamDefsItemType::Enumeration, Some(_), _, _) | (TypeParamDefsItemType::Enumeration, _, Some(_), _) => {
-                Err(TypeParamError::UnexpectedMinMaxBounds { param_type: TypeParamDefsItemType::Enumeration })
+            (TypeParamDefsItemType::Enumeration, Some(_), _, _)
+            | (TypeParamDefsItemType::Enumeration, _, Some(_), _) => {
+                Err(TypeParamError::UnexpectedMinMaxBounds {
+                    param_type: TypeParamDefsItemType::Enumeration,
+                })
             }
             (TypeParamDefsItemType::Enumeration, None, None, None) => {
                 Err(TypeParamError::MissingEnumOptions)
             }
-            
+
             // Error cases - String with unexpected parameters
-            (TypeParamDefsItemType::String, Some(_), _, _) | (TypeParamDefsItemType::String, _, Some(_), _) => {
-                Err(TypeParamError::UnexpectedMinMaxBounds { param_type: TypeParamDefsItemType::String })
+            (TypeParamDefsItemType::String, Some(_), _, _)
+            | (TypeParamDefsItemType::String, _, Some(_), _) => {
+                Err(TypeParamError::UnexpectedMinMaxBounds {
+                    param_type: TypeParamDefsItemType::String,
+                })
             }
             (TypeParamDefsItemType::String, None, None, Some(_)) => {
-                Err(TypeParamError::UnexpectedEnumOptions { param_type: TypeParamDefsItemType::String })
+                Err(TypeParamError::UnexpectedEnumOptions {
+                    param_type: TypeParamDefsItemType::String,
+                })
             }
         }
     }
@@ -320,6 +340,15 @@ pub enum ExtensionTypeError {
     /// Parameter validation failed
     #[error("Invalid parameter: {0}")]
     InvalidParameter(#[from] TypeParamError),
+    /// Field type is invalid
+    #[error("Invalid structure field type: {0}")]
+    InvalidFieldType(String),
+    /// Structure representation cannot be nullable
+    #[error("Structure representation cannot be nullable: {type_string}")]
+    StructureCannotBeNullable {
+        /// The type string that was nullable
+        type_string: String,
+    },
 }
 
 /// Error types for TypeParam validation
@@ -330,23 +359,23 @@ pub enum TypeParamError {
     MissingName,
     /// Integer parameter has non-integer min/max values
     #[error("Integer parameter has invalid min/max values: min={min:?}, max={max:?}")]
-    InvalidIntegerBounds { 
+    InvalidIntegerBounds {
         /// The invalid minimum value
-        min: Option<f64>, 
+        min: Option<f64>,
         /// The invalid maximum value
-        max: Option<f64> 
+        max: Option<f64>,
     },
     /// Parameter type cannot have min/max bounds
     #[error("Parameter type '{param_type}' cannot have min/max bounds")]
-    UnexpectedMinMaxBounds { 
+    UnexpectedMinMaxBounds {
         /// The parameter type that cannot have bounds
-        param_type: TypeParamDefsItemType 
+        param_type: TypeParamDefsItemType,
     },
     /// Parameter type cannot have enumeration options
     #[error("Parameter type '{param_type}' cannot have enumeration options")]
-    UnexpectedEnumOptions { 
+    UnexpectedEnumOptions {
         /// The parameter type that cannot have options
-        param_type: TypeParamDefsItemType 
+        param_type: TypeParamDefsItemType,
     },
     /// Enumeration parameter is missing required options
     #[error("Enumeration parameter is missing required options")]
@@ -360,8 +389,9 @@ pub struct CustomType {
     pub name: String,
     /// Optional description of this type
     pub description: Option<String>,
-    /// What this type actually represents
-    pub definition: TypeDefinition,
+    /// How this type is represented (None = opaque, Some = structured representation)
+    /// If Some, nullable MUST be false
+    pub structure: Option<ConcreteType>,
     /// Parameters for this type (empty if none)
     pub parameters: Vec<TypeParam>,
     // TODO: Add variadic field for variadic type support
@@ -413,8 +443,8 @@ impl Parse<ExtensionContext> for SimpleExtensionsTypesItem {
             name,
             description,
             parameters,
-            structure: _, // TODO: Add structure support
-            variadic: _,  // TODO: Add variadic support
+            structure,
+            variadic: _, // TODO: Add variadic support
         } = self;
 
         // TODO: Not all names are valid for types, we should validate that
@@ -433,15 +463,75 @@ impl Parse<ExtensionContext> for SimpleExtensionsTypesItem {
             None => Vec::new(),
         };
 
+        // Parse structure field if present
+        let structure = match structure {
+            Some(structure_data) => Some(ConcreteType::try_from(structure_data)?),
+            None => None, // Opaque type
+        };
+
         let custom_type = CustomType {
             name: name.clone(),
             description,
-            definition: TypeDefinition::Reference(name), // TODO: Parse from structure field
+            structure,
             parameters,
         };
 
         ctx.add_type(&custom_type);
         Ok(custom_type)
+    }
+}
+
+impl TryFrom<ExtType> for ConcreteType {
+    type Error = ExtensionTypeError;
+
+    fn try_from(ext_type: ExtType) -> Result<Self, Self::Error> {
+        match ext_type {
+            // Case: structure: "BINARY" (alias to another type)
+            ExtType::Variant0(type_string) => {
+                let parsed_type = ParsedType::parse(&type_string);
+                let concrete_type = ConcreteType::try_from(parsed_type)?;
+
+                // Structure representation cannot be nullable
+                if concrete_type.nullable {
+                    return Err(ExtensionTypeError::InvalidName {
+                        name: format!(
+                            "Structure representation '{}' cannot be nullable",
+                            type_string
+                        ),
+                    });
+                }
+
+                Ok(concrete_type)
+            }
+            // Case: structure: { field1: type1, field2: type2 } (named struct)
+            ExtType::Variant1(field_map) => {
+                let mut field_names = Vec::new();
+                let mut field_types = Vec::new();
+
+                for (field_name, field_type_variant) in field_map {
+                    field_names.push(field_name);
+
+                    let field_type_str = match field_type_variant {
+                        Value::String(s) => s,
+                        _ => {
+                            return Err(ExtensionTypeError::InvalidName {
+                                name: field_type_variant.to_string(),
+                            })
+                        }
+                    };
+
+                    let parsed_field_type = ParsedType::parse(&field_type_str);
+                    let field_concrete_type = ConcreteType::try_from(parsed_field_type)?;
+                    field_types.push(field_concrete_type);
+                }
+
+                Ok(ConcreteType {
+                    base: KnownType::NStruct(field_names),
+                    nullable: false, // Structure representation cannot be nullable
+                    parameters: field_types,
+                })
+            }
+        }
     }
 }
 
@@ -499,13 +589,31 @@ pub enum ArgumentsItemError {
 //     }
 // }
 
-/// Represents a known, specific type, either builtin or extension
+/// Represents a known, specific type, either builtin, extension reference, or structured
 #[derive(Clone, Debug, PartialEq)]
 pub enum KnownType {
     /// Built-in primitive types
     Builtin(BuiltinType),
-    /// Custom types defined in extension YAML files
-    Extension(CustomType),
+    /// Custom types defined in extension YAML files (unresolved reference)
+    Extension(String),
+    /// Named struct with field names (corresponds to Substrait's NSTRUCT pseudo-type)
+    NStruct(Vec<String>),
+}
+
+impl FromStr for KnownType {
+    type Err = ExtensionTypeError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // First try to parse as a builtin type
+        match BuiltinType::from_str(s) {
+            Ok(builtin) => Ok(KnownType::Builtin(builtin)),
+            Err(_) => {
+                // TODO: Validate that the string is a valid type name
+                // For now, treat all non-builtin strings as extension type references
+                Ok(KnownType::Extension(s.to_string()))
+            }
+        }
+    }
 }
 
 /// A concrete type, fully specified with nullability and parameters
@@ -530,12 +638,25 @@ impl ConcreteType {
         }
     }
 
-    /// Create a concrete type from a custom type
-    pub fn extension(t: CustomType, nullable: bool) -> Self {
+    /// Create a concrete type from an extension type name
+    pub fn extension(type_name: impl Into<String>, nullable: bool) -> Self {
         Self {
-            base: KnownType::Extension(t),
+            base: KnownType::Extension(type_name.into()),
             nullable,
             parameters: Vec::new(),
+        }
+    }
+
+    /// Create a concrete type for a named struct (NSTRUCT)
+    pub fn nstruct(
+        field_names: Vec<String>,
+        field_types: Vec<ConcreteType>,
+        nullable: bool,
+    ) -> Self {
+        Self {
+            base: KnownType::NStruct(field_names),
+            nullable,
+            parameters: field_types,
         }
     }
 
@@ -545,6 +666,40 @@ impl ConcreteType {
             base,
             nullable,
             parameters,
+        }
+    }
+}
+
+impl<'a> TryFrom<ParsedType<'a>> for ConcreteType {
+    type Error = ExtensionTypeError;
+
+    fn try_from(parsed: ParsedType<'a>) -> Result<Self, Self::Error> {
+        match parsed {
+            ParsedType::Builtin(builtin_type, nullable) => {
+                Ok(ConcreteType::builtin(builtin_type, nullable))
+            }
+            ParsedType::NamedExtension(type_name, nullable) => {
+                Ok(ConcreteType::extension(type_name.to_string(), nullable))
+            }
+            ParsedType::TypeVariable(_) | ParsedType::NullableTypeVariable(_) => {
+                Err(ExtensionTypeError::InvalidName {
+                    name: "Type variables not allowed in structure definitions".to_string(),
+                })
+            }
+            ParsedType::Parameterized {
+                base,
+                parameters,
+                nullable,
+            } => {
+                let base_concrete = ConcreteType::try_from(*base)?;
+                let param_concretes: Result<Vec<_>, _> =
+                    parameters.into_iter().map(ConcreteType::try_from).collect();
+                Ok(ConcreteType::parameterized(
+                    base_concrete.base,
+                    nullable,
+                    param_concretes?,
+                ))
+            }
         }
     }
 }
@@ -700,6 +855,7 @@ impl TypeBindings {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
     use url::Url;
 
     #[test]
@@ -843,7 +999,7 @@ mod tests {
         let type_param = TypeParam::try_from(original_param.clone()).unwrap();
         assert_eq!(type_param.name, "test_param");
         assert_eq!(type_param.description, Some("A test parameter".to_string()));
-        
+
         if let ParamKind::Integer { min, max } = type_param.kind {
             assert_eq!(min, Some(0));
             assert_eq!(max, Some(100));
@@ -859,5 +1015,100 @@ mod tests {
         assert_eq!(converted_back.min, original_param.min);
         assert_eq!(converted_back.max, original_param.max);
         // Note: optional field is not used in our new structure
+    }
+
+    #[test]
+    fn test_simple_type_no_structure() {
+        // Test a simple opaque type (no structure field)
+        let uri = Url::parse("https://example.com/test.yaml").unwrap();
+        let mut ctx = ExtensionContext::new(uri);
+
+        let type_item = SimpleExtensionsTypesItem {
+            name: "unknown".to_string(),
+            description: Some("An opaque type".to_string()),
+            parameters: None,
+            structure: None, // Opaque type
+            variadic: None,
+        };
+
+        let result = type_item.parse(&mut ctx);
+        assert!(result.is_ok());
+
+        let custom_type = result.unwrap();
+        assert_eq!(custom_type.name, "unknown");
+        assert_eq!(custom_type.description, Some("An opaque type".to_string()));
+        assert!(custom_type.structure.is_none()); // Should be None for opaque type
+        assert!(custom_type.parameters.is_empty());
+    }
+
+    #[test]
+    fn test_types_with_structure() {
+        // Test a type with structure: "BINARY" (alias)
+        let uri = Url::parse("https://example.com/test.yaml").unwrap();
+        let mut ctx = ExtensionContext::new(uri);
+
+        let type_item = SimpleExtensionsTypesItem {
+            name: "coordinate".to_string(),
+            description: Some("A coordinate in some form".to_string()),
+            parameters: None,
+            structure: Some(ExtType::Variant0("fp64".to_string())), // Alias to fp64
+            variadic: None,
+        };
+
+        let result = type_item.parse(&mut ctx);
+        assert!(result.is_ok());
+
+        let custom_type = result.unwrap();
+        assert_eq!(custom_type.name, "coordinate");
+        assert!(custom_type.structure.is_some());
+
+        let structure = custom_type.structure.unwrap();
+        assert!(!structure.nullable); // Structure cannot be nullable
+        assert!(matches!(
+            structure.base,
+            KnownType::Builtin(BuiltinType::Fp64)
+        ));
+
+        // Create a map structure like { latitude: "coordinate", longitude: "coordinate" }
+        let mut field_map = serde_json::Map::new();
+        field_map.insert("latitude".to_string(), json!("coordinate"));
+        field_map.insert("longitude".to_string(), json!("coordinate"));
+
+        let type_item = SimpleExtensionsTypesItem {
+            name: "point".to_string(),
+            description: Some("A 2D point".to_string()),
+            parameters: None,
+            structure: Some(ExtType::Variant1(field_map)),
+            variadic: None,
+        };
+
+        let result = type_item.parse(&mut ctx);
+        assert!(result.is_ok());
+
+        let custom_type = result.unwrap();
+        assert_eq!(custom_type.name, "point");
+        assert!(custom_type.structure.is_some());
+
+        let structure = custom_type.structure.unwrap();
+        assert!(!structure.nullable); // Structure cannot be nullable
+
+        // Should be NStruct with field names
+        if let KnownType::NStruct(field_names) = structure.base {
+            assert_eq!(field_names.len(), 2);
+            assert!(field_names.contains(&"latitude".to_string()));
+            assert!(field_names.contains(&"longitude".to_string()));
+        } else {
+            panic!("Expected NStruct base type");
+        }
+
+        // Should have 2 field types (parameters)
+        assert_eq!(structure.parameters.len(), 2);
+        for param in &structure.parameters {
+            if let KnownType::Extension(ref type_name) = param.base {
+                assert_eq!(type_name, "coordinate");
+            } else {
+                panic!("Expected Extension type for coordinate reference");
+            }
+        }
     }
 }

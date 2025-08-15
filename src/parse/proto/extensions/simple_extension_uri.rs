@@ -8,7 +8,7 @@ use url::Url;
 use crate::{
     parse::{
         context::{ContextError, ProtoContext},
-        Anchor, Context, Parse,
+        Anchor, Parse,
     },
     proto,
 };

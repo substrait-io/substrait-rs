@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 use url::Url;
 
-use crate::parse::Context;
 use super::types::CustomType;
+use crate::parse::Context;
 
 /// Context for parsing and validating extension definitions.
 ///
@@ -17,7 +17,7 @@ pub struct ExtensionContext {
     /// The URI of the extension being parsed.
     pub uri: Url,
     /// Map of type names to their validated definitions
-    types: HashMap<String, CustomType>,
+    pub(crate) types: HashMap<String, CustomType>,
 }
 
 impl ExtensionContext {
@@ -36,11 +36,12 @@ impl ExtensionContext {
 
     /// Add a type to the context after it has been validated
     pub(crate) fn add_type(&mut self, custom_type: &CustomType) {
-        self.types.insert(custom_type.name.clone(), custom_type.clone());
+        self.types
+            .insert(custom_type.name.clone(), custom_type.clone());
     }
 
     /// Get a type by name from the context, returning the CustomType
-    pub(crate) fn get_type(&self, name: &str) -> Option<&CustomType> {
+    pub fn get_type(&self, name: &str) -> Option<&CustomType> {
         self.types.get(name)
     }
 }

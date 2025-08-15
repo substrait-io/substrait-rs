@@ -3,11 +3,7 @@
 //! Parsing of [proto::PlanVersion].
 
 use crate::{
-    parse::{
-        context::{Context, ProtoContext},
-        proto::Version,
-        Parse,
-    },
+    parse::{context::ProtoContext, proto::Version, Parse},
     proto,
 };
 use thiserror::Error;

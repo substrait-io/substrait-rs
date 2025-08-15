@@ -18,19 +18,17 @@
 //!
 //! ## Core Types
 //!
-//! - [`ExtensionFile`]: Validated wrapper around a SimpleExtensions + URI
-//! - [`ConcreteType`]: Fully-specified types for function arguments and return
-//!       values
-//! - [`GlobalRegistry`]: Immutable registry for URI+name based function lookup
+//! - [`ExtensionFile`]: Validated wrapper around SimpleExtensions + URI focusing on type definitions
+//! - [`CustomType`]: Parsed and validated extension type definitions 
+//! - [`Registry`]: Immutable registry for URI+name based type lookup
+//!
+//! Currently only type definitions are supported. Function parsing will be added in a future update.
 
 mod context;
 mod extension;
 mod registry;
 pub mod types;
 
-pub use extension::{
-    AggregateFunctionImplRef, AggregateFunctionRef, ExtensionFile, ScalarFunctionRef,
-    ScalarImplementation, ValidationError, WindowFunctionImplRef, WindowFunctionRef,
-};
-pub use registry::GlobalRegistry;
-pub use types::ConcreteType;
+pub use extension::{ExtensionFile, ValidationError};
+pub use registry::Registry;
+pub use types::{ConcreteType, CustomType};
