@@ -8,7 +8,7 @@
 use super::extensions::SimpleExtensions;
 use crate::parse::Parse;
 use crate::text::simple_extensions::{
-    EnumOptions, SimpleExtensionsTypesItem, Type as ExtType, TypeParamDefsItem,
+    EnumOptions, SimpleExtensionsTypesItem, Type as ExtType, TypeParamDefs, TypeParamDefsItem,
     TypeParamDefsItemType,
 };
 use serde_json::Value;
@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use thiserror::Error;
 
-/// Substrait built-in primitive types
+/// Substrait built-in primitive types (no parameters required)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BuiltinType {
     /// Boolean type - `bool`
@@ -39,28 +39,79 @@ pub enum BuiltinType {
     Binary,
     /// Calendar date - `date`
     Date,
-    /// Time of day - `time` (deprecated, use precision_time)
+    /// Time of day - `time` (deprecated, use CompoundType::PrecisionTime)
     Time,
-    /// Date and time - `timestamp` (deprecated, use precision_timestamp)
+    /// Date and time - `timestamp` (deprecated, use CompoundType::PrecisionTimestamp)
     Timestamp,
-    /// Date and time with timezone - `timestamp_tz` (deprecated, use precision_timestamp_tz)
+    /// Date and time with timezone - `timestamp_tz` (deprecated, use CompoundType::PrecisionTimestampTz)
     TimestampTz,
     /// Year-month interval - `interval_year`
     IntervalYear,
-    /// Day-time interval - `interval_day`
-    IntervalDay,
     /// 128-bit UUID - `uuid`
     Uuid,
-    /// Fixed-length decimal - `decimal`
-    Decimal,
-    /// Variable-length decimal - `decimal`
-    PrecisionDecimal,
-    /// Time with precision - `precision_time`
-    PrecisionTime,
-    /// Timestamp with precision - `precision_timestamp`
-    PrecisionTimestamp,
-    /// Timestamp with timezone and precision - `precision_timestamp_tz`
-    PrecisionTimestampTz,
+}
+
+/// Parameter for parameterized types
+#[derive(Clone, Debug, PartialEq)]
+pub enum TypeParameter {
+    /// Integer parameter (e.g., precision, scale)
+    Integer(i64),
+    /// Type parameter (nested type)
+    Type(Box<ConcreteType>),
+    /// String parameter
+    String(String),
+}
+
+/// Parameterized builtin types that require parameters
+#[derive(Clone, Debug, PartialEq)]
+pub enum CompoundType {
+    /// Fixed-length character string FIXEDCHAR<L>
+    FixedChar {
+        /// Length (number of characters), must be >= 1
+        length: i32,
+    },
+    /// Variable-length character string VARCHAR<L>
+    VarChar {
+        /// Maximum length (number of characters), must be >= 1
+        length: i32,
+    },
+    /// Fixed-length binary data FIXEDBINARY<L>
+    FixedBinary {
+        /// Length (number of bytes), must be >= 1
+        length: i32,
+    },
+    /// Fixed-point decimal DECIMAL<P, S>
+    Decimal {
+        /// Precision (total digits), <= 38
+        precision: i32,
+        /// Scale (digits after decimal point), 0 <= S <= P
+        scale: i32,
+    },
+    /// Time with sub-second precision PRECISIONTIME<P>
+    PrecisionTime {
+        /// Sub-second precision digits (0-12: seconds to picoseconds)
+        precision: i32,
+    },
+    /// Timestamp with sub-second precision PRECISIONTIMESTAMP<P>
+    PrecisionTimestamp {
+        /// Sub-second precision digits (0-12: seconds to picoseconds)
+        precision: i32,
+    },
+    /// Timezone-aware timestamp with precision PRECISIONTIMESTAMPTZ<P>
+    PrecisionTimestampTz {
+        /// Sub-second precision digits (0-12: seconds to picoseconds)
+        precision: i32,
+    },
+    /// Day-time interval INTERVAL_DAY<P>
+    IntervalDay {
+        /// Sub-second precision digits (0-9: seconds to nanoseconds)
+        precision: i32,
+    },
+    /// Compound interval INTERVAL_COMPOUND<P>
+    IntervalCompound {
+        /// Sub-second precision digits
+        precision: i32,
+    },
 }
 
 /// Error when a builtin type name is not recognized
@@ -87,13 +138,7 @@ impl FromStr for BuiltinType {
             "timestamp" => Ok(BuiltinType::Timestamp),
             "timestamp_tz" => Ok(BuiltinType::TimestampTz),
             "interval_year" => Ok(BuiltinType::IntervalYear),
-            "interval_day" => Ok(BuiltinType::IntervalDay),
             "uuid" => Ok(BuiltinType::Uuid),
-            "decimal" => Ok(BuiltinType::Decimal),
-            "precision_decimal" => Ok(BuiltinType::PrecisionDecimal),
-            "precision_time" => Ok(BuiltinType::PrecisionTime),
-            "precision_timestamp" => Ok(BuiltinType::PrecisionTimestamp),
-            "precision_timestamp_tz" => Ok(BuiltinType::PrecisionTimestampTz),
             _ => Err(UnrecognizedBuiltin(s.to_string())),
         }
     }
@@ -330,7 +375,7 @@ impl From<CustomType> for SimpleExtensionsTypesItem {
         let parameters = if value.parameters.is_empty() {
             None
         } else {
-            Some(crate::text::simple_extensions::TypeParamDefs(
+            Some(TypeParamDefs(
                 value
                     .parameters
                     .into_iter()
@@ -446,7 +491,7 @@ impl TryFrom<ExtType> for ConcreteType {
                 }
 
                 Ok(ConcreteType {
-                    known_type: KnownType::Struct {
+                    known_type: KnownType::NamedStruct {
                         field_names,
                         field_types,
                     },
@@ -519,10 +564,17 @@ pub enum FunctionCallError {
 /// Known Substrait types (builtin + extension references)
 #[derive(Clone, Debug, PartialEq)]
 pub enum KnownType {
-    /// Built-in Substrait primitive type
+    /// Simple built-in Substrait primitive type (no parameters)
     Builtin(BuiltinType),
-    /// Reference to an extension type by name
-    Extension(String),
+    /// Parameterized built-in types
+    Compound(CompoundType),
+    /// Extension type with optional parameters
+    Extension {
+        /// Extension type name
+        name: String,
+        /// Type parameters
+        parameters: Vec<TypeParameter>,
+    },
     /// List type with element type
     List(Box<ConcreteType>),
     /// Map type with key and value types
@@ -532,11 +584,13 @@ pub enum KnownType {
         /// Value type
         value: Box<ConcreteType>,
     },
-    /// Struct type with named fields
-    Struct {
+    /// Struct type (ordered fields without names)
+    Struct(Vec<ConcreteType>),
+    /// Named struct type (nstruct - ordered fields with names)
+    NamedStruct {
         /// Field names
         field_names: Vec<String>,
-        /// Field types
+        /// Field types (same order as field_names)
         field_types: Vec<ConcreteType>,
     },
     /// Type variable (e.g., any1, any2)
@@ -561,10 +615,33 @@ impl ConcreteType {
         }
     }
 
-    /// Create a new extension type reference
+    /// Create a new compound (parameterized) type
+    pub fn compound(compound_type: CompoundType, nullable: bool) -> ConcreteType {
+        ConcreteType {
+            known_type: KnownType::Compound(compound_type),
+            nullable,
+        }
+    }
+
+    /// Create a new extension type reference (without parameters)
     pub fn extension(name: String, nullable: bool) -> ConcreteType {
         ConcreteType {
-            known_type: KnownType::Extension(name),
+            known_type: KnownType::Extension {
+                name,
+                parameters: Vec::new(),
+            },
+            nullable,
+        }
+    }
+
+    /// Create a new parameterized extension type
+    pub fn extension_with_params(
+        name: String,
+        parameters: Vec<TypeParameter>,
+        nullable: bool,
+    ) -> ConcreteType {
+        ConcreteType {
+            known_type: KnownType::Extension { name, parameters },
             nullable,
         }
     }
@@ -577,13 +654,10 @@ impl ConcreteType {
         }
     }
 
-    /// Create a new struct type
-    pub fn r#struct(element_type: ConcreteType, nullable: bool) -> ConcreteType {
+    /// Create a new struct type (ordered fields without names)
+    pub fn r#struct(field_types: Vec<ConcreteType>, nullable: bool) -> ConcreteType {
         ConcreteType {
-            known_type: KnownType::Struct {
-                field_names: vec!["field1".into(), "field2".into()],
-                field_types: vec![element_type],
-            },
+            known_type: KnownType::Struct(field_types),
             nullable,
         }
     }
@@ -599,14 +673,14 @@ impl ConcreteType {
         }
     }
 
-    /// Create a new struct type
-    pub fn nstruct(
+    /// Create a new named struct type (nstruct - ordered fields with names)
+    pub fn named_struct(
         field_names: Vec<String>,
         field_types: Vec<ConcreteType>,
         nullable: bool,
     ) -> ConcreteType {
         ConcreteType {
-            known_type: KnownType::Struct {
+            known_type: KnownType::NamedStruct {
                 field_names,
                 field_types,
             },
@@ -664,15 +738,11 @@ impl<'a> TryFrom<ParsedType<'a>> for ConcreteType {
                 ))
             }
             ParsedType::Struct(field_types, nullability) => {
-                let field_names: Vec<String> = (0..field_types.len())
-                    .map(|i| format!("field{}", i))
-                    .collect();
                 let concrete_field_types: Result<Vec<ConcreteType>, _> = field_types
                     .into_iter()
                     .map(ConcreteType::try_from)
                     .collect();
-                Ok(ConcreteType::nstruct(
-                    field_names,
+                Ok(ConcreteType::r#struct(
                     concrete_field_types?,
                     nullability.unwrap_or(false),
                 ))
@@ -991,7 +1061,7 @@ mod tests {
         let ext_type = text::simple_extensions::Type::Variant1(field_map);
         let concrete = ConcreteType::try_from(ext_type)?;
 
-        if let KnownType::Struct {
+        if let KnownType::NamedStruct {
             field_names,
             field_types,
         } = &concrete.known_type
@@ -1003,7 +1073,7 @@ mod tests {
                 ConcreteType::builtin(BuiltinType::Fp64, false)
             );
         } else {
-            panic!("Expected struct type");
+            panic!("Expected named struct type");
         }
 
         Ok(())
@@ -1063,7 +1133,7 @@ mod tests {
 
         if let Some(ConcreteType {
             known_type:
-                KnownType::Struct {
+                KnownType::NamedStruct {
                     field_names,
                     field_types,
                 },
@@ -1088,9 +1158,8 @@ mod tests {
     fn test_nullable_structure_rejected() {
         let ext_type = text::simple_extensions::Type::Variant0("i32?".to_string());
         let result = ConcreteType::try_from(ext_type);
-        if let Err(ExtensionTypeError::InvalidName { name }) = result {
-            assert!(name.contains("Structure representation"));
-            assert!(name.contains("cannot be nullable"));
+        if let Err(ExtensionTypeError::StructureCannotBeNullable { type_string }) = result {
+            assert!(type_string.contains("i32?"));
         } else {
             panic!(
                 "Expected nullable structure to be rejected, got: {:?}",
