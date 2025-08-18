@@ -371,7 +371,7 @@ impl From<TypeArg> for ArgumentsItem {
 mod tests {
     use super::*;
     use crate::text::simple_extensions;
-    use crate::{parse::context::tests::Context, text};
+    use crate::{parse::context::fixtures::Context, text};
 
     #[test]
     fn parse_enum_argument() -> Result<(), ArgumentsItemError> {
@@ -677,7 +677,7 @@ mod tests {
     #[test]
     fn parse_extensions() {
         use crate::extensions::EXTENSIONS;
-        use crate::parse::context::tests::Context;
+        use crate::parse::context::fixtures::Context;
 
         macro_rules! parse_arguments {
             ($url:expr, $fns:expr) => {

@@ -142,7 +142,7 @@ impl From<Version> for proto::Version {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::context::tests::Context;
+    use crate::parse::context::fixtures::Context;
 
     #[test]
     fn version() -> Result<(), VersionError> {

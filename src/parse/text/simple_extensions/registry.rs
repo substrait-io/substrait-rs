@@ -8,13 +8,13 @@
 //!
 //! Currently only type definitions are supported. Function parsing will be added in a future update.
 //!
-//! This module is only available when the `registry` feature is enabled.
+//! This module is only available when the `parse` feature is enabled.
 
-#![cfg(feature = "registry")]
+#![cfg(feature = "parse")]
 
 use url::Url;
 
-use super::{types::CustomType, ExtensionFile};
+use super::{types::CustomType, extension::ExtensionFile};
 
 /// Extension Registry that manages Substrait extensions
 ///

@@ -91,7 +91,7 @@ impl From<SimpleExtensionUri> for proto::extensions::SimpleExtensionUri {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::{context::tests::Context, Context as _};
+    use crate::parse::{context::fixtures::Context, Context as _};
 
     #[test]
     fn parse() -> Result<(), SimpleExtensionUriError> {

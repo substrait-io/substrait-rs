@@ -59,7 +59,7 @@ pub enum ContextError {
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+pub(crate) mod fixtures {
     use std::collections::{hash_map::Entry, HashMap};
 
     use crate::parse::{
@@ -72,14 +72,12 @@ pub(crate) mod tests {
     /// This currently mocks support for simple extensions (does not resolve or
     /// parse).
     pub struct Context {
-        empty_simple_extensions: SimpleExtensions,
-        simple_extensions: HashMap<Anchor<SimpleExtensionUri>, SimpleExtensionUri>,
+        simple_extensions: HashMap<Anchor<SimpleExtensionUri>, SimpleExtensions>,
     }
 
     impl Default for Context {
         fn default() -> Self {
             Self {
-                empty_simple_extensions: SimpleExtensions {},
                 simple_extensions: Default::default(),
             }
         }
@@ -100,9 +98,10 @@ pub(crate) mod tests {
                     // This is where we would resolve and then parse.
                     // This check shows the use of the unsupported uri error.
                     if let "http" | "https" | "file" = simple_extension_uri.uri().scheme() {
-                        entry.insert(simple_extension_uri.clone());
+                        let ext = entry
+                            .insert(SimpleExtensions::empty(simple_extension_uri.uri().clone()));
                         // Here we just return an empty simple extensions.
-                        Ok(&self.empty_simple_extensions)
+                        Ok(ext)
                     } else {
                         Err(ContextError::UnsupportedURI(format!(
                             "`{}` scheme not supported",
@@ -118,8 +117,7 @@ pub(crate) mod tests {
             anchor: &Anchor<SimpleExtensionUri>,
         ) -> Result<&SimpleExtensions, ContextError> {
             self.simple_extensions
-                .contains_key(anchor)
-                .then_some(&self.empty_simple_extensions)
+                .get(anchor)
                 .ok_or(ContextError::UndefinedSimpleExtension(*anchor))
         }
     }

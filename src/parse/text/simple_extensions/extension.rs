@@ -10,7 +10,7 @@ use thiserror::Error;
 use url::Url;
 
 use crate::parse::Parse;
-use crate::registry::types::{CustomType, ExtensionTypeError};
+use crate::parse::text::simple_extensions::types::{CustomType, ExtensionTypeError};
 use crate::text::simple_extensions::SimpleExtensions;
 
 use super::context::ExtensionContext;

@@ -71,7 +71,7 @@ impl From<PlanVersion> for proto::PlanVersion {
 mod tests {
     use super::*;
     use crate::{
-        parse::{context::tests::Context, proto::VersionError},
+        parse::{context::fixtures::Context, proto::VersionError},
         version,
     };
 

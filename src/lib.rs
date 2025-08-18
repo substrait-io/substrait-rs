@@ -122,8 +122,5 @@ pub mod proto;
 pub mod text;
 pub mod version;
 
-#[cfg(feature = "registry")]
-pub mod registry;
-
 #[cfg(feature = "parse")]
 pub mod parse;
