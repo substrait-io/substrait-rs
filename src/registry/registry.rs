@@ -19,7 +19,7 @@ use super::{types::CustomType, ExtensionFile};
 /// Extension Registry that manages Substrait extensions
 ///
 /// This registry is immutable and reusable across multiple plans.
-/// It provides URI + name based lookup for extension types. Function parsing will be added later.
+/// It provides URI + name based lookup for extension types. Function parsing will be added in a future update.
 #[derive(Debug)]
 pub struct Registry {
     /// Pre-validated extension files
@@ -51,10 +51,7 @@ impl Registry {
             .iter()
             .map(|(uri, simple_extensions)| {
                 ExtensionFile::create(uri.clone(), simple_extensions.clone())
-                    .map_err(|err| {
-                        eprintln!("Failed to create extension file for {}: {}", uri, err);
-                    })
-                    .expect("Core extensions should be valid")
+                    .unwrap_or_else(|err| panic!("Core extensions should be valid, but failed to create extension file for {uri}: {err}"))
             })
             .collect();
 

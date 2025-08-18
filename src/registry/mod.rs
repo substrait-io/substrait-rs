@@ -26,6 +26,7 @@
 
 mod context;
 mod extension;
+#[allow(clippy::module_inception)]
 mod registry;
 pub mod types;
 

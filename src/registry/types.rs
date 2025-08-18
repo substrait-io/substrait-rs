@@ -8,7 +8,7 @@
 use crate::parse::Parse;
 use crate::registry::context::ExtensionContext;
 use crate::text::simple_extensions::{
-    EnumOptions, SimpleExtensionsTypesItem, Type as ExtType, TypeParamDefsItem,
+    EnumOptions, SimpleExtensionsTypesItem, Type as ExtType, TypeParamDefs, TypeParamDefsItem,
     TypeParamDefsItemType,
 };
 use serde_json::Value;
@@ -419,7 +419,7 @@ impl From<CustomType> for SimpleExtensionsTypesItem {
             parameters: if custom_type.parameters.is_empty() {
                 None
             } else {
-                Some(crate::text::simple_extensions::TypeParamDefs(
+                Some(TypeParamDefs(
                     custom_type.parameters.into_iter().map(Into::into).collect(),
                 ))
             },
@@ -494,10 +494,7 @@ impl TryFrom<ExtType> for ConcreteType {
                 // Structure representation cannot be nullable
                 if concrete_type.nullable {
                     return Err(ExtensionTypeError::InvalidName {
-                        name: format!(
-                            "Structure representation '{}' cannot be nullable",
-                            type_string
-                        ),
+                        name: format!("Structure representation '{type_string}' cannot be nullable"),
                     });
                 }
 
@@ -784,7 +781,7 @@ pub enum Match {
     Fail,
 }
 
-impl<'a> ArgumentPattern {
+impl ArgumentPattern {
     /// Check if this pattern matches the given concrete type
     pub fn matches(&self, concrete: &ConcreteType) -> Match {
         match self {
@@ -894,7 +891,7 @@ mod tests {
         let original_type_item = SimpleExtensionsTypesItem {
             name: "ParameterizedType".to_string(),
             description: None,
-            parameters: Some(crate::text::simple_extensions::TypeParamDefs(vec![
+            parameters: Some(TypeParamDefs(vec![
                 TypeParamDefsItem {
                     name: Some("length".to_string()),
                     description: Some("The length parameter".to_string()),
