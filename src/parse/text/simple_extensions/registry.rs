@@ -14,7 +14,7 @@
 
 use url::Url;
 
-use super::{types::CustomType, extension::ExtensionFile};
+use super::{types::CustomType, ExtensionFile};
 
 /// Extension Registry that manages Substrait extensions
 ///
@@ -46,7 +46,7 @@ impl Registry {
         // Force evaluation of core extensions
         LazyLock::force(&EXTENSIONS);
 
-        // Convert HashMap<Url, SimpleExtensions> to Vec<ExtensionFile>
+        // Convert HashMap<Url, SimpleExtensions> to Vec<SimpleExtensions>
         let extensions: Vec<ExtensionFile> = EXTENSIONS
             .iter()
             .map(|(uri, simple_extensions)| {
@@ -72,8 +72,10 @@ impl Registry {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::text::simple_extensions::*;
+    use super::ExtensionFile as ParsedSimpleExtensions;
+    use super::Registry;
+    use crate::text::simple_extensions::{SimpleExtensions, SimpleExtensionsTypesItem};
+    use url::Url;
 
     fn create_test_extension_with_types() -> SimpleExtensions {
         SimpleExtensions {
@@ -96,7 +98,8 @@ mod tests {
     fn test_new_registry() {
         let uri = Url::parse("https://example.com/test.yaml").unwrap();
         let extension_file =
-            ExtensionFile::create(uri.clone(), create_test_extension_with_types()).unwrap();
+            ParsedSimpleExtensions::create(uri.clone(), create_test_extension_with_types())
+                .unwrap();
         let extensions = vec![extension_file];
 
         let registry = Registry::new(extensions);
@@ -109,7 +112,8 @@ mod tests {
     fn test_type_lookup() {
         let uri = Url::parse("https://example.com/test.yaml").unwrap();
         let extension_file =
-            ExtensionFile::create(uri.clone(), create_test_extension_with_types()).unwrap();
+            ParsedSimpleExtensions::create(uri.clone(), create_test_extension_with_types())
+                .unwrap();
         let extensions = vec![extension_file];
 
         let registry = Registry::new(extensions);

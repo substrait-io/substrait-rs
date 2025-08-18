@@ -5,7 +5,7 @@
 //! This module provides a clean, type-safe wrapper around Substrait extension types,
 //! separating function signature patterns from concrete argument types.
 
-use super::context::ExtensionContext;
+use super::extensions::SimpleExtensions;
 use crate::parse::Parse;
 use crate::text::simple_extensions::{
     EnumOptions, SimpleExtensionsTypesItem, Type as ExtType, TypeParamDefsItem,
@@ -367,11 +367,11 @@ impl From<CustomType> for SimpleExtensionsTypesItem {
     }
 }
 
-impl Parse<ExtensionContext> for SimpleExtensionsTypesItem {
+impl Parse<SimpleExtensions> for SimpleExtensionsTypesItem {
     type Parsed = CustomType;
     type Error = ExtensionTypeError;
 
-    fn parse(self, _ctx: &mut ExtensionContext) -> Result<Self::Parsed, Self::Error> {
+    fn parse(self, _ctx: &mut SimpleExtensions) -> Result<Self::Parsed, Self::Error> {
         let name = self.name;
         CustomType::validate_name(&name)
             .map_err(|InvalidTypeName(name)| ExtensionTypeError::InvalidName { name })?;
@@ -415,10 +415,8 @@ impl TryFrom<ExtType> for ConcreteType {
 
                 // Structure representation cannot be nullable
                 if concrete_type.nullable {
-                    return Err(ExtensionTypeError::InvalidName {
-                        name: format!(
-                            "Structure representation '{type_string}' cannot be nullable"
-                        ),
+                    return Err(ExtensionTypeError::StructureCannotBeNullable {
+                        type_string: type_string,
                     });
                 }
 
@@ -575,6 +573,17 @@ impl ConcreteType {
     pub fn list(element_type: ConcreteType, nullable: bool) -> ConcreteType {
         ConcreteType {
             known_type: KnownType::List(Box::new(element_type)),
+            nullable,
+        }
+    }
+
+    /// Create a new struct type
+    pub fn r#struct(element_type: ConcreteType, nullable: bool) -> ConcreteType {
+        ConcreteType {
+            known_type: KnownType::Struct {
+                field_names: vec!["field1".into(), "field2".into()],
+                field_types: vec![element_type],
+            },
             nullable,
         }
     }
@@ -813,11 +822,10 @@ impl TypeBindings {
 
 #[cfg(test)]
 mod tests {
-    use super::super::context::ExtensionContext;
+    use super::super::extensions::SimpleExtensions;
     use super::*;
     use crate::text;
     use crate::text::simple_extensions;
-    use url::Url;
 
     #[test]
     fn test_builtin_type_parsing() {
@@ -1013,7 +1021,7 @@ mod tests {
             variadic: None,
         };
 
-        let mut ctx = ExtensionContext::new(Url::parse("https://example.com/test.yaml").unwrap());
+        let mut ctx = SimpleExtensions::default();
         let custom_type = type_item.parse(&mut ctx)?;
         assert_eq!(custom_type.name, "TestType");
         assert_eq!(custom_type.description, Some("A test type".to_string()));
@@ -1049,7 +1057,7 @@ mod tests {
             variadic: None,
         };
 
-        let mut ctx = ExtensionContext::new(Url::parse("https://example.com/test.yaml").unwrap());
+        let mut ctx = SimpleExtensions::default();
         let custom_type = type_item.parse(&mut ctx)?;
         assert_eq!(custom_type.name, "Point");
 

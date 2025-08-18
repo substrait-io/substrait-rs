@@ -4,8 +4,6 @@
 
 use std::collections::HashMap;
 
-use url::Url;
-
 use super::types::CustomType;
 use crate::parse::Context;
 
@@ -13,26 +11,17 @@ use crate::parse::Context;
 ///
 /// The context provides access to types defined in the same extension file during parsing.
 /// This allows type references to be resolved within the same extension file.
-#[derive(Debug)]
-pub struct ExtensionContext {
-    /// The URI this extension is being loaded from
-    pub uri: Url,
+#[derive(Debug, Default)]
+pub struct SimpleExtensions {
     /// Types defined in this extension file
     types: HashMap<String, CustomType>,
 }
 
-impl ExtensionContext {
-    /// Create a new extension context for the given URI
-    pub fn new(uri: Url) -> Self {
-        Self {
-            uri,
-            types: HashMap::new(),
-        }
-    }
-
+impl SimpleExtensions {
     /// Add a type to the context
     pub fn add_type(&mut self, custom_type: &CustomType) {
-        self.types.insert(custom_type.name.clone(), custom_type.clone());
+        self.types
+            .insert(custom_type.name.clone(), custom_type.clone());
     }
 
     /// Check if a type with the given name exists in the context
@@ -51,6 +40,6 @@ impl ExtensionContext {
     }
 }
 
-impl Context for ExtensionContext {
+impl Context for SimpleExtensions {
     // ExtensionContext implements the Context trait
 }

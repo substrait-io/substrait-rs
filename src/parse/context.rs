@@ -5,7 +5,7 @@
 use thiserror::Error;
 
 use crate::parse::{
-    proto::extensions::SimpleExtensionUri, text::simple_extensions::SimpleExtensions, Anchor, Parse,
+    proto::extensions::SimpleExtensionUri, text::simple_extensions::ExtensionFile, Anchor, Parse,
 };
 
 /// A parse context.
@@ -33,13 +33,13 @@ pub trait ProtoContext: Context {
     fn add_simple_extension_uri(
         &mut self,
         simple_extension_uri: &SimpleExtensionUri,
-    ) -> Result<&SimpleExtensions, ContextError>;
+    ) -> Result<&ExtensionFile, ContextError>;
 
     /// Returns the simple extensions for the given simple extension anchor.
     fn simple_extensions(
         &self,
         anchor: &Anchor<SimpleExtensionUri>,
-    ) -> Result<&SimpleExtensions, ContextError>;
+    ) -> Result<&ExtensionFile, ContextError>;
 }
 
 /// Parse context errors.
@@ -64,7 +64,7 @@ pub(crate) mod fixtures {
 
     use crate::parse::{
         context::ContextError, proto::extensions::SimpleExtensionUri,
-        text::simple_extensions::SimpleExtensions, Anchor,
+        text::simple_extensions::ExtensionFile, Anchor,
     };
 
     /// A test context.
@@ -72,7 +72,7 @@ pub(crate) mod fixtures {
     /// This currently mocks support for simple extensions (does not resolve or
     /// parse).
     pub struct Context {
-        simple_extensions: HashMap<Anchor<SimpleExtensionUri>, SimpleExtensions>,
+        simple_extensions: HashMap<Anchor<SimpleExtensionUri>, ExtensionFile>,
     }
 
     impl Default for Context {
@@ -89,7 +89,7 @@ pub(crate) mod fixtures {
         fn add_simple_extension_uri(
             &mut self,
             simple_extension_uri: &crate::parse::proto::extensions::SimpleExtensionUri,
-        ) -> Result<&SimpleExtensions, ContextError> {
+        ) -> Result<&ExtensionFile, ContextError> {
             match self.simple_extensions.entry(simple_extension_uri.anchor()) {
                 Entry::Occupied(_) => Err(ContextError::DuplicateSimpleExtension(
                     simple_extension_uri.anchor(),
@@ -98,8 +98,8 @@ pub(crate) mod fixtures {
                     // This is where we would resolve and then parse.
                     // This check shows the use of the unsupported uri error.
                     if let "http" | "https" | "file" = simple_extension_uri.uri().scheme() {
-                        let ext = entry
-                            .insert(SimpleExtensions::empty(simple_extension_uri.uri().clone()));
+                        let ext =
+                            entry.insert(ExtensionFile::empty(simple_extension_uri.uri().clone()));
                         // Here we just return an empty simple extensions.
                         Ok(ext)
                     } else {
@@ -115,7 +115,7 @@ pub(crate) mod fixtures {
         fn simple_extensions(
             &self,
             anchor: &Anchor<SimpleExtensionUri>,
-        ) -> Result<&SimpleExtensions, ContextError> {
+        ) -> Result<&ExtensionFile, ContextError> {
             self.simple_extensions
                 .get(anchor)
                 .ok_or(ContextError::UndefinedSimpleExtension(*anchor))
