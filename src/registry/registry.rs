@@ -132,6 +132,7 @@ mod tests {
         assert!(missing_extension.is_none());
     }
 
+    #[cfg(feature = "extensions")]
     #[test]
     fn test_from_core_extensions() {
         let registry = Registry::from_core_extensions();
