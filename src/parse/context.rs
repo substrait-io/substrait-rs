@@ -71,16 +71,9 @@ pub(crate) mod fixtures {
     ///
     /// This currently mocks support for simple extensions (does not resolve or
     /// parse).
+    #[derive(Default)]
     pub struct Context {
         simple_extensions: HashMap<Anchor<SimpleExtensionUri>, ExtensionFile>,
-    }
-
-    impl Default for Context {
-        fn default() -> Self {
-            Self {
-                simple_extensions: Default::default(),
-            }
-        }
     }
 
     impl super::Context for Context {}

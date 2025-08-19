@@ -142,7 +142,7 @@ mod tests {
         // Find the unknown.yaml extension dynamically
         let unknown_extension = registry
             .extensions()
-            .find(|ext| ext.uri.path_segments().map(|s| s.last()) == Some(Some("unknown.yaml")))
+            .find(|ext| ext.uri.path_segments().map(|mut s| s.next_back()) == Some(Some("unknown.yaml")))
             .expect("Should find unknown.yaml extension");
 
         let unknown_type = unknown_extension.get_type("unknown");
