@@ -12,7 +12,6 @@ use crate::text::simple_extensions::{
     TypeParamDefsItemType,
 };
 use serde_json::Value;
-use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 use thiserror::Error;
@@ -141,49 +140,49 @@ impl fmt::Display for TypeParameter {
 /// Parameterized builtin types that require non-type parameters
 #[derive(Clone, Debug, PartialEq)]
 pub enum CompoundType {
-    /// Fixed-length character string FIXEDCHAR<L>
+    /// Fixed-length character string: `FIXEDCHAR<L>`
     FixedChar {
         /// Length (number of characters), must be >= 1
         length: i32,
     },
-    /// Variable-length character string VARCHAR<L>
+    /// Variable-length character string: `VARCHAR<L>`
     VarChar {
         /// Maximum length (number of characters), must be >= 1
         length: i32,
     },
-    /// Fixed-length binary data FIXEDBINARY<L>
+    /// Fixed-length binary data: `FIXEDBINARY<L>`
     FixedBinary {
         /// Length (number of bytes), must be >= 1
         length: i32,
     },
-    /// Fixed-point decimal DECIMAL<P, S>
+    /// Fixed-point decimal: `DECIMAL<P, S>`
     Decimal {
         /// Precision (total digits), <= 38
         precision: i32,
         /// Scale (digits after decimal point), 0 <= S <= P
         scale: i32,
     },
-    /// Time with sub-second precision PRECISIONTIME<P>
+    /// Time with sub-second precision: `PRECISIONTIME<P>`
     PrecisionTime {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
         precision: i32,
     },
-    /// Timestamp with sub-second precision PRECISIONTIMESTAMP<P>
+    /// Timestamp with sub-second precision: `PRECISIONTIMESTAMP<P>`
     PrecisionTimestamp {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
         precision: i32,
     },
-    /// Timezone-aware timestamp with precision PRECISIONTIMESTAMPTZ<P>
+    /// Timezone-aware timestamp with precision: `PRECISIONTIMESTAMPTZ<P>`
     PrecisionTimestampTz {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
         precision: i32,
     },
-    /// Day-time interval INTERVAL_DAY<P>
+    /// Day-time interval: `INTERVAL_DAY<P>`
     IntervalDay {
         /// Sub-second precision digits (0-9: seconds to nanoseconds)
         precision: i32,
     },
-    /// Compound interval INTERVAL_COMPOUND<P>
+    /// Compound interval: `INTERVAL_COMPOUND<P>`
     IntervalCompound {
         /// Sub-second precision digits
         precision: i32,
@@ -638,60 +637,6 @@ impl Parse<TypeContext> for RawType {
 #[error("{0}")]
 pub struct InvalidTypeName(String);
 
-/// Error for invalid Type specifications
-#[derive(Debug, thiserror::Error)]
-pub enum TypeParseError {
-    /// Extension type name not found in context
-    #[error("Extension type '{name}' not found")]
-    ExtensionTypeNotFound {
-        /// The extension type name that was not found
-        name: String,
-    },
-    /// Type variable ID is invalid (must be >= 1)
-    #[error("Type variable 'any{id}' is invalid (must be >= 1)")]
-    InvalidTypeVariableId {
-        /// The invalid type variable ID
-        id: u32,
-    },
-    /// Unimplemented Type variant
-    #[error("Unimplemented Type variant")]
-    UnimplementedVariant,
-}
-
-// TODO: ValidatedType will be updated when we implement proper type validation
-
-// TODO: Update this Parse implementation when ValidatedType and ParsedType are converted to owned types
-// impl Parse<ExtensionContext> for &RawType {
-//     type Parsed = ValidatedType;
-//     type Error = TypeParseError;
-//     fn parse(self, ctx: &mut ExtensionContext) -> Result<Self::Parsed, Self::Error> {
-//         todo!("Update when ValidatedType and ParsedType are owned")
-//     }
-// }
-
-/// Error for invalid function call specifications
-#[derive(Debug, thiserror::Error)]
-pub enum FunctionCallError {
-    /// Type parsing failed
-    #[error("Type parsing failed: {0}")]
-    TypeParseError(#[from] TypeParseError),
-    /// Unsupported ArgumentsItem variant
-    #[error("Unimplemented ArgumentsItem variant: {variant}")]
-    UnimplementedVariant {
-        /// The unsupported variant name
-        variant: String,
-    },
-}
-
-// TODO: Update this Parse implementation when ArgumentPattern is converted to owned type
-// impl Parse<ExtensionContext> for &simple_extensions::ArgumentsItem {
-//     type Parsed = ArgumentPattern;
-//     type Error = FunctionCallError;
-//     fn parse(self, ctx: &mut ExtensionContext) -> Result<Self::Parsed, Self::Error> {
-//         todo!("Update when ArgumentPattern is owned")
-//     }
-// }
-
 /// Known Substrait types (builtin + extension references)
 #[derive(Clone, Debug, PartialEq)]
 pub enum KnownType {
@@ -972,89 +917,6 @@ impl<'a> ParsedType<'a> {
     }
 }
 
-/// A pattern for function arguments that can match concrete types or type variables (TODO: Remove lifetime when ArgumentPattern is owned)
-#[derive(Clone, Debug, PartialEq)]
-pub enum ArgumentPattern {
-    /// Type variable like any1, any2, etc.
-    TypeVariable(u32),
-    /// Concrete type pattern
-    Concrete(ConcreteType),
-}
-
-/// Result of matching an argument pattern against a concrete type (TODO: Remove lifetime when Match is owned)
-#[derive(Clone, Debug, PartialEq)]
-pub enum Match {
-    /// Pattern matched exactly (for concrete patterns)
-    Concrete,
-    /// Type variable bound to concrete type
-    Variable(u32, ConcreteType),
-    /// Match failed
-    Fail,
-}
-
-impl ArgumentPattern {
-    /// Check if this pattern matches the given concrete type
-    pub fn matches(&self, concrete: &ConcreteType) -> Match {
-        match self {
-            ArgumentPattern::TypeVariable(id) => Match::Variable(*id, concrete.clone()),
-            ArgumentPattern::Concrete(pattern_type) => {
-                if pattern_type == concrete {
-                    Match::Concrete
-                } else {
-                    Match::Fail
-                }
-            }
-        }
-    }
-}
-
-/// Type variable bindings from matching function arguments (TODO: Remove lifetime when TypeBindings is owned)
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypeBindings {
-    /// Map of type variable IDs (e.g. 1 for 'any1') to their concrete types
-    pub vars: HashMap<u32, ConcreteType>,
-}
-
-impl TypeBindings {
-    /// Create type bindings by matching argument patterns against concrete arguments
-    pub fn new(patterns: &[ArgumentPattern], args: &[ConcreteType]) -> Option<Self> {
-        let mut vars = HashMap::new();
-
-        if patterns.len() != args.len() {
-            return None;
-        }
-
-        for (pattern, arg) in patterns.iter().zip(args.iter()) {
-            match pattern.matches(arg) {
-                Match::Concrete => {} // Pattern matched, nothing to bind
-                Match::Variable(id, concrete_type) => {
-                    // Check if this type variable is already bound to a different type
-                    if let Some(existing_type) = vars.get(&id) {
-                        if existing_type != &concrete_type {
-                            return None; // Conflict: same variable bound to different types
-                        }
-                    } else {
-                        vars.insert(id, concrete_type);
-                    }
-                }
-                Match::Fail => return None, // Pattern did not match
-            }
-        }
-
-        Some(TypeBindings { vars })
-    }
-
-    /// Get the concrete type bound to a type variable
-    pub fn get_binding(&self, var_id: u32) -> Option<&ConcreteType> {
-        self.vars.get(&var_id)
-    }
-
-    /// Check if all type variables are bound
-    pub fn is_complete(&self, expected_vars: &[u32]) -> bool {
-        expected_vars.iter().all(|var| self.vars.contains_key(var))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::super::extensions::TypeContext;
@@ -1112,49 +974,6 @@ mod tests {
                 nullable: true
             }
         );
-    }
-
-    #[test]
-    fn test_argument_pattern_matching() {
-        let concrete_int = ConcreteType::builtin(BuiltinType::I32, false);
-        let concrete_string = ConcreteType::builtin(BuiltinType::String, false);
-
-        // Test concrete pattern matching
-        let concrete_pattern = ArgumentPattern::Concrete(concrete_int.clone());
-        assert_eq!(concrete_pattern.matches(&concrete_int), Match::Concrete);
-        assert_eq!(concrete_pattern.matches(&concrete_string), Match::Fail);
-
-        // Test type variable pattern
-        let var_pattern = ArgumentPattern::TypeVariable(1);
-        assert_eq!(
-            var_pattern.matches(&concrete_int),
-            Match::Variable(1, concrete_int.clone())
-        );
-    }
-
-    #[test]
-    fn test_type_bindings() {
-        let patterns = vec![
-            ArgumentPattern::TypeVariable(1),
-            ArgumentPattern::TypeVariable(1), // Same variable should bind to same type
-        ];
-        let args = vec![
-            ConcreteType::builtin(BuiltinType::I32, false),
-            ConcreteType::builtin(BuiltinType::I32, false),
-        ];
-
-        let bindings = TypeBindings::new(&patterns, &args).unwrap();
-        assert_eq!(
-            bindings.get_binding(1),
-            Some(&ConcreteType::builtin(BuiltinType::I32, false))
-        );
-
-        // Test conflicting bindings
-        let conflicting_args = vec![
-            ConcreteType::builtin(BuiltinType::I32, false),
-            ConcreteType::builtin(BuiltinType::String, false),
-        ];
-        assert!(TypeBindings::new(&patterns, &conflicting_args).is_none());
     }
 
     #[test]

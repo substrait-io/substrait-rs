@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Parsing of [text::simple_extensions] types.
+//! Parsing of [crate::text::simple_extensions] types into [SimpleExtensions].
 
 use std::convert::Infallible;
 
@@ -10,7 +10,7 @@ pub mod argument;
 mod extensions;
 mod file;
 mod registry;
-pub mod types;
+mod types;
 
 pub use extensions::SimpleExtensions;
 pub use extensions::TypeContext;
@@ -18,7 +18,7 @@ pub use file::ExtensionFile;
 pub use registry::Registry;
 pub use types::{ConcreteType, CustomType, ExtensionTypeError};
 
-/// Parse errors for [text::simple_extensions::SimpleExtensions].
+/// Errors for converting from YAML to [SimpleExtensions].
 #[derive(Debug, Error)]
 pub enum SimpleExtensionsError {
     /// Extension type error
