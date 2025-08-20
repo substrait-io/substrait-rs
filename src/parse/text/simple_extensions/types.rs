@@ -5,11 +5,14 @@
 //! This module provides a clean, type-safe wrapper around Substrait extension types,
 //! separating function signature patterns from concrete argument types.
 
+use super::argument::{
+    EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
+};
 use super::extensions::TypeContext;
 use crate::parse::Parse;
 use crate::text::simple_extensions::{
-    EnumOptions, SimpleExtensionsTypesItem, Type as RawType, TypeParamDefs, TypeParamDefsItem,
-    TypeParamDefsItemType,
+    EnumOptions as RawEnumOptions, SimpleExtensionsTypesItem, Type as RawType, TypeParamDefs,
+    TypeParamDefsItem, TypeParamDefsItemType,
 };
 use serde_json::Value;
 use std::fmt;
@@ -257,8 +260,8 @@ pub enum ParameterType {
     },
     /// Enumeration parameter
     Enumeration {
-        /// Valid enumeration values
-        options: Vec<String>,
+        /// Valid enumeration values (validated, deduplicated)
+        options: ParsedEnumOptions,
     },
     /// Boolean parameter
     Boolean,
@@ -287,9 +290,9 @@ impl ParameterType {
     }
 
     /// Extract raw enum options for enumeration parameters
-    fn raw_options(&self) -> Option<EnumOptions> {
+    fn raw_options(&self) -> Option<RawEnumOptions> {
         match self {
-            ParameterType::Enumeration { options } => Some(EnumOptions(options.clone())),
+            ParameterType::Enumeration { options } => Some(options.clone().into()),
             _ => None,
         }
     }
@@ -314,7 +317,7 @@ impl ParameterType {
 
     fn from_raw(
         t: TypeParamDefsItemType,
-        opts: Option<EnumOptions>,
+        opts: Option<RawEnumOptions>,
         min: Option<f64>,
         max: Option<f64>,
     ) -> Result<Self, TypeParamError> {
@@ -331,7 +334,8 @@ impl ParameterType {
                 }
             }
             TypeParamDefsItemType::Enumeration => {
-                let options = opts.ok_or(TypeParamError::MissingEnumOptions)?.0; // Extract Vec<String> from EnumOptions
+                let options: ParsedEnumOptions =
+                    opts.ok_or(TypeParamError::MissingEnumOptions)?.try_into()?;
                 Self::Enumeration { options }
             }
             TypeParamDefsItemType::String => Self::String,
@@ -426,6 +430,9 @@ pub enum TypeParamError {
     /// Enumeration parameter is missing options
     #[error("Enumeration parameter is missing options")]
     MissingEnumOptions,
+    /// Enumeration parameter has invalid options
+    #[error("Enumeration parameter has invalid options: {0}")]
+    InvalidEnumOptions(#[from] ParsedEnumOptionsError),
 }
 
 /// A validated custom extension type definition
@@ -921,6 +928,7 @@ impl<'a> ParsedType<'a> {
 mod tests {
     use super::super::extensions::TypeContext;
     use super::*;
+    use crate::parse::text::simple_extensions::argument::EnumOptions as ParsedEnumOptions;
     use crate::text::simple_extensions;
 
     #[test]
@@ -988,9 +996,9 @@ mod tests {
         assert!(!int_param.is_valid_value(&Value::Number(11.into())));
         assert!(!int_param.is_valid_value(&Value::String("not a number".into())));
 
-        let enum_param = ParameterType::Enumeration {
-            options: vec!["OVERFLOW".to_string(), "ERROR".to_string()],
-        };
+        let raw = simple_extensions::EnumOptions(vec!["OVERFLOW".to_string(), "ERROR".to_string()]);
+        let parsed = ParsedEnumOptions::try_from(raw).unwrap();
+        let enum_param = ParameterType::Enumeration { options: parsed };
 
         assert!(enum_param.is_valid_value(&Value::String("OVERFLOW".into())));
         assert!(!enum_param.is_valid_value(&Value::String("INVALID".into())));

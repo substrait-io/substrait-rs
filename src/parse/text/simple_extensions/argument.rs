@@ -177,18 +177,26 @@ impl<C: Context> Parse<C> for simple_extensions::EnumOptions {
     type Error = EnumOptionsError;
 
     fn parse(self, _ctx: &mut C) -> Result<EnumOptions, EnumOptionsError> {
-        let options = self.0;
+        self.try_into()
+    }
+}
+
+impl TryFrom<simple_extensions::EnumOptions> for EnumOptions {
+    type Error = EnumOptionsError;
+
+    fn try_from(raw: simple_extensions::EnumOptions) -> Result<Self, Self::Error> {
+        let options = raw.0;
         if options.is_empty() {
             return Err(EnumOptionsError::EmptyList);
         }
 
         let mut unique_options = HashSet::new();
-        for option in options.iter() {
+        for option in options.into_iter() {
             if option.is_empty() {
                 return Err(EnumOptionsError::EmptyOption);
             }
             if !unique_options.insert(option.clone()) {
-                return Err(EnumOptionsError::DuplicatedOption(option.clone()));
+                return Err(EnumOptionsError::DuplicatedOption(option));
             }
         }
 
