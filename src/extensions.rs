@@ -6,6 +6,7 @@
 //! included in the packaged crate, ignored by git, and automatically kept
 //! in-sync.
 
+#[cfg(feature = "extensions")]
 include!(concat!(env!("OUT_DIR"), "/extensions.in"));
 
 #[cfg(test)]
@@ -18,6 +19,6 @@ mod tests {
     fn core_extensions() {
         // Force evaluation of core extensions.
         LazyLock::force(&EXTENSIONS);
-        println!("Core extensions: {:#?}", EXTENSIONS);
+        println!("Core extensions: {EXTENSIONS:#?}");
     }
 }
