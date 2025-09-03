@@ -56,7 +56,6 @@ impl ExtensionFile {
     /// - `reader`: any `Read` instance with the YAML content
     ///
     /// Returns a parsed and validated `ExtensionFile` or an error.
-    #[cfg(feature = "extensions")]
     pub fn read<U: TryInto<Url>, R: Read>(uri: U, reader: R) -> Result<Self, SimpleExtensionsError>
     where
         SimpleExtensionsError: From<U::Error>,
@@ -67,7 +66,6 @@ impl ExtensionFile {
     }
 
     /// Read an extension file from a string slice.
-    #[cfg(feature = "extensions")]
     pub fn read_from_str<U: TryInto<Url>, S: AsRef<str>>(
         uri: U,
         s: S,
@@ -85,10 +83,8 @@ impl ExtensionFile {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        parse::text::simple_extensions::types::ParameterType as RawParameterType,
-        text::simple_extensions::SimpleExtensions as RawExtensions,
-    };
+    use crate::parse::text::simple_extensions::types::ParameterConstraint as RawParameterType;
+    use crate::text::simple_extensions::SimpleExtensions as RawExtensions;
 
     use super::*;
 

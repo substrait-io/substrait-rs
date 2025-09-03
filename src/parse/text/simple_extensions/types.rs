@@ -9,6 +9,8 @@ use super::argument::{
     EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
 };
 use super::extensions::TypeContext;
+use super::TypeExpr;
+use crate::parse::text::simple_extensions::parsed_type::TypeParseError;
 use crate::parse::Parse;
 use crate::text::simple_extensions::{
     EnumOptions as RawEnumOptions, SimpleExtensionsTypesItem, Type as RawType, TypeParamDefs,
@@ -192,6 +194,26 @@ pub enum CompoundType {
     },
 }
 
+impl CompoundType {
+    /// Check if a string is a valid name for a compound built-in type.
+    ///
+    /// Only matches lowercase.
+    pub fn is_name(s: &str) -> bool {
+        matches!(
+            s,
+            "fixedchar"
+                | "varchar"
+                | "fixedbinary"
+                | "decimal"
+                | "precisiontime"
+                | "precisiontimestamp"
+                | "precisiontimestamptz"
+                | "interval_day"
+                | "interval_compound"
+        )
+    }
+}
+
 impl fmt::Display for CompoundType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -248,7 +270,7 @@ impl FromStr for BuiltinType {
 
 /// Parameter type information for type definitions
 #[derive(Clone, Debug, PartialEq)]
-pub enum ParameterType {
+pub enum ParameterConstraint {
     /// Data type parameter
     DataType,
     /// Integer parameter with range constraints
@@ -269,22 +291,24 @@ pub enum ParameterType {
     String,
 }
 
-impl ParameterType {
+impl ParameterConstraint {
     /// Convert back to raw TypeParamDefsItemType
     fn raw_type(&self) -> TypeParamDefsItemType {
         match self {
-            ParameterType::DataType => TypeParamDefsItemType::DataType,
-            ParameterType::Boolean => TypeParamDefsItemType::Boolean,
-            ParameterType::Integer { .. } => TypeParamDefsItemType::Integer,
-            ParameterType::Enumeration { .. } => TypeParamDefsItemType::Enumeration,
-            ParameterType::String => TypeParamDefsItemType::String,
+            ParameterConstraint::DataType => TypeParamDefsItemType::DataType,
+            ParameterConstraint::Boolean => TypeParamDefsItemType::Boolean,
+            ParameterConstraint::Integer { .. } => TypeParamDefsItemType::Integer,
+            ParameterConstraint::Enumeration { .. } => TypeParamDefsItemType::Enumeration,
+            ParameterConstraint::String => TypeParamDefsItemType::String,
         }
     }
 
     /// Extract raw bounds for integer parameters (min, max)
     fn raw_bounds(&self) -> (Option<f64>, Option<f64>) {
         match self {
-            ParameterType::Integer { min, max } => (min.map(|i| i as f64), max.map(|i| i as f64)),
+            ParameterConstraint::Integer { min, max } => {
+                (min.map(|i| i as f64), max.map(|i| i as f64))
+            }
             _ => (None, None),
         }
     }
@@ -292,7 +316,7 @@ impl ParameterType {
     /// Extract raw enum options for enumeration parameters
     fn raw_options(&self) -> Option<RawEnumOptions> {
         match self {
-            ParameterType::Enumeration { options } => Some(options.clone().into()),
+            ParameterConstraint::Enumeration { options } => Some(options.clone().into()),
             _ => None,
         }
     }
@@ -300,17 +324,17 @@ impl ParameterType {
     /// Check if a parameter value is valid for this parameter type
     pub fn is_valid_value(&self, value: &Value) -> bool {
         match (self, value) {
-            (ParameterType::DataType, Value::String(_)) => true,
-            (ParameterType::Integer { min, max }, Value::Number(n)) => {
+            (ParameterConstraint::DataType, Value::String(_)) => true,
+            (ParameterConstraint::Integer { min, max }, Value::Number(n)) => {
                 if let Some(i) = n.as_i64() {
                     min.is_none_or(|min_val| i >= min_val) && max.is_none_or(|max_val| i <= max_val)
                 } else {
                     false
                 }
             }
-            (ParameterType::Enumeration { options }, Value::String(s)) => options.contains(s),
-            (ParameterType::Boolean, Value::Bool(_)) => true,
-            (ParameterType::String, Value::String(_)) => true,
+            (ParameterConstraint::Enumeration { options }, Value::String(s)) => options.contains(s),
+            (ParameterConstraint::Boolean, Value::Bool(_)) => true,
+            (ParameterConstraint::String, Value::String(_)) => true,
             _ => false,
         }
     }
@@ -349,14 +373,14 @@ pub struct TypeParam {
     /// Parameter name (e.g., "K" for a type variable)
     pub name: String,
     /// Parameter type constraints
-    pub param_type: ParameterType,
+    pub param_type: ParameterConstraint,
     /// Human-readable description
     pub description: Option<String>,
 }
 
 impl TypeParam {
     /// Create a new type parameter
-    pub fn new(name: String, param_type: ParameterType, description: Option<String>) -> Self {
+    pub fn new(name: String, param_type: ParameterConstraint, description: Option<String>) -> Self {
         Self {
             name,
             param_type,
@@ -375,7 +399,8 @@ impl TryFrom<TypeParamDefsItem> for TypeParam {
 
     fn try_from(item: TypeParamDefsItem) -> Result<Self, Self::Error> {
         let name = item.name.ok_or(TypeParamError::MissingName)?;
-        let param_type = ParameterType::from_raw(item.type_, item.options, item.min, item.max)?;
+        let param_type =
+            ParameterConstraint::from_raw(item.type_, item.options, item.min, item.max)?;
 
         Ok(Self {
             name,
@@ -411,6 +436,9 @@ pub enum ExtensionTypeError {
         /// The type string that was nullable
         type_string: String,
     },
+    /// Error parsing type
+    #[error("Error parsing type: {0}")]
+    ParseType(#[from] TypeParseError),
 }
 
 /// Error types for TypeParam validation
@@ -566,34 +594,11 @@ impl Parse<TypeContext> for RawType {
     type Error = ExtensionTypeError;
 
     fn parse(self, ctx: &mut TypeContext) -> Result<Self::Parsed, Self::Error> {
-        // Walk a ParsedType and record extension type references in the context
-        fn visit_parsed_type_references<'a, F>(p: &'a ParsedType<'a>, on_ext: &mut F)
-        where
-            F: FnMut(&'a str),
-        {
-            match p {
-                ParsedType::Extension(name, _) | ParsedType::NamedExtension(name, _) => {
-                    on_ext(name)
-                }
-                ParsedType::List(t, _) => visit_parsed_type_references(t, on_ext),
-                ParsedType::Map(k, v, _) => {
-                    visit_parsed_type_references(k, on_ext);
-                    visit_parsed_type_references(v, on_ext);
-                }
-                ParsedType::Struct(ts, _) => {
-                    for t in ts {
-                        visit_parsed_type_references(t, on_ext)
-                    }
-                }
-                ParsedType::Builtin(..) | ParsedType::TypeVariable(..) => {}
-            }
-        }
-
         match self {
             RawType::Variant0(type_string) => {
-                let parsed_type = ParsedType::parse(&type_string);
+                let parsed_type = TypeExpr::parse(&type_string)?;
                 let mut link = |name: &str| ctx.linked(name);
-                visit_parsed_type_references(&parsed_type, &mut link);
+                parsed_type.visit_references(&mut link);
                 let concrete = ConcreteType::try_from(parsed_type)?;
 
                 // Structure representation cannot be nullable
@@ -619,9 +624,9 @@ impl Parse<TypeContext> for RawType {
                         }
                     };
 
-                    let parsed_field_type = ParsedType::parse(&type_string);
+                    let parsed_field_type = TypeExpr::parse(&type_string)?;
                     let mut link = |name: &str| ctx.linked(name);
-                    visit_parsed_type_references(&parsed_field_type, &mut link);
+                    parsed_field_type.visit_references(&mut link);
                     let field_concrete_type = ConcreteType::try_from(parsed_field_type)?;
 
                     field_types.push(field_concrete_type);
@@ -840,87 +845,25 @@ impl From<ConcreteType> for RawType {
     }
 }
 
-impl<'a> TryFrom<ParsedType<'a>> for ConcreteType {
+impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
     type Error = ExtensionTypeError;
 
-    fn try_from(parsed_type: ParsedType<'a>) -> Result<Self, Self::Error> {
+    fn try_from(parsed_type: TypeExpr<'a>) -> Result<Self, Self::Error> {
         match parsed_type {
-            ParsedType::Builtin(builtin_type, nullability) => {
-                Ok(ConcreteType::builtin(builtin_type, nullability))
-            }
-            ParsedType::Extension(ext_name, nullability) => {
-                Ok(ConcreteType::extension(ext_name.to_string(), nullability))
-            }
-            ParsedType::List(element_type, nullability) => {
-                let element_concrete = ConcreteType::try_from(*element_type)?;
-                Ok(ConcreteType::list(element_concrete, nullability))
-            }
-            ParsedType::Map(key_type, value_type, nullability) => {
-                let key_concrete = ConcreteType::try_from(*key_type)?;
-                let value_concrete = ConcreteType::try_from(*value_type)?;
-                Ok(ConcreteType::map(key_concrete, value_concrete, nullability))
-            }
-            ParsedType::Struct(field_types, nullability) => {
-                let concrete_field_types: Result<Vec<ConcreteType>, _> = field_types
-                    .into_iter()
-                    .map(ConcreteType::try_from)
-                    .collect();
-                Ok(ConcreteType::r#struct(concrete_field_types?, nullability))
-            }
-            ParsedType::TypeVariable(id, nullability) => {
-                Err(ExtensionTypeError::InvalidAnyTypeVariable { id, nullability })
-            }
-            ParsedType::NamedExtension(type_str, nullability) => {
-                Ok(ConcreteType::extension(type_str.to_string(), nullability))
-            }
-        }
-    }
-}
-
-/// A parsed type from a type string, with lifetime tied to the original string
-#[derive(Clone, Debug, PartialEq)]
-pub enum ParsedType<'a> {
-    /// Built-in type
-    Builtin(BuiltinType, bool),
-    /// Extension type reference
-    Extension(&'a str, bool),
-    /// List type
-    List(Box<ParsedType<'a>>, bool),
-    /// Map type
-    Map(Box<ParsedType<'a>>, Box<ParsedType<'a>>, bool),
-    /// Struct type
-    Struct(Vec<ParsedType<'a>>, bool),
-    /// Type variable (e.g., any1, any2)
-    TypeVariable(u32, bool),
-    /// Named extension type (unresolved)
-    NamedExtension(&'a str, bool),
-}
-
-impl<'a> ParsedType<'a> {
-    /// Parse a type string into a ParsedType
-    pub fn parse(type_str: &'a str) -> Self {
-        // Simple parsing implementation - could be more sophisticated
-        let (base_type, nullable) = match type_str.strip_suffix('?') {
-            Some(base) => (base, true),
-            None => (type_str, false),
-        };
-
-        // Handle type variables like any1, any2, etc.
-        if let Some(suffix) = base_type.strip_prefix("any") {
-            if let Ok(id) = suffix.parse::<u32>() {
-                if id >= 1 {
-                    return ParsedType::TypeVariable(id, nullable);
+            TypeExpr::Simple(name, _params, nullable) => {
+                // Try builtin first
+                match BuiltinType::from_str(&name.to_ascii_lowercase()) {
+                    Ok(b) => Ok(ConcreteType::builtin(b, nullable)),
+                    Err(_) => Ok(ConcreteType::extension(name.to_string(), nullable)),
                 }
             }
+            TypeExpr::UserDefined(name, _params, nullable) => Ok(
+                ConcreteType::extension_with_params(name.to_string(), vec![], nullable),
+            ),
+            TypeExpr::TypeVariable(id, nullability) => {
+                Err(ExtensionTypeError::InvalidAnyTypeVariable { id, nullability })
+            }
         }
-
-        // Try to parse as builtin type
-        if let Ok(builtin_type) = BuiltinType::from_str(base_type) {
-            return ParsedType::Builtin(builtin_type, nullable);
-        }
-
-        // Otherwise, treat as extension type
-        ParsedType::NamedExtension(base_type, nullable)
     }
 }
 
@@ -939,28 +882,6 @@ mod tests {
             BuiltinType::String
         );
         assert!(BuiltinType::from_str("invalid").is_err());
-    }
-
-    #[test]
-    fn test_parsed_type_simple() {
-        let parsed = ParsedType::parse("i32");
-        assert_eq!(parsed, ParsedType::Builtin(BuiltinType::I32, false));
-
-        let parsed_nullable = ParsedType::parse("i32?");
-        assert_eq!(parsed_nullable, ParsedType::Builtin(BuiltinType::I32, true));
-    }
-
-    #[test]
-    fn test_parsed_type_variables() {
-        let parsed = ParsedType::parse("any1");
-        assert_eq!(parsed, ParsedType::TypeVariable(1, false));
-
-        let parsed_nullable = ParsedType::parse("any2?");
-        assert_eq!(parsed_nullable, ParsedType::TypeVariable(2, true));
-
-        // Invalid type variable ID (must be >= 1)
-        let parsed_invalid = ParsedType::parse("any0");
-        assert_eq!(parsed_invalid, ParsedType::NamedExtension("any0", false));
     }
 
     #[test]
@@ -986,7 +907,7 @@ mod tests {
 
     #[test]
     fn test_parameter_type_validation() {
-        let int_param = ParameterType::Integer {
+        let int_param = ParameterConstraint::Integer {
             min: Some(1),
             max: Some(10),
         };
@@ -998,7 +919,7 @@ mod tests {
 
         let raw = simple_extensions::EnumOptions(vec!["OVERFLOW".to_string(), "ERROR".to_string()]);
         let parsed = ParsedEnumOptions::try_from(raw).unwrap();
-        let enum_param = ParameterType::Enumeration { options: parsed };
+        let enum_param = ParameterConstraint::Enumeration { options: parsed };
 
         assert!(enum_param.is_valid_value(&Value::String("OVERFLOW".into())));
         assert!(!enum_param.is_valid_value(&Value::String("INVALID".into())));
@@ -1018,7 +939,7 @@ mod tests {
         };
         let tp = TypeParam::try_from(item).expect("should parse integer bounds");
         match tp.param_type {
-            ParameterType::Integer { min, max } => {
+            ParameterConstraint::Integer { min, max } => {
                 assert_eq!(min, Some(1));
                 assert_eq!(max, Some(10));
             }
@@ -1037,7 +958,7 @@ mod tests {
         };
         let tp = TypeParam::try_from(trunc).expect("should parse with truncation");
         match tp.param_type {
-            ParameterType::Integer { min, max } => {
+            ParameterConstraint::Integer { min, max } => {
                 assert_eq!(min, Some(1));
                 assert_eq!(max, None);
             }

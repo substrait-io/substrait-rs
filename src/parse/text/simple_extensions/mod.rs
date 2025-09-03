@@ -9,12 +9,14 @@ use thiserror::Error;
 pub mod argument;
 mod extensions;
 mod file;
+mod parsed_type;
 mod registry;
 mod types;
 
 pub use extensions::SimpleExtensions;
 pub use extensions::TypeContext;
 pub use file::ExtensionFile;
+pub use parsed_type::TypeExpr;
 pub use registry::Registry;
 pub use types::{ConcreteType, CustomType, ExtensionTypeError};
 
