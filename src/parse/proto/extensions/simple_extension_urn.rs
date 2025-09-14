@@ -7,9 +7,9 @@ use std::str::FromStr;
 use thiserror::Error;
 
 use crate::{
-    extensions::{InvalidUrn, Urn},
     parse::{Anchor, Context, Parse, context::ContextError},
     proto,
+    urn::{InvalidUrn, Urn},
 };
 
 /// A parsed [proto::extensions::SimpleExtensionUrn].

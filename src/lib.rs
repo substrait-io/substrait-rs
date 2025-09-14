@@ -122,6 +122,7 @@ pub mod extensions;
 pub mod proto;
 #[allow(missing_docs)]
 pub mod text;
+pub mod urn;
 pub mod version;
 
 #[cfg(feature = "parse")]

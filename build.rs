@@ -247,6 +247,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::LazyLock;
 use crate::text::simple_extensions::SimpleExtensions;
+use crate::urn::Urn;
 
 /// Map with Substrait core extensions. Maps Urns to included extensions.
 pub static EXTENSIONS: LazyLock<HashMap<Urn, SimpleExtensions>> = LazyLock::new(|| {
