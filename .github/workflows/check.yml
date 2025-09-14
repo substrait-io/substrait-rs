@@ -7,7 +7,7 @@ on: [push, pull_request]
 jobs:
   license:
     name: SPDX License Header
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v5
       - uses: enarx/spdx@master
@@ -16,7 +16,7 @@ jobs:
 
   formatting:
     name: Formatting
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
