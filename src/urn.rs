@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 //! Extension URNs
 
 use std::{error::Error, fmt, str::FromStr};
