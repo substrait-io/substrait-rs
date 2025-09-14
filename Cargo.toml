@@ -2,8 +2,8 @@
 [package]
 name = "substrait"
 version = "0.59.1"
-edition = "2021"
-rust-version = "1.85.1"
+edition = "2024"
+rust-version = "1.88.0"
 description = "Cross-Language Serialization for Relational Algebra"
 documentation = "https://docs.rs/substrait"
 readme = "README.md"
@@ -26,8 +26,8 @@ include = [
 
 [features]
 default = []
-extensions = ["dep:serde_yaml", "dep:url"]
-parse = ["dep:hex", "dep:thiserror", "dep:url", "semver"]
+extensions = ["dep:serde_yaml"]
+parse = ["dep:hex", "dep:thiserror", "semver"]
 protoc = ["dep:protobuf-src"]
 semver = ["dep:semver"]
 serde = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
@@ -38,7 +38,6 @@ pbjson = { version = "0.8.0", optional = true }
 pbjson-types = { version = "0.8.0", optional = true }
 prost = "0.14.1"
 prost-types = "0.14.1"
-url = { version = "2.5.7", optional = true }
 regress = "0.10.4"
 semver = { version = "1.0.26", optional = true }
 serde = { version = "1.0.219", features = ["derive"] }

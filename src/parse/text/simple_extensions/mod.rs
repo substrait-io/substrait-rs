@@ -36,12 +36,16 @@ impl<C: Context> Parse<C> for text::simple_extensions::SimpleExtensions {
         //     window_functions,
         // } = self;
 
-        todo!("text::simple_extensions::SimpleExtensions - https://github.com/substrait-io/substrait-rs/issues/157")
+        todo!(
+            "text::simple_extensions::SimpleExtensions - https://github.com/substrait-io/substrait-rs/issues/157"
+        )
     }
 }
 
 impl From<SimpleExtensions> for text::simple_extensions::SimpleExtensions {
     fn from(_value: SimpleExtensions) -> Self {
-        todo!("text::simple_extensions::SimpleExtensions - https://github.com/substrait-io/substrait-rs/issues/157")
+        todo!(
+            "text::simple_extensions::SimpleExtensions - https://github.com/substrait-io/substrait-rs/issues/157"
+        )
     }
 }

@@ -2,5 +2,5 @@
 
 //! Parsing of [crate::proto::extensions] types.
 
-mod simple_extension_uri;
-pub use simple_extension_uri::SimpleExtensionUri;
+mod simple_extension_urn;
+pub use simple_extension_urn::SimpleExtensionUrn;
