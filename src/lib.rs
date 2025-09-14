@@ -76,6 +76,7 @@
 //! let simple_extension_yaml = r#"
 //! %YAML 1.2
 //! ---
+//! urn: extension:substrait-rs:add-example
 //! scalar_functions:
 //!   -
 //!     name: "add"
@@ -94,6 +95,7 @@
 //!
 //! let simple_extension = serde_yaml::from_str::<SimpleExtensions>(simple_extension_yaml)?;
 //!
+//! assert_eq!(simple_extension.urn, "extension:substrait-rs:add-example");
 //! assert_eq!(simple_extension.scalar_functions.len(), 1);
 //! assert_eq!(simple_extension.scalar_functions[0].name, "add");
 //! # Ok(()) }

@@ -31,11 +31,11 @@ mod tests {
     fn pbjson_serde() -> Result<(), Box<dyn std::error::Error>> {
         let plan = serde_json::from_str::<super::Plan>(
             r#"{
-  "version": { "minorNumber": 19, "producer": "substrait-rs" },
-  "extensionUris": [
+  "version": { "minorNumber": 75, "producer": "substrait-rs" },
+  "extensionUrns": [
     {
-      "extensionUriAnchor": 1,
-      "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_string.yaml"
+      "extensionUrnAnchor": 1,
+      "urn": "extension:io.substrait:functions_string"
     }
   ]
 }"#,
@@ -43,12 +43,12 @@ mod tests {
         assert_eq!(
             plan.version,
             Some(super::Version {
-                minor_number: 19,
+                minor_number: 75,
                 producer: "substrait-rs".into(),
                 ..Default::default()
             })
         );
-        assert_eq!(plan.extension_uris.len(), 1);
+        assert_eq!(plan.extension_urns.len(), 1);
         Ok(())
     }
 }

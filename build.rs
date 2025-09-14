@@ -114,7 +114,9 @@ pub const SUBSTRAIT_{major}_{minor}_{patch}: () = ();
     } else {
         // If we don't have a version file yet we fail the build.
         if !version_in_file.exists() {
-            panic!("Couldn't find the substrait submodule. Please clone the submodule: `git submodule update --init`.")
+            panic!(
+                "Couldn't find the substrait submodule. Please clone the submodule: `git submodule update --init`."
+            )
         }
 
         // File exists we should get the version and return it.
@@ -225,10 +227,18 @@ fn extensions(version: semver::Version, out_dir: &Path) -> Result<(), Box<dyn Er
 /// Included source of [`{name}`]({url}).
 const {var_name}: &str = include_str!("{}/{}");
 "#,
-            PathBuf::from(dbg!(env::var("CARGO_MANIFEST_DIR").unwrap())).display(),
+            PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).display(),
             extension.display()
         ));
-        map.insert(url, var_name);
+        let urn = format!(
+            "extension:io.substrait:{}",
+            extension
+                .with_extension("")
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+        );
+        map.insert(urn, var_name);
     }
     // Add static lookup map.
     output.push_str(
@@ -237,16 +247,17 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::LazyLock;
 use crate::text::simple_extensions::SimpleExtensions;
-use url::Url;
 
-/// Map with Substrait core extensions. Maps URIs to included extensions.
-pub static EXTENSIONS: LazyLock<HashMap<Url, SimpleExtensions>> = LazyLock::new(|| {
+/// Map with Substrait core extensions. Maps Urns to included extensions.
+pub static EXTENSIONS: LazyLock<HashMap<Urn, SimpleExtensions>> = LazyLock::new(|| {
     let mut map = HashMap::new();"#,
     );
 
-    for (url, var_name) in map {
-        output.push_str(&format!(r#"
-    map.insert(Url::from_str("{url}").expect("a valid url"), serde_yaml::from_str({var_name}).expect("a valid core extension"));"#));
+    for (urn, var_name) in map {
+        output.push_str(&format!(
+            r#"
+    map.insert(Urn::from_str("{urn}").expect("valid urn"), serde_yaml::from_str({var_name}).expect("a valid core extension"));"#
+        ));
     }
 
     output.push_str(
@@ -287,7 +298,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let _version = substrait_version()?;
 
     #[cfg(feature = "protoc")]
-    std::env::set_var("PROTOC", protobuf_src::protoc());
+    unsafe {
+        std::env::set_var("PROTOC", protobuf_src::protoc())
+    };
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 

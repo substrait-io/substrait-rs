@@ -5,7 +5,7 @@
 use thiserror::Error;
 
 use crate::parse::{
-    proto::extensions::SimpleExtensionUri, text::simple_extensions::SimpleExtensions, Anchor, Parse,
+    Anchor, Parse, proto::extensions::SimpleExtensionUrn, text::simple_extensions::SimpleExtensions,
 };
 
 /// A parse context.
@@ -23,20 +23,20 @@ pub trait Context {
         item.parse(self)
     }
 
-    /// Add a [SimpleExtensionUri] to this context. Must return an error for duplicate
-    /// anchors or when the URI is not supported.
+    /// Add a [SimpleExtensionUrn] to this context. Must return an error for duplicate
+    /// anchors or when the urn is not supported.
     ///
     /// This function must eagerly resolve and parse the simple extension, returning an
     /// error if either fails.
-    fn add_simple_extension_uri(
+    fn add_simple_extension_urn(
         &mut self,
-        simple_extension_uri: &SimpleExtensionUri,
+        simple_extension_urn: &SimpleExtensionUrn,
     ) -> Result<&SimpleExtensions, ContextError>;
 
     /// Returns the simple extensions for the given simple extension anchor.
     fn simple_extensions(
         &self,
-        anchor: &Anchor<SimpleExtensionUri>,
+        anchor: &Anchor<SimpleExtensionUrn>,
     ) -> Result<&SimpleExtensions, ContextError>;
 }
 
@@ -45,24 +45,24 @@ pub trait Context {
 pub enum ContextError {
     /// Undefined reference to simple extension.
     #[error("undefined reference to simple extension with anchor `{0}`")]
-    UndefinedSimpleExtension(Anchor<SimpleExtensionUri>),
+    UndefinedSimpleExtension(Anchor<SimpleExtensionUrn>),
 
     /// Duplicate anchor for simple extension.
     #[error("duplicate anchor `{0}` for simple extension")]
-    DuplicateSimpleExtension(Anchor<SimpleExtensionUri>),
+    DuplicateSimpleExtension(Anchor<SimpleExtensionUrn>),
 
-    /// Unsupported simple extension URI.
-    #[error("unsupported simple extension URI: {0}")]
-    UnsupportedURI(String),
+    /// Unsupported simple extension urn.
+    #[error("unsupported simple extension urn: {0}")]
+    UnsupportedUrn(String),
 }
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::collections::{hash_map::Entry, HashMap};
+    use std::collections::{HashMap, hash_map::Entry};
 
     use crate::parse::{
-        context::ContextError, proto::extensions::SimpleExtensionUri,
-        text::simple_extensions::SimpleExtensions, Anchor,
+        Anchor, context::ContextError, proto::extensions::SimpleExtensionUrn,
+        text::simple_extensions::SimpleExtensions,
     };
 
     /// A test context.
@@ -71,7 +71,7 @@ pub(crate) mod tests {
     /// parse).
     pub struct Context {
         empty_simple_extensions: SimpleExtensions,
-        simple_extensions: HashMap<Anchor<SimpleExtensionUri>, SimpleExtensionUri>,
+        simple_extensions: HashMap<Anchor<SimpleExtensionUrn>, SimpleExtensionUrn>,
     }
 
     impl Default for Context {
@@ -84,34 +84,26 @@ pub(crate) mod tests {
     }
 
     impl super::Context for Context {
-        fn add_simple_extension_uri(
+        fn add_simple_extension_urn(
             &mut self,
-            simple_extension_uri: &crate::parse::proto::extensions::SimpleExtensionUri,
+            simple_extension_urn: &crate::parse::proto::extensions::SimpleExtensionUrn,
         ) -> Result<&SimpleExtensions, ContextError> {
-            match self.simple_extensions.entry(simple_extension_uri.anchor()) {
+            match self.simple_extensions.entry(simple_extension_urn.anchor()) {
                 Entry::Occupied(_) => Err(ContextError::DuplicateSimpleExtension(
-                    simple_extension_uri.anchor(),
+                    simple_extension_urn.anchor(),
                 )),
                 Entry::Vacant(entry) => {
-                    // This is where we would resolve and then parse.
-                    // This check shows the use of the unsupported uri error.
-                    if let "http" | "https" | "file" = simple_extension_uri.uri().scheme() {
-                        entry.insert(simple_extension_uri.clone());
-                        // Here we just return an empty simple extensions.
-                        Ok(&self.empty_simple_extensions)
-                    } else {
-                        Err(ContextError::UnsupportedURI(format!(
-                            "`{}` scheme not supported",
-                            simple_extension_uri.uri().scheme()
-                        )))
-                    }
+                    // TODO: fetch
+                    entry.insert(simple_extension_urn.clone());
+                    // For now just return an empty extension
+                    Ok(&self.empty_simple_extensions)
                 }
             }
         }
 
         fn simple_extensions(
             &self,
-            anchor: &Anchor<SimpleExtensionUri>,
+            anchor: &Anchor<SimpleExtensionUrn>,
         ) -> Result<&SimpleExtensions, ContextError> {
             self.simple_extensions
                 .contains_key(anchor)
