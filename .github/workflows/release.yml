@@ -14,13 +14,13 @@ on:
 jobs:
   release:
     name: Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     environment:
       name: crates-io
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive
@@ -30,7 +30,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       # Trigger build script to generate version info
       - run: cargo build
-      - uses: MarcoIeni/release-plz-action@v0.5.110
+      - uses: MarcoIeni/release-plz-action@v0.5.117
         with:
           command: release
         env:
@@ -39,12 +39,12 @@ jobs:
 
   pr:
     name: PR
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     concurrency:
       group: release-${{ github.ref }}
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: recursive
@@ -53,7 +53,7 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo build
-      - uses: MarcoIeni/release-plz-action@v0.5.110
+      - uses: MarcoIeni/release-plz-action@v0.5.117
         with:
           command: release-pr
         env:

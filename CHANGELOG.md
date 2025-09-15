@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.0](https://github.com/substrait-io/substrait-rs/compare/v0.59.1...v0.60.0) - 2025-09-14
+
+### Added
+
+- *(deps,substrait)* [**breaking**] bump substrait from `0.74.1` to `0.75.0`, use Rust 1.88 and 2024 edition ([#391](https://github.com/substrait-io/substrait-rs/pull/391))
+
+### Other
+
+- *(deps,cargo)* bump url from 2.5.6 to 2.5.7 in the cargo group ([#382](https://github.com/substrait-io/substrait-rs/pull/382))
+
+## [0.59.1](https://github.com/substrait-io/substrait-rs/compare/v0.59.0...v0.59.1) - 2025-08-22
+
+### Other
+
+- *(deps,cargo)* bump the cargo group across 1 directory with 6 updates ([#379](https://github.com/substrait-io/substrait-rs/pull/379))
+- *(deps,cargo)* bump prettyplease from 0.2.35 to 0.2.36 in the cargo group ([#363](https://github.com/substrait-io/substrait-rs/pull/363))
+- *(deps,cargo)* bump serde_json from 1.0.140 to 1.0.141 in the cargo group ([#361](https://github.com/substrait-io/substrait-rs/pull/361))
+
 ## [0.59.0](https://github.com/substrait-io/substrait-rs/compare/v0.58.0...v0.59.0) - 2025-07-16
 
 ### Other

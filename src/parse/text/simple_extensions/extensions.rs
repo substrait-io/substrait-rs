@@ -3,24 +3,41 @@
 //! Parsing context for extension processing.
 
 use std::collections::{HashMap, HashSet};
+use std::str::FromStr;
 
 use super::types::CustomType;
 use crate::{
     parse::{Context, Parse},
     text::simple_extensions::SimpleExtensions as RawExtensions,
+    urn::Urn,
 };
 
 /// Parsing context for extension processing
 ///
 /// The context provides access to types defined in the same extension file during parsing.
 /// This allows type references to be resolved within the same extension file.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct SimpleExtensions {
+    /// URN identifying this extension file
+    urn: Urn,
     /// Types defined in this extension file
     types: HashMap<String, CustomType>,
 }
 
 impl SimpleExtensions {
+    /// Create a new simple extension container for the provided URN.
+    pub fn new(urn: Urn) -> Self {
+        Self {
+            urn,
+            types: HashMap::new(),
+        }
+    }
+
+    /// Returns the URN attached to this extension file.
+    pub fn urn(&self) -> &Urn {
+        &self.urn
+    }
+
     /// Add a type to the context
     pub fn add_type(&mut self, custom_type: &CustomType) {
         self.types
@@ -77,9 +94,11 @@ impl Parse<TypeContext> for RawExtensions {
     type Error = super::SimpleExtensionsError;
 
     fn parse(self, ctx: &mut TypeContext) -> Result<Self::Parsed, Self::Error> {
-        let mut extension = SimpleExtensions::default();
+        let RawExtensions { types, urn, .. } = self;
+        let urn = Urn::from_str(&urn)?;
+        let mut extension = SimpleExtensions::new(urn);
 
-        for type_item in self.types {
+        for type_item in types {
             let custom_type = Parse::parse(type_item, ctx)?;
             // Add the parsed type to the context so later types can reference it
             extension.add_type(&custom_type);
@@ -92,8 +111,10 @@ impl Parse<TypeContext> for RawExtensions {
 // Implement conversion from parsed form back to raw text representation.
 impl From<SimpleExtensions> for RawExtensions {
     fn from(value: SimpleExtensions) -> Self {
+        let SimpleExtensions { urn, types } = value;
+        let urn = urn.to_string();
         // Minimal types-only conversion to satisfy tests
-        let types = value.types().cloned().map(Into::into).collect();
+        let types = types.into_values().map(Into::into).collect();
         RawExtensions {
             types,
             // TODO: Implement conversion back to raw representation
@@ -102,6 +123,7 @@ impl From<SimpleExtensions> for RawExtensions {
             scalar_functions: vec![],
             type_variations: vec![],
             window_functions: vec![],
+            urn,
         }
     }
 }

@@ -5,13 +5,13 @@
 //! This module provides a clean, type-safe wrapper around Substrait extension types,
 //! separating function signature patterns from concrete argument types.
 
+use super::TypeExpr;
 use super::argument::{
     EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
 };
 use super::extensions::TypeContext;
-use super::TypeExpr;
-use crate::parse::text::simple_extensions::parsed_type::TypeParseError;
 use crate::parse::Parse;
+use crate::parse::text::simple_extensions::parsed_type::TypeParseError;
 use crate::text::simple_extensions::{
     EnumOptions as RawEnumOptions, SimpleExtensionsTypesItem, Type as RawType, TypeParamDefs,
     TypeParamDefsItem, TypeParamDefsItemType,
@@ -620,7 +620,7 @@ impl Parse<TypeContext> for RawType {
                         _ => {
                             return Err(ExtensionTypeError::InvalidFieldType(
                                 "Struct field types must be strings".to_string(),
-                            ))
+                            ));
                         }
                     };
 
@@ -1155,9 +1155,11 @@ mod tests {
             assert!(field_names.contains(&"y".to_string()));
             assert_eq!(field_types.len(), 2);
             // Note: HashMap iteration order is not guaranteed, so we just check the types exist
-            assert!(field_types
-                .iter()
-                .all(|t| matches!(t.known_type, KnownType::Builtin(BuiltinType::Fp64))));
+            assert!(
+                field_types
+                    .iter()
+                    .all(|t| matches!(t.known_type, KnownType::Builtin(BuiltinType::Fp64)))
+            );
         } else {
             panic!("Expected struct type");
         }

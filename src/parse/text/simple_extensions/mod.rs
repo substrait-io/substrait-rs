@@ -32,9 +32,9 @@ pub enum SimpleExtensionsError {
     /// I/O error while reading extension content
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
-    /// Invalid URI provided
-    #[error("invalid URI: {0}")]
-    InvalidUri(#[from] url::ParseError),
+    /// Invalid URN provided
+    #[error("invalid urn")]
+    InvalidUrn(#[from] crate::urn::InvalidUrn),
     /// Unresolved type reference in structure field
     #[error("Type '{type_name}' referenced in '{originating}' structure not found")]
     UnresolvedTypeReference {
@@ -45,7 +45,7 @@ pub enum SimpleExtensionsError {
     },
 }
 
-// Needed for certain conversions - e.g. Url -> Url - to succeed.
+// Needed for certain conversions - e.g. Urn -> Urn - to succeed.
 impl From<Infallible> for SimpleExtensionsError {
     fn from(_: Infallible) -> Self {
         unreachable!()

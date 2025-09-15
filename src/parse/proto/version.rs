@@ -3,7 +3,7 @@
 //! Parsing of [proto::Version].
 
 use crate::{
-    parse::{context::ProtoContext, Parse},
+    parse::{Parse, context::ProtoContext},
     proto, version,
 };
 use hex::FromHex;

@@ -1,38 +1,36 @@
-use url::Url;
-
 use super::{CustomType, SimpleExtensions, SimpleExtensionsError};
-use crate::parse::text::simple_extensions::extensions::TypeContext;
 use crate::parse::Parse;
+use crate::parse::text::simple_extensions::extensions::TypeContext;
 use crate::text::simple_extensions::SimpleExtensions as RawExtensions;
+use crate::urn::Urn;
 use std::io::Read;
 
 /// A parsed and validated [RawExtensions].
 #[derive(Debug)]
 pub struct ExtensionFile {
-    /// The URI this extension was loaded from
-    pub uri: Url,
+    /// The URN this extension was loaded from
+    pub urn: Urn,
     /// The extension data containing types and eventually functions
     extension: SimpleExtensions,
 }
 
 impl ExtensionFile {
     /// Create a new, empty SimpleExtensions
-    pub fn empty(uri: Url) -> Self {
-        Self {
-            uri,
-            extension: SimpleExtensions::default(),
-        }
+    pub fn empty(urn: Urn) -> Self {
+        let extension = SimpleExtensions::new(urn.clone());
+        Self { urn, extension }
     }
 
-    /// Create a validated SimpleExtensions from raw data and URI
-    pub fn create(uri: Url, extensions: RawExtensions) -> Result<Self, SimpleExtensionsError> {
+    /// Create a validated SimpleExtensions from raw data
+    pub fn create(extensions: RawExtensions) -> Result<Self, SimpleExtensionsError> {
         // Parse all types (may contain unresolved Extension(String) references)
         let mut ctx = TypeContext::default();
         let extension = Parse::parse(extensions, &mut ctx)?;
+        let urn = extension.urn().clone();
 
         // TODO: Use ctx.known/ctx.linked to validate unresolved references and cross-file links.
 
-        Ok(Self { uri, extension })
+        Ok(Self { urn, extension })
     }
 
     /// Get a type by name
@@ -45,37 +43,29 @@ impl ExtensionFile {
         self.extension.types()
     }
 
+    /// Returns the URN for this extension file.
+    pub fn urn(&self) -> &Urn {
+        &self.urn
+    }
+
     /// Get a reference to the underlying SimpleExtension
     pub fn extension(&self) -> &SimpleExtensions {
         &self.extension
     }
 
-    /// Read an extension file from a reader and a URI string.
-    ///
-    /// - `uri_str`: a string that parses to Url (e.g., file:///...) used to tag the extension
+    /// Read an extension file from a reader.
     /// - `reader`: any `Read` instance with the YAML content
     ///
     /// Returns a parsed and validated `ExtensionFile` or an error.
-    pub fn read<U: TryInto<Url>, R: Read>(uri: U, reader: R) -> Result<Self, SimpleExtensionsError>
-    where
-        SimpleExtensionsError: From<U::Error>,
-    {
+    pub fn read<R: Read>(reader: R) -> Result<Self, SimpleExtensionsError> {
         let raw: RawExtensions = serde_yaml::from_reader(reader)?;
-        let uri = uri.try_into()?;
-        Self::create(uri, raw)
+        Self::create(raw)
     }
 
     /// Read an extension file from a string slice.
-    pub fn read_from_str<U: TryInto<Url>, S: AsRef<str>>(
-        uri: U,
-        s: S,
-    ) -> Result<Self, SimpleExtensionsError>
-    where
-        SimpleExtensionsError: From<U::Error>,
-    {
+    pub fn read_from_str<S: AsRef<str>>(s: S) -> Result<Self, SimpleExtensionsError> {
         let raw: RawExtensions = serde_yaml::from_str(s.as_ref())?;
-        let uri = uri.try_into()?;
-        Self::create(uri, raw)
+        Self::create(raw)
     }
 }
 
@@ -94,6 +84,7 @@ mod tests {
         let yaml = r#"
 %YAML 1.2
 ---
+urn: extension:example.com:param_test
 types:
   - name: "ParamTest"
     parameters:
@@ -103,7 +94,8 @@ types:
         max: 10
 "#;
 
-        let ext = ExtensionFile::read_from_str("file:///param_test.yaml", yaml).expect("parse ok");
+        let ext = ExtensionFile::read_from_str(yaml).expect("parse ok");
+        assert_eq!(ext.urn().to_string(), "extension:example.com:param_test");
 
         // Validate parsed parameter bounds
         let ty = ext.get_type("ParamTest").expect("type exists");
@@ -133,5 +125,6 @@ types:
         ));
         assert_eq!(p.min, Some(1.0));
         assert_eq!(p.max, Some(10.0));
+        assert_eq!(back.urn, "extension:example.com:param_test");
     }
 }
