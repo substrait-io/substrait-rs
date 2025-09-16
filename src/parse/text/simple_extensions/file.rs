@@ -6,6 +6,10 @@ use crate::urn::Urn;
 use std::io::Read;
 
 /// A parsed and validated [RawExtensions].
+///
+/// `ExtensionFile` owns the canonical URN for a simple extension file along with the parsed
+/// [`SimpleExtensions`](super::SimpleExtensions) data. Keeping the URN here (instead of on the inner
+/// type map) lets us thread it through I/O, registries, and conversions without duplicating state.
 #[derive(Debug)]
 pub struct ExtensionFile {
     /// The URN this extension was loaded from
@@ -17,7 +21,7 @@ pub struct ExtensionFile {
 impl ExtensionFile {
     /// Create a new, empty SimpleExtensions
     pub fn empty(urn: Urn) -> Self {
-        let extension = SimpleExtensions::new(urn.clone());
+        let extension = SimpleExtensions::default();
         Self { urn, extension }
     }
 
@@ -25,8 +29,7 @@ impl ExtensionFile {
     pub fn create(extensions: RawExtensions) -> Result<Self, SimpleExtensionsError> {
         // Parse all types (may contain unresolved Extension(String) references)
         let mut ctx = TypeContext::default();
-        let extension = Parse::parse(extensions, &mut ctx)?;
-        let urn = extension.urn().clone();
+        let (urn, extension) = Parse::parse(extensions, &mut ctx)?;
 
         // TODO: Use ctx.known/ctx.linked to validate unresolved references and cross-file links.
 
@@ -53,6 +56,17 @@ impl ExtensionFile {
         &self.extension
     }
 
+    /// Convert the parsed extension file back into the raw text representation by value.
+    pub fn into_raw(self) -> RawExtensions {
+        let ExtensionFile { urn, extension } = self;
+        RawExtensions::from((urn, extension))
+    }
+
+    /// Convert the parsed extension file back into the raw text representation by reference.
+    pub fn to_raw(&self) -> RawExtensions {
+        RawExtensions::from((self.urn.clone(), self.extension.clone()))
+    }
+
     /// Read an extension file from a reader.
     /// - `reader`: any `Read` instance with the YAML content
     ///
@@ -74,7 +88,6 @@ impl ExtensionFile {
 #[cfg(test)]
 mod tests {
     use crate::parse::text::simple_extensions::types::ParameterConstraint as RawParameterType;
-    use crate::text::simple_extensions::SimpleExtensions as RawExtensions;
 
     use super::*;
 
@@ -109,7 +122,7 @@ types:
         }
 
         // Convert back to text::simple_extensions and assert bounds are preserved as f64
-        let back: RawExtensions = ext.extension.into();
+        let back = ext.to_raw();
         let item = back
             .types
             .into_iter()
