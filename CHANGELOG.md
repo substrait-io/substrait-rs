@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.1](https://github.com/substrait-io/substrait-rs/compare/v0.60.0...v0.60.1) - 2025-09-16
+
+### Other
+
+- *(deps,cargo)* bump serde from 1.0.223 to 1.0.225 in the cargo group ([#396](https://github.com/substrait-io/substrait-rs/pull/396))
+- *(deps,cargo)* bump the cargo group with 3 updates ([#392](https://github.com/substrait-io/substrait-rs/pull/392))
+
 ## [0.60.0](https://github.com/substrait-io/substrait-rs/compare/v0.59.1...v0.60.0) - 2025-09-14
 
 ### Added
