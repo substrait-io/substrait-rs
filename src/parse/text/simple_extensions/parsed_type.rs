@@ -2,11 +2,7 @@
 
 //! Parsed type AST used by the simple extensions type parser.
 
-use std::str::FromStr;
-
-use crate::parse::text::simple_extensions::types::CompoundType;
-
-use super::types::BuiltinType;
+use crate::parse::text::simple_extensions::types::is_builtin_type_name;
 
 /// A parsed type expression from a type string, with lifetime tied to the original string.
 #[derive(Clone, Debug, PartialEq)]
@@ -95,8 +91,7 @@ impl<'a> TypeExpr<'a> {
                 }
             }
             TypeExpr::Simple(name, params, _) => {
-                let lower = name.to_ascii_lowercase();
-                if BuiltinType::from_str(&lower).is_err() && !CompoundType::is_name(name) {
+                if !is_builtin_type_name(name) {
                     on_ext(name);
                 }
                 for p in params {
@@ -202,5 +197,17 @@ mod tests {
                 true,
             )
         );
+    }
+
+    #[test]
+    fn test_visit_references_builtin_case_insensitive() {
+        let parsed = TypeExpr::parse("DECIMAL<10,2>").unwrap();
+        let mut refs = Vec::new();
+        parsed.visit_references(&mut |name| refs.push(name.to_string()));
+        assert!(refs.is_empty());
+
+        let parsed_list = TypeExpr::parse("List<string>").unwrap();
+        parsed_list.visit_references(&mut |name| refs.push(name.to_string()));
+        assert!(refs.is_empty());
     }
 }
