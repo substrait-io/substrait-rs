@@ -144,50 +144,67 @@ fn parse_param<'a>(s: &'a str) -> Result<TypeExprParam<'a>, TypeParseError> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_parsed_type_simple() {
-        let parsed = TypeExpr::parse("i32").unwrap();
-        assert_eq!(parsed, TypeExpr::Simple("i32", vec![], false));
-
-        let parsed_nullable = TypeExpr::parse("i32?").unwrap();
-        assert_eq!(parsed_nullable, TypeExpr::Simple("i32", vec![], true));
+    fn parse(expr: &str) -> TypeExpr<'_> {
+        TypeExpr::parse(expr).expect("parse succeeds")
     }
 
     #[test]
-    fn test_parsed_type_variables() {
-        let parsed = TypeExpr::parse("any1").unwrap();
-        assert_eq!(parsed, TypeExpr::TypeVariable(1, false));
+    fn test_simple_types() {
+        let cases = vec![
+            ("i32", TypeExpr::Simple("i32", vec![], false)),
+            ("i32?", TypeExpr::Simple("i32", vec![], true)),
+            ("MAP", TypeExpr::Simple("MAP", vec![], false)),
+        ];
 
-        let parsed_nullable = TypeExpr::parse("any2?").unwrap();
-        assert_eq!(parsed_nullable, TypeExpr::TypeVariable(2, true));
+        for (expr, expected) in cases {
+            assert_eq!(parse(expr), expected, "unexpected parse for {expr}");
+        }
     }
 
     #[test]
-    fn test_user_defined_and_params() {
-        match TypeExpr::parse("u!geo?<i32?, point<i32, i32>>").unwrap() {
+    fn test_type_variables() {
+        let cases = vec![
+            ("any1", TypeExpr::TypeVariable(1, false)),
+            ("any2?", TypeExpr::TypeVariable(2, true)),
+        ];
+
+        for (expr, expected) in cases {
+            assert_eq!(
+                parse(expr),
+                expected,
+                "unexpected variable parse for {expr}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_user_defined_and_parameters() {
+        let expr = "u!geo?<i32?, point<i32, i32>>";
+        match parse(expr) {
             TypeExpr::UserDefined(name, params, nullable) => {
-                assert_eq!(name, "geo");
-                assert!(nullable);
+                assert_eq!(name, "geo", "unexpected name for {expr}");
+                assert!(nullable, "{expr} should be nullable");
                 assert_eq!(
-                    params[0],
-                    TypeExprParam::Type(TypeExpr::Simple("i32", vec![], true))
-                );
-                assert_eq!(
-                    params[1],
-                    TypeExprParam::Type(TypeExpr::Simple(
-                        "point",
-                        vec![
-                            TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
-                            TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
-                        ],
-                        false
-                    ))
+                    params,
+                    vec![
+                        TypeExprParam::Type(TypeExpr::Simple("i32", vec![], true)),
+                        TypeExprParam::Type(TypeExpr::Simple(
+                            "point",
+                            vec![
+                                TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
+                                TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
+                            ],
+                            false,
+                        )),
+                    ]
                 );
             }
-            other => panic!("unexpected: {other:?}"),
+            other => panic!("unexpected parse result: {other:?}"),
         }
+
+        let map_expr = "Map?<i32, string>";
         assert_eq!(
-            TypeExpr::parse("Map?<i32, string>").unwrap(),
+            parse(map_expr),
             TypeExpr::Simple(
                 "Map",
                 vec![
@@ -195,19 +212,24 @@ mod tests {
                     TypeExprParam::Type(TypeExpr::Simple("string", vec![], false)),
                 ],
                 true,
-            )
+            ),
+            "unexpected map parse"
         );
     }
 
     #[test]
     fn test_visit_references_builtin_case_insensitive() {
-        let parsed = TypeExpr::parse("DECIMAL<10,2>").unwrap();
-        let mut refs = Vec::new();
-        parsed.visit_references(&mut |name| refs.push(name.to_string()));
-        assert!(refs.is_empty());
+        let cases = vec![
+            ("DECIMAL<10,2>", Vec::<String>::new()),
+            ("List<string>", Vec::<String>::new()),
+            ("u!custom<i32>", vec!["custom".to_string()]),
+            ("Geo<string>", vec!["Geo".to_string()]),
+        ];
 
-        let parsed_list = TypeExpr::parse("List<string>").unwrap();
-        parsed_list.visit_references(&mut |name| refs.push(name.to_string()));
-        assert!(refs.is_empty());
+        for (expr, expected_refs) in cases {
+            let mut refs = Vec::new();
+            parse(expr).visit_references(&mut |name| refs.push(name.to_string()));
+            assert_eq!(refs, expected_refs, "unexpected references for {expr}");
+        }
     }
 }

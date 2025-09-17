@@ -73,65 +73,78 @@ impl Registry {
 
 #[cfg(test)]
 mod tests {
-    use super::ExtensionFile as ParsedSimpleExtensions;
-    use super::Registry;
+    use super::{ExtensionFile, Registry};
     use crate::text::simple_extensions::{SimpleExtensions, SimpleExtensionsTypesItem};
     use crate::urn::Urn;
     use std::str::FromStr;
 
-    fn create_test_extension_with_types() -> SimpleExtensions {
-        SimpleExtensions {
+    fn extension_file(urn: &str, type_names: &[&str]) -> ExtensionFile {
+        let types = type_names
+            .iter()
+            .map(|name| SimpleExtensionsTypesItem {
+                name: (*name).to_string(),
+                description: None,
+                parameters: None,
+                structure: None,
+                variadic: None,
+            })
+            .collect();
+
+        let raw = SimpleExtensions {
             scalar_functions: vec![],
             aggregate_functions: vec![],
             window_functions: vec![],
             dependencies: Default::default(),
             type_variations: vec![],
-            types: vec![SimpleExtensionsTypesItem {
-                name: "test_type".to_string(),
-                description: Some("A test type".to_string()),
-                parameters: None,
-                structure: None,
-                variadic: None,
-            }],
-            urn: "extension:example.com:test".to_string(),
-        }
+            types,
+            urn: urn.to_string(),
+        };
+
+        ExtensionFile::create(raw).expect("valid extension file")
     }
 
     #[test]
-    fn test_new_registry() {
-        let urn = Urn::from_str("extension:example.com:test").unwrap();
-        let extension_file =
-            ParsedSimpleExtensions::create(create_test_extension_with_types()).unwrap();
-        let extensions = vec![extension_file];
+    fn test_registry_iteration() {
+        let urns = vec![
+            "extension:example.com:first",
+            "extension:example.com:second",
+        ];
+        let registry = Registry::new(
+            urns.iter()
+                .map(|urn| extension_file(urn, &["type"]))
+                .collect(),
+        );
 
-        let registry = Registry::new(extensions);
-        assert_eq!(registry.extensions().count(), 1);
-        let extension_urns: Vec<&Urn> = registry.extensions().map(|ext| ext.urn()).collect();
-        assert!(extension_urns.contains(&&urn));
+        let collected: Vec<&Urn> = registry.extensions().map(|ext| ext.urn()).collect();
+        assert_eq!(collected.len(), 2);
+        for urn in urns {
+            assert!(
+                collected
+                    .iter()
+                    .any(|candidate| candidate.to_string() == urn)
+            );
+        }
     }
 
     #[test]
     fn test_type_lookup() {
         let urn = Urn::from_str("extension:example.com:test").unwrap();
-        let extension_file =
-            ParsedSimpleExtensions::create(create_test_extension_with_types()).unwrap();
-        let extensions = vec![extension_file];
+        let registry = Registry::new(vec![extension_file(&urn.to_string(), &["test_type"])]);
+        let other_urn = Urn::from_str("extension:example.com:other").unwrap();
 
-        let registry = Registry::new(extensions);
+        let cases = vec![
+            (&urn, "test_type", true),
+            (&urn, "missing", false),
+            (&other_urn, "test_type", false),
+        ];
 
-        // Test successful type lookup
-        let found_type = registry.get_type(&urn, "test_type");
-        assert!(found_type.is_some());
-        assert_eq!(found_type.unwrap().name, "test_type");
-
-        // Test missing type lookup
-        let missing_type = registry.get_type(&urn, "nonexistent_type");
-        assert!(missing_type.is_none());
-
-        // Test missing extension lookup
-        let wrong_urn = Urn::from_str("extension:example.com:wrong").unwrap();
-        let missing_extension = registry.get_type(&wrong_urn, "test_type");
-        assert!(missing_extension.is_none());
+        for (query_urn, type_name, expected) in cases {
+            assert_eq!(
+                registry.get_type(query_urn, type_name).is_some(),
+                expected,
+                "unexpected lookup result for {query_urn}:{type_name}"
+            );
+        }
     }
 
     #[cfg(feature = "extensions")]

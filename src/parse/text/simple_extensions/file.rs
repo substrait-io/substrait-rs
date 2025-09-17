@@ -87,14 +87,10 @@ impl ExtensionFile {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::parse::text::simple_extensions::types::ParameterConstraint as RawParameterType;
 
-    use super::*;
-
-    #[test]
-    fn yaml_round_trip_integer_param_bounds() {
-        // A minimal YAML extension file with a single type that has integer bounds on a parameter
-        let yaml = r#"
+    const YAML_PARAM_TEST: &str = r#"
 %YAML 1.2
 ---
 urn: extension:example.com:param_test
@@ -107,37 +103,40 @@ types:
         max: 10
 "#;
 
-        let ext = ExtensionFile::read_from_str(yaml).expect("parse ok");
+    #[test]
+    fn yaml_round_trip_integer_param_bounds() {
+        let ext = ExtensionFile::read_from_str(YAML_PARAM_TEST).expect("parse ok");
         assert_eq!(ext.urn().to_string(), "extension:example.com:param_test");
 
-        // Validate parsed parameter bounds
         let ty = ext.get_type("ParamTest").expect("type exists");
-        assert_eq!(ty.parameters.len(), 1);
-        match &ty.parameters[0].param_type {
-            RawParameterType::Integer { min, max } => {
-                assert_eq!(min, &Some(1));
-                assert_eq!(max, &Some(10));
-            }
-            other => panic!("unexpected param type: {other:?}"),
+        match &ty.parameters[..] {
+            [param] => match &param.param_type {
+                RawParameterType::Integer {
+                    min: actual_min,
+                    max: actual_max,
+                } => {
+                    assert_eq!(actual_min, &Some(1));
+                    assert_eq!(actual_max, &Some(10));
+                }
+                other => panic!("unexpected param type: {other:?}"),
+            },
+            other => panic!("unexpected parameters: {other:?}"),
         }
 
-        // Convert back to text::simple_extensions and assert bounds are preserved as f64
         let back = ext.to_raw();
+        assert_eq!(back.urn, "extension:example.com:param_test");
         let item = back
             .types
             .into_iter()
             .find(|t| t.name == "ParamTest")
             .expect("round-tripped type present");
-        let param_defs = item.parameters.expect("params present");
-        assert_eq!(param_defs.0.len(), 1);
-        let p = &param_defs.0[0];
-        assert_eq!(p.name.as_deref(), Some("K"));
+        let param = item.parameters.unwrap().0.into_iter().next().unwrap();
+        assert_eq!(param.name.as_deref(), Some("K"));
         assert!(matches!(
-            p.type_,
+            param.type_,
             crate::text::simple_extensions::TypeParamDefsItemType::Integer
         ));
-        assert_eq!(p.min, Some(1.0));
-        assert_eq!(p.max, Some(10.0));
-        assert_eq!(back.urn, "extension:example.com:param_test");
+        assert_eq!(param.min, Some(1.0));
+        assert_eq!(param.max, Some(10.0));
     }
 }

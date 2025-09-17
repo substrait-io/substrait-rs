@@ -200,8 +200,11 @@ impl BuiltinParameterized {
                 | "fixedbinary"
                 | "decimal"
                 | "precisiontime"
+                | "time"
                 | "precisiontimestamp"
+                | "timestamp"
                 | "precisiontimestamptz"
+                | "timestamp_tz"
                 | "interval_day"
                 | "interval_compound"
         )
@@ -764,7 +767,9 @@ impl fmt::Display for ConcreteTypeKind {
             }
             ConcreteTypeKind::List(elem) => write!(f, "List<{elem}>"),
             ConcreteTypeKind::Map { key, value } => write!(f, "Map<{key}, {value}>"),
-            ConcreteTypeKind::Struct(types) => write_separated(f, types.iter(), "Struct<", ">", ", "),
+            ConcreteTypeKind::Struct(types) => {
+                write_separated(f, types.iter(), "Struct<", ">", ", ")
+            }
             ConcreteTypeKind::NamedStruct {
                 field_names,
                 field_types,
@@ -1021,7 +1026,7 @@ fn parse_parameterized_builtin<'a>(
             let scale = expect_integer_param(display_name, 1, &params[1])?;
             Ok(Some(BuiltinParameterized::Decimal { precision, scale }))
         }
-        "precisiontime" => {
+        "precisiontime" | "time" => {
             if params.len() != 1 {
                 return Err(ExtensionTypeError::InvalidParameterCount {
                     type_name: display_name.to_string(),
@@ -1032,7 +1037,7 @@ fn parse_parameterized_builtin<'a>(
             let precision = expect_integer_param(display_name, 0, &params[0])?;
             Ok(Some(BuiltinParameterized::PrecisionTime { precision }))
         }
-        "precisiontimestamp" => {
+        "precisiontimestamp" | "timestamp" => {
             if params.len() != 1 {
                 return Err(ExtensionTypeError::InvalidParameterCount {
                     type_name: display_name.to_string(),
@@ -1041,11 +1046,9 @@ fn parse_parameterized_builtin<'a>(
                 });
             }
             let precision = expect_integer_param(display_name, 0, &params[0])?;
-            Ok(Some(BuiltinParameterized::PrecisionTimestamp {
-                precision,
-            }))
+            Ok(Some(BuiltinParameterized::PrecisionTimestamp { precision }))
         }
-        "precisiontimestamptz" => {
+        "precisiontimestamptz" | "timestamp_tz" => {
             if params.len() != 1 {
                 return Err(ExtensionTypeError::InvalidParameterCount {
                     type_name: display_name.to_string(),
@@ -1078,9 +1081,7 @@ fn parse_parameterized_builtin<'a>(
                 });
             }
             let precision = expect_integer_param(display_name, 0, &params[0])?;
-            Ok(Some(BuiltinParameterized::IntervalCompound {
-                precision,
-            }))
+            Ok(Some(BuiltinParameterized::IntervalCompound { precision }))
         }
         _ => Ok(None),
     }
@@ -1186,103 +1187,222 @@ mod tests {
     use crate::parse::text::simple_extensions::TypeExpr;
     use crate::parse::text::simple_extensions::argument::EnumOptions as ParsedEnumOptions;
     use crate::text::simple_extensions;
+    use std::iter::FromIterator;
 
-    #[test]
-    fn test_builtin_type_parsing() {
-        assert_eq!(PrimitiveType::from_str("i32").unwrap(), PrimitiveType::I32);
-        assert_eq!(
-            PrimitiveType::from_str("string").unwrap(),
-            PrimitiveType::String
+    /// Create a [ConcreteType] from a [BuiltinParameterized]
+    fn concretize(builtin: BuiltinParameterized) -> ConcreteType {
+        ConcreteType::parameterized_builtin(builtin, false)
+    }
+
+    /// Parse a string into a [ConcreteType]
+    fn parse_type(expr: &str) -> ConcreteType {
+        let parsed = TypeExpr::parse(expr).unwrap();
+        ConcreteType::try_from(parsed).unwrap()
+    }
+
+    /// Parse a string into a builtin [ConcreteType], with no unresolved
+    /// extension references
+    fn parse_simple(s: &str) -> ConcreteType {
+        let parsed = TypeExpr::parse(s).unwrap();
+
+        let mut refs = Vec::new();
+        parsed.visit_references(&mut |name| refs.push(name.to_string()));
+        assert!(refs.is_empty(), "{s} should not add an extension reference");
+
+        ConcreteType::try_from(parsed).unwrap()
+    }
+
+    /// Create a type parameter from a type expression string
+    fn type_param(expr: &str) -> TypeParameter {
+        TypeParameter::Type(parse_type(expr))
+    }
+
+    /// Create an extension type
+    fn extension(name: &str, parameters: Vec<TypeParameter>, nullable: bool) -> ConcreteType {
+        ConcreteType::extension_with_params(name.to_string(), parameters, nullable)
+    }
+
+    /// Convert a custom type to raw and back, ensuring round-trip consistency
+    fn round_trip(custom: &CustomType) {
+        let item: simple_extensions::SimpleExtensionsTypesItem = custom.clone().into();
+        let mut ctx = TypeContext::default();
+        let parsed = Parse::parse(item, &mut ctx).unwrap();
+        assert_eq!(&parsed, custom);
+    }
+
+    /// Create a raw named struct (e.g. straight from YAML) from field name and
+    /// type pairs
+    fn raw_named_struct(fields: &[(&str, &str)]) -> RawType {
+        let map = serde_json::Map::from_iter(
+            fields
+                .iter()
+                .map(|(name, ty)| ((*name).into(), serde_json::Value::String((*ty).into()))),
         );
-        assert!(PrimitiveType::from_str("invalid").is_err());
+        RawType::Variant1(map)
     }
 
     #[test]
-    fn test_concrete_type_creation() {
-        let int_type = ConcreteType::builtin(PrimitiveType::I32, false);
-        assert_eq!(
-            int_type,
-            ConcreteType {
-                kind: ConcreteTypeKind::Builtin(BuiltinKind::Primitive(PrimitiveType::I32)),
-                nullable: false
-            }
-        );
+    fn test_primitive_type_parsing() {
+        let cases = vec![
+            ("bool", Some(PrimitiveType::Boolean)),
+            ("i32", Some(PrimitiveType::I32)),
+            ("STRING", Some(PrimitiveType::String)),
+            ("uuid", Some(PrimitiveType::Uuid)),
+            ("timestamp", None),
+            ("invalid", None),
+        ];
 
-        let list_type = ConcreteType::list(int_type.clone(), true);
-        assert_eq!(
-            list_type,
-            ConcreteType {
-                kind: ConcreteTypeKind::List(Box::new(int_type)),
-                nullable: true
-            }
-        );
-    }
-
-    #[test]
-    fn test_list_type_parameters_preserved() {
-        let parsed = TypeExpr::parse("List<i32>").unwrap();
-        let concrete = ConcreteType::try_from(parsed).unwrap();
-        assert_eq!(
-            concrete,
-            ConcreteType::list(ConcreteType::builtin(PrimitiveType::I32, false), false)
-        );
-    }
-
-    #[test]
-    fn test_decimal_type_case_insensitive() {
-        let parsed = TypeExpr::parse("DECIMAL<10,2>").unwrap();
-        let concrete = ConcreteType::try_from(parsed).unwrap();
-        match concrete.kind {
-            ConcreteTypeKind::Builtin(BuiltinKind::Parameterized(
-                BuiltinParameterized::Decimal { precision, scale },
-            )) => {
-                assert_eq!(precision, 10);
-                assert_eq!(scale, 2);
-            }
-            other => panic!("unexpected type: {other:?}"),
-        }
-        assert!(!concrete.nullable);
-    }
-
-    #[test]
-    fn test_extension_parameters_preserved() {
-        let parsed_udf = TypeExpr::parse("u!geo<List<i32>, 10>").unwrap();
-        let udf_type = ConcreteType::try_from(parsed_udf).unwrap();
-        match &udf_type.kind {
-            ConcreteTypeKind::Extension { name, parameters } => {
-                assert_eq!(name, "geo");
-                assert_eq!(parameters.len(), 2);
-                match &parameters[0] {
-                    TypeParameter::Type(inner) => match &inner.kind {
-                        ConcreteTypeKind::List(element) => {
-                            assert_eq!(**element, ConcreteType::builtin(PrimitiveType::I32, false));
-                        }
-                        other => panic!("unexpected list element: {other:?}"),
-                    },
-                    other => panic!("unexpected parameter: {other:?}"),
+        for (input, expected) in cases {
+            match expected {
+                Some(expected_type) => {
+                    assert_eq!(
+                        PrimitiveType::from_str(input).unwrap(),
+                        expected_type,
+                        "expected primitive type for {input}"
+                    );
                 }
-                assert_eq!(parameters[1], TypeParameter::Integer(10));
-            }
-            other => panic!("unexpected type: {other:?}"),
-        }
-
-        let parsed_simple = TypeExpr::parse("Geo<List<i32>>").unwrap();
-        let simple_type = ConcreteType::try_from(parsed_simple).unwrap();
-        match &simple_type.kind {
-            ConcreteTypeKind::Extension { name, parameters } => {
-                assert_eq!(name, "Geo");
-                assert_eq!(parameters.len(), 1);
-                match &parameters[0] {
-                    TypeParameter::Type(inner) => match &inner.kind {
-                        ConcreteTypeKind::List(element) => {
-                            assert_eq!(**element, ConcreteType::builtin(PrimitiveType::I32, false));
-                        }
-                        other => panic!("unexpected list element: {other:?}"),
-                    },
-                    other => panic!("unexpected parameter: {other:?}"),
+                None => {
+                    assert!(
+                        PrimitiveType::from_str(input).is_err(),
+                        "expected parsing {input} to fail"
+                    );
                 }
             }
-            other => panic!("unexpected type: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parameterized_builtin_types() {
+        let cases = vec![
+            (
+                "time<9>",
+                concretize(BuiltinParameterized::PrecisionTime { precision: 9 }),
+            ),
+            (
+                "timestamp<3>",
+                concretize(BuiltinParameterized::PrecisionTimestamp { precision: 3 }),
+            ),
+            (
+                "timestamp_tz<4>",
+                concretize(BuiltinParameterized::PrecisionTimestampTz { precision: 4 }),
+            ),
+            (
+                "precisiontime<2>",
+                concretize(BuiltinParameterized::PrecisionTime { precision: 2 }),
+            ),
+            (
+                "precisiontimestamp<1>",
+                concretize(BuiltinParameterized::PrecisionTimestamp { precision: 1 }),
+            ),
+            (
+                "precisiontimestamptz<5>",
+                concretize(BuiltinParameterized::PrecisionTimestampTz { precision: 5 }),
+            ),
+            (
+                "DECIMAL<10,2>",
+                concretize(BuiltinParameterized::Decimal {
+                    precision: 10,
+                    scale: 2,
+                }),
+            ),
+            (
+                "fixedchar<12>",
+                concretize(BuiltinParameterized::FixedChar { length: 12 }),
+            ),
+            (
+                "VarChar<42>",
+                concretize(BuiltinParameterized::VarChar { length: 42 }),
+            ),
+            (
+                "fixedbinary<8>",
+                concretize(BuiltinParameterized::FixedBinary { length: 8 }),
+            ),
+            (
+                "interval_day<7>",
+                concretize(BuiltinParameterized::IntervalDay { precision: 7 }),
+            ),
+            (
+                "interval_compound<6>",
+                concretize(BuiltinParameterized::IntervalCompound { precision: 6 }),
+            ),
+        ];
+
+        for (expr, expected) in cases {
+            let found = parse_simple(expr);
+            assert_eq!(found, expected, "unexpected type for {expr}");
+        }
+    }
+
+    #[test]
+    fn test_container_types() {
+        let cases = vec![
+            (
+                "List<i32>",
+                ConcreteType::list(ConcreteType::builtin(PrimitiveType::I32, false), false),
+            ),
+            (
+                "List<fp64?>",
+                ConcreteType::list(ConcreteType::builtin(PrimitiveType::Fp64, true), false),
+            ),
+            (
+                "Map?<i64, string?>",
+                ConcreteType::map(
+                    ConcreteType::builtin(PrimitiveType::I64, false),
+                    ConcreteType::builtin(PrimitiveType::String, true),
+                    true,
+                ),
+            ),
+            (
+                "Struct?<i8, string?>",
+                ConcreteType::r#struct(
+                    vec![
+                        ConcreteType::builtin(PrimitiveType::I8, false),
+                        ConcreteType::builtin(PrimitiveType::String, true),
+                    ],
+                    true,
+                ),
+            ),
+        ];
+
+        for (expr, expected) in cases {
+            assert_eq!(parse_type(expr), expected, "unexpected parse for {expr}");
+        }
+    }
+
+    #[test]
+    fn test_extension_types() {
+        let cases = vec![
+            (
+                "u!geo<List<i32>, 10>",
+                extension(
+                    "geo",
+                    vec![type_param("List<i32>"), TypeParameter::Integer(10)],
+                    false,
+                ),
+            ),
+            (
+                "Geo?<List<i32?>>",
+                extension("Geo", vec![type_param("List<i32?>")], true),
+            ),
+            (
+                "Custom<string?, bool>",
+                extension(
+                    "Custom",
+                    vec![
+                        type_param("string?"),
+                        TypeParameter::Type(ConcreteType::builtin(PrimitiveType::Boolean, false)),
+                    ],
+                    false,
+                ),
+            ),
+        ];
+
+        for (expr, expected) in cases {
+            assert_eq!(
+                parse_type(expr),
+                expected,
+                "unexpected extension for {expr}"
+            );
         }
     }
 
@@ -1292,81 +1412,77 @@ mod tests {
             min: Some(1),
             max: Some(10),
         };
+        let enum_param = ParameterConstraint::Enumeration {
+            options: ParsedEnumOptions::try_from(simple_extensions::EnumOptions(vec![
+                "OVERFLOW".to_string(),
+                "ERROR".to_string(),
+            ]))
+            .unwrap(),
+        };
 
-        assert!(int_param.is_valid_value(&Value::Number(5.into())));
-        assert!(!int_param.is_valid_value(&Value::Number(0.into())));
-        assert!(!int_param.is_valid_value(&Value::Number(11.into())));
-        assert!(!int_param.is_valid_value(&Value::String("not a number".into())));
+        let cases = vec![
+            (&int_param, Value::Number(5.into()), true),
+            (&int_param, Value::Number(0.into()), false),
+            (&int_param, Value::Number(11.into()), false),
+            (&int_param, Value::String("not a number".into()), false),
+            (&enum_param, Value::String("OVERFLOW".into()), true),
+            (&enum_param, Value::String("INVALID".into()), false),
+        ];
 
-        let raw = simple_extensions::EnumOptions(vec!["OVERFLOW".to_string(), "ERROR".to_string()]);
-        let parsed = ParsedEnumOptions::try_from(raw).unwrap();
-        let enum_param = ParameterConstraint::Enumeration { options: parsed };
-
-        assert!(enum_param.is_valid_value(&Value::String("OVERFLOW".into())));
-        assert!(!enum_param.is_valid_value(&Value::String("INVALID".into())));
+        for (param, value, expected) in cases {
+            assert_eq!(
+                param.is_valid_value(&value),
+                expected,
+                "unexpected validation result for {value:?}"
+            );
+        }
     }
 
     #[test]
     fn test_integer_param_bounds_round_trip() {
-        // Valid bounds now use lossy cast from f64 to i64; fractional parts are truncated toward zero
-        let item = simple_extensions::TypeParamDefsItem {
-            name: Some("K".to_string()),
-            description: None,
-            type_: simple_extensions::TypeParamDefsItemType::Integer,
-            min: Some(1.0),
-            max: Some(10.0),
-            options: None,
-            optional: None,
-        };
-        let tp = TypeParam::try_from(item).expect("should parse integer bounds");
-        match tp.param_type {
-            ParameterConstraint::Integer { min, max } => {
-                assert_eq!(min, Some(1));
-                assert_eq!(max, Some(10));
-            }
-            _ => panic!("expected integer param type"),
-        }
+        let cases = vec![
+            (
+                "bounded",
+                simple_extensions::TypeParamDefsItem {
+                    name: Some("K".to_string()),
+                    description: None,
+                    type_: simple_extensions::TypeParamDefsItemType::Integer,
+                    min: Some(1.0),
+                    max: Some(10.0),
+                    options: None,
+                    optional: None,
+                },
+                (Some(1), Some(10)),
+            ),
+            (
+                "truncated",
+                simple_extensions::TypeParamDefsItem {
+                    name: Some("K".to_string()),
+                    description: None,
+                    type_: simple_extensions::TypeParamDefsItemType::Integer,
+                    min: Some(1.5),
+                    max: None,
+                    options: None,
+                    optional: None,
+                },
+                (Some(1), None),
+            ),
+        ];
 
-        // Fractional min is truncated
-        let trunc = simple_extensions::TypeParamDefsItem {
-            name: Some("K".to_string()),
-            description: None,
-            type_: simple_extensions::TypeParamDefsItemType::Integer,
-            min: Some(1.5),
-            max: None,
-            options: None,
-            optional: None,
-        };
-        let tp = TypeParam::try_from(trunc).expect("should parse with truncation");
-        match tp.param_type {
-            ParameterConstraint::Integer { min, max } => {
-                assert_eq!(min, Some(1));
-                assert_eq!(max, None);
+        for (label, item, (expected_min, expected_max)) in cases {
+            let tp = TypeParam::try_from(item).expect("should parse integer bounds");
+            match tp.param_type {
+                ParameterConstraint::Integer { min, max } => {
+                    assert_eq!(min, expected_min, "min mismatch for {label}");
+                    assert_eq!(max, expected_max, "max mismatch for {label}");
+                }
+                _ => panic!("expected integer param type for {label}"),
             }
-            _ => panic!("expected integer param type"),
         }
     }
 
     #[test]
-    fn test_custom_type_round_trip_alias() -> Result<(), ExtensionTypeError> {
-        let custom = CustomType::new(
-            "AliasType".to_string(),
-            vec![],
-            Some(ConcreteType::builtin(PrimitiveType::I32, false)),
-            None,
-            Some("desc".to_string()),
-        )?;
-        let item: simple_extensions::SimpleExtensionsTypesItem = custom.clone().into();
-        let mut ctx = TypeContext::default();
-        let parsed = Parse::parse(item, &mut ctx)?;
-        assert_eq!(parsed.name, custom.name);
-        assert_eq!(parsed.description, custom.description);
-        assert_eq!(parsed.structure, custom.structure);
-        Ok(())
-    }
-
-    #[test]
-    fn test_custom_type_round_trip_named_struct() -> Result<(), ExtensionTypeError> {
+    fn test_custom_type_round_trip() -> Result<(), ExtensionTypeError> {
         let fields = vec![
             (
                 "x".to_string(),
@@ -1378,96 +1494,80 @@ mod tests {
             ),
         ];
         let (names, types): (Vec<_>, Vec<_>) = fields.into_iter().unzip();
-        let custom = CustomType::new(
-            "Point".to_string(),
-            vec![],
-            Some(ConcreteType::named_struct(
-                names.clone(),
-                types.clone(),
-                false,
-            )),
-            None,
-            None,
-        )?;
-        let item: simple_extensions::SimpleExtensionsTypesItem = custom.clone().into();
-        let mut ctx = TypeContext::default();
-        let parsed = Parse::parse(item, &mut ctx)?;
-        assert_eq!(parsed.name, custom.name);
-        if let Some(ConcreteType {
-            kind:
-                ConcreteTypeKind::NamedStruct {
-                    field_names,
-                    field_types,
-                },
-            nullable,
-        }) = parsed.structure
-        {
-            assert!(!nullable);
-            assert_eq!(field_names, names);
-            assert_eq!(field_types, types);
-        } else {
-            panic!("expected named struct after round-trip");
+
+        let cases = vec![
+            CustomType::new(
+                "AliasType".to_string(),
+                vec![],
+                Some(ConcreteType::builtin(PrimitiveType::I32, false)),
+                None,
+                Some("a test alias type".to_string()),
+            )?,
+            CustomType::new(
+                "Point".to_string(),
+                vec![TypeParam::new(
+                    "T".to_string(),
+                    ParameterConstraint::DataType,
+                    Some("a numeric value".to_string()),
+                )],
+                Some(ConcreteType::named_struct(names, types, false)),
+                None,
+                None,
+            )?,
+        ];
+
+        for custom in cases {
+            round_trip(&custom);
         }
-        Ok(())
-    }
 
-    #[test]
-    fn test_custom_type_creation() -> Result<(), ExtensionTypeError> {
-        let custom_type = CustomType::new(
-            "MyType".to_string(),
-            vec![],
-            Some(ConcreteType::builtin(PrimitiveType::I32, false)),
-            None,
-            Some("A custom type".to_string()),
-        )?;
-
-        assert_eq!(custom_type.name, "MyType");
-        assert_eq!(custom_type.parameters.len(), 0);
-        assert!(custom_type.structure.is_some());
         Ok(())
     }
 
     #[test]
     fn test_invalid_type_names() {
-        // Empty name should be invalid
-        assert!(CustomType::validate_name("").is_err());
-        // Name with whitespace should be invalid
-        assert!(CustomType::validate_name("bad name").is_err());
-        // Valid name should pass
-        assert!(CustomType::validate_name("GoodName").is_ok());
+        let cases = vec![
+            ("", false),
+            ("bad name", false),
+            ("GoodName", true),
+            ("also_good", true),
+        ];
+
+        for (name, expected_ok) in cases {
+            let result = CustomType::validate_name(name);
+            assert_eq!(
+                result.is_ok(),
+                expected_ok,
+                "unexpected validation for {name}"
+            );
+        }
     }
 
     #[test]
     fn test_ext_type_to_concrete_type() -> Result<(), ExtensionTypeError> {
-        // Test simple type string alias
-        let ext_type = RawType::Variant0("i32".to_string());
-        let mut ctx = TypeContext::default();
-        let concrete = Parse::parse(ext_type, &mut ctx)?;
-        assert_eq!(concrete, ConcreteType::builtin(PrimitiveType::I32, false));
+        let cases = vec![
+            (
+                "alias",
+                RawType::Variant0("i32".to_string()),
+                ConcreteType::builtin(PrimitiveType::I32, false),
+            ),
+            (
+                "named_struct",
+                raw_named_struct(&[("field1", "fp64"), ("field2", "i32?")]),
+                ConcreteType::named_struct(
+                    vec!["field1".to_string(), "field2".to_string()],
+                    vec![
+                        ConcreteType::builtin(PrimitiveType::Fp64, false),
+                        ConcreteType::builtin(PrimitiveType::I32, true),
+                    ],
+                    false,
+                ),
+            ),
+        ];
 
-        // Test struct type
-        let mut field_map = serde_json::Map::new();
-        field_map.insert(
-            "field1".to_string(),
-            serde_json::Value::String("fp64".to_string()),
-        );
-        let ext_type = RawType::Variant1(field_map);
-        let mut ctx = TypeContext::default();
-        let concrete = Parse::parse(ext_type, &mut ctx)?;
-
-        if let ConcreteTypeKind::NamedStruct {
-            field_names,
-            field_types,
-        } = &concrete.kind
-        {
-            assert_eq!(field_names, &vec!["field1".to_string()]);
-            assert_eq!(field_types.len(), 1);
-            assert_eq!(
-                field_types[0],
-                ConcreteType::builtin(PrimitiveType::Fp64, false)
-            );
-        } else {
-            panic!("Expected named struct type");
+        for (label, raw, expected) in cases {
+            let mut ctx = TypeContext::default();
+            let parsed = Parse::parse(raw, &mut ctx)?;
+            assert_eq!(parsed, expected, "unexpected type for {label}");
         }
 
         Ok(())
@@ -1475,87 +1575,89 @@ mod tests {
 
     #[test]
     fn test_custom_type_parsing() -> Result<(), ExtensionTypeError> {
-        let type_item = simple_extensions::SimpleExtensionsTypesItem {
-            name: "TestType".to_string(),
-            description: Some("A test type".to_string()),
-            parameters: None,
-            structure: Some(RawType::Variant0("BINARY".to_string())), // Alias to fp64
-            variadic: None,
-        };
+        let cases = vec![
+            (
+                "alias",
+                simple_extensions::SimpleExtensionsTypesItem {
+                    name: "Alias".to_string(),
+                    description: Some("Alias type".to_string()),
+                    parameters: None,
+                    structure: Some(RawType::Variant0("BINARY".to_string())),
+                    variadic: None,
+                },
+                "Alias",
+                Some("Alias type"),
+                Some(ConcreteType::builtin(PrimitiveType::Binary, false)),
+            ),
+            (
+                "named_struct",
+                simple_extensions::SimpleExtensionsTypesItem {
+                    name: "Point".to_string(),
+                    description: Some("A 2D point".to_string()),
+                    parameters: None,
+                    structure: Some(raw_named_struct(&[("x", "fp64"), ("y", "fp64?")])),
+                    variadic: None,
+                },
+                "Point",
+                Some("A 2D point"),
+                Some(ConcreteType::named_struct(
+                    vec!["x".to_string(), "y".to_string()],
+                    vec![
+                        ConcreteType::builtin(PrimitiveType::Fp64, false),
+                        ConcreteType::builtin(PrimitiveType::Fp64, true),
+                    ],
+                    false,
+                )),
+            ),
+            (
+                "no_structure",
+                simple_extensions::SimpleExtensionsTypesItem {
+                    name: "Opaque".to_string(),
+                    description: None,
+                    parameters: None,
+                    structure: None,
+                    variadic: Some(true),
+                },
+                "Opaque",
+                None,
+                None,
+            ),
+        ];
 
-        let mut ctx = TypeContext::default();
-        let custom_type = Parse::parse(type_item, &mut ctx)?;
-        assert_eq!(custom_type.name, "TestType");
-        assert_eq!(custom_type.description, Some("A test type".to_string()));
-        assert!(custom_type.structure.is_some());
-
-        if let Some(structure) = &custom_type.structure {
+        for (label, item, expected_name, expected_description, expected_structure) in cases {
+            let mut ctx = TypeContext::default();
+            let parsed = Parse::parse(item, &mut ctx)?;
+            assert_eq!(parsed.name, expected_name);
             assert_eq!(
-                structure.kind,
-                ConcreteTypeKind::Builtin(BuiltinKind::Primitive(PrimitiveType::Binary))
+                parsed.description.as_deref(),
+                expected_description,
+                "description mismatch for {label}"
+            );
+            assert_eq!(
+                parsed.structure, expected_structure,
+                "structure mismatch for {label}"
             );
         }
 
         Ok(())
     }
 
-    #[test]
-    fn test_custom_type_with_struct() -> Result<(), ExtensionTypeError> {
-        let mut field_map = serde_json::Map::new();
-        field_map.insert(
-            "x".to_string(),
-            serde_json::Value::String("fp64".to_string()),
-        );
-        field_map.insert(
-            "y".to_string(),
-            serde_json::Value::String("fp64".to_string()),
-        );
-
-        let type_item = simple_extensions::SimpleExtensionsTypesItem {
-            name: "Point".to_string(),
-            description: Some("A 2D point".to_string()),
-            parameters: None,
-            structure: Some(RawType::Variant1(field_map)),
-            variadic: None,
-        };
-
-        let mut ctx = TypeContext::default();
-        let custom_type = Parse::parse(type_item, &mut ctx)?;
-        assert_eq!(custom_type.name, "Point");
-
-        if let Some(ConcreteType {
-            kind:
-                ConcreteTypeKind::NamedStruct {
-                    field_names,
-                    field_types,
-                },
-            ..
-        }) = &custom_type.structure
-        {
-            assert!(field_names.contains(&"x".to_string()));
-            assert!(field_names.contains(&"y".to_string()));
-            assert_eq!(field_types.len(), 2);
-            // Note: HashMap iteration order is not guaranteed, so we just check the types exist
-            assert!(field_types.iter().all(|t| matches!(
-                t.kind,
-                ConcreteTypeKind::Builtin(BuiltinKind::Primitive(PrimitiveType::Fp64))
-            )));
-        } else {
-            panic!("Expected struct type");
-        }
-
-        Ok(())
-    }
-
+    /// A type defined with a structure cannot be defined as nullable; e.g. if
+    /// you define 'Integer' as an alias for 'i64?', then what do you mean by
+    /// 'INTEGER?' - is that now equal to `i64??`
     #[test]
     fn test_nullable_structure_rejected() {
-        let ext_type = RawType::Variant0("i32?".to_string());
-        let mut ctx = TypeContext::default();
-        let result = Parse::parse(ext_type, &mut ctx);
-        if let Err(ExtensionTypeError::StructureCannotBeNullable { type_string }) = result {
-            assert!(type_string.contains("i32?"));
-        } else {
-            panic!("Expected nullable structure to be rejected, got: {result:?}");
+        let cases = vec![RawType::Variant0("i32?".to_string())];
+
+        for raw in cases {
+            let mut ctx = TypeContext::default();
+            let result = Parse::parse(raw, &mut ctx);
+            match result {
+                Err(ExtensionTypeError::StructureCannotBeNullable { type_string }) => {
+                    assert!(type_string.contains('?'));
+                }
+                other => panic!("Expected nullable structure error, got {other:?}"),
+            }
         }
     }
 }
