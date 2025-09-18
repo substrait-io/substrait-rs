@@ -23,8 +23,6 @@ pub enum TypeExprParam<'a> {
     Type(TypeExpr<'a>),
     /// An integer literal parameter
     Integer(i64),
-    /// A string literal parameter (unquoted)
-    String(&'a str),
 }
 
 #[derive(Debug, PartialEq, thiserror::Error)]

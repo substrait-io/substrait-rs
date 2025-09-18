@@ -121,8 +121,6 @@ pub enum TypeParameter {
     Integer(i64),
     /// Type parameter (nested type)
     Type(ConcreteType),
-    /// String parameter
-    String(String),
 }
 
 impl fmt::Display for TypeParameter {
@@ -130,7 +128,6 @@ impl fmt::Display for TypeParameter {
         match self {
             TypeParameter::Integer(i) => write!(f, "{i}"),
             TypeParameter::Type(t) => write!(f, "{t}"),
-            TypeParameter::String(s) => write!(f, "{s}"),
         }
     }
 }
@@ -957,11 +954,6 @@ fn expect_type_argument<'a>(
             index,
             expected: "a type",
         }),
-        TypeExprParam::String(_) => Err(ExtensionTypeError::InvalidParameterKind {
-            type_name: type_name.to_string(),
-            index,
-            expected: "a type",
-        }),
     }
 }
 
@@ -970,7 +962,6 @@ fn type_expr_param_to_type_parameter<'a>(
 ) -> Result<TypeParameter, ExtensionTypeError> {
     Ok(match param {
         TypeExprParam::Integer(v) => TypeParameter::Integer(v),
-        TypeExprParam::String(s) => TypeParameter::String(s.to_string()),
         TypeExprParam::Type(t) => TypeParameter::Type(ConcreteType::try_from(t)?),
     })
 }
