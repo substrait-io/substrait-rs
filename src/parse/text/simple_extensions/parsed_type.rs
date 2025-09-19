@@ -29,6 +29,8 @@ pub enum TypeExprParam<'a> {
 pub enum TypeParseError {
     #[error("Parameter list {0} Must start and end with angle brackets")]
     ExpectedClosingAngleBracket(String),
+    #[error("Type variation syntax is not supported: {0}")]
+    UnsupportedVariation(String),
 }
 
 impl<'a> TypeExpr<'a> {
@@ -59,6 +61,10 @@ impl<'a> TypeExpr<'a> {
                 },
                 None => (rest, vec![]),
             };
+
+        if name_and_nullable.contains('[') || name_and_nullable.contains(']') {
+            return Err(TypeParseError::UnsupportedVariation(type_str.to_string()));
+        }
 
         let (name, nullable) = match name_and_nullable.strip_suffix('?') {
             Some(name) => (name, true),
@@ -234,6 +240,18 @@ mod tests {
             let mut refs = Vec::new();
             parse(expr).visit_references(&mut |name| refs.push(name.to_string()));
             assert_eq!(refs, expected_refs, "unexpected references for {expr}");
+        }
+    }
+
+    #[test]
+    fn test_variation_not_supported() {
+        let cases = vec!["i32[1]", "Foo?[1]", "u!bar[2]" ];
+
+        for expr in cases {
+            match TypeExpr::parse(expr) {
+                Err(TypeParseError::UnsupportedVariation(s)) => assert_eq!(s, expr),
+                other => panic!("expected UnsupportedVariation for {expr}, got {other:?}"),
+            }
         }
     }
 }
