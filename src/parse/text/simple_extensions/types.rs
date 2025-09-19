@@ -794,10 +794,10 @@ impl fmt::Display for ConcreteTypeKind {
                 write!(f, "{name}")?;
                 write_separated(f, parameters.iter(), "<", ">", ", ")
             }
-            ConcreteTypeKind::List(elem) => write!(f, "List<{elem}>"),
-            ConcreteTypeKind::Map { key, value } => write!(f, "Map<{key}, {value}>"),
+            ConcreteTypeKind::List(elem) => write!(f, "list<{elem}>"),
+            ConcreteTypeKind::Map { key, value } => write!(f, "map<{key}, {value}>"),
             ConcreteTypeKind::Struct(types) => {
-                write_separated(f, types.iter(), "Struct<", ">", ", ")
+                write_separated(f, types.iter(), "struct<", ">", ", ")
             }
             ConcreteTypeKind::NamedStruct {
                 field_names,
@@ -1537,6 +1537,41 @@ mod tests {
                 expected,
                 "unexpected validation result for {value:?}"
             );
+        }
+    }
+
+    #[test]
+    fn test_type_round_trip_display() {
+        let cases = vec![
+            ("i32", None),
+            ("I64?", Some("i64?")),
+            ("list<string>", None),
+            ("List<STRING?>", Some("list<string?>")),
+            ("map<i32, list<string>>", None),
+            (
+                "struct<i8, string?>",
+                None,
+            ),
+            (
+                "Struct<List<i32>, Map<string, list<i64?>>>",
+                Some("struct<list<i32>, map<string, list<i64?>>>")
+            ),
+            (
+                "Map<List<I32?>, Struct<string, list<i64?>>>",
+                Some("map<list<i32?>, struct<string, list<i64?>>>"),
+            ),
+            ("u!custom<i32>", Some("custom<i32>")),
+        ];
+
+        for (input, expected) in cases {
+            let parsed = TypeExpr::parse(input).unwrap();
+            let concrete = ConcreteType::try_from(parsed).unwrap();
+            let actual = concrete.to_string();
+            if let Some(expected_display) = expected {
+                assert_eq!(actual, expected_display, "unexpected display for {input}");
+            } else {
+                assert_eq!(actual, input, "unexpected canonical output for {input}");
+            }
         }
     }
 
