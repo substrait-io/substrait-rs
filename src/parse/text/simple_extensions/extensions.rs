@@ -55,7 +55,7 @@ impl SimpleExtensions {
 /// A context for parsing simple extensions.
 #[derive(Debug, Default)]
 pub struct TypeContext {
-    /// Types that have been seen so far, not yet resolved.
+    /// Types that have been seen so far, now resolved.
     known: HashSet<String>,
     /// Types that have been linked to, not yet resolved.
     linked: HashSet<String>,

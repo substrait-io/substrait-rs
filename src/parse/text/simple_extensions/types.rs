@@ -400,9 +400,19 @@ impl ParameterConstraint {
             TypeParamDefsItemType::DataType => Self::DataType,
             TypeParamDefsItemType::Boolean => Self::Boolean,
             TypeParamDefsItemType::Integer => {
-                // TODO: This truncates from float to int; probably fine
-                let min_i = min.map(|n| n as i64);
-                let max_i = max.map(|n| n as i64);
+                if let Some(min_f) = min {
+                    if min_f.fract() != 0.0 {
+                        return Err(TypeParamError::InvalidIntegerBounds { min, max });
+                    }
+                }
+                if let Some(max_f) = max {
+                    if max_f.fract() != 0.0 {
+                        return Err(TypeParamError::InvalidIntegerBounds { min, max });
+                    }
+                }
+
+                let min_i = min.map(|v| v as i64);
+                let max_i = max.map(|v| v as i64);
                 Self::Integer {
                     min: min_i,
                     max: max_i,
@@ -1544,10 +1554,10 @@ mod tests {
                     options: None,
                     optional: None,
                 },
-                (Some(1), Some(10)),
+                Ok((Some(1), Some(10))),
             ),
             (
-                "truncated",
+                "fractional_min",
                 simple_extensions::TypeParamDefsItem {
                     name: Some("K".to_string()),
                     description: None,
@@ -1557,18 +1567,44 @@ mod tests {
                     options: None,
                     optional: None,
                 },
-                (Some(1), None),
+                Err(TypeParamError::InvalidIntegerBounds {
+                    min: Some(1.5),
+                    max: None,
+                }),
+            ),
+            (
+                "fractional_max",
+                simple_extensions::TypeParamDefsItem {
+                    name: Some("K".to_string()),
+                    description: None,
+                    type_: simple_extensions::TypeParamDefsItemType::Integer,
+                    min: None,
+                    max: Some(9.9),
+                    options: None,
+                    optional: None,
+                },
+                Err(TypeParamError::InvalidIntegerBounds {
+                    min: None,
+                    max: Some(9.9),
+                }),
             ),
         ];
 
-        for (label, item, (expected_min, expected_max)) in cases {
-            let tp = TypeParam::try_from(item).expect("should parse integer bounds");
-            match tp.param_type {
-                ParameterConstraint::Integer { min, max } => {
-                    assert_eq!(min, expected_min, "min mismatch for {label}");
-                    assert_eq!(max, expected_max, "max mismatch for {label}");
+        for (label, item, expected) in cases {
+            match (TypeParam::try_from(item), expected) {
+                (Ok(tp), Ok((expected_min, expected_max))) => match tp.param_type {
+                    ParameterConstraint::Integer { min, max } => {
+                        assert_eq!(min, expected_min, "min mismatch for {label}");
+                        assert_eq!(max, expected_max, "max mismatch for {label}");
+                    }
+                    _ => panic!("expected integer param type for {label}"),
+                },
+                (Err(actual_err), Err(expected_err)) => {
+                    assert_eq!(actual_err, expected_err, "unexpected error for {label}");
                 }
-                _ => panic!("expected integer param type for {label}"),
+                (result, expected) => {
+                    panic!("unexpected result for {label}: got {result:?}, expected {expected:?}")
+                }
             }
         }
     }
