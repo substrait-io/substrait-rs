@@ -86,8 +86,14 @@ pub enum PrimitiveType {
     String,
     /// Variable-length binary data - `binary`
     Binary,
+    /// Naive Timestamp
+    Timestamp,
+    /// Timestamp with time zone - `timestamp_tz`
+    TimestampTz,
     /// Calendar date - `date`
     Date,
+    /// Time of day - `time`
+    Time,
     /// Year-month interval - `interval_year`
     IntervalYear,
     /// 128-bit UUID - `uuid`
@@ -106,7 +112,10 @@ impl fmt::Display for PrimitiveType {
             PrimitiveType::Fp64 => "fp64",
             PrimitiveType::String => "string",
             PrimitiveType::Binary => "binary",
+            PrimitiveType::Timestamp => "timestamp",
+            PrimitiveType::TimestampTz => "timestamp_tz",
             PrimitiveType::Date => "date",
+            PrimitiveType::Time => "time",
             PrimitiveType::IntervalYear => "interval_year",
             PrimitiveType::Uuid => "uuid",
         };
@@ -197,11 +206,8 @@ impl BuiltinParameterized {
                 | "fixedbinary"
                 | "decimal"
                 | "precisiontime"
-                | "time"
                 | "precisiontimestamp"
-                | "timestamp"
                 | "precisiontimestamptz"
-                | "timestamp_tz"
                 | "interval_day"
                 | "interval_compound"
         )
@@ -301,7 +307,10 @@ impl FromStr for PrimitiveType {
             "fp64" => Ok(PrimitiveType::Fp64),
             "string" => Ok(PrimitiveType::String),
             "binary" => Ok(PrimitiveType::Binary),
+            "timestamp" => Ok(PrimitiveType::Timestamp),
+            "timestamp_tz" => Ok(PrimitiveType::TimestampTz),
             "date" => Ok(PrimitiveType::Date),
+            "time" => Ok(PrimitiveType::Time),
             "interval_year" => Ok(PrimitiveType::IntervalYear),
             "uuid" => Ok(PrimitiveType::Uuid),
             _ => Err(UnrecognizedBuiltin(s.to_string())),
@@ -1017,7 +1026,10 @@ fn parse_parameterized_builtin<'a>(
             let scale = expect_integer_param(display_name, 1, &params[1])?;
             Ok(Some(BuiltinParameterized::Decimal { precision, scale }))
         }
-        "precisiontime" | "time" => {
+        // Should we accept both "precision_time" and "precisiontime"? The
+        // docs/spec say PRECISIONTIME. The protos use underscores, so it could
+        // show up in generated code, although maybe that's out of spec.
+        "precisiontime" => {
             if params.len() != 1 {
                 return Err(ExtensionTypeError::InvalidParameterCount {
                     type_name: display_name.to_string(),
@@ -1028,7 +1040,7 @@ fn parse_parameterized_builtin<'a>(
             let precision = expect_integer_param(display_name, 0, &params[0])?;
             Ok(Some(BuiltinParameterized::PrecisionTime { precision }))
         }
-        "precisiontimestamp" | "timestamp" => {
+        "precisiontimestamp" => {
             if params.len() != 1 {
                 return Err(ExtensionTypeError::InvalidParameterCount {
                     type_name: display_name.to_string(),
@@ -1039,7 +1051,7 @@ fn parse_parameterized_builtin<'a>(
             let precision = expect_integer_param(display_name, 0, &params[0])?;
             Ok(Some(BuiltinParameterized::PrecisionTimestamp { precision }))
         }
-        "precisiontimestamptz" | "timestamp_tz" => {
+        "precisiontimestamptz" => {
             if params.len() != 1 {
                 return Err(ExtensionTypeError::InvalidParameterCount {
                     type_name: display_name.to_string(),
@@ -1198,7 +1210,7 @@ mod tests {
 
         let mut refs = Vec::new();
         parsed.visit_references(&mut |name| refs.push(name.to_string()));
-        assert!(refs.is_empty(), "{s} should not add an extension reference");
+        assert!(refs.is_empty(), "{s} should add a builtin type");
 
         ConcreteType::try_from(parsed).unwrap()
     }
@@ -1236,10 +1248,20 @@ mod tests {
     fn test_primitive_type_parsing() {
         let cases = vec![
             ("bool", Some(PrimitiveType::Boolean)),
+            ("i8", Some(PrimitiveType::I8)),
+            ("i16", Some(PrimitiveType::I16)),
             ("i32", Some(PrimitiveType::I32)),
+            ("i64", Some(PrimitiveType::I64)),
+            ("fp32", Some(PrimitiveType::Fp32)),
+            ("fp64", Some(PrimitiveType::Fp64)),
             ("STRING", Some(PrimitiveType::String)),
+            ("binary", Some(PrimitiveType::Binary)),
             ("uuid", Some(PrimitiveType::Uuid)),
-            ("timestamp", None),
+            ("date", Some(PrimitiveType::Date)),
+            ("interval_year", Some(PrimitiveType::IntervalYear)),
+            ("time", Some(PrimitiveType::Time)),
+            ("timestamp", Some(PrimitiveType::Timestamp)),
+            ("timestamp_tz", Some(PrimitiveType::TimestampTz)),
             ("invalid", None),
         ];
 
@@ -1265,18 +1287,6 @@ mod tests {
     #[test]
     fn test_parameterized_builtin_types() {
         let cases = vec![
-            (
-                "time<9>",
-                concretize(BuiltinParameterized::PrecisionTime { precision: 9 }),
-            ),
-            (
-                "timestamp<3>",
-                concretize(BuiltinParameterized::PrecisionTimestamp { precision: 3 }),
-            ),
-            (
-                "timestamp_tz<4>",
-                concretize(BuiltinParameterized::PrecisionTimestampTz { precision: 4 }),
-            ),
             (
                 "precisiontime<2>",
                 concretize(BuiltinParameterized::PrecisionTime { precision: 2 }),
