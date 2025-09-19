@@ -153,7 +153,10 @@ mod tests {
             ("i32?", TypeExpr::Simple("i32", vec![], true)),
             ("MAP", TypeExpr::Simple("MAP", vec![], false)),
             ("timestamp", TypeExpr::Simple("timestamp", vec![], false)),
-            ("timestamp_tz?", TypeExpr::Simple("timestamp_tz", vec![], true)),
+            (
+                "timestamp_tz?",
+                TypeExpr::Simple("timestamp_tz", vec![], true),
+            ),
             ("time", TypeExpr::Simple("time", vec![], false)),
         ];
 

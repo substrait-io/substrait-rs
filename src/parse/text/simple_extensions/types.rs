@@ -20,6 +20,7 @@ use crate::text::simple_extensions::{
 use serde_json::Value;
 use std::convert::TryFrom;
 use std::fmt;
+use std::ops::RangeInclusive;
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -501,7 +502,7 @@ pub enum ExtensionTypeError {
         expected: &'static str,
     },
     /// Provided parameter value does not fit within the expected bounds
-    #[error("Type '{type_name}' parameter {index} value {value} is out of range for {expected}")]
+    #[error("Type '{type_name}' parameter {index} value {value} is not within {expected}")]
     InvalidParameterValue {
         /// The type name being validated
         type_name: String,
@@ -511,6 +512,18 @@ pub enum ExtensionTypeError {
         value: i64,
         /// Description of the expected range or type
         expected: &'static str,
+    },
+    /// Provided parameter value does not fit within the expected bounds
+    #[error("Type '{type_name}' parameter {index} value {value} is out of range {expected:?}")]
+    InvalidParameterRange {
+        /// The type name being validated
+        type_name: String,
+        /// Zero-based index of the offending parameter
+        index: usize,
+        /// Provided parameter value
+        value: i64,
+        /// Description of the expected range or type
+        expected: RangeInclusive<i32>,
     },
     /// Structure representation cannot be nullable
     #[error("Structure representation cannot be nullable: {type_string}")]
@@ -933,8 +946,9 @@ fn expect_integer_param(
     type_name: &str,
     index: usize,
     param: &TypeExprParam<'_>,
+    range: Option<RangeInclusive<i32>>,
 ) -> Result<i32, ExtensionTypeError> {
-    match param {
+    let value = match param {
         TypeExprParam::Integer(value) => {
             i32::try_from(*value).map_err(|_| ExtensionTypeError::InvalidParameterValue {
                 type_name: type_name.to_string(),
@@ -948,7 +962,20 @@ fn expect_integer_param(
             index,
             expected: "an integer",
         }),
+    }?;
+
+    if let Some(range) = &range {
+        if !range.contains(&value) {
+            return Err(ExtensionTypeError::InvalidParameterRange {
+                type_name: type_name.to_string(),
+                index,
+                value: i64::from(value),
+                expected: range.clone(),
+            });
+        }
     }
+
+    Ok(value)
 }
 
 fn expect_type_argument<'a>(
@@ -989,7 +1016,7 @@ fn parse_parameterized_builtin<'a>(
                     actual: params.len(),
                 });
             }
-            let length = expect_integer_param(display_name, 0, &params[0])?;
+            let length = expect_integer_param(display_name, 0, &params[0], None)?;
             Ok(Some(BuiltinParameterized::FixedChar { length }))
         }
         "varchar" => {
@@ -1000,7 +1027,7 @@ fn parse_parameterized_builtin<'a>(
                     actual: params.len(),
                 });
             }
-            let length = expect_integer_param(display_name, 0, &params[0])?;
+            let length = expect_integer_param(display_name, 0, &params[0], None)?;
             Ok(Some(BuiltinParameterized::VarChar { length }))
         }
         "fixedbinary" => {
@@ -1011,7 +1038,7 @@ fn parse_parameterized_builtin<'a>(
                     actual: params.len(),
                 });
             }
-            let length = expect_integer_param(display_name, 0, &params[0])?;
+            let length = expect_integer_param(display_name, 0, &params[0], None)?;
             Ok(Some(BuiltinParameterized::FixedBinary { length }))
         }
         "decimal" => {
@@ -1022,8 +1049,8 @@ fn parse_parameterized_builtin<'a>(
                     actual: params.len(),
                 });
             }
-            let precision = expect_integer_param(display_name, 0, &params[0])?;
-            let scale = expect_integer_param(display_name, 1, &params[1])?;
+            let precision = expect_integer_param(display_name, 0, &params[0], Some(1..=38))?;
+            let scale = expect_integer_param(display_name, 1, &params[1], Some(0..=precision))?;
             Ok(Some(BuiltinParameterized::Decimal { precision, scale }))
         }
         // Should we accept both "precision_time" and "precisiontime"? The
@@ -1037,7 +1064,7 @@ fn parse_parameterized_builtin<'a>(
                     actual: params.len(),
                 });
             }
-            let precision = expect_integer_param(display_name, 0, &params[0])?;
+            let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(BuiltinParameterized::PrecisionTime { precision }))
         }
         "precisiontimestamp" => {
@@ -1048,7 +1075,7 @@ fn parse_parameterized_builtin<'a>(
                     actual: params.len(),
                 });
             }
-            let precision = expect_integer_param(display_name, 0, &params[0])?;
+            let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(BuiltinParameterized::PrecisionTimestamp { precision }))
         }
         "precisiontimestamptz" => {
@@ -1059,7 +1086,7 @@ fn parse_parameterized_builtin<'a>(
                     actual: params.len(),
                 });
             }
-            let precision = expect_integer_param(display_name, 0, &params[0])?;
+            let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(BuiltinParameterized::PrecisionTimestampTz {
                 precision,
             }))
@@ -1072,7 +1099,7 @@ fn parse_parameterized_builtin<'a>(
                     actual: params.len(),
                 });
             }
-            let precision = expect_integer_param(display_name, 0, &params[0])?;
+            let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=9))?;
             Ok(Some(BuiltinParameterized::IntervalDay { precision }))
         }
         "interval_compound" => {
@@ -1083,7 +1110,7 @@ fn parse_parameterized_builtin<'a>(
                     actual: params.len(),
                 });
             }
-            let precision = expect_integer_param(display_name, 0, &params[0])?;
+            let precision = expect_integer_param(display_name, 0, &params[0], None)?;
             Ok(Some(BuiltinParameterized::IntervalCompound { precision }))
         }
         _ => Ok(None),
@@ -1203,6 +1230,12 @@ mod tests {
         ConcreteType::try_from(parsed).unwrap()
     }
 
+    /// Parse a string into a [ConcreteType], returning the result
+    fn parse_type_result(expr: &str) -> Result<ConcreteType, ExtensionTypeError> {
+        let parsed = TypeExpr::parse(expr).unwrap();
+        ConcreteType::try_from(parsed)
+    }
+
     /// Parse a string into a builtin [ConcreteType], with no unresolved
     /// extension references
     fn parse_simple(s: &str) -> ConcreteType {
@@ -1210,7 +1243,7 @@ mod tests {
 
         let mut refs = Vec::new();
         parsed.visit_references(&mut |name| refs.push(name.to_string()));
-        assert!(refs.is_empty(), "{s} should add a builtin type");
+        assert!(refs.is_empty(), "{s} should not add an extension reference");
 
         ConcreteType::try_from(parsed).unwrap()
     }
@@ -1331,6 +1364,64 @@ mod tests {
         for (expr, expected) in cases {
             let found = parse_simple(expr);
             assert_eq!(found, expected, "unexpected type for {expr}");
+        }
+    }
+
+    #[test]
+    fn test_parameterized_builtin_range_errors() {
+        use ExtensionTypeError::InvalidParameterRange;
+
+        let cases = vec![
+            ("precisiontime<13>", "precisiontime", 0, 13, 0..=12),
+            ("precisiontime<-1>", "precisiontime", 0, -1, 0..=12),
+            (
+                "precisiontimestamp<13>",
+                "precisiontimestamp",
+                0,
+                13,
+                0..=12,
+            ),
+            (
+                "precisiontimestamp<-1>",
+                "precisiontimestamp",
+                0,
+                -1,
+                0..=12,
+            ),
+            (
+                "precisiontimestamptz<20>",
+                "precisiontimestamptz",
+                0,
+                20,
+                0..=12,
+            ),
+            ("interval_day<10>", "interval_day", 0, 10, 0..=9),
+            ("DECIMAL<39,0>", "DECIMAL", 0, 39, 1..=38),
+            ("DECIMAL<0,0>", "DECIMAL", 0, 0, 1..=38),
+            ("DECIMAL<10,-1>", "DECIMAL", 1, -1, 0..=10),
+            ("DECIMAL<10,12>", "DECIMAL", 1, 12, 0..=10),
+        ];
+
+        for (expr, expected_type, expected_index, expected_value, expected_range) in cases {
+            match parse_type_result(expr) {
+                Ok(value) => panic!("expected error parsing {expr}, got {value:?}"),
+                Err(InvalidParameterRange {
+                    type_name,
+                    index,
+                    value,
+                    expected,
+                }) => {
+                    assert_eq!(type_name, expected_type, "unexpected type for {expr}");
+                    assert_eq!(index, expected_index, "unexpected index for {expr}");
+                    assert_eq!(
+                        value,
+                        i64::from(expected_value),
+                        "unexpected value for {expr}"
+                    );
+                    assert_eq!(expected, expected_range, "unexpected range for {expr}");
+                }
+                Err(other) => panic!("expected InvalidParameterRange for {expr}, got {other:?}"),
+            }
         }
     }
 
