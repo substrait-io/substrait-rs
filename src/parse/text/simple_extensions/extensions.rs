@@ -96,6 +96,13 @@ impl Parse<TypeContext> for RawExtensions {
             extension.add_type(&custom_type);
         }
 
+        if let Some(missing) = ctx.linked.iter().next() {
+            // TODO: Track originating type(s) to improve this error message.
+            return Err(super::SimpleExtensionsError::UnresolvedTypeReference {
+                type_name: missing.clone(),
+            });
+        }
+
         Ok((urn, extension))
     }
 }

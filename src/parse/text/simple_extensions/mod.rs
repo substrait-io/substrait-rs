@@ -36,12 +36,11 @@ pub enum SimpleExtensionsError {
     #[error("invalid urn")]
     InvalidUrn(#[from] crate::urn::InvalidUrn),
     /// Unresolved type reference in structure field
-    #[error("Type '{type_name}' referenced in '{originating}' structure not found")]
+    #[error("Type '{type_name}' referenced in structure not found")]
     UnresolvedTypeReference {
         /// The type name that could not be resolved
         type_name: String,
-        /// The type that contains the unresolved reference
-        originating: String,
+        // TODO: the location in the file where this came from would be nice
     },
 }
 

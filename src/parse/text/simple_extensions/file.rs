@@ -103,6 +103,15 @@ types:
         max: 10
 "#;
 
+    const YAML_UNRESOLVED_TYPE: &str = r#"
+%YAML 1.2
+---
+urn: extension:example.com:unresolved
+types:
+  - name: "Alias"
+    structure: List<Map<string, MissingType>>
+"#;
+
     #[test]
     fn yaml_round_trip_integer_param_bounds() {
         let ext = ExtensionFile::read_from_str(YAML_PARAM_TEST).expect("parse ok");
@@ -138,5 +147,18 @@ types:
         ));
         assert_eq!(param.min, Some(1.0));
         assert_eq!(param.max, Some(10.0));
+    }
+
+    #[test]
+    fn unresolved_type_reference_errors() {
+        let err = ExtensionFile::read_from_str(YAML_UNRESOLVED_TYPE)
+            .expect_err("expected unresolved type reference error");
+
+        match err {
+            SimpleExtensionsError::UnresolvedTypeReference { type_name } => {
+                assert_eq!(type_name, "MissingType");
+            }
+            other => panic!("unexpected error type: {other:?}"),
+        }
     }
 }
