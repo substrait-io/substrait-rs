@@ -714,10 +714,43 @@ impl Parse<TypeContext> for RawType {
                 Ok(concrete)
             }
             RawType::Variant1(field_map) => {
+                // Here we have the internal structure of a custom type,
+                // specified by (field name, type) pairs. Note that in the YAML
+                // itself, these are a map - and thus, while the text has an
+                // order, the data implicitly does not. In Rust, the field map
+                // is of type serde_json::Map, which also does not preserve
+                // order.
+                //
+                // So while it might be surprising in some ways that we are not
+                // preserving the order of fields as specified in the YAML, the
+                // nature of YAML somewhat precludes that.
+                //
+                // To give an example: we are considering these two equivalent:
+                //
+                // ```yaml
+                // types:
+                //   - name: point1
+                //     structure:
+                //       longitude: i32
+                //       latitude: i32
+                //   - name: point2
+                //     structure:
+                //       latitude: i32
+                //       longitude: i32
+                // ```
+                //
+                // In Rust, these come in as a `serde_json::Map`, which does not
+                // preserve insertion order. Here, we chose to store keys in
+                // lexicographic order, with an explicit sort so that our
+                // internal representation and any round-trip output remain
+                // deterministic.
+                let mut entries: Vec<_> = field_map.into_iter().collect();
+                entries.sort_by(|a, b| a.0.cmp(&b.0));
+
                 let mut field_names = Vec::new();
                 let mut field_types = Vec::new();
 
-                for (field_name, field_type_value) in field_map {
+                for (field_name, field_type_value) in entries {
                     field_names.push(field_name);
 
                     let type_string = match field_type_value {
@@ -1284,6 +1317,10 @@ mod tests {
                 .iter()
                 .map(|(name, ty)| ((*name).into(), serde_json::Value::String((*ty).into()))),
         );
+
+        // Named struct YAML/json objects are inherently unordered; we sort the
+        // fields lexicographically when parsing so round-tripped output is
+        // deterministic. This test locks in that behaviour.
         RawType::Variant1(map)
     }
 
@@ -1548,13 +1585,10 @@ mod tests {
             ("list<string>", None),
             ("List<STRING?>", Some("list<string?>")),
             ("map<i32, list<string>>", None),
-            (
-                "struct<i8, string?>",
-                None,
-            ),
+            ("struct<i8, string?>", None),
             (
                 "Struct<List<i32>, Map<string, list<i64?>>>",
-                Some("struct<list<i32>, map<string, list<i64?>>>")
+                Some("struct<list<i32>, map<string, list<i64?>>>"),
             ),
             (
                 "Map<List<I32?>, Struct<string, list<i64?>>>",
@@ -1573,6 +1607,37 @@ mod tests {
                 assert_eq!(actual, input, "unexpected canonical output for {input}");
             }
         }
+    }
+
+    /// Test that named struct field order is stable and sorted
+    /// lexicographically when round-tripping through RawType.
+    ///
+    /// Normally, order in structs in SQL / relational algebra is significant;
+    /// but the spec doesn't say that, and it starts as a YAML map, which
+    /// doesn't generally preserve order, so for both implementation ease and
+    /// test stability, we sort the fields when parsing named structs.
+    /// (Preserving order would be difficult - most YAML parsers don't preserve
+    /// map order)
+    #[test]
+    fn test_named_struct_field_order_stability() -> Result<(), ExtensionTypeError> {
+        let mut raw_fields = serde_json::Map::new();
+        raw_fields.insert("beta".to_string(), Value::String("i32".to_string()));
+        raw_fields.insert("alpha".to_string(), Value::String("string?".to_string()));
+
+        let raw = RawType::Variant1(raw_fields);
+        let mut ctx = TypeContext::default();
+        let concrete = Parse::parse(raw, &mut ctx)?;
+
+        let round_tripped: RawType = concrete.into();
+        match round_tripped {
+            RawType::Variant1(result_map) => {
+                let keys: Vec<_> = result_map.keys().collect();
+                assert_eq!(keys, vec!["alpha", "beta"], "field order should be sorted");
+            }
+            other => panic!("expected Variant1, got {other:?}"),
+        }
+
+        Ok(())
     }
 
     #[test]
