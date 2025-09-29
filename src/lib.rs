@@ -113,7 +113,7 @@
     html_logo_url = "https://raw.githubusercontent.com/substrait-io/substrait/main/site/docs/img/logo.svg",
     html_favicon_url = "https://raw.githubusercontent.com/substrait-io/substrait/main/site/docs/img/logo.svg"
 )]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
 
 #[cfg(feature = "extensions")]
