@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.0](https://github.com/substrait-io/substrait-rs/compare/v0.60.1...v0.61.0) - 2025-10-05
+
+### Fixed
+
+- remove `doc(hidden)` from version const to fix semver checks ([#403](https://github.com/substrait-io/substrait-rs/pull/403))
+
 ## [0.60.1](https://github.com/substrait-io/substrait-rs/compare/v0.60.0...v0.60.1) - 2025-09-29
 
 ### Other
