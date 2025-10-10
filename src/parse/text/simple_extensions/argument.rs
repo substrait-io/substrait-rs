@@ -442,7 +442,7 @@ mod tests {
         let item = simple_extensions::ArgumentsItem::ValueArg(simple_extensions::ValueArg {
             name: Some("arg".to_string()),
             description: Some("desc".to_string()),
-            value: text::simple_extensions::Type::Variant0("i32".to_string()),
+            value: text::simple_extensions::Type::String("i32".to_string()),
             constant: Some(true),
         });
         let item = item.parse(&mut Context::default())?;
@@ -456,7 +456,7 @@ mod tests {
                 assert_eq!(name, Some("arg".to_string()));
                 assert_eq!(description, Some("desc".to_string()));
                 assert!(
-                    matches!(value, text::simple_extensions::Type::Variant0(type_) if type_ == "i32")
+                    matches!(value, text::simple_extensions::Type::String(type_) if type_ == "i32")
                 );
                 assert_eq!(constant, Some(true));
             }
@@ -499,7 +499,7 @@ mod tests {
             simple_extensions::ArgumentsItem::ValueArg(simple_extensions::ValueArg {
                 name: None,
                 description: None,
-                value: text::simple_extensions::Type::Variant0("i32".to_string()),
+                value: text::simple_extensions::Type::String("i32".to_string()),
                 constant: None,
             }),
             simple_extensions::ArgumentsItem::TypeArg(simple_extensions::TypeArg {
@@ -548,7 +548,7 @@ mod tests {
             simple_extensions::ArgumentsItem::ValueArg(simple_extensions::ValueArg {
                 name: Some("".to_string()),
                 description: None,
-                value: text::simple_extensions::Type::Variant0("i32".to_string()),
+                value: text::simple_extensions::Type::String("i32".to_string()),
                 constant: None,
             }),
             simple_extensions::ArgumentsItem::TypeArg(simple_extensions::TypeArg {
@@ -573,7 +573,7 @@ mod tests {
             simple_extensions::ArgumentsItem::ValueArg(simple_extensions::ValueArg {
                 name: None,
                 description: Some("".to_string()),
-                value: text::simple_extensions::Type::Variant0("i32".to_string()),
+                value: text::simple_extensions::Type::String("i32".to_string()),
                 constant: None,
             }),
             simple_extensions::ArgumentsItem::TypeArg(simple_extensions::TypeArg {
@@ -625,7 +625,7 @@ mod tests {
         let item: ArgumentsItem = ValueArg {
             name: Some("arg".to_string()),
             description: Some("desc".to_string()),
-            value: text::simple_extensions::Type::Variant0("".to_string()),
+            value: text::simple_extensions::Type::String("".to_string()),
             constant: Some(true),
         }
         .into();
@@ -641,7 +641,7 @@ mod tests {
                 assert_eq!(name, Some("arg".to_string()));
                 assert_eq!(description, Some("desc".to_string()));
                 assert!(
-                    matches!(value, text::simple_extensions::Type::Variant0(type_) if type_.is_empty())
+                    matches!(value, text::simple_extensions::Type::String(type_) if type_.is_empty())
                 );
                 assert_eq!(constant, Some(true));
             }
