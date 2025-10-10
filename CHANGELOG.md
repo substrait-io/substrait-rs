@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.0](https://github.com/substrait-io/substrait-rs/compare/v0.60.1...v0.61.0) - 2025-10-05
+
+### Fixed
+
+- remove `doc(hidden)` from version const to fix semver checks ([#403](https://github.com/substrait-io/substrait-rs/pull/403))
+
+## [0.60.1](https://github.com/substrait-io/substrait-rs/compare/v0.60.0...v0.60.1) - 2025-09-29
+
+### Other
+
+- *(deps,cargo)* bump the cargo group with 2 updates ([#400](https://github.com/substrait-io/substrait-rs/pull/400))
+- rename `doc_auto_cfg` to `doc_cfg` ([#401](https://github.com/substrait-io/substrait-rs/pull/401))
+- *(deps,cargo)* bump serde from 1.0.226 to 1.0.227 in the cargo group ([#399](https://github.com/substrait-io/substrait-rs/pull/399))
+- *(deps,cargo)* bump serde from 1.0.225 to 1.0.226 in the cargo group ([#398](https://github.com/substrait-io/substrait-rs/pull/398))
+- *(deps,cargo)* bump serde from 1.0.223 to 1.0.225 in the cargo group ([#396](https://github.com/substrait-io/substrait-rs/pull/396))
+- *(deps,cargo)* bump the cargo group with 3 updates ([#392](https://github.com/substrait-io/substrait-rs/pull/392))
+
 ## [0.60.0](https://github.com/substrait-io/substrait-rs/compare/v0.59.1...v0.60.0) - 2025-09-14
 
 ### Added
