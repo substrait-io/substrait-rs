@@ -585,13 +585,22 @@ pub struct CustomType {
 
 impl CustomType {
     /// Check if this type name is valid according to Substrait naming rules
+    /// (see the `Identifier` rule in `substrait/grammar/SubstraitLexer.g4`).
+    /// Identifiers are case-insensitive and must start with a an ASCII letter,
+    /// `_`, or `$`, followed by ASCII letters, digits, `_`, or `$`.
+    //
+    // Note: I'm not sure if `$` is actually something we want to allow, or if
+    // `_` is, but it's in the grammar so I'm allowing it here.
     pub fn validate_name(name: &str) -> Result<(), InvalidTypeName> {
-        if name.is_empty() {
+        let mut chars = name.chars();
+        let first = chars
+            .next()
+            .ok_or_else(|| InvalidTypeName(name.to_string()))?;
+        if !(first.is_ascii_alphabetic() || first == '_' || first == '$') {
             return Err(InvalidTypeName(name.to_string()));
         }
 
-        // Basic validation - could be extended with more rules
-        if name.contains(|c: char| c.is_whitespace()) {
+        if !chars.all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$') {
             return Err(InvalidTypeName(name.to_string()));
         }
 
@@ -1756,8 +1765,14 @@ mod tests {
         let cases = vec![
             ("", false),
             ("bad name", false),
+            ("9bad", false),
+            ("bad-name", false),
+            ("bad.name", false),
             ("GoodName", true),
             ("also_good", true),
+            ("_underscore", true),
+            ("$dollar", true),
+            ("CamelCase123", true),
         ];
 
         for (name, expected_ok) in cases {
