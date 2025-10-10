@@ -709,7 +709,7 @@ impl Parse<TypeContext> for RawType {
 
     fn parse(self, ctx: &mut TypeContext) -> Result<Self::Parsed, Self::Error> {
         match self {
-            RawType::Variant0(type_string) => {
+            RawType::String(type_string) => {
                 let parsed_type = TypeExpr::parse(&type_string)?;
                 let mut link = |name: &str| ctx.linked(name);
                 parsed_type.visit_references(&mut link);
@@ -722,7 +722,7 @@ impl Parse<TypeContext> for RawType {
 
                 Ok(concrete)
             }
-            RawType::Variant1(field_map) => {
+            RawType::Object(field_map) => {
                 // Here we have the internal structure of a custom type,
                 // specified by (field name, type) pairs. Note that in the YAML
                 // itself, these are a map - and thus, while the text has an
@@ -987,9 +987,9 @@ impl From<ConcreteType> for RawType {
                         panic!("duplicate value '{v:?}' in NamedStruct");
                     }
                 }
-                RawType::Variant1(map)
+                RawType::Object(map)
             }
-            _ => RawType::Variant0(val.to_string()),
+            _ => RawType::String(val.to_string()),
         }
     }
 }
@@ -1330,7 +1330,7 @@ mod tests {
         // Named struct YAML/json objects are inherently unordered; we sort the
         // fields lexicographically when parsing so round-tripped output is
         // deterministic. This test locks in that behaviour.
-        RawType::Variant1(map)
+        RawType::Object(map)
     }
 
     #[test]
@@ -1633,17 +1633,17 @@ mod tests {
         raw_fields.insert("beta".to_string(), Value::String("i32".to_string()));
         raw_fields.insert("alpha".to_string(), Value::String("string?".to_string()));
 
-        let raw = RawType::Variant1(raw_fields);
+        let raw = RawType::Object(raw_fields);
         let mut ctx = TypeContext::default();
         let concrete = Parse::parse(raw, &mut ctx)?;
 
         let round_tripped: RawType = concrete.into();
         match round_tripped {
-            RawType::Variant1(result_map) => {
+            RawType::Object(result_map) => {
                 let keys: Vec<_> = result_map.keys().collect();
                 assert_eq!(keys, vec!["alpha", "beta"], "field order should be sorted");
             }
-            other => panic!("expected Variant1, got {other:?}"),
+            other => panic!("expected Object, got {other:?}"),
         }
 
         Ok(())
@@ -1790,7 +1790,7 @@ mod tests {
         let cases = vec![
             (
                 "alias",
-                RawType::Variant0("i32".to_string()),
+                RawType::String("i32".to_string()),
                 ConcreteType::builtin(PrimitiveType::I32, false),
             ),
             (
@@ -1825,7 +1825,7 @@ mod tests {
                     name: "Alias".to_string(),
                     description: Some("Alias type".to_string()),
                     parameters: None,
-                    structure: Some(RawType::Variant0("BINARY".to_string())),
+                    structure: Some(RawType::String("BINARY".to_string())),
                     variadic: None,
                 },
                 "Alias",
@@ -1890,7 +1890,7 @@ mod tests {
     /// 'INTEGER?' - is that now equal to `i64??`
     #[test]
     fn test_nullable_structure_rejected() {
-        let cases = vec![RawType::Variant0("i32?".to_string())];
+        let cases = vec![RawType::String("i32?".to_string())];
 
         for raw in cases {
             let mut ctx = TypeContext::default();
