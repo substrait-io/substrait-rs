@@ -3,7 +3,7 @@
 //! Parsing of [proto::Version].
 
 use crate::{
-    parse::{Parse, context::Context},
+    parse::{Parse, context::ProtoContext},
     proto, version,
 };
 use hex::FromHex;
@@ -75,7 +75,7 @@ pub enum VersionError {
     Substrait(semver::Version, semver::VersionReq),
 }
 
-impl<C: Context> Parse<C> for proto::Version {
+impl<C: ProtoContext> Parse<C> for proto::Version {
     type Parsed = Version;
     type Error = VersionError;
 
@@ -142,7 +142,7 @@ impl From<Version> for proto::Version {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::context::tests::Context;
+    use crate::parse::context::fixtures::Context;
 
     #[test]
     fn version() -> Result<(), VersionError> {

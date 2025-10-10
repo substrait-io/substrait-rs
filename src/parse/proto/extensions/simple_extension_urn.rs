@@ -7,7 +7,7 @@ use std::str::FromStr;
 use thiserror::Error;
 
 use crate::{
-    parse::{Anchor, Context, Parse, context::ContextError},
+    parse::{Anchor, Parse, context::ContextError, context::ProtoContext},
     proto,
     urn::{InvalidUrn, Urn},
 };
@@ -50,7 +50,7 @@ pub enum SimpleExtensionUrnError {
     Context(#[from] ContextError),
 }
 
-impl<C: Context> Parse<C> for proto::extensions::SimpleExtensionUrn {
+impl<C: ProtoContext> Parse<C> for proto::extensions::SimpleExtensionUrn {
     type Parsed = SimpleExtensionUrn;
     type Error = SimpleExtensionUrnError;
 
@@ -90,7 +90,7 @@ impl From<SimpleExtensionUrn> for proto::extensions::SimpleExtensionUrn {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::{Context as _, context::tests::Context};
+    use crate::parse::{Context as _, context::fixtures::Context};
 
     #[test]
     fn parse() -> Result<(), SimpleExtensionUrnError> {
