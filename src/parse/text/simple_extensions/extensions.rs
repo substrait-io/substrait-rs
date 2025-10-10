@@ -5,7 +5,7 @@
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use super::types::CustomType;
+use super::{SimpleExtensionsError, types::CustomType};
 use crate::{
     parse::{Context, Parse},
     text::simple_extensions::SimpleExtensions as RawExtensions,
@@ -26,9 +26,16 @@ pub struct SimpleExtensions {
 
 impl SimpleExtensions {
     /// Add a type to the context
-    pub fn add_type(&mut self, custom_type: &CustomType) {
+    pub fn add_type(&mut self, custom_type: &CustomType) -> Result<(), SimpleExtensionsError> {
+        if self.types.contains_key(&custom_type.name) {
+            return Err(SimpleExtensionsError::DuplicateTypeName {
+                name: custom_type.name.clone(),
+            });
+        }
+
         self.types
             .insert(custom_type.name.clone(), custom_type.clone());
+        Ok(())
     }
 
     /// Check if a type with the given name exists in the context
@@ -93,7 +100,7 @@ impl Parse<TypeContext> for RawExtensions {
         for type_item in types {
             let custom_type = Parse::parse(type_item, ctx)?;
             // Add the parsed type to the context so later types can reference it
-            extension.add_type(&custom_type);
+            extension.add_type(&custom_type)?;
         }
 
         if let Some(missing) = ctx.linked.iter().next() {

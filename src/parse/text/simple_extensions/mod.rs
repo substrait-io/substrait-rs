@@ -14,7 +14,6 @@ mod registry;
 mod types;
 
 pub use extensions::SimpleExtensions;
-pub use extensions::TypeContext;
 pub use file::ExtensionFile;
 pub use parsed_type::TypeExpr;
 pub use registry::Registry;
@@ -41,6 +40,12 @@ pub enum SimpleExtensionsError {
         /// The type name that could not be resolved
         type_name: String,
         // TODO: the location in the file where this came from would be nice
+    },
+    /// Duplicate type definition within the same extension
+    #[error("duplicate type definition for `{name}`")]
+    DuplicateTypeName {
+        /// The repeated type name
+        name: String,
     },
 }
 

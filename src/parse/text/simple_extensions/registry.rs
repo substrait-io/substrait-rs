@@ -10,8 +10,6 @@
 //!
 //! This module is only available when the `parse` feature is enabled.
 
-#![cfg(feature = "parse")]
-
 use super::{ExtensionFile, types::CustomType};
 use crate::urn::Urn;
 

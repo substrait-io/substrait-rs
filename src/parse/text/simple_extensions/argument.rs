@@ -237,7 +237,8 @@ pub struct ValueArg {
 
     /// A fully defined type or a type expression.
     ///
-    /// todo: implement parsed [simple_extensions::Type].
+    /// TODO: parse this to a typed representation (likely using the `TypeExpr` parser)
+    /// so the caller does not have to interpret the raw string.
     value: simple_extensions::Type,
 
     /// Whether this argument is required to be a constant for invocation.
@@ -319,7 +320,8 @@ pub struct TypeArg {
 
     /// A partially or completely parameterized type. E.g. `List<K>` or `K`.
     ///
-    /// todo: implement parsed [simple_extensions::Type].
+    /// TODO: parse this to a typed representation (likely using the `TypeExpr` parser)
+    /// so the caller does not have to interpret the raw string.
     type_: String,
 }
 

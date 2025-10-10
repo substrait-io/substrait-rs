@@ -793,7 +793,7 @@ impl Parse<TypeContext> for RawType {
 
 /// Invalid type name error
 #[derive(Debug, Error, PartialEq)]
-#[error("{0}")]
+#[error("invalid type name `{0}`")]
 pub struct InvalidTypeName(String);
 
 /// Known Substrait types (builtin + extension references)

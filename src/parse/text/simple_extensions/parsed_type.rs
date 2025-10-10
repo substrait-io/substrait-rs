@@ -27,7 +27,7 @@ pub enum TypeExprParam<'a> {
 
 #[derive(Debug, PartialEq, thiserror::Error)]
 pub enum TypeParseError {
-    #[error("Parameter list {0} Must start and end with angle brackets")]
+    #[error("missing closing angle bracket in parameter list: {0}")]
     ExpectedClosingAngleBracket(String),
     #[error("Type variation syntax is not supported: {0}")]
     UnsupportedVariation(String),
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_variation_not_supported() {
-        let cases = vec!["i32[1]", "Foo?[1]", "u!bar[2]" ];
+        let cases = vec!["i32[1]", "Foo?[1]", "u!bar[2]"];
 
         for expr in cases {
             match TypeExpr::parse(expr) {
