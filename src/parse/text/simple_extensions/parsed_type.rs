@@ -34,7 +34,7 @@ pub enum TypeParseError {
 }
 
 impl<'a> TypeExpr<'a> {
-    /// Parse a type string into a ParsedType
+    /// Parse a type string into a [`TypeExpr`].
     pub fn parse(type_str: &'a str) -> Result<Self, TypeParseError> {
         // Handle type variables like any1, any2, etc.
         if let Some(suffix) = type_str.strip_prefix("any") {

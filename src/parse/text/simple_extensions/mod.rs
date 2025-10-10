@@ -1,6 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Parsing of [crate::text::simple_extensions] types into [SimpleExtensions].
+//! Rustic types for validating and working with Substrait simple extensions.
+//!
+//! The raw YAML structs live in [`crate::text::simple_extensions`].  This
+//! module parses those values into the typed representations used by this
+//! crate:
+//! * [`ExtensionFile`] – a fully validated extension document (URN plus its
+//!   definitions).
+//! * [`SimpleExtensions`] – the validated objects declared by a single
+//!   extension file.
+//! * [`CustomType`] / [`ConcreteType`] – type definitions and resolved type
+//!   structures used when checking function signatures.
+//! * [`Registry`] – a reusable lookup structure that stores validated extension
+//!   files and exposes typed access to their contents.
 
 use std::convert::Infallible;
 

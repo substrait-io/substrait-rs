@@ -7,11 +7,10 @@ use crate::text::simple_extensions::SimpleExtensions as RawExtensions;
 use crate::urn::Urn;
 use std::io::Read;
 
-/// A parsed and validated [RawExtensions].
+/// A parsed and validated [`RawExtensions`]: a simple extensions file.
 ///
-/// `ExtensionFile` owns the canonical URN for a simple extension file along with the parsed
-/// [`SimpleExtensions`](super::SimpleExtensions) data. Keeping the URN here (instead of on the inner
-/// type map) lets us thread it through I/O, registries, and conversions without duplicating state.
+/// An [`ExtensionFile`] has a canonical [`Urn`] and a parsed set of
+/// [`SimpleExtensions`] data. It represents the extensions file as a whole.
 #[derive(Debug)]
 pub struct ExtensionFile {
     /// The URN this extension was loaded from
@@ -21,13 +20,13 @@ pub struct ExtensionFile {
 }
 
 impl ExtensionFile {
-    /// Create a new, empty SimpleExtensions
+    /// Create a new, empty [`ExtensionFile`] with an empty set of [`SimpleExtensions`].
     pub fn empty(urn: Urn) -> Self {
         let extension = SimpleExtensions::default();
         Self { urn, extension }
     }
 
-    /// Create a validated SimpleExtensions from raw data
+    /// Create an [`ExtensionFile`] from raw simple extension data.
     pub fn create(extensions: RawExtensions) -> Result<Self, SimpleExtensionsError> {
         // Parse all types (may contain unresolved Extension(String) references)
         let mut ctx = TypeContext::default();
@@ -48,31 +47,33 @@ impl ExtensionFile {
         self.extension.types()
     }
 
-    /// Returns the URN for this extension file.
+    /// Returns the [`Urn`]` for this extension file.
     pub fn urn(&self) -> &Urn {
         &self.urn
     }
 
-    /// Get a reference to the underlying SimpleExtension
+    /// Get a reference to the underlying [`SimpleExtensions`].
     pub fn extension(&self) -> &SimpleExtensions {
         &self.extension
     }
 
-    /// Convert the parsed extension file back into the raw text representation by value.
+    /// Convert the parsed extension file back into the raw text representation
+    /// by value.
     pub fn into_raw(self) -> RawExtensions {
         let ExtensionFile { urn, extension } = self;
         RawExtensions::from((urn, extension))
     }
 
-    /// Convert the parsed extension file back into the raw text representation by reference.
+    /// Convert the parsed extension file back into the raw text representation
+    /// by reference.
     pub fn to_raw(&self) -> RawExtensions {
         RawExtensions::from((self.urn.clone(), self.extension.clone()))
     }
 
     /// Read an extension file from a reader.
-    /// - `reader`: any `Read` instance with the YAML content
+    /// - `reader`: any [`Read`] instance with the YAML content
     ///
-    /// Returns a parsed and validated `ExtensionFile` or an error.
+    /// Returns a parsed and validated [`ExtensionFile`] or an error.
     pub fn read<R: Read>(reader: R) -> Result<Self, SimpleExtensionsError> {
         let raw: RawExtensions = serde_yaml::from_reader(reader)?;
         Self::create(raw)

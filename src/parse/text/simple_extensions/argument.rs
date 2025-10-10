@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Parsing of [simple_extensions::ArgumentsItem].
+//! Parsing of type arguments: [`simple_extensions::ArgumentsItem`].
 
 use std::{collections::HashSet, ops::Deref};
 
@@ -11,21 +11,24 @@ use crate::{
     text::simple_extensions,
 };
 
-/// A parsed [simple_extensions::ArgumentsItem].
+/// A parsed [`simple_extensions::ArgumentsItem`].
 #[derive(Clone, Debug)]
 pub enum ArgumentsItem {
-    /// Arguments that support a fixed set of declared values as constant arguments.
+    /// Arguments that support a fixed set of declared values as constant
+    /// arguments.
     EnumArgument(EnumerationArg),
 
     /// Arguments that refer to a data value.
     ValueArgument(ValueArg),
 
-    /// Arguments that are used only to inform the evaluation and/or type derivation of the function.
+    /// Arguments that are used only to inform the evaluation and/or type
+    /// derivation of the function.
     TypeArgument(TypeArg),
 }
 
 impl ArgumentsItem {
-    /// Parses an `Option<String>` field, rejecting it if an empty string is provided.
+    /// Parses an `Option<String>` field, rejecting it if an empty string is
+    /// provided.
     #[inline]
     fn parse_optional_string(
         name: &str,
@@ -75,7 +78,7 @@ impl From<ArgumentsItem> for simple_extensions::ArgumentsItem {
     }
 }
 
-/// Parse errors for [simple_extensions::ArgumentsItem].
+/// Parse errors for [`simple_extensions::ArgumentsItem`].
 #[derive(Debug, Error, PartialEq)]
 pub enum ArgumentsItemError {
     /// Invalid enumeration options.
@@ -103,21 +106,21 @@ pub struct EnumerationArg {
 impl EnumerationArg {
     /// Returns the name of this argument.
     ///
-    /// See [simple_extensions::EnumerationArg::name].
+    /// See [`simple_extensions::EnumerationArg::name`].
     pub fn name(&self) -> Option<&String> {
         self.name.as_ref()
     }
 
     /// Returns the description of this argument.
     ///
-    /// See [simple_extensions::EnumerationArg::description].
+    /// See [`simple_extensions::EnumerationArg::description`].
     pub fn description(&self) -> Option<&String> {
         self.description.as_ref()
     }
 
     /// Returns the options of this argument.
     ///
-    /// See [simple_extensions::EnumerationArg::options].
+    /// See [`simple_extensions::EnumerationArg::options`].
     pub fn options(&self) -> &EnumOptions {
         &self.options
     }
@@ -210,7 +213,7 @@ impl From<EnumOptions> for simple_extensions::EnumOptions {
     }
 }
 
-/// Parse errors for [simple_extensions::EnumOptions].
+/// Parse errors for [`simple_extensions::EnumOptions`].
 #[derive(Debug, Error, PartialEq)]
 pub enum EnumOptionsError {
     /// Empty list.
@@ -237,27 +240,27 @@ pub struct ValueArg {
 
     /// A fully defined type or a type expression.
     ///
-    /// TODO: parse this to a typed representation (likely using the `TypeExpr` parser)
-    /// so the caller does not have to interpret the raw string.
+    /// TODO: parse this to a typed representation (likely using the `TypeExpr`
+    /// parser) so the caller does not have to interpret the raw string.
     value: simple_extensions::Type,
 
-    /// Whether this argument is required to be a constant for invocation.
-    /// For example, in some system a regular expression pattern would only be accepted as a literal
-    /// and not a column value reference.
+    /// Whether this argument is required to be a constant for invocation. For
+    /// example, in some system a regular expression pattern would only be
+    /// accepted as a literal and not a column value reference.
     constant: Option<bool>,
 }
 
 impl ValueArg {
     /// Returns the name of this argument.
     ///
-    /// See [simple_extensions::ValueArg::name].
+    /// See [`simple_extensions::ValueArg::name`].
     pub fn name(&self) -> Option<&String> {
         self.name.as_ref()
     }
 
     /// Returns the description of this argument.
     ///
-    /// See [simple_extensions::ValueArg::description].
+    /// See [`simple_extensions::ValueArg::description`].
     pub fn description(&self) -> Option<&String> {
         self.description.as_ref()
     }
@@ -265,7 +268,7 @@ impl ValueArg {
     /// Returns the constant of this argument.
     /// Defaults to `false` if the underlying value is `None`.
     ///
-    /// See [simple_extensions::ValueArg::constant].
+    /// See [`simple_extensions::ValueArg::constant`].
     pub fn constant(&self) -> bool {
         self.constant.unwrap_or(false)
     }
@@ -309,10 +312,10 @@ impl From<ValueArg> for ArgumentsItem {
     }
 }
 
-/// Arguments that are used only to inform the evaluation and/or type derivation of the function.
+/// A type argument to a parameterized type, e.g. the `T` in `List<T>`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeArg {
-    /// A human-readable name for this argument to help clarify use.
+    /// A human-readable name for this argument to clarify use.
     name: Option<String>,
 
     /// Additional description for this argument.
@@ -320,22 +323,22 @@ pub struct TypeArg {
 
     /// A partially or completely parameterized type. E.g. `List<K>` or `K`.
     ///
-    /// TODO: parse this to a typed representation (likely using the `TypeExpr` parser)
-    /// so the caller does not have to interpret the raw string.
+    /// TODO: parse this to a typed representation (likely using the `TypeExpr`
+    /// parser) so the caller does not have to interpret the raw string.
     type_: String,
 }
 
 impl TypeArg {
     /// Returns the name of this argument.
     ///
-    /// See [simple_extensions::TypeArg::name].
+    /// See [`simple_extensions::TypeArg::name`].
     pub fn name(&self) -> Option<&String> {
         self.name.as_ref()
     }
 
     /// Returns the description of this argument.
     ///
-    /// See [simple_extensions::TypeArg::description].
+    /// See [`simple_extensions::TypeArg::description`].
     pub fn description(&self) -> Option<&String> {
         self.description.as_ref()
     }

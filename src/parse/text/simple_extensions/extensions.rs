@@ -12,12 +12,14 @@ use crate::{
     urn::Urn,
 };
 
-/// Parsing context for extension processing
+/// The contents (types) in an [`ExtensionFile`](super::file::ExtensionFile).
 ///
-/// The context provides access to types defined in the same extension file during parsing.
-/// This allows type references to be resolved within the same extension file. The corresponding
-/// URN is tracked by [`ExtensionFile`](super::file::ExtensionFile) so this structure can focus on
-/// validated type information.
+/// This structure stores and provides access to the individual objects defined
+/// in an [`ExtensionFile`](super::file::ExtensionFile); [`SimpleExtensions`]
+/// represents the contents of an extensions file.
+///
+/// Currently, only the [`CustomType`]s are included; any scalar, window, or
+/// aggregate functions are not yet included.
 #[derive(Clone, Debug, Default)]
 pub struct SimpleExtensions {
     /// Types defined in this extension file
@@ -25,7 +27,7 @@ pub struct SimpleExtensions {
 }
 
 impl SimpleExtensions {
-    /// Add a type to the context
+    /// Add a type to the context. Name must be unique.
     pub fn add_type(&mut self, custom_type: &CustomType) -> Result<(), SimpleExtensionsError> {
         if self.types.contains_key(&custom_type.name) {
             return Err(SimpleExtensionsError::DuplicateTypeName {
@@ -59,7 +61,8 @@ impl SimpleExtensions {
     }
 }
 
-/// A context for parsing simple extensions.
+/// A context for parsing simple extensions, tracking what type names are
+/// resolved or unresolved.
 #[derive(Debug, Default)]
 pub struct TypeContext {
     /// Types that have been seen so far, now resolved.
@@ -75,7 +78,8 @@ impl TypeContext {
         self.known.insert(name.to_string());
     }
 
-    /// Mark a type as linked to - some other type or function references it, but we haven't seen it.
+    /// Mark a type as linked to - some other type or function references it,
+    /// but we haven't seen it.
     pub fn linked(&mut self, name: &str) {
         if !self.known.contains(name) {
             self.linked.insert(name.to_string());
