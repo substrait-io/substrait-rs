@@ -3,7 +3,7 @@
 //! Parsing of [proto::PlanVersion].
 
 use crate::{
-    parse::{Parse, context::Context, proto::Version},
+    parse::{Parse, context::ProtoContext, proto::Version},
     proto,
 };
 use thiserror::Error;
@@ -38,7 +38,7 @@ pub enum PlanVersionError {
     Version(#[from] VersionError),
 }
 
-impl<C: Context> Parse<C> for proto::PlanVersion {
+impl<C: ProtoContext> Parse<C> for proto::PlanVersion {
     type Parsed = PlanVersion;
     type Error = PlanVersionError;
 
@@ -71,7 +71,7 @@ impl From<PlanVersion> for proto::PlanVersion {
 mod tests {
     use super::*;
     use crate::{
-        parse::{context::tests::Context, proto::VersionError},
+        parse::{context::fixtures::Context, proto::VersionError},
         version,
     };
 
