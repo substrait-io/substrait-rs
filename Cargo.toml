@@ -27,11 +27,12 @@ include = [
 [features]
 default = ["bundled-proto"]
 bundled-proto = []
+proto-build = ["dep:prost-build", "dep:pbjson-build"]
 extensions = ["dep:serde_yaml"]
 parse = ["dep:hex", "dep:thiserror", "semver"]
 protoc = ["dep:protobuf-src"]
 semver = ["dep:semver"]
-serde = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
+serde = ["dep:pbjson", "dep:pbjson-types"]
 
 [dependencies]
 hex = { version = "0.4.3", optional = true }
@@ -50,7 +51,7 @@ thiserror = { version = "2.0.17", optional = true }
 heck = "0.5.0"
 pbjson-build = { version = "0.8.0", optional = true }
 prettyplease = "0.2.37"
-prost-build = { version = "0.14.1", default-features = false }
+prost-build = { version = "0.14.1", default-features = false, optional = true }
 protobuf-src = { version = "2.1.1", optional = true }
 schemars = "0.8.22"
 semver = "1.0.27"

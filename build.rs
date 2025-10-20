@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#[cfg(feature = "proto-build")]
 use prost_build::Config;
 use std::{
     env,
@@ -14,6 +15,7 @@ use walkdir::{DirEntry, WalkDir};
 const SUBMODULE_ROOT: &str = "substrait";
 #[cfg(feature = "extensions")]
 const EXTENSIONS_ROOT: &str = "substrait/extensions";
+#[cfg(feature = "proto-build")]
 const PROTO_ROOT: &str = "substrait/proto";
 const TEXT_ROOT: &str = "substrait/text";
 const GEN_ROOT: &str = "gen";
@@ -274,7 +276,7 @@ pub static EXTENSIONS: LazyLock<HashMap<Urn, SimpleExtensions>> = LazyLock::new(
     Ok(())
 }
 
-#[cfg(feature = "serde")]
+#[cfg(all(feature = "serde", feature = "proto-build"))]
 /// Serialize and deserialize implementations for proto types using `pbjson`
 fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
     use pbjson_build::Builder;
@@ -289,6 +291,20 @@ fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Er
     Builder::new()
         .register_descriptors(&fs::read(descriptor_path)?)?
         .build(&[".substrait"])?;
+
+    Ok(())
+}
+
+#[cfg(feature = "proto-build")]
+fn compile_protos(protos: &[impl AsRef<Path>], out_dir: &Path) -> Result<(), Box<dyn Error>> {
+    #[cfg(feature = "serde")]
+    serde(protos, out_dir.to_path_buf())?;
+
+    #[cfg(not(feature = "serde"))]
+    {
+        let _ = out_dir;
+        Config::new().compile_protos(protos, &[PROTO_ROOT])?;
+    }
 
     Ok(())
 }
@@ -344,6 +360,7 @@ fn copy_bundled_proto(out_dir: &Path) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+#[cfg(feature = "proto-build")]
 fn sync_generated_proto(out_dir: &Path) -> Result<(), Box<dyn Error>> {
     let destination_dir = proto_storage_dir();
     fs::create_dir_all(&destination_dir)?;
@@ -382,6 +399,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     #[cfg(feature = "extensions")]
     extensions(_version, out_dir.as_path())?;
 
+    #[cfg(feature = "proto-build")]
     let protos = WalkDir::new(PROTO_ROOT)
         .into_iter()
         .filter_map(Result::ok)
@@ -403,14 +421,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     let should_generate = regenerate || !cfg!(feature = "bundled-proto");
 
     if should_generate {
-        #[cfg(feature = "serde")]
-        serde(&protos, out_dir.clone())?;
+        #[cfg(feature = "proto-build")]
+        {
+            compile_protos(&protos, out_dir.as_path())?;
+            if regenerate {
+                sync_generated_proto(out_dir.as_path())?;
+            }
+        }
 
-        #[cfg(not(feature = "serde"))]
-        Config::new().compile_protos(&protos, &[PROTO_ROOT])?;
-
-        if regenerate {
-            sync_generated_proto(out_dir.as_path())?;
+        #[cfg(not(feature = "proto-build"))]
+        {
+            return Err(format!(
+                "Regeneration of protobuf sources was requested, but the `proto-build` feature is disabled. Enable it to rebuild from `.proto` files."
+            )
+            .into());
         }
     } else {
         copy_bundled_proto(out_dir.as_path())?;
