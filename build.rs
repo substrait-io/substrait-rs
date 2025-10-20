@@ -17,6 +17,8 @@ const EXTENSIONS_ROOT: &str = "substrait/extensions";
 const PROTO_ROOT: &str = "substrait/proto";
 const TEXT_ROOT: &str = "substrait/text";
 const GEN_ROOT: &str = "gen";
+const GEN_PROTO_ROOT: &str = "gen/proto";
+const REGENERATE_PREGENERATED_ENV: &str = "REGENERATE_PREGENERATED";
 
 /// Add Substrait version information to the build
 fn substrait_version() -> Result<semver::Version, Box<dyn Error>> {
@@ -291,9 +293,80 @@ fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Er
     Ok(())
 }
 
+fn proto_storage_dir() -> PathBuf {
+    let mut dir = PathBuf::from(GEN_PROTO_ROOT);
+    dir.push(if cfg!(feature = "serde") {
+        "serde"
+    } else {
+        "bundled"
+    });
+    dir
+}
+
+#[cfg(feature = "serde")]
+fn proto_artifacts() -> Vec<&'static str> {
+    vec![
+        "substrait.extensions.rs",
+        "substrait.rs",
+        "substrait.extensions.serde.rs",
+        "substrait.serde.rs",
+    ]
+}
+
+#[cfg(not(feature = "serde"))]
+fn proto_artifacts() -> Vec<&'static str> {
+    vec!["substrait.extensions.rs", "substrait.rs"]
+}
+
+fn copy_bundled_proto(out_dir: &Path) -> Result<(), Box<dyn Error>> {
+    let source_dir = proto_storage_dir();
+    if !source_dir.exists() {
+        return Err(format!(
+            "Bundled proto directory `{}` is missing. Set {REGENERATE_PREGENERATED_ENV}=1 to refresh pre-generated files.",
+            source_dir.display()
+        )
+        .into());
+    }
+
+    for artifact in proto_artifacts() {
+        let src = source_dir.join(artifact);
+        if !src.exists() {
+            return Err(format!(
+                "Bundled proto file `{}` is missing. Set {REGENERATE_PREGENERATED_ENV}=1 to refresh pre-generated files.",
+                src.display()
+            )
+            .into());
+        }
+        println!("cargo:rerun-if-changed={}", src.display());
+        fs::copy(src, out_dir.join(artifact))?;
+    }
+
+    Ok(())
+}
+
+fn sync_generated_proto(out_dir: &Path) -> Result<(), Box<dyn Error>> {
+    let destination_dir = proto_storage_dir();
+    fs::create_dir_all(&destination_dir)?;
+
+    for artifact in proto_artifacts() {
+        let source = out_dir.join(artifact);
+        if !source.exists() {
+            return Err(format!(
+                "Generated proto file `{}` is missing. Ensure `prost-build` produced the expected output.",
+                source.display()
+            )
+            .into());
+        }
+        fs::copy(source, destination_dir.join(artifact))?;
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     // for use in docker build where file changes can be wonky
     println!("cargo:rerun-if-env-changed=FORCE_REBUILD");
+    println!("cargo:rerun-if-env-changed={REGENERATE_PREGENERATED_ENV}");
 
     let _version = substrait_version()?;
 
@@ -326,11 +399,22 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .collect::<Vec<_>>();
 
-    #[cfg(feature = "serde")]
-    serde(&protos, out_dir)?;
+    let regenerate = env::var_os(REGENERATE_PREGENERATED_ENV).is_some();
+    let should_generate = regenerate || !cfg!(feature = "bundled-proto");
 
-    #[cfg(not(feature = "serde"))]
-    Config::new().compile_protos(&protos, &[PROTO_ROOT])?;
+    if should_generate {
+        #[cfg(feature = "serde")]
+        serde(&protos, out_dir.clone())?;
+
+        #[cfg(not(feature = "serde"))]
+        Config::new().compile_protos(&protos, &[PROTO_ROOT])?;
+
+        if regenerate {
+            sync_generated_proto(out_dir.as_path())?;
+        }
+    } else {
+        copy_bundled_proto(out_dir.as_path())?;
+    }
 
     Ok(())
 }
