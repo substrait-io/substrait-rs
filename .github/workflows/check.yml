@@ -14,10 +14,10 @@ jobs:
         with:
           licenses: Apache-2.0
           ignore-paths: |-
-            src/gen/text/
-            src/gen/proto/
-            src/gen/proto/pbjson/
-            src/gen/extensions/
+            src/gen/text
+            src/gen/proto
+            src/gen/proto/pbjson
+            src/gen/extensions
 
   formatting:
     name: Formatting
