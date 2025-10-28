@@ -14,6 +14,7 @@ keywords = ["substrait"]
 include = [
     "LICENSE",
     "src/",
+    "!src/gen/**/*.bin",
     "substrait/LICENSE",
     "substrait/extensions/**/*.yaml",
     "substrait/proto/**/*.proto",
