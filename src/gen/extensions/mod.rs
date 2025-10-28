@@ -4,4 +4,4 @@
 mod substrait;
 
 #[doc(inline)]
-pub use substrait::*;
+pub use self::substrait::*;

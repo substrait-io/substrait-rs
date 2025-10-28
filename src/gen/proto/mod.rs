@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[cfg(not(feature = "serde"))]
+#[expect(clippy::doc_overindented_list_items, clippy::module_inception)]
 mod proto {
     include!("substrait.rs");
 
