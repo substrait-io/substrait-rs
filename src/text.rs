@@ -12,4 +12,4 @@
 
 //! Generated types for text-based definitions.
 
-include!(concat!(env!("OUT_DIR"), "/substrait_text.rs"));
+pub use crate::r#gen::text::*;
