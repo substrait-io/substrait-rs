@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.62.0](https://github.com/substrait-io/substrait-rs/compare/v0.61.0...v0.62.0) - 2025-10-28
+
+### Other
+
+- revert msrv to 1.85.1 ([#416](https://github.com/substrait-io/substrait-rs/pull/416))
+- *(deps,cargo)* bump typify from 0.4.3 to 0.5.0 in the cargo group ([#405](https://github.com/substrait-io/substrait-rs/pull/405))
+
 ## [0.61.0](https://github.com/substrait-io/substrait-rs/compare/v0.60.1...v0.61.0) - 2025-10-05
 
 ### Fixed
