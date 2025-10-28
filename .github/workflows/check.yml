@@ -14,7 +14,9 @@ jobs:
         with:
           licenses: Apache-2.0
           ignore-paths: |-
-            src/gen/
+            src/gen/text/
+            src/gen/proto/
+            src/gen/pbjson/
 
   formatting:
     name: Formatting

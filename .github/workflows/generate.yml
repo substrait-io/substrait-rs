@@ -3,6 +3,10 @@
 name: Generate
 
 on:
+  push:
+    paths:
+      - "substrait/**"
+      - "gen/**"
   pull_request:
     paths:
       - "substrait/**"
