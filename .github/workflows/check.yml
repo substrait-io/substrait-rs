@@ -13,6 +13,8 @@ jobs:
       - uses: enarx/spdx@master
         with:
           licenses: Apache-2.0
+          ignore-paths: |-
+            src/gen/
 
   formatting:
     name: Formatting
