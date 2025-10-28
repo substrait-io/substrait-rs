@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 [package]
 name = "substrait"
-version = "0.61.0"
+version = "0.62.0"
 edition = "2024"
-rust-version = "1.88.0"
+rust-version = "1.85.1"
 description = "Cross-Language Serialization for Relational Algebra"
 documentation = "https://docs.rs/substrait"
 readme = "README.md"
