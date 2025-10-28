@@ -16,7 +16,8 @@ jobs:
           ignore-paths: |-
             src/gen/text/
             src/gen/proto/
-            src/gen/pbjson/
+            src/gen/proto/pbjson/
+            src/gen/extensions/
 
   formatting:
     name: Formatting

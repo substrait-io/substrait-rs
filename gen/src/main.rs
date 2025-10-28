@@ -164,8 +164,6 @@ pub mod {title} {{
 
 /// Add Substrait core extensions
 fn extensions(version: semver::Version, out_dir: &Path) -> Result<(), Box<dyn Error>> {
-    use std::collections::HashMap;
-
     let substrait_extensions_file = out_dir.join("extensions").join("substrait.rs");
 
     let mut output = String::from(
@@ -173,7 +171,7 @@ fn extensions(version: semver::Version, out_dir: &Path) -> Result<(), Box<dyn Er
 // Note that this file is auto-generated and auto-synced using `substrait-gen`.
 "#,
     );
-    let mut map = HashMap::<String, String>::default();
+    let mut map = Vec::default();
     for extension in WalkDir::new(EXTENSIONS_ROOT)
         .into_iter()
         .filter_map(Result::ok)
@@ -209,7 +207,7 @@ const {var_name}: &str = include_str!("../../{}");
                 .unwrap_or_default()
                 .to_string_lossy()
         );
-        map.insert(urn, var_name);
+        map.push((urn, var_name));
     }
     // Add static lookup map.
     output.push_str(

@@ -14,6 +14,7 @@ on:
 
 jobs:
   generate:
+    name: Generate
     defaults:
       run:
         working-directory: gen
@@ -26,6 +27,7 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: "33.x"
       - uses: dtolnay/rust-toolchain@stable
         id: rust-toolchain
       - uses: actions/cache@v4
@@ -47,7 +49,7 @@ jobs:
       - name: Diff
         working-directory: .
         id: diff
-        run: echo ::set-output name=modified::$(if test -z "$(git status --porcelain)"; then echo "false"; else echo "true"; fi)
+        run: echo "modified::$(if test -z "$(git status --porcelain)"; then echo "false"; else echo "true"; fi)" >> $GITHUB_OUTPUT
       - name: Push
         working-directory: .
         if: ${{ steps.diff.outputs.modified == 'true' }}
