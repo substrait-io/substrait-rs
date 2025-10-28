@@ -28,8 +28,6 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: dtolnay/rust-toolchain@stable
-      # Trigger build script to generate version info
-      - run: cargo build
       - uses: MarcoIeni/release-plz-action@v0.5.118
         with:
           command: release
@@ -52,7 +50,6 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo build
       - uses: MarcoIeni/release-plz-action@v0.5.118
         with:
           command: release-pr

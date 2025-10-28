@@ -61,22 +61,22 @@ use crate::urn::Urn;
 /// Map with Substrait core extensions. Maps Urns to included extensions.
 pub static EXTENSIONS: LazyLock<HashMap<Urn, SimpleExtensions>> = LazyLock::new(|| {
     let mut map = HashMap::new();
-    map.insert(Urn::from_str("extension:io.substrait:extension_types").expect("valid urn"), serde_yaml::from_str(EXTENSION_TYPES).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:functions_datetime").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_DATETIME).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:unknown").expect("valid urn"), serde_yaml::from_str(UNKNOWN).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:type_variations").expect("valid urn"), serde_yaml::from_str(TYPE_VARIATIONS).expect("a valid core extension"));
     map.insert(Urn::from_str("extension:io.substrait:functions_aggregate_decimal_output").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_AGGREGATE_DECIMAL_OUTPUT).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:functions_geometry").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_GEOMETRY).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:functions_boolean").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_BOOLEAN).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:functions_comparison").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_COMPARISON).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:functions_arithmetic_decimal").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_ARITHMETIC_DECIMAL).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:functions_set").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_SET).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:functions_aggregate_approx").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_AGGREGATE_APPROX).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:functions_rounding").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_ROUNDING).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:functions_logarithmic").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_LOGARITHMIC).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:functions_arithmetic").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_ARITHMETIC).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:functions_aggregate_generic").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_AGGREGATE_GENERIC).expect("a valid core extension"));
-    map.insert(Urn::from_str("extension:io.substrait:functions_rounding_decimal").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_ROUNDING_DECIMAL).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:type_variations").expect("valid urn"), serde_yaml::from_str(TYPE_VARIATIONS).expect("a valid core extension"));
     map.insert(Urn::from_str("extension:io.substrait:functions_string").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_STRING).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:functions_comparison").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_COMPARISON).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:functions_rounding_decimal").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_ROUNDING_DECIMAL).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:functions_arithmetic_decimal").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_ARITHMETIC_DECIMAL).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:functions_aggregate_approx").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_AGGREGATE_APPROX).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:functions_arithmetic").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_ARITHMETIC).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:functions_geometry").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_GEOMETRY).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:functions_logarithmic").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_LOGARITHMIC).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:functions_boolean").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_BOOLEAN).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:extension_types").expect("valid urn"), serde_yaml::from_str(EXTENSION_TYPES).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:functions_aggregate_generic").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_AGGREGATE_GENERIC).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:functions_datetime").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_DATETIME).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:functions_set").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_SET).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:functions_rounding").expect("valid urn"), serde_yaml::from_str(FUNCTIONS_ROUNDING).expect("a valid core extension"));
+    map.insert(Urn::from_str("extension:io.substrait:unknown").expect("valid urn"), serde_yaml::from_str(UNKNOWN).expect("a valid core extension"));
     map
 });

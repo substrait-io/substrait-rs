@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Generate
+
+on:
+  pull_request:
+    paths:
+      - "substrait/**"
+      - "gen/**"
+
+jobs:
+  generate:
+    defaults:
+      run:
+        working-directory: gen
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: dtolnay/rust-toolchain@stable
+        id: rust-toolchain
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-generate-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-generate-
+            ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
+            ${{ runner.os }}-cargo-
+      - run: cargo fmt -- --check
+      - run: cargo clippy -- -Dwarnings
+      - run: cargo run
+      - name: Diff
+        working-directory: .
+        id: diff
+        run: echo ::set-output name=modified::$(if test -z "$(git status --porcelain)"; then echo "false"; else echo "true"; fi)
+      - name: Push
+        working-directory: .
+        if: ${{ steps.diff.outputs.modified == 'true' }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git commit -am "Update generated files"
+          git push
