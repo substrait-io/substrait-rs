@@ -162,7 +162,6 @@ pub mod {title} {{
     Ok(())
 }
 
-// #[cfg(feature = "extensions")]
 /// Add Substrait core extensions
 fn extensions(version: semver::Version, out_dir: &Path) -> Result<(), Box<dyn Error>> {
     use std::collections::HashMap;
