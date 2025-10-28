@@ -11,18 +11,8 @@
 
 //! Generated types for the protobuf `substrait` package.
 
-/// Generated types for the protobuf `substrait.extensions` package
-pub mod extensions {
-    include!(concat!(env!("OUT_DIR"), "/substrait.extensions.rs"));
-
-    #[cfg(feature = "serde")]
-    include!(concat!(env!("OUT_DIR"), "/substrait.extensions.serde.rs"));
-}
-
-include!(concat!(env!("OUT_DIR"), "/substrait.rs"));
-
-#[cfg(feature = "serde")]
-include!(concat!(env!("OUT_DIR"), "/substrait.serde.rs"));
+#[doc(inline)]
+pub use crate::r#gen::proto::*;
 
 #[cfg(test)]
 mod tests {

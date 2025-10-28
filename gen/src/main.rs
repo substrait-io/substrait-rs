@@ -2,44 +2,27 @@
 
 use prost_build::Config;
 use std::{
-    env,
     error::Error,
     fs::{self, File},
     io::Write,
-    path::{Path, PathBuf},
+    path::Path,
     process::Command,
 };
 use walkdir::{DirEntry, WalkDir};
 
-const SUBMODULE_ROOT: &str = "substrait";
-#[cfg(feature = "extensions")]
-const EXTENSIONS_ROOT: &str = "substrait/extensions";
-const PROTO_ROOT: &str = "substrait/proto";
-const TEXT_ROOT: &str = "substrait/text";
-const GEN_ROOT: &str = "gen";
+const SUBMODULE_ROOT: &str = "../substrait";
+const EXTENSIONS_ROOT: &str = "../substrait/extensions";
+const PROTO_ROOT: &str = "../substrait/proto";
+const TEXT_ROOT: &str = "../substrait/text";
+const GEN_ROOT: &str = "../src/gen";
 
 /// Add Substrait version information to the build
-fn substrait_version() -> Result<semver::Version, Box<dyn Error>> {
-    let gen_dir = Path::new(GEN_ROOT);
-    fs::create_dir_all(gen_dir)?;
-
-    let version_in_file = gen_dir.join("version.in");
-    let substrait_version_file = gen_dir.join("version");
-
-    // Rerun if the Substrait submodule changed (to allow setting `dirty`)
-    println!(
-        "cargo:rerun-if-changed={}",
-        Path::new("substrait").display()
-    );
+fn substrait_version(out_dir: &Path) -> Result<semver::Version, Box<dyn Error>> {
+    let version_in_file = out_dir.join("version.rs");
+    let substrait_version_file = out_dir.join("version");
 
     // Check if there is a submodule. This file is not included in the packaged crate.
     if Path::new(SUBMODULE_ROOT).join(".git").exists() {
-        // Rerun if the Substrait submodule HEAD changed (when there is a submodule)
-        println!(
-            "cargo:rerun-if-changed={}",
-            Path::new(".git/modules/substrait/HEAD").display()
-        );
-
         // Get the version of the submodule by directly calling `git describe`.
         let git_describe = String::from_utf8(
             Command::new("git")
@@ -73,8 +56,7 @@ fn substrait_version() -> Result<semver::Version, Box<dyn Error>> {
             format!(
                 r#"// SPDX-License-Identifier: Apache-2.0
 
-// Note that this file is auto-generated and auto-synced using `build.rs`. It is
-// included in `version.rs`.
+// Note that this file is auto-generated.
 
 /// The major version of Substrait used to build this crate
 pub const SUBSTRAIT_MAJOR_VERSION: u32 = {major};
@@ -101,7 +83,7 @@ pub const SUBSTRAIT_GIT_DIRTY: bool = {git_dirty};
 
 /// A constant with the Substrait version as name, to trigger semver bumps when
 /// the Substrait version changes.
-pub const SUBSTRAIT_{major}_{minor}_{patch}: () = ();
+pub const SUBSTRAIT_{major}_{minor}: () = ();
 "#
             ),
         )?;
@@ -130,8 +112,7 @@ fn text(out_dir: &Path) -> Result<(), Box<dyn Error>> {
     use heck::ToSnakeCase;
     use schemars::schema::{RootSchema, Schema};
     use typify::{TypeSpace, TypeSpaceSettings};
-
-    let mut out_file = File::create(out_dir.join("substrait_text").with_extension("rs"))?;
+    let mut out_file = File::create(out_dir.join("text").join("substrait").with_extension("rs"))?;
 
     for schema_path in WalkDir::new(TEXT_ROOT)
         .into_iter()
@@ -145,9 +126,6 @@ fn text(out_dir: &Path) -> Result<(), Box<dyn Error>> {
                 .is_some()
         })
         .map(DirEntry::into_path)
-        .inspect(|entry| {
-            println!("cargo:rerun-if-changed={}", entry.display());
-        })
     {
         let schema = serde_yaml::from_reader::<_, RootSchema>(File::open(&schema_path)?)?;
         let metadata = schema.schema.metadata.as_ref();
@@ -184,17 +162,16 @@ pub mod {title} {{
     Ok(())
 }
 
-#[cfg(feature = "extensions")]
+// #[cfg(feature = "extensions")]
 /// Add Substrait core extensions
 fn extensions(version: semver::Version, out_dir: &Path) -> Result<(), Box<dyn Error>> {
     use std::collections::HashMap;
 
-    let substrait_extensions_file = out_dir.join("extensions.in");
+    let substrait_extensions_file = out_dir.join("extensions").join("substrait.rs");
 
     let mut output = String::from(
         r#"// SPDX-License-Identifier: Apache-2.0
-// Note that this file is auto-generated and auto-synced using `build.rs`. It is
-// included in `extensions.rs`.
+// Note that this file is auto-generated and auto-synced using `substrait-gen`.
 "#,
     );
     let mut map = HashMap::<String, String>::default();
@@ -210,9 +187,6 @@ fn extensions(version: semver::Version, out_dir: &Path) -> Result<(), Box<dyn Er
                 .is_some()
         })
         .map(DirEntry::into_path)
-        .inspect(|entry| {
-            println!("cargo:rerun-if-changed={}", entry.display());
-        })
     {
         let name = extension.file_stem().unwrap_or_default().to_string_lossy();
         let url = format!(
@@ -224,9 +198,8 @@ fn extensions(version: semver::Version, out_dir: &Path) -> Result<(), Box<dyn Er
         output.push_str(&format!(
             r#"
 /// Included source of [`{name}`]({url}).
-const {var_name}: &str = include_str!("{}/{}");
+const {var_name}: &str = include_str!("../../{}");
 "#,
-            PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).display(),
             extension.display()
         ));
         let urn = format!(
@@ -272,13 +245,16 @@ pub static EXTENSIONS: LazyLock<HashMap<Urn, SimpleExtensions>> = LazyLock::new(
     Ok(())
 }
 
-#[cfg(feature = "serde")]
 /// Serialize and deserialize implementations for proto types using `pbjson`
-fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
+fn serde(protos: &[impl AsRef<Path>], out_dir: &Path) -> Result<(), Box<dyn Error>> {
     use pbjson_build::Builder;
 
-    let descriptor_path = out_dir.join("proto_descriptor.bin");
+    let descriptor_path = out_dir
+        .join("proto")
+        .join("pbjson")
+        .join("proto_descriptor.bin");
     let mut cfg = Config::new();
+    cfg.out_dir(out_dir.join("proto").join("pbjson"));
     cfg.file_descriptor_set_path(&descriptor_path);
     cfg.compile_well_known_types()
         .extern_path(".google.protobuf", "::pbjson_types")
@@ -286,28 +262,19 @@ fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Er
 
     Builder::new()
         .register_descriptors(&fs::read(descriptor_path)?)?
+        .out_dir(out_dir.join("proto").join("pbjson"))
         .build(&[".substrait"])?;
 
     Ok(())
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    // for use in docker build where file changes can be wonky
-    println!("cargo:rerun-if-env-changed=FORCE_REBUILD");
+    let out_dir = Path::new(GEN_ROOT);
+    fs::create_dir_all(out_dir)?;
 
-    let _version = substrait_version()?;
-
-    #[cfg(feature = "protoc")]
-    unsafe {
-        std::env::set_var("PROTOC", protobuf_src::protoc())
-    };
-
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-
-    text(out_dir.as_path())?;
-
-    #[cfg(feature = "extensions")]
-    extensions(_version, out_dir.as_path())?;
+    let version = substrait_version(out_dir)?;
+    text(out_dir)?;
+    extensions(version, out_dir)?;
 
     let protos = WalkDir::new(PROTO_ROOT)
         .into_iter()
@@ -321,16 +288,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .is_some()
         })
         .map(DirEntry::into_path)
-        .inspect(|entry| {
-            println!("cargo:rerun-if-changed={}", entry.display());
-        })
         .collect::<Vec<_>>();
 
-    #[cfg(feature = "serde")]
-    serde(&protos, out_dir)?;
+    Config::new()
+        .out_dir(out_dir.join("proto"))
+        .compile_protos(&protos, &[PROTO_ROOT])?;
 
-    #[cfg(not(feature = "serde"))]
-    Config::new().compile_protos(&protos, &[PROTO_ROOT])?;
-
-    Ok(())
+    serde(&protos, out_dir)
 }
