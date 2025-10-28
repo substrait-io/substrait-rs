@@ -3,11 +3,6 @@
 name: Generate
 
 on:
-  push:
-    paths:
-      - ".github/workflows/generate.yml"
-      - "substrait/**"
-      - "gen/**"
   pull_request:
     paths:
       - ".github/workflows/generate.yml"
