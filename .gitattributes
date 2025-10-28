@@ -1,0 +1,2 @@
+src/gen/**/*.rs linguist-generated=true
+src/gen/**/mod.rs linguist-generated=false
