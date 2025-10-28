@@ -114,7 +114,7 @@ fn text(out_dir: &Path) -> Result<(), Box<dyn Error>> {
     use typify::{TypeSpace, TypeSpaceSettings};
     let mut out_file = File::create(out_dir.join("text").join("substrait").with_extension("rs"))?;
 
-    for schema_path in WalkDir::new(TEXT_ROOT)
+    let mut schemas = WalkDir::new(TEXT_ROOT)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|entry| entry.file_type().is_file() || entry.file_type().is_symlink())
@@ -126,7 +126,9 @@ fn text(out_dir: &Path) -> Result<(), Box<dyn Error>> {
                 .is_some()
         })
         .map(DirEntry::into_path)
-    {
+        .collect::<Vec<_>>();
+    schemas.sort();
+    for schema_path in schemas {
         let schema = serde_yaml::from_reader::<_, RootSchema>(File::open(&schema_path)?)?;
         let metadata = schema.schema.metadata.as_ref();
         let id = metadata
@@ -172,7 +174,7 @@ fn extensions(version: semver::Version, out_dir: &Path) -> Result<(), Box<dyn Er
 "#,
     );
     let mut map = Vec::default();
-    for extension in WalkDir::new(EXTENSIONS_ROOT)
+    let mut extensions = WalkDir::new(EXTENSIONS_ROOT)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|entry| entry.file_type().is_file())
@@ -184,7 +186,9 @@ fn extensions(version: semver::Version, out_dir: &Path) -> Result<(), Box<dyn Er
                 .is_some()
         })
         .map(DirEntry::into_path)
-    {
+        .collect::<Vec<_>>();
+    extensions.sort();
+    for extension in extensions {
         let name = extension.file_stem().unwrap_or_default().to_string_lossy();
         let url = format!(
             "https://github.com/substrait-io/substrait/raw/v{}/extensions/{}",
@@ -209,6 +213,7 @@ const {var_name}: &str = include_str!("../../{}");
         );
         map.push((urn, var_name));
     }
+    map.sort();
     // Add static lookup map.
     output.push_str(
         r#"
@@ -273,7 +278,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     text(out_dir)?;
     extensions(version, out_dir)?;
 
-    let protos = WalkDir::new(PROTO_ROOT)
+    let mut protos = WalkDir::new(PROTO_ROOT)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|entry| entry.file_type().is_file() || entry.file_type().is_symlink())
@@ -286,6 +291,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .map(DirEntry::into_path)
         .collect::<Vec<_>>();
+    protos.sort();
 
     Config::new()
         .out_dir(out_dir.join("proto"))
