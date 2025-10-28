@@ -3,7 +3,7 @@
 name = "substrait-gen"
 version = "0.61.0"
 edition = "2024"
-rust-version = "1.88.0"
+rust-version = "1.85.1"
 description = "Code generation for substrait-rs"
 publish = false
 
