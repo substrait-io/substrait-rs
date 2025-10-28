@@ -31,6 +31,7 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: "33.x"
       - run: cargo run
         working-directory: gen
       - run: cargo check --all-targets --no-default-features
@@ -62,6 +63,7 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: "33.x"
       - run: cargo run
         working-directory: gen
       - run: cargo check --all-targets --no-default-features
@@ -97,6 +99,7 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: "33.x"
       - run: cargo run
         working-directory: gen
       - run: cargo test --all-targets --no-default-features
@@ -142,6 +145,7 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: "33.x"
       - run: cargo run
         working-directory: gen
       - run: cargo clippy --all-targets --no-default-features -- -Dwarnings
@@ -173,6 +177,7 @@ jobs:
       - uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: "33.x"
       - run: cargo run
         working-directory: gen
       - run: cargo build --all-features
