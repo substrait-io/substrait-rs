@@ -4,9 +4,9 @@
 
 use thiserror::Error;
 
-use crate::parse::{
-    Anchor, Parse, proto::extensions::SimpleExtensionUrn, text::simple_extensions::SimpleExtensions,
-};
+use crate::parse::proto::extensions::SimpleExtensionUrn;
+use crate::parse::text::simple_extensions::ExtensionFile;
+use crate::parse::{Anchor, Parse};
 
 /// A parse context.
 ///
@@ -22,22 +22,24 @@ pub trait Context {
     {
         item.parse(self)
     }
+}
 
+pub trait ProtoContext: Context {
     /// Add a [SimpleExtensionUrn] to this context. Must return an error for duplicate
-    /// anchors or when the urn is not supported.
+    /// anchors or when the URI is not supported.
     ///
     /// This function must eagerly resolve and parse the simple extension, returning an
     /// error if either fails.
     fn add_simple_extension_urn(
         &mut self,
         simple_extension_urn: &SimpleExtensionUrn,
-    ) -> Result<&SimpleExtensions, ContextError>;
+    ) -> Result<&ExtensionFile, ContextError>;
 
     /// Returns the simple extensions for the given simple extension anchor.
     fn simple_extensions(
         &self,
         anchor: &Anchor<SimpleExtensionUrn>,
-    ) -> Result<&SimpleExtensions, ContextError>;
+    ) -> Result<&ExtensionFile, ContextError>;
 }
 
 /// Parse context errors.
@@ -57,46 +59,39 @@ pub enum ContextError {
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+pub(crate) mod fixtures {
     use std::collections::{HashMap, hash_map::Entry};
 
     use crate::parse::{
         Anchor, context::ContextError, proto::extensions::SimpleExtensionUrn,
-        text::simple_extensions::SimpleExtensions,
+        text::simple_extensions::ExtensionFile,
     };
 
     /// A test context.
     ///
     /// This currently mocks support for simple extensions (does not resolve or
     /// parse).
+    #[derive(Default)]
     pub struct Context {
-        empty_simple_extensions: SimpleExtensions,
-        simple_extensions: HashMap<Anchor<SimpleExtensionUrn>, SimpleExtensionUrn>,
+        simple_extensions: HashMap<Anchor<SimpleExtensionUrn>, ExtensionFile>,
     }
 
-    impl Default for Context {
-        fn default() -> Self {
-            Self {
-                empty_simple_extensions: SimpleExtensions {},
-                simple_extensions: Default::default(),
-            }
-        }
-    }
+    impl super::Context for Context {}
 
-    impl super::Context for Context {
+    impl super::ProtoContext for Context {
         fn add_simple_extension_urn(
             &mut self,
             simple_extension_urn: &crate::parse::proto::extensions::SimpleExtensionUrn,
-        ) -> Result<&SimpleExtensions, ContextError> {
+        ) -> Result<&ExtensionFile, ContextError> {
             match self.simple_extensions.entry(simple_extension_urn.anchor()) {
                 Entry::Occupied(_) => Err(ContextError::DuplicateSimpleExtension(
                     simple_extension_urn.anchor(),
                 )),
                 Entry::Vacant(entry) => {
-                    // TODO: fetch
-                    entry.insert(simple_extension_urn.clone());
-                    // For now just return an empty extension
-                    Ok(&self.empty_simple_extensions)
+                    let f = ExtensionFile::empty(simple_extension_urn.urn().clone());
+                    let ext_ref = entry.insert(f);
+
+                    Ok(ext_ref)
                 }
             }
         }
@@ -104,10 +99,9 @@ pub(crate) mod tests {
         fn simple_extensions(
             &self,
             anchor: &Anchor<SimpleExtensionUrn>,
-        ) -> Result<&SimpleExtensions, ContextError> {
+        ) -> Result<&ExtensionFile, ContextError> {
             self.simple_extensions
-                .contains_key(anchor)
-                .then_some(&self.empty_simple_extensions)
+                .get(anchor)
                 .ok_or(ContextError::UndefinedSimpleExtension(*anchor))
         }
     }
