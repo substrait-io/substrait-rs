@@ -52,3 +52,34 @@ impl FromStr for Urn {
             .ok_or(InvalidUrn)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_parse_valid_urn() {
+        let valid_urn = "extension:io.substrait:fake_functions";
+        let result = valid_urn.parse::<Urn>();
+        assert_eq!(
+            result,
+            Ok(Urn {
+                owner: "io.substrait".to_string(),
+                id: "fake_functions".to_string()
+            })
+        );
+    }
+
+    #[test]
+    fn parse_fail_invalid_urns() {
+        let invalid_urns = vec![
+            "io.substrait:something",         // missing "extension:" at beginning
+            "other_type:substrait:something", // incorrect type at beginning
+            "extension:something",            // doesn't have both owner and id
+            "extension:one:two:three",        //has too many parts
+        ];
+        for invalid_urn in invalid_urns {
+            assert_eq!(invalid_urn.parse::<Urn>(), Err(InvalidUrn))
+        }
+    }
+}
