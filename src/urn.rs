@@ -40,16 +40,14 @@ impl FromStr for Urn {
     type Err = InvalidUrn;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.split_once(':')
-            .filter(|(extension, _)| *extension == "extension")
-            .map(|(_, segments)| segments)
-            .and_then(|segments| segments.split_once(':'))
-            .filter(|(owner, id)| !owner.is_empty() && !id.is_empty())
-            .map(|(owner, id)| Urn {
-                owner: owner.to_owned(),
-                id: id.to_owned(),
-            })
-            .ok_or(InvalidUrn)
+        let parts: Vec<&str> = s.split(':').collect();
+        match parts.as_slice() {
+            ["extension", owner, id] if !owner.is_empty() && !id.is_empty() => Ok(Urn {
+                owner: owner.to_string(),
+                id: id.to_string(),
+            }),
+            _ => Err(InvalidUrn),
+        }
     }
 }
 
