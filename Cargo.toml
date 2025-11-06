@@ -38,7 +38,7 @@ pbjson = { version = "0.8.0", optional = true }
 pbjson-types = { version = "0.8.0", optional = true }
 prost = "0.14.1"
 prost-types = "0.14.1"
-regress = "0.10.4"
+regress = "0.10.5"
 semver = { version = "1.0.27", optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
@@ -54,7 +54,7 @@ protobuf-src = { version = "2.1.1", optional = true }
 schemars = "0.8.22"
 semver = "1.0.27"
 serde_yaml = "0.9.34"
-syn = "2.0.108"
+syn = "2.0.109"
 typify = "0.5.0"
 walkdir = "2.5.0"
 
