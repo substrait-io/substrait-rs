@@ -116,6 +116,8 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
 
+mod r#gen;
+
 #[cfg(feature = "extensions")]
 pub mod extensions;
 #[allow(missing_docs)]

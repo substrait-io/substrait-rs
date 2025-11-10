@@ -6,7 +6,8 @@
 //! included in the packaged crate, ignored by git, and automatically kept
 //! in-sync.
 
-include!(concat!(env!("OUT_DIR"), "/extensions.in"));
+#[doc(inline)]
+pub use crate::r#gen::extensions::*;
 
 #[cfg(test)]
 mod tests {

@@ -11,14 +11,11 @@ homepage = "https://substrait.io"
 repository = "https://github.com/substrait-io/substrait-rs"
 license = "Apache-2.0"
 keywords = ["substrait"]
-build = "build.rs"
 include = [
     "LICENSE",
-    "build.rs",
-    "gen/",
-    "src/**/*.rs",
+    "src/",
+    "!src/gen/**/*.bin",
     "substrait/LICENSE",
-    "substrait/README.md",
     "substrait/extensions/**/*.yaml",
     "substrait/proto/**/*.proto",
     "substrait/text/**/*.yaml",
@@ -28,9 +25,8 @@ include = [
 default = []
 extensions = ["dep:serde_yaml"]
 parse = ["dep:hex", "dep:thiserror", "semver"]
-protoc = ["dep:protobuf-src"]
 semver = ["dep:semver"]
-serde = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
+serde = ["dep:pbjson", "dep:pbjson-types"]
 
 [dependencies]
 hex = { version = "0.4.3", optional = true }
@@ -44,19 +40,6 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 serde_yaml = { version = "0.9.34", optional = true }
 thiserror = { version = "2.0.17", optional = true }
-
-[build-dependencies]
-heck = "0.5.0"
-pbjson-build = { version = "0.8.0", optional = true }
-prettyplease = "0.2.37"
-prost-build = { version = "0.14.1", default-features = false }
-protobuf-src = { version = "2.1.1", optional = true }
-schemars = "0.8.22"
-semver = "1.0.27"
-serde_yaml = "0.9.34"
-syn = "2.0.110"
-typify = "0.5.0"
-walkdir = "2.5.0"
 
 [package.metadata.docs.rs]
 all-features = true
