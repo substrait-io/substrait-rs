@@ -286,6 +286,7 @@ fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Er
 
     Builder::new()
         .register_descriptors(&fs::read(descriptor_path)?)?
+        .ignore_unknown_fields()
         .build(&[".substrait"])?;
 
     Ok(())

@@ -51,4 +51,34 @@ mod tests {
         assert_eq!(plan.extension_urns.len(), 1);
         Ok(())
     }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn forward_compatible_unknown_fields() -> Result<(), Box<dyn std::error::Error>> {
+        // Test that unknown fields are ignored for forward compatibility
+        let plan = serde_json::from_str::<super::Plan>(
+            r#"{
+  "version": { "minorNumber": 75, "producer": "substrait-rs" },
+  "unknownField": "this field doesn't exist in the proto",
+  "anotherUnknownField": {"nested": "data"},
+  "extensionUrns": [
+    {
+      "extensionUrnAnchor": 1,
+      "urn": "extension:io.substrait:functions_string",
+      "futureField": "should be ignored"
+    }
+  ]
+}"#,
+        )?;
+        assert_eq!(
+            plan.version,
+            Some(super::Version {
+                minor_number: 75,
+                producer: "substrait-rs".into(),
+                ..Default::default()
+            })
+        );
+        assert_eq!(plan.extension_urns.len(), 1);
+        Ok(())
+    }
 }
