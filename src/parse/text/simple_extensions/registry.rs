@@ -10,7 +10,9 @@
 //!
 //! This module is only available when the `parse` feature is enabled.
 
-use super::{ExtensionFile, types::CustomType};
+use std::collections::HashMap;
+
+use super::{ExtensionFile, SimpleExtensions, types::CustomType};
 use crate::urn::Urn;
 
 /// Extension Registry that manages Substrait extensions
@@ -20,17 +22,21 @@ use crate::urn::Urn;
 #[derive(Debug)]
 pub struct Registry {
     /// Pre-validated extension files
-    extensions: Vec<ExtensionFile>,
+    extensions: HashMap<Urn, SimpleExtensions>,
 }
 
 impl Registry {
     /// Create a new Global Registry from validated extension files
-    pub fn new(extensions: Vec<ExtensionFile>) -> Self {
+    pub fn new<I: IntoIterator<Item = ExtensionFile>>(extensions: I) -> Self {
+        let extensions = extensions
+            .into_iter()
+            .map(|ExtensionFile { urn, extension }| (urn, extension))
+            .collect();
         Self { extensions }
     }
 
     /// Get an iterator over all extension files in this registry
-    pub fn extensions(&self) -> impl Iterator<Item = &ExtensionFile> {
+    pub fn extensions(&self) -> impl Iterator<Item = (&Urn, &SimpleExtensions)> {
         self.extensions.iter()
     }
 
@@ -38,29 +44,23 @@ impl Registry {
     #[cfg(feature = "extensions")]
     pub fn from_core_extensions() -> Self {
         use crate::extensions::EXTENSIONS;
-        use std::sync::LazyLock;
 
-        // Force evaluation of core extensions
-        LazyLock::force(&EXTENSIONS);
-
-        // Convert HashMap<Urn, SimpleExtensions> to Vec<SimpleExtensions>
-        let extensions: Vec<ExtensionFile> = EXTENSIONS
+        // Parse the core extensions from the raw extensions format to the parsed format
+        let extensions: HashMap<Urn, SimpleExtensions> = EXTENSIONS
             .iter()
-            .map(|(urn, simple_extensions)| {
-                let extension_file = ExtensionFile::create(simple_extensions.clone())
-                    .unwrap_or_else(|err| panic!("Core extensions should be valid, but failed to create extension file for {urn}: {err}"));
-                debug_assert_eq!(extension_file.urn(), urn);
-                extension_file
+            .map(|(orig_urn, simple_extensions)| {
+                let ExtensionFile { urn, extension } = ExtensionFile::create(simple_extensions.clone())
+                    .unwrap_or_else(|err| panic!("Core extensions should be valid, but failed to create extension file for {orig_urn}: {err}"));
+                debug_assert_eq!(orig_urn, &urn);
+                (urn, extension)
             })
             .collect();
 
         Self { extensions }
     }
 
-    // Private helper methods
-
-    fn get_extension(&self, urn: &Urn) -> Option<&ExtensionFile> {
-        self.extensions.iter().find(|ext| ext.urn() == urn)
+    fn get_extension(&self, urn: &Urn) -> Option<&SimpleExtensions> {
+        self.extensions.get(urn)
     }
 
     /// Get a type by URI and name
@@ -107,13 +107,9 @@ mod tests {
             "extension:example.com:first",
             "extension:example.com:second",
         ];
-        let registry = Registry::new(
-            urns.iter()
-                .map(|urn| extension_file(urn, &["type"]))
-                .collect(),
-        );
+        let registry = Registry::new(urns.iter().map(|&urn| extension_file(urn, &["type"])));
 
-        let collected: Vec<&Urn> = registry.extensions().map(|ext| ext.urn()).collect();
+        let collected: Vec<&Urn> = registry.extensions().map(|(urn, _)| urn).collect();
         assert_eq!(collected.len(), 2);
         for urn in urns {
             assert!(
@@ -152,19 +148,19 @@ mod tests {
         assert!(registry.extensions().count() > 0);
 
         // Find the unknown.yaml extension dynamically
-        let unknown_extension = registry
-            .extensions()
-            .find(|ext| ext.urn().to_string() == "extension:io.substrait:unknown")
-            .expect("Should find unknown extension");
+        let urn = Urn::from_str("extension:io.substrait:extension_types").unwrap();
+        let core_extension = registry
+            .get_extension(&urn)
+            .expect("Should find extension_types extension");
 
-        let unknown_type = unknown_extension.get_type("unknown");
+        let point_type = core_extension.get_type("point");
         assert!(
-            unknown_type.is_some(),
-            "Should find 'unknown' type in unknown.yaml extension"
+            point_type.is_some(),
+            "Should find 'point' type in unknown.yaml extension"
         );
 
         // Also test the registry's get_type method with the actual URI
-        let unknown_type_via_registry = registry.get_type(unknown_extension.urn(), "unknown");
-        assert!(unknown_type_via_registry.is_some());
+        let type_via_registry = registry.get_type(&urn, "point");
+        assert!(type_via_registry.is_some());
     }
 }

@@ -3,7 +3,10 @@
 //! Parsing of [proto::PlanVersion].
 
 use crate::{
-    parse::{Parse, context::ProtoContext, proto::Version},
+    parse::{
+        Context as _, Parse,
+        proto::{ExtensionAnchors, Version},
+    },
     proto,
 };
 use thiserror::Error;
@@ -38,11 +41,11 @@ pub enum PlanVersionError {
     Version(#[from] VersionError),
 }
 
-impl<C: ProtoContext> Parse<C> for proto::PlanVersion {
+impl Parse<ExtensionAnchors> for proto::PlanVersion {
     type Parsed = PlanVersion;
     type Error = PlanVersionError;
 
-    fn parse(self, ctx: &mut C) -> Result<Self::Parsed, Self::Error> {
+    fn parse(self, ctx: &mut ExtensionAnchors) -> Result<Self::Parsed, Self::Error> {
         let proto::PlanVersion { version } = self;
 
         // The version is required, and must be valid.
@@ -71,7 +74,7 @@ impl From<PlanVersion> for proto::PlanVersion {
 mod tests {
     use super::*;
     use crate::{
-        parse::{context::fixtures::Context, proto::VersionError},
+        parse::{proto::ExtensionAnchors, proto::VersionError},
         version,
     };
 
@@ -80,7 +83,7 @@ mod tests {
         let plan_version = proto::PlanVersion {
             version: Some(version::version()),
         };
-        plan_version.parse(&mut Context::default())?;
+        plan_version.parse(&mut ExtensionAnchors::default())?;
         Ok(())
     }
 
@@ -88,7 +91,7 @@ mod tests {
     fn missing() {
         let plan_version = proto::PlanVersion::default();
         assert_eq!(
-            plan_version.parse(&mut Context::default()),
+            plan_version.parse(&mut ExtensionAnchors::default()),
             Err(PlanVersionError::Missing)
         );
     }
@@ -99,7 +102,7 @@ mod tests {
             version: Some(proto::Version::default()),
         };
         assert_eq!(
-            plan_version.parse(&mut Context::default()),
+            plan_version.parse(&mut ExtensionAnchors::default()),
             Err(PlanVersionError::Version(VersionError::Missing))
         );
     }

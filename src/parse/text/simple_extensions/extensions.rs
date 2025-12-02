@@ -87,9 +87,7 @@ impl TypeContext {
     }
 }
 
-impl Context for TypeContext {
-    // ExtensionContext implements the Context trait
-}
+impl Context for TypeContext {}
 
 // Implement parsing for the raw text representation to produce an `ExtensionFile`.
 impl Parse<TypeContext> for RawExtensions {

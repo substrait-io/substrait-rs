@@ -1,6 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Parsed type AST used by the simple extensions type parser.
+//!
+//! This module is based on the offical substrait type grammar defined
+//! [here](https://github.com/substrait-io/substrait/blob/5f031b69ed211e1ec307be3db7989d64c65d33a2/grammar/SubstraitType.g4).
+
+// Ideally, this module would be generated from the grammar, but there are no
+// well-maintained ANTLR grammar modules for Rust availableat the time of this
+// writing:
+// - Official Antlr4 [language
+//   support](https://github.com/antlr/antlr4/blob/594cf95e5460435c7521e80618666741e33e4d91/doc/targets.md)
+//   does not support Rust
+// - The ([`antlr4rust`](https://github.com/rrevenantt/antlr4rust) ) crate has
+//   not been updated in 3 years
+//
+// Therefore, the grammar is manually implemented.
 
 use crate::parse::text::simple_extensions::types::is_builtin_type_name;
 

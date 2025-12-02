@@ -16,7 +16,7 @@ pub struct ExtensionFile {
     /// The URN this extension was loaded from
     pub urn: Urn,
     /// The extension data containing types and eventually functions
-    extension: SimpleExtensions,
+    pub(crate) extension: SimpleExtensions,
 }
 
 impl ExtensionFile {
@@ -117,7 +117,8 @@ types:
 
     #[test]
     fn yaml_round_trip_integer_param_bounds() {
-        let ext = ExtensionFile::read_from_str(YAML_PARAM_TEST).expect("parse ok");
+        let deserialized: RawExtensions = serde_yaml::from_str(YAML_PARAM_TEST).expect("parse ok");
+        let ext = ExtensionFile::create(deserialized.clone()).expect("create ok");
         assert_eq!(ext.urn().to_string(), "extension:example.com:param_test");
 
         let ty = ext.get_type("ParamTest").expect("type exists");
@@ -136,20 +137,7 @@ types:
         }
 
         let back = ext.to_raw();
-        assert_eq!(back.urn, "extension:example.com:param_test");
-        let item = back
-            .types
-            .into_iter()
-            .find(|t| t.name == "ParamTest")
-            .expect("round-tripped type present");
-        let param = item.parameters.unwrap().0.into_iter().next().unwrap();
-        assert_eq!(param.name.as_deref(), Some("K"));
-        assert!(matches!(
-            param.type_,
-            crate::text::simple_extensions::TypeParamDefsItemType::Integer
-        ));
-        assert_eq!(param.min, Some(1.0));
-        assert_eq!(param.max, Some(10.0));
+        assert_eq!(deserialized, back);
     }
 
     #[test]

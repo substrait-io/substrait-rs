@@ -384,7 +384,12 @@ impl From<TypeArg> for ArgumentsItem {
 mod tests {
     use super::*;
     use crate::text::simple_extensions;
-    use crate::{parse::context::fixtures::Context, text};
+    use crate::{parse::Context, text};
+
+    /// A test context for parsing simple extensions. These extensions do not need any additional context,
+    pub struct TestContext;
+
+    impl Context for TestContext {}
 
     #[test]
     fn parse_enum_argument() -> Result<(), ArgumentsItemError> {
@@ -394,7 +399,7 @@ mod tests {
                 description: Some("desc".to_string()),
                 options: simple_extensions::EnumOptions(vec!["OVERFLOW".to_string()]),
             });
-        let item = enum_argument.parse(&mut Context::default())?;
+        let item = enum_argument.parse(&mut TestContext)?;
         let enum_argument = match item {
             ArgumentsItem::EnumArgument(enum_argument) => enum_argument,
             _ => unreachable!(),
@@ -414,7 +419,7 @@ mod tests {
     fn parse_empty_enum_options() -> Result<(), ArgumentsItemError> {
         let options = simple_extensions::EnumOptions(vec![]);
         let is_err = options
-            .parse(&mut Context::default())
+            .parse(&mut TestContext)
             .err()
             .map(|err| matches!(err, EnumOptionsError::EmptyList));
         assert_eq!(is_err, Some(true));
@@ -425,7 +430,7 @@ mod tests {
     fn parse_enum_options_with_empty_value() -> Result<(), ArgumentsItemError> {
         let options = simple_extensions::EnumOptions(vec!["".to_string()]);
         let is_err = options
-            .parse(&mut Context::default())
+            .parse(&mut TestContext)
             .err()
             .map(|err| matches!(err, EnumOptionsError::EmptyOption));
         assert_eq!(is_err, Some(true));
@@ -436,16 +441,12 @@ mod tests {
     fn parse_enum_argument_with_duplicated_option() -> Result<(), ArgumentsItemError> {
         let options =
             simple_extensions::EnumOptions(vec!["OVERFLOW".to_string(), "OVERFLOW".to_string()]);
-        let is_err = options
-            .clone()
-            .parse(&mut Context::default())
-            .err()
-            .map(|err| {
-                matches!(
-                    err,
-                    EnumOptionsError::DuplicatedOption(opt) if opt == "OVERFLOW"
-                )
-            });
+        let is_err = options.clone().parse(&mut TestContext).err().map(|err| {
+            matches!(
+                err,
+                EnumOptionsError::DuplicatedOption(opt) if opt == "OVERFLOW"
+            )
+        });
         assert_eq!(is_err, Some(true));
         Ok(())
     }
@@ -458,7 +459,7 @@ mod tests {
             value: text::simple_extensions::Type::String("i32".to_string()),
             constant: Some(true),
         });
-        let item = item.parse(&mut Context::default())?;
+        let item = item.parse(&mut TestContext)?;
         match item {
             ArgumentsItem::ValueArgument(ValueArg {
                 name,
@@ -485,7 +486,7 @@ mod tests {
             description: Some("desc".to_string()),
             type_: "".to_string(),
         });
-        let item = type_argument.parse(&mut Context::default())?;
+        let item = type_argument.parse(&mut TestContext)?;
         match item {
             ArgumentsItem::TypeArgument(TypeArg {
                 name,
@@ -523,7 +524,7 @@ mod tests {
         ];
 
         for item in items {
-            let item = item.parse(&mut Context::default())?;
+            let item = item.parse(&mut TestContext)?;
             let (name, description) = match item {
                 ArgumentsItem::EnumArgument(EnumerationArg {
                     name, description, ..
@@ -572,7 +573,7 @@ mod tests {
         ];
         for item in items {
             assert_eq!(
-                item.parse(&mut Context::default()).err(),
+                item.parse(&mut TestContext).err(),
                 Some(ArgumentsItemError::EmptyOptionalField("name".to_string()))
             );
         }
@@ -597,7 +598,7 @@ mod tests {
         ];
         for item in items {
             assert_eq!(
-                item.parse(&mut Context::default()).err(),
+                item.parse(&mut TestContext).err(),
                 Some(ArgumentsItemError::EmptyOptionalField(
                     "description".to_string()
                 ))
@@ -690,7 +691,6 @@ mod tests {
     #[test]
     fn parse_extensions() {
         use crate::extensions::EXTENSIONS;
-        use crate::parse::context::fixtures::Context;
 
         macro_rules! parse_arguments {
             ($url:expr, $fns:expr) => {
@@ -701,7 +701,7 @@ mod tests {
                         .flat_map(|a| &a.0)
                         .for_each(|item| {
                             item.clone()
-                                .parse(&mut Context::default())
+                                .parse(&mut TestContext)
                                 .unwrap_or_else(|err| {
                                     panic!(
                                         "found an invalid argument: {}, (url: {}, function: {}, arg: {:?})",

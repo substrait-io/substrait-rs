@@ -3,7 +3,7 @@
 //! Parsing of [proto::Version].
 
 use crate::{
-    parse::{Parse, context::ProtoContext},
+    parse::{Parse, proto::ExtensionAnchors},
     proto, version,
 };
 use hex::FromHex;
@@ -75,11 +75,11 @@ pub enum VersionError {
     Substrait(semver::Version, semver::VersionReq),
 }
 
-impl<C: ProtoContext> Parse<C> for proto::Version {
+impl Parse<ExtensionAnchors> for proto::Version {
     type Parsed = Version;
     type Error = VersionError;
 
-    fn parse(self, _ctx: &mut C) -> Result<Self::Parsed, Self::Error> {
+    fn parse(self, _ctx: &mut ExtensionAnchors) -> Result<Self::Parsed, Self::Error> {
         let proto::Version {
             major_number,
             minor_number,
@@ -142,18 +142,17 @@ impl From<Version> for proto::Version {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::context::fixtures::Context;
 
     #[test]
     fn version() -> Result<(), VersionError> {
         let version = proto::Version::default();
         assert_eq!(
-            version.parse(&mut Context::default()),
+            version.parse(&mut ExtensionAnchors::default()),
             Err(VersionError::Missing)
         );
 
         let version = version::version();
-        version.parse(&mut Context::default())?;
+        version.parse(&mut ExtensionAnchors::default())?;
         Ok(())
     }
 
@@ -168,7 +167,7 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            version.parse(&mut Context::default()),
+            version.parse(&mut ExtensionAnchors::default()),
             Err(VersionError::GitHash(git_hash))
         );
 
@@ -179,7 +178,7 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            version.parse(&mut Context::default()),
+            version.parse(&mut ExtensionAnchors::default()),
             Err(VersionError::GitHash(git_hash))
         );
 
@@ -190,7 +189,7 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            version.parse(&mut Context::default()),
+            version.parse(&mut ExtensionAnchors::default()),
             Err(VersionError::GitHash(git_hash))
         );
 
@@ -201,14 +200,14 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            version.parse(&mut Context::default()),
+            version.parse(&mut ExtensionAnchors::default()),
             Err(VersionError::GitHash(git_hash))
         );
 
         // Valid.
         let git_hash = String::from("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12");
         let version = proto::Version { git_hash, ..base };
-        assert!(version.parse(&mut Context::default()).is_ok());
+        assert!(version.parse(&mut ExtensionAnchors::default()).is_ok());
     }
 
     #[test]
@@ -218,7 +217,7 @@ mod tests {
             producer: String::from(""),
             ..version::version()
         };
-        let version = version.parse(&mut Context::default())?;
+        let version = version.parse(&mut ExtensionAnchors::default())?;
         assert!(version.producer.is_none());
         Ok(())
     }
@@ -227,7 +226,7 @@ mod tests {
     fn convert() -> Result<(), VersionError> {
         let version = version::version();
         assert_eq!(
-            proto::Version::from(version.clone().parse(&mut Context::default())?),
+            proto::Version::from(version.clone().parse(&mut ExtensionAnchors::default())?),
             version
         );
         Ok(())
@@ -235,21 +234,21 @@ mod tests {
 
     #[test]
     fn compatible() -> Result<(), VersionError> {
-        let _version = version::version().parse(&mut Context::default())?;
+        let _version = version::version().parse(&mut ExtensionAnchors::default())?;
 
         let mut version = version::version();
         version.major_number += 1;
-        let version = version.parse(&mut Context::default());
+        let version = version.parse(&mut ExtensionAnchors::default());
         matches!(version, Err(VersionError::Substrait(_, _)));
 
         let mut version = version::version();
         version.minor_number += 1;
-        let version = version.parse(&mut Context::default());
+        let version = version.parse(&mut ExtensionAnchors::default());
         matches!(version, Err(VersionError::Substrait(_, _)));
 
         let mut version = version::version();
         version.patch_number += 1;
-        let _version = version.parse(&mut Context::default())?;
+        let _version = version.parse(&mut ExtensionAnchors::default())?;
 
         Ok(())
     }
