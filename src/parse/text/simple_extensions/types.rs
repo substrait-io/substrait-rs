@@ -400,15 +400,14 @@ impl ParameterConstraint {
             TypeParamDefsItemType::DataType => Self::DataType,
             TypeParamDefsItemType::Boolean => Self::Boolean,
             TypeParamDefsItemType::Integer => {
-                if let Some(min_f) = min
-                    && min_f.fract() != 0.0
-                {
-                    return Err(TypeParamError::InvalidIntegerBounds { min, max });
-                }
-                if let Some(max_f) = max
-                    && max_f.fract() != 0.0
-                {
-                    return Err(TypeParamError::InvalidIntegerBounds { min, max });
+                match (min, max) {
+                    (Some(min_f), _) if min_f.fract() != 0.0 => {
+                        return Err(TypeParamError::InvalidIntegerBounds { min, max });
+                    }
+                    (_, Some(max_f)) if max_f.fract() != 0.0 => {
+                        return Err(TypeParamError::InvalidIntegerBounds { min, max });
+                    }
+                    _ => (),
                 }
 
                 let min_i = min.map(|v| v as i64);
@@ -1016,15 +1015,15 @@ fn expect_integer_param(
         }),
     }?;
 
-    if let Some(range) = &range
-        && !range.contains(&value)
-    {
-        return Err(ExtensionTypeError::InvalidParameterRange {
-            type_name: type_name.to_string(),
-            index,
-            value: i64::from(value),
-            expected: range.clone(),
-        });
+    if let Some(range) = &range {
+        if !range.contains(&value) {
+            return Err(ExtensionTypeError::InvalidParameterRange {
+                type_name: type_name.to_string(),
+                index,
+                value: i64::from(value),
+                expected: range.clone(),
+            });
+        }
     }
 
     Ok(value)
