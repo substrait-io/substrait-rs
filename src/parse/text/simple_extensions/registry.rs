@@ -10,9 +10,9 @@
 //!
 //! This module is only available when the `parse` feature is enabled.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, hash_map::Entry};
 
-use super::{ExtensionFile, SimpleExtensions, types::CustomType};
+use super::{ExtensionFile, SimpleExtensions, SimpleExtensionsError, types::CustomType};
 use crate::urn::Urn;
 
 /// Extension Registry that manages Substrait extensions
@@ -26,13 +26,22 @@ pub struct Registry {
 }
 
 impl Registry {
-    /// Create a new Global Registry from validated extension files
-    pub fn new<I: IntoIterator<Item = ExtensionFile>>(extensions: I) -> Self {
-        let extensions = extensions
-            .into_iter()
-            .map(|ExtensionFile { urn, extension }| (urn, extension))
-            .collect();
-        Self { extensions }
+    /// Create a new Global Registry from validated extension files.
+    ///
+    /// Any duplicate URNs will raise an error.
+    pub fn new<I: IntoIterator<Item = ExtensionFile>>(
+        extensions: I,
+    ) -> Result<Self, SimpleExtensionsError> {
+        let mut map = HashMap::new();
+        for ExtensionFile { urn, extension } in extensions {
+            match map.entry(urn.clone()) {
+                Entry::Occupied(_) => return Err(SimpleExtensionsError::DuplicateUrn(urn)),
+                Entry::Vacant(entry) => {
+                    entry.insert(extension);
+                }
+            }
+        }
+        Ok(Self { extensions: map })
     }
 
     /// Get an iterator over all extension files in this registry
@@ -107,7 +116,8 @@ mod tests {
             "extension:example.com:first",
             "extension:example.com:second",
         ];
-        let registry = Registry::new(urns.iter().map(|&urn| extension_file(urn, &["type"])));
+        let registry =
+            Registry::new(urns.iter().map(|&urn| extension_file(urn, &["type"]))).unwrap();
 
         let collected: Vec<&Urn> = registry.extensions().map(|(urn, _)| urn).collect();
         assert_eq!(collected.len(), 2);
@@ -123,7 +133,8 @@ mod tests {
     #[test]
     fn test_type_lookup() {
         let urn = Urn::from_str("extension:example.com:test").unwrap();
-        let registry = Registry::new(vec![extension_file(&urn.to_string(), &["test_type"])]);
+        let registry =
+            Registry::new(vec![extension_file(&urn.to_string(), &["test_type"])]).unwrap();
         let other_urn = Urn::from_str("extension:example.com:other").unwrap();
 
         let cases = vec![

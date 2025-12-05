@@ -31,9 +31,14 @@ pub use parsed_type::TypeExpr;
 pub use registry::Registry;
 pub use types::{ConcreteType, CustomType, ExtensionTypeError};
 
+use crate::urn::Urn;
+
 /// Errors for converting from YAML to [SimpleExtensions].
 #[derive(Debug, Error)]
 pub enum SimpleExtensionsError {
+    /// Duplicate URNs in the registry
+    #[error("duplicate URNs in the registry: {0}")]
+    DuplicateUrn(Urn),
     /// Extension type error
     #[error("Extension type error: {0}")]
     ExtensionTypeError(#[from] ExtensionTypeError),
