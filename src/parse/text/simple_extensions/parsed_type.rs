@@ -203,13 +203,11 @@ mod tests {
 
     #[test]
     fn test_user_defined_and_parameters() {
-        let expr = "u!geo?<i32?, point<i32, i32>>";
-        match parse(expr) {
-            TypeExpr::UserDefined(name, params, nullable) => {
-                assert_eq!(name, "geo", "unexpected name for {expr}");
-                assert!(nullable, "{expr} should be nullable");
-                assert_eq!(
-                    params,
+        let cases = [
+            (
+                "u!geo?<i32?, point<i32, i32>>",
+                TypeExpr::UserDefined(
+                    "geo",
                     vec![
                         TypeExprParam::Type(TypeExpr::Simple("i32", vec![], true)),
                         TypeExprParam::Type(TypeExpr::Simple(
@@ -220,25 +218,25 @@ mod tests {
                             ],
                             false,
                         )),
-                    ]
-                );
-            }
-            other => panic!("unexpected parse result: {other:?}"),
-        }
-
-        let map_expr = "Map?<i32, string>";
-        assert_eq!(
-            parse(map_expr),
-            TypeExpr::Simple(
-                "Map",
-                vec![
-                    TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
-                    TypeExprParam::Type(TypeExpr::Simple("string", vec![], false)),
-                ],
-                true,
+                    ],
+                    true,
+                ),
             ),
-            "unexpected map parse"
-        );
+            (
+                "Map?<i32, string>",
+                TypeExpr::Simple(
+                    "Map",
+                    vec![
+                        TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
+                        TypeExprParam::Type(TypeExpr::Simple("string", vec![], false)),
+                    ],
+                    true,
+                ),
+            ),
+        ];
+        for (expr, expected) in cases {
+            assert_eq!(parse(expr), expected, "unexpected parse for {expr}");
+        }
     }
 
     #[test]
