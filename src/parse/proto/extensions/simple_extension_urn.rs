@@ -7,7 +7,7 @@ use std::str::FromStr;
 use thiserror::Error;
 
 use crate::{
-    parse::{Anchor, Context, Parse, context::ContextError},
+    parse::{Anchor, Parse, context::ContextError, proto::ExtensionAnchors},
     proto,
     urn::{InvalidUrn, Urn},
 };
@@ -50,11 +50,11 @@ pub enum SimpleExtensionUrnError {
     Context(#[from] ContextError),
 }
 
-impl<C: Context> Parse<C> for proto::extensions::SimpleExtensionUrn {
+impl Parse<ExtensionAnchors> for proto::extensions::SimpleExtensionUrn {
     type Parsed = SimpleExtensionUrn;
     type Error = SimpleExtensionUrnError;
 
-    fn parse(self, ctx: &mut C) -> Result<Self::Parsed, Self::Error> {
+    fn parse(self, ctx: &mut ExtensionAnchors) -> Result<Self::Parsed, Self::Error> {
         let proto::extensions::SimpleExtensionUrn {
             extension_urn_anchor: anchor,
             urn,
@@ -90,7 +90,7 @@ impl From<SimpleExtensionUrn> for proto::extensions::SimpleExtensionUrn {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::{Context as _, context::tests::Context};
+    use crate::parse::{Context as _, proto::ExtensionAnchors};
 
     #[test]
     fn parse() -> Result<(), SimpleExtensionUrnError> {
@@ -98,7 +98,7 @@ mod tests {
             extension_urn_anchor: 1,
             urn: "extension:substrait-rs:test".to_string(),
         };
-        let simple_extension_urn = simple_extension_urn.parse(&mut Context::default())?;
+        let simple_extension_urn = simple_extension_urn.parse(&mut ExtensionAnchors::default())?;
         assert_eq!(simple_extension_urn.anchor(), Anchor::new(1));
         assert_eq!(
             simple_extension_urn.urn().to_string().as_str(),
@@ -111,7 +111,7 @@ mod tests {
     fn invalid_urn() {
         let simple_extension_urn = proto::extensions::SimpleExtensionUrn::default();
         assert_eq!(
-            simple_extension_urn.parse(&mut Context::default()),
+            simple_extension_urn.parse(&mut ExtensionAnchors::default()),
             Err(SimpleExtensionUrnError::InvalidUrn(InvalidUrn))
         );
         let simple_extension_urn = proto::extensions::SimpleExtensionUrn {
@@ -119,14 +119,14 @@ mod tests {
             urn: "urn::".to_string(),
         };
         assert_eq!(
-            simple_extension_urn.parse(&mut Context::default()),
+            simple_extension_urn.parse(&mut ExtensionAnchors::default()),
             Err(SimpleExtensionUrnError::InvalidUrn(InvalidUrn))
         );
     }
 
     #[test]
     fn duplicate_simple_extension() {
-        let mut ctx = Context::default();
+        let mut ctx = ExtensionAnchors::default();
         let simple_extension_urn = proto::extensions::SimpleExtensionUrn {
             extension_urn_anchor: 1,
             urn: "extension:substrait-rs:test".to_string(),
