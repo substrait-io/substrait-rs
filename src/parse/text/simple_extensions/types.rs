@@ -131,6 +131,8 @@ pub enum TypeParameter {
     Integer(i64),
     /// Type parameter (nested type)
     Type(ConcreteType),
+    // TODO: Add support for other type parameters, as described in
+    // https://github.com/substrait-io/substrait/blob/35101020d961eda48f8dd1aafbc794c9e5cac077/proto/substrait/type.proto#L250-L265
 }
 
 impl fmt::Display for TypeParameter {
