@@ -11,7 +11,7 @@ use crate::parse::{Anchor, Parse};
 ///
 /// Parsing Substrait data is context-sensitive. This trait provides methods
 /// that can be used by parser implementations to parse Substrait data.
-pub trait Context {
+pub(crate) trait Context {
     /// Parse an item with this context.
     ///
     /// See [Parse::parse].

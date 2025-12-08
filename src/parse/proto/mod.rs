@@ -49,12 +49,7 @@ impl ExtensionAnchors {
 
     /// Look up the [Urn] for a previously registered anchor. Returns an error
     /// if the anchor has not been seen.
-    pub fn get_simple_extension_urn(
-        &self,
-        anchor: &Anchor<SimpleExtensionUrn>,
-    ) -> Result<&Urn, ContextError> {
-        self.simple_extensions
-            .get(anchor)
-            .ok_or(ContextError::UndefinedSimpleExtension(*anchor))
+    pub fn get_simple_extension_urn(&self, anchor: &Anchor<SimpleExtensionUrn>) -> Option<&Urn> {
+        self.simple_extensions.get(anchor)
     }
 }
