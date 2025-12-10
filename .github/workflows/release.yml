@@ -12,6 +12,51 @@ on:
       - main
 
 jobs:
+  bundle:
+    name: Bundled Proto Sync
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Refresh bundled proto (no serde)
+        run: REGENERATE_PREGENERATED=1 cargo build --no-default-features --features proto-build
+      - name: Refresh bundled proto (serde)
+        run: REGENERATE_PREGENERATED=1 cargo build --no-default-features --features "proto-build,serde"
+      - name: Detect generated changes
+        id: diff
+        run: |
+          if [ -n "$(git status --porcelain -- gen/proto)" ]; then
+            echo "changed=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >>"$GITHUB_OUTPUT"
+          fi
+      - name: Create PR for bundled proto updates
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: sync bundled proto"
+          committer: Substrait Release Bot <releases@substrait.io>
+          author: Substrait Release Bot <releases@substrait.io>
+          title: "chore: sync bundled proto"
+          body: |
+            Automated refresh of bundled Substrait proto artifacts.
+
+            This PR is created when pre-generated protobuf sources diverge from the current `.proto` definitions.
+          branch: chore/sync-bundled-proto
+          delete-branch: true
+          add-paths: |
+            gen/proto/**
+
   release:
     name: Release
     runs-on: ubuntu-24.04-arm

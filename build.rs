@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#[cfg(feature = "proto-build")]
 use prost_build::Config;
 use std::{
     env,
@@ -14,9 +15,12 @@ use walkdir::{DirEntry, WalkDir};
 const SUBMODULE_ROOT: &str = "substrait";
 #[cfg(feature = "extensions")]
 const EXTENSIONS_ROOT: &str = "substrait/extensions";
+#[cfg(feature = "proto-build")]
 const PROTO_ROOT: &str = "substrait/proto";
 const TEXT_ROOT: &str = "substrait/text";
 const GEN_ROOT: &str = "gen";
+const GEN_PROTO_ROOT: &str = "gen/proto";
+const REGENERATE_PREGENERATED_ENV: &str = "REGENERATE_PREGENERATED";
 
 /// Add Substrait version information to the build
 fn substrait_version() -> Result<semver::Version, Box<dyn Error>> {
@@ -272,7 +276,7 @@ pub static EXTENSIONS: LazyLock<HashMap<Urn, SimpleExtensions>> = LazyLock::new(
     Ok(())
 }
 
-#[cfg(feature = "serde")]
+#[cfg(all(feature = "serde", feature = "proto-build"))]
 /// Serialize and deserialize implementations for proto types using `pbjson`
 fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
     use pbjson_build::Builder;
@@ -292,9 +296,95 @@ fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Er
     Ok(())
 }
 
+#[cfg(feature = "proto-build")]
+fn compile_protos(protos: &[impl AsRef<Path>], out_dir: &Path) -> Result<(), Box<dyn Error>> {
+    #[cfg(feature = "serde")]
+    serde(protos, out_dir.to_path_buf())?;
+
+    #[cfg(not(feature = "serde"))]
+    {
+        let _ = out_dir;
+        Config::new().compile_protos(protos, &[PROTO_ROOT])?;
+    }
+
+    Ok(())
+}
+
+fn proto_storage_dir() -> PathBuf {
+    let mut dir = PathBuf::from(GEN_PROTO_ROOT);
+    dir.push(if cfg!(feature = "serde") {
+        "serde"
+    } else {
+        "bundled"
+    });
+    dir
+}
+
+#[cfg(feature = "serde")]
+fn proto_artifacts() -> Vec<&'static str> {
+    vec![
+        "substrait.extensions.rs",
+        "substrait.rs",
+        "substrait.extensions.serde.rs",
+        "substrait.serde.rs",
+    ]
+}
+
+#[cfg(not(feature = "serde"))]
+fn proto_artifacts() -> Vec<&'static str> {
+    vec!["substrait.extensions.rs", "substrait.rs"]
+}
+
+fn copy_bundled_proto(out_dir: &Path) -> Result<(), Box<dyn Error>> {
+    let source_dir = proto_storage_dir();
+    if !source_dir.exists() {
+        return Err(format!(
+            "Bundled proto directory `{}` is missing. Set {REGENERATE_PREGENERATED_ENV}=1 to refresh pre-generated files.",
+            source_dir.display()
+        )
+        .into());
+    }
+
+    for artifact in proto_artifacts() {
+        let src = source_dir.join(artifact);
+        if !src.exists() {
+            return Err(format!(
+                "Bundled proto file `{}` is missing. Set {REGENERATE_PREGENERATED_ENV}=1 to refresh pre-generated files.",
+                src.display()
+            )
+            .into());
+        }
+        println!("cargo:rerun-if-changed={}", src.display());
+        fs::copy(src, out_dir.join(artifact))?;
+    }
+
+    Ok(())
+}
+
+#[cfg(feature = "proto-build")]
+fn sync_generated_proto(out_dir: &Path) -> Result<(), Box<dyn Error>> {
+    let destination_dir = proto_storage_dir();
+    fs::create_dir_all(&destination_dir)?;
+
+    for artifact in proto_artifacts() {
+        let source = out_dir.join(artifact);
+        if !source.exists() {
+            return Err(format!(
+                "Generated proto file `{}` is missing. Ensure `prost-build` produced the expected output.",
+                source.display()
+            )
+            .into());
+        }
+        fs::copy(source, destination_dir.join(artifact))?;
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     // for use in docker build where file changes can be wonky
     println!("cargo:rerun-if-env-changed=FORCE_REBUILD");
+    println!("cargo:rerun-if-env-changed={REGENERATE_PREGENERATED_ENV}");
 
     let _version = substrait_version()?;
 
@@ -310,6 +400,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     #[cfg(feature = "extensions")]
     extensions(_version, out_dir.as_path())?;
 
+    #[cfg(feature = "proto-build")]
     let protos = WalkDir::new(PROTO_ROOT)
         .into_iter()
         .filter_map(Result::ok)
@@ -327,11 +418,28 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .collect::<Vec<_>>();
 
-    #[cfg(feature = "serde")]
-    serde(&protos, out_dir)?;
+    let regenerate = env::var_os(REGENERATE_PREGENERATED_ENV).is_some();
+    let should_generate = regenerate || !cfg!(feature = "bundled-proto");
 
-    #[cfg(not(feature = "serde"))]
-    Config::new().compile_protos(&protos, &[PROTO_ROOT])?;
+    if should_generate {
+        #[cfg(feature = "proto-build")]
+        {
+            compile_protos(&protos, out_dir.as_path())?;
+            if regenerate {
+                sync_generated_proto(out_dir.as_path())?;
+            }
+        }
+
+        #[cfg(not(feature = "proto-build"))]
+        {
+            return Err(format!(
+                "Regeneration of protobuf sources was requested, but the `proto-build` feature is disabled. Enable it to rebuild from `.proto` files."
+            )
+            .into());
+        }
+    } else {
+        copy_bundled_proto(out_dir.as_path())?;
+    }
 
     Ok(())
 }
