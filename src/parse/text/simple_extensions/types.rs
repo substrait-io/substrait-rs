@@ -17,7 +17,8 @@ use crate::text::simple_extensions::{
     EnumOptions as RawEnumOptions, SimpleExtensionsTypesItem, Type as RawType, TypeParamDefs,
     TypeParamDefsItem, TypeParamDefsItemType,
 };
-use serde_json::Value;
+use indexmap::IndexMap;
+use serde_json::{Map, Value};
 use std::convert::TryFrom;
 use std::fmt;
 use std::ops::RangeInclusive;
@@ -428,6 +429,12 @@ pub enum ExtensionTypeError {
     /// Field type is invalid
     #[error("Invalid structure field type: {0}")]
     InvalidFieldType(String),
+    /// Duplicate struct field name
+    #[error("Duplicate struct field '{field_name}'")]
+    DuplicateFieldName {
+        /// The duplicated field name
+        field_name: String,
+    },
     /// Type parameter count is invalid for the given type name
     #[error("Type '{type_name}' expects {expected} parameters, got {actual}")]
     InvalidParameterCount {
@@ -663,45 +670,13 @@ impl Parse<TypeContext> for RawType {
                 Ok(concrete)
             }
             RawType::Object(field_map) => {
-                // Here we have the internal structure of a custom type,
-                // specified by (field name, type) pairs. Note that in the YAML
-                // itself, these are a map - and thus, while the text has an
-                // order, the data implicitly does not. In Rust, the field map
-                // is of type serde_json::Map, which also does not preserve
-                // order.
-                //
-                // So while it might be surprising in some ways that we are not
-                // preserving the order of fields as specified in the YAML, the
-                // nature of YAML somewhat precludes that.
-                //
-                // To give an example: we are considering these two equivalent:
-                //
-                // ```yaml
-                // types:
-                //   - name: point1
-                //     structure:
-                //       longitude: i32
-                //       latitude: i32
-                //   - name: point2
-                //     structure:
-                //       latitude: i32
-                //       longitude: i32
-                // ```
-                //
-                // In Rust, these come in as a `serde_json::Map`, which does not
-                // preserve insertion order. Here, we chose to store keys in
-                // lexicographic order, with an explicit sort so that our
-                // internal representation and any round-trip output remain
-                // deterministic.
-                let mut entries: Vec<_> = field_map.into_iter().collect();
-                entries.sort_by(|a, b| a.0.cmp(&b.0));
+                // Type structure in Substrait must preserve field order (see
+                // substrait-io/substrait#915). The typify generation uses
+                // IndexMap to retain the YAML order so that the order of the
+                // fields in the structure matches that of the extensions file.
+                let mut fields = IndexMap::new();
 
-                let mut field_names = Vec::new();
-                let mut field_types = Vec::new();
-
-                for (field_name, field_type_value) in entries {
-                    field_names.push(field_name);
-
+                for (field_name, field_type_value) in field_map {
                     let type_string = match field_type_value {
                         serde_json::Value::String(s) => s,
                         _ => {
@@ -716,14 +691,16 @@ impl Parse<TypeContext> for RawType {
                     parsed_field_type.visit_references(&mut link);
                     let field_concrete_type = ConcreteType::try_from(parsed_field_type)?;
 
-                    field_types.push(field_concrete_type);
+                    if fields
+                        .insert(field_name.clone(), field_concrete_type)
+                        .is_some()
+                    {
+                        return Err(ExtensionTypeError::DuplicateFieldName { field_name });
+                    }
                 }
 
                 Ok(ConcreteType {
-                    kind: ConcreteTypeKind::NamedStruct {
-                        field_names,
-                        field_types,
-                    },
+                    kind: ConcreteTypeKind::NamedStruct { fields },
                     nullable: false,
                 })
             }
@@ -767,10 +744,9 @@ pub enum ConcreteTypeKind {
     Struct(Vec<ConcreteType>),
     /// Named struct type (nstruct - ordered fields with names)
     NamedStruct {
-        /// Field names
-        field_names: Vec<String>,
-        /// Field types (same order as field_names)
-        field_types: Vec<ConcreteType>,
+        /// Ordered field names and types. They are in the order they should
+        /// appear in the struct - hence the use of [`IndexMap`].
+        fields: IndexMap<String, ConcreteType>,
     },
 }
 
@@ -787,14 +763,8 @@ impl fmt::Display for ConcreteTypeKind {
             ConcreteTypeKind::Struct(types) => {
                 write_separated(f, types.iter(), "struct<", ">", ", ")
             }
-            ConcreteTypeKind::NamedStruct {
-                field_names,
-                field_types,
-            } => {
-                let kvs = field_names
-                    .iter()
-                    .zip(field_types.iter())
-                    .map(|(k, v)| KeyValueDisplay(k, v, ": "));
+            ConcreteTypeKind::NamedStruct { fields } => {
+                let kvs = fields.iter().map(|(k, v)| KeyValueDisplay(k, v, ": "));
 
                 write_separated(f, kvs, "{", "}", ", ")
             }
@@ -871,16 +841,9 @@ impl ConcreteType {
     }
 
     /// Create a new named struct type (nstruct - ordered fields with names)
-    pub fn named_struct(
-        field_names: Vec<String>,
-        field_types: Vec<ConcreteType>,
-        nullable: bool,
-    ) -> ConcreteType {
+    pub fn named_struct(fields: IndexMap<String, ConcreteType>, nullable: bool) -> ConcreteType {
         ConcreteType {
-            kind: ConcreteTypeKind::NamedStruct {
-                field_names,
-                field_types,
-            },
+            kind: ConcreteTypeKind::NamedStruct { fields },
             nullable,
         }
     }
@@ -910,18 +873,12 @@ impl fmt::Display for ConcreteType {
 impl From<ConcreteType> for RawType {
     fn from(val: ConcreteType) -> Self {
         match val.kind {
-            ConcreteTypeKind::NamedStruct {
-                field_names,
-                field_types,
-            } => {
-                let mut map = serde_json::Map::new();
-                for (name, ty) in field_names.into_iter().zip(field_types.into_iter()) {
-                    if let Some(v) = map.insert(name, serde_json::Value::String(ty.to_string())) {
-                        // This should not happen - you should not have
-                        // duplicate field names in a NamedStruct
-                        panic!("duplicate value '{v:?}' in NamedStruct");
-                    }
-                }
+            ConcreteTypeKind::NamedStruct { fields } => {
+                let map = Map::from_iter(
+                    fields
+                        .into_iter()
+                        .map(|(name, ty)| (name, serde_json::Value::String(ty.to_string()))),
+                );
                 RawType::Object(map)
             }
             _ => RawType::String(val.to_string()),
@@ -1214,15 +1171,12 @@ mod tests {
     /// Create a raw named struct (e.g. straight from YAML) from field name and
     /// type pairs
     fn raw_named_struct(fields: &[(&str, &str)]) -> RawType {
-        let map = serde_json::Map::from_iter(
+        let map = Map::from_iter(
             fields
                 .iter()
                 .map(|(name, ty)| ((*name).into(), serde_json::Value::String((*ty).into()))),
         );
 
-        // Named struct YAML/json objects are inherently unordered; we sort the
-        // fields lexicographically when parsing so round-tripped output is
-        // deterministic. This test locks in that behaviour.
         RawType::Object(map)
     }
 
@@ -1512,18 +1466,11 @@ mod tests {
         }
     }
 
-    /// Test that named struct field order is stable and sorted
-    /// lexicographically when round-tripping through RawType.
-    ///
-    /// Normally, order in structs in SQL / relational algebra is significant;
-    /// but the spec doesn't say that, and it starts as a YAML map, which
-    /// doesn't generally preserve order, so for both implementation ease and
-    /// test stability, we sort the fields when parsing named structs.
-    /// (Preserving order would be difficult - most YAML parsers don't preserve
-    /// map order)
+    /// Test that named struct field order preserves the structure order when
+    /// round-tripping through RawType (Substrait #915).
     #[test]
     fn test_named_struct_field_order_stability() -> Result<(), ExtensionTypeError> {
-        let mut raw_fields = serde_json::Map::new();
+        let mut raw_fields = Map::new();
         raw_fields.insert("beta".to_string(), Value::String("i32".to_string()));
         raw_fields.insert("alpha".to_string(), Value::String("string?".to_string()));
 
@@ -1535,7 +1482,11 @@ mod tests {
         match round_tripped {
             RawType::Object(result_map) => {
                 let keys: Vec<_> = result_map.keys().collect();
-                assert_eq!(keys, vec!["alpha", "beta"], "field order should be sorted");
+                assert_eq!(
+                    keys,
+                    vec!["beta", "alpha"],
+                    "field order should be preserved"
+                );
             }
             other => panic!("expected Object, got {other:?}"),
         }
@@ -1614,7 +1565,7 @@ mod tests {
 
     #[test]
     fn test_custom_type_round_trip() -> Result<(), ExtensionTypeError> {
-        let fields = vec![
+        let fields = IndexMap::from_iter([
             (
                 "x".to_string(),
                 ConcreteType::builtin(BasicBuiltinType::Fp64, false),
@@ -1623,8 +1574,7 @@ mod tests {
                 "y".to_string(),
                 ConcreteType::builtin(BasicBuiltinType::Fp64, false),
             ),
-        ];
-        let (names, types): (Vec<_>, Vec<_>) = fields.into_iter().unzip();
+        ]);
 
         let cases = vec![
             CustomType::new(
@@ -1641,7 +1591,7 @@ mod tests {
                     ParameterConstraint::DataType,
                     Some("a numeric value".to_string()),
                 )],
-                Some(ConcreteType::named_struct(names, types, false)),
+                Some(ConcreteType::named_struct(fields, false)),
                 None,
                 None,
             )?,
@@ -1691,11 +1641,16 @@ mod tests {
                 "named_struct",
                 raw_named_struct(&[("field1", "fp64"), ("field2", "i32?")]),
                 ConcreteType::named_struct(
-                    vec!["field1".to_string(), "field2".to_string()],
-                    vec![
-                        ConcreteType::builtin(BasicBuiltinType::Fp64, false),
-                        ConcreteType::builtin(BasicBuiltinType::I32, true),
-                    ],
+                    IndexMap::from_iter([
+                        (
+                            "field1".to_string(),
+                            ConcreteType::builtin(BasicBuiltinType::Fp64, false),
+                        ),
+                        (
+                            "field2".to_string(),
+                            ConcreteType::builtin(BasicBuiltinType::I32, true),
+                        ),
+                    ]),
                     false,
                 ),
             ),
@@ -1738,11 +1693,16 @@ mod tests {
                 "Point",
                 Some("A 2D point"),
                 Some(ConcreteType::named_struct(
-                    vec!["x".to_string(), "y".to_string()],
-                    vec![
-                        ConcreteType::builtin(BasicBuiltinType::Fp64, false),
-                        ConcreteType::builtin(BasicBuiltinType::Fp64, true),
-                    ],
+                    IndexMap::from_iter([
+                        (
+                            "x".to_string(),
+                            ConcreteType::builtin(BasicBuiltinType::Fp64, false),
+                        ),
+                        (
+                            "y".to_string(),
+                            ConcreteType::builtin(BasicBuiltinType::Fp64, true),
+                        ),
+                    ]),
                     false,
                 )),
             ),

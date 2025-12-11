@@ -5,6 +5,7 @@
 //! Currently only type definitions are supported; function parsing will be
 //! added in a future update.
 
+use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
@@ -128,7 +129,7 @@ impl From<(Urn, SimpleExtensions)> for RawExtensions {
         RawExtensions {
             urn: urn.to_string(),
             aggregate_functions: vec![],
-            dependencies: HashMap::new(),
+            dependencies: IndexMap::new(),
             scalar_functions: vec![],
             type_variations: vec![],
             types,
