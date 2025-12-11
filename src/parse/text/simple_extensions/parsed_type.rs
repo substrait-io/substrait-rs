@@ -2,11 +2,11 @@
 
 //! Parsed type AST used by the simple extensions type parser.
 //!
-//! This module is based on the offical substrait type grammar defined
+//! This module is based on the official substrait type grammar defined
 //! [here](https://github.com/substrait-io/substrait/blob/5f031b69ed211e1ec307be3db7989d64c65d33a2/grammar/SubstraitType.g4).
 
 // Ideally, this module would be generated from the grammar, but there are no
-// well-maintained ANTLR grammar modules for Rust availableat the time of this
+// well-maintained ANTLR grammar modules for Rust available at the time of this
 // writing:
 // - Official Antlr4 [language
 //   support](https://github.com/antlr/antlr4/blob/594cf95e5460435c7521e80618666741e33e4d91/doc/targets.md)
@@ -178,6 +178,7 @@ mod tests {
                 TypeExpr::Simple("timestamp_tz", vec![], true),
             ),
             ("time", TypeExpr::Simple("time", vec![], false)),
+            ("any", TypeExpr::Simple("any", vec![], false)),
         ];
 
         for (expr, expected) in cases {

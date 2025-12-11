@@ -72,7 +72,7 @@ impl Registry {
         self.extensions.get(urn)
     }
 
-    /// Get a type by URI and name
+    /// Get a type by URN and name
     pub fn get_type(&self, urn: &Urn, name: &str) -> Option<&CustomType> {
         self.get_extension(urn)?.get_type(name)
     }
@@ -170,7 +170,7 @@ mod tests {
             "Should find 'point' type in unknown.yaml extension"
         );
 
-        // Also test the registry's get_type method with the actual URI
+        // Also test the registry's get_type method with the actual URN
         let type_via_registry = registry.get_type(&urn, "point");
         assert!(type_via_registry.is_some());
     }

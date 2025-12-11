@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Parsing context for extension processing.
+//! Validated simple extensions: [`SimpleExtensions`].
+//!
+//! Currently only type definitions are supported; function parsing will be
+//! added in a future update.
 
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -61,10 +64,9 @@ impl SimpleExtensions {
     }
 }
 
-/// A context for parsing simple extensions, tracking what type names are
 /// resolved or unresolved.
 #[derive(Debug, Default)]
-pub struct TypeContext {
+pub(crate) struct TypeContext {
     /// Types that have been seen so far, now resolved.
     known: HashSet<String>,
     /// Types that have been linked to, not yet resolved.
@@ -101,7 +103,6 @@ impl Parse<TypeContext> for RawExtensions {
 
         for type_item in types {
             let custom_type = Parse::parse(type_item, ctx)?;
-            // Add the parsed type to the context so later types can reference it
             extension.add_type(&custom_type)?;
         }
 

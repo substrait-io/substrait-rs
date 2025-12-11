@@ -14,8 +14,6 @@
 //! * [`Registry`] – a reusable lookup structure that stores validated extension
 //!   files and exposes typed access to their contents.
 
-use std::convert::Infallible;
-
 use thiserror::Error;
 
 pub mod argument;
@@ -64,11 +62,4 @@ pub enum SimpleExtensionsError {
         /// The repeated type name
         name: String,
     },
-}
-
-// Needed for certain conversions - e.g. Urn -> Urn - to succeed.
-impl From<Infallible> for SimpleExtensionsError {
-    fn from(_: Infallible) -> Self {
-        unreachable!()
-    }
 }

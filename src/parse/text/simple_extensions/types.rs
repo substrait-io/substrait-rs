@@ -68,7 +68,7 @@ where
 /// Non-recursive, built-in Substrait types: types with no parameters (primitive
 /// types), or simple with only primitive / literal parameters.
 #[derive(Clone, Debug, PartialEq)]
-pub enum BuiltinType {
+pub enum BasicBuiltinType {
     /// Boolean type - `bool`
     Boolean,
     /// 8-bit signed integer - `i8`
@@ -148,7 +148,7 @@ pub enum BuiltinType {
     },
 }
 
-impl BuiltinType {
+impl BasicBuiltinType {
     /// Check if a string is a valid name for a builtin scalar type
     pub fn is_name(name: &str) -> bool {
         let lower = name.to_ascii_lowercase();
@@ -168,39 +168,41 @@ impl BuiltinType {
     }
 }
 
-impl fmt::Display for BuiltinType {
+impl fmt::Display for BasicBuiltinType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BuiltinType::Boolean => f.write_str("bool"),
-            BuiltinType::I8 => f.write_str("i8"),
-            BuiltinType::I16 => f.write_str("i16"),
-            BuiltinType::I32 => f.write_str("i32"),
-            BuiltinType::I64 => f.write_str("i64"),
-            BuiltinType::Fp32 => f.write_str("fp32"),
-            BuiltinType::Fp64 => f.write_str("fp64"),
-            BuiltinType::String => f.write_str("string"),
-            BuiltinType::Binary => f.write_str("binary"),
-            BuiltinType::Timestamp => f.write_str("timestamp"),
-            BuiltinType::TimestampTz => f.write_str("timestamp_tz"),
-            BuiltinType::Date => f.write_str("date"),
-            BuiltinType::Time => f.write_str("time"),
-            BuiltinType::IntervalYear => f.write_str("interval_year"),
-            BuiltinType::Uuid => f.write_str("uuid"),
-            BuiltinType::FixedChar { length } => write!(f, "FIXEDCHAR<{length}>"),
-            BuiltinType::VarChar { length } => write!(f, "VARCHAR<{length}>"),
-            BuiltinType::FixedBinary { length } => write!(f, "FIXEDBINARY<{length}>"),
-            BuiltinType::Decimal { precision, scale } => {
+            BasicBuiltinType::Boolean => f.write_str("bool"),
+            BasicBuiltinType::I8 => f.write_str("i8"),
+            BasicBuiltinType::I16 => f.write_str("i16"),
+            BasicBuiltinType::I32 => f.write_str("i32"),
+            BasicBuiltinType::I64 => f.write_str("i64"),
+            BasicBuiltinType::Fp32 => f.write_str("fp32"),
+            BasicBuiltinType::Fp64 => f.write_str("fp64"),
+            BasicBuiltinType::String => f.write_str("string"),
+            BasicBuiltinType::Binary => f.write_str("binary"),
+            BasicBuiltinType::Timestamp => f.write_str("timestamp"),
+            BasicBuiltinType::TimestampTz => f.write_str("timestamp_tz"),
+            BasicBuiltinType::Date => f.write_str("date"),
+            BasicBuiltinType::Time => f.write_str("time"),
+            BasicBuiltinType::IntervalYear => f.write_str("interval_year"),
+            BasicBuiltinType::Uuid => f.write_str("uuid"),
+            BasicBuiltinType::FixedChar { length } => write!(f, "FIXEDCHAR<{length}>"),
+            BasicBuiltinType::VarChar { length } => write!(f, "VARCHAR<{length}>"),
+            BasicBuiltinType::FixedBinary { length } => write!(f, "FIXEDBINARY<{length}>"),
+            BasicBuiltinType::Decimal { precision, scale } => {
                 write!(f, "DECIMAL<{precision}, {scale}>")
             }
-            BuiltinType::PrecisionTime { precision } => write!(f, "PRECISIONTIME<{precision}>"),
-            BuiltinType::PrecisionTimestamp { precision } => {
+            BasicBuiltinType::PrecisionTime { precision } => {
+                write!(f, "PRECISIONTIME<{precision}>")
+            }
+            BasicBuiltinType::PrecisionTimestamp { precision } => {
                 write!(f, "PRECISIONTIMESTAMP<{precision}>")
             }
-            BuiltinType::PrecisionTimestampTz { precision } => {
+            BasicBuiltinType::PrecisionTimestampTz { precision } => {
                 write!(f, "PRECISIONTIMESTAMPTZ<{precision}>")
             }
-            BuiltinType::IntervalDay { precision } => write!(f, "INTERVAL_DAY<{precision}>"),
-            BuiltinType::IntervalCompound { precision } => {
+            BasicBuiltinType::IntervalDay { precision } => write!(f, "INTERVAL_DAY<{precision}>"),
+            BasicBuiltinType::IntervalCompound { precision } => {
                 write!(f, "INTERVAL_COMPOUND<{precision}>")
             }
         }
@@ -230,27 +232,27 @@ impl fmt::Display for TypeParameter {
 /// Check if a name corresponds to any built-in type (scalar or container)
 pub fn is_builtin_type_name(name: &str) -> bool {
     let lower = name.to_ascii_lowercase();
-    BuiltinType::is_name(&lower) || matches!(lower.as_str(), "list" | "map" | "struct")
+    BasicBuiltinType::is_name(&lower) || matches!(lower.as_str(), "list" | "map" | "struct")
 }
 
 /// Parse a primitive (no type parameters) builtin type name
-fn primitive_builtin(lower_name: &str) -> Option<BuiltinType> {
+fn primitive_builtin(lower_name: &str) -> Option<BasicBuiltinType> {
     match lower_name {
-        "bool" => Some(BuiltinType::Boolean),
-        "i8" => Some(BuiltinType::I8),
-        "i16" => Some(BuiltinType::I16),
-        "i32" => Some(BuiltinType::I32),
-        "i64" => Some(BuiltinType::I64),
-        "fp32" => Some(BuiltinType::Fp32),
-        "fp64" => Some(BuiltinType::Fp64),
-        "string" => Some(BuiltinType::String),
-        "binary" => Some(BuiltinType::Binary),
-        "timestamp" => Some(BuiltinType::Timestamp),
-        "timestamp_tz" => Some(BuiltinType::TimestampTz),
-        "date" => Some(BuiltinType::Date),
-        "time" => Some(BuiltinType::Time),
-        "interval_year" => Some(BuiltinType::IntervalYear),
-        "uuid" => Some(BuiltinType::Uuid),
+        "bool" => Some(BasicBuiltinType::Boolean),
+        "i8" => Some(BasicBuiltinType::I8),
+        "i16" => Some(BasicBuiltinType::I16),
+        "i32" => Some(BasicBuiltinType::I32),
+        "i64" => Some(BasicBuiltinType::I64),
+        "fp32" => Some(BasicBuiltinType::Fp32),
+        "fp64" => Some(BasicBuiltinType::Fp64),
+        "string" => Some(BasicBuiltinType::String),
+        "binary" => Some(BasicBuiltinType::Binary),
+        "timestamp" => Some(BasicBuiltinType::Timestamp),
+        "timestamp_tz" => Some(BasicBuiltinType::TimestampTz),
+        "date" => Some(BasicBuiltinType::Date),
+        "time" => Some(BasicBuiltinType::Time),
+        "interval_year" => Some(BasicBuiltinType::IntervalYear),
+        "uuid" => Some(BasicBuiltinType::Uuid),
         _ => None,
     }
 }
@@ -581,6 +583,9 @@ impl From<CustomType> for SimpleExtensionsTypesItem {
                             min,
                             max,
                             options: param.param_type.raw_options(),
+                            // TODO: add this to TypeParamDefsItem parsing, and
+                            // follow it through here. I'm not entirely sure
+                            // when/if it is used.
                             optional: None,
                         }
                     })
@@ -731,14 +736,17 @@ impl Parse<TypeContext> for RawType {
 #[error("invalid type name `{0}`")]
 pub struct InvalidTypeName(String);
 
-/// Known Substrait types (builtin + extension references).
+/// The structural kind of a Substrait type (builtin, list, map, etc).
+///
+/// This is almost a complete type, but is missing nullability information. It must be
+/// wrapped in a [`ConcreteType`] to form a complete type with nullable/non-nullable annotation.
 ///
 /// Note that this is a recursive type - other than the [BuiltinType]s, the other variants can
 /// have type parameters that are themselves [ConcreteType]s.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ConcreteTypeKind {
     /// Built-in Substrait type (primitive or parameterized)
-    Builtin(BuiltinType),
+    Builtin(BasicBuiltinType),
     /// Extension type with optional parameters
     Extension {
         /// Extension type name
@@ -805,7 +813,7 @@ pub struct ConcreteType {
 
 impl ConcreteType {
     /// Create a new builtin scalar type
-    pub fn builtin(builtin_type: BuiltinType, nullable: bool) -> ConcreteType {
+    pub fn builtin(builtin_type: BasicBuiltinType, nullable: bool) -> ConcreteType {
         ConcreteType {
             kind: ConcreteTypeKind::Builtin(builtin_type),
             nullable,
@@ -1001,11 +1009,14 @@ fn type_expr_param_to_type_parameter<'a>(
     })
 }
 
+/// Parse a builtin type. Returns an `ExtensionTypeError` if the type name is
+/// matched, but parameters are incorrect; returns `Some(None)` if the type is
+/// not known.
 fn parse_builtin<'a>(
     display_name: &str,
     lower_name: &str,
     params: &[TypeExprParam<'a>],
-) -> Result<Option<BuiltinType>, ExtensionTypeError> {
+) -> Result<Option<BasicBuiltinType>, ExtensionTypeError> {
     if let Some(builtin) = primitive_builtin(lower_name) {
         expect_param_len(display_name, params, 0)?;
         return Ok(Some(builtin));
@@ -1016,23 +1027,23 @@ fn parse_builtin<'a>(
         "fixedchar" => {
             expect_param_len(display_name, params, 1)?;
             let length = expect_integer_param(display_name, 0, &params[0], None)?;
-            Ok(Some(BuiltinType::FixedChar { length }))
+            Ok(Some(BasicBuiltinType::FixedChar { length }))
         }
         "varchar" => {
             expect_param_len(display_name, params, 1)?;
             let length = expect_integer_param(display_name, 0, &params[0], None)?;
-            Ok(Some(BuiltinType::VarChar { length }))
+            Ok(Some(BasicBuiltinType::VarChar { length }))
         }
         "fixedbinary" => {
             expect_param_len(display_name, params, 1)?;
             let length = expect_integer_param(display_name, 0, &params[0], None)?;
-            Ok(Some(BuiltinType::FixedBinary { length }))
+            Ok(Some(BasicBuiltinType::FixedBinary { length }))
         }
         "decimal" => {
             expect_param_len(display_name, params, 2)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(1..=38))?;
             let scale = expect_integer_param(display_name, 1, &params[1], Some(0..=precision))?;
-            Ok(Some(BuiltinType::Decimal { precision, scale }))
+            Ok(Some(BasicBuiltinType::Decimal { precision, scale }))
         }
         // Should we accept both "precision_time" and "precisiontime"? The
         // docs/spec say PRECISIONTIME. The protos use underscores, so it could
@@ -1040,27 +1051,27 @@ fn parse_builtin<'a>(
         "precisiontime" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
-            Ok(Some(BuiltinType::PrecisionTime { precision }))
+            Ok(Some(BasicBuiltinType::PrecisionTime { precision }))
         }
         "precisiontimestamp" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
-            Ok(Some(BuiltinType::PrecisionTimestamp { precision }))
+            Ok(Some(BasicBuiltinType::PrecisionTimestamp { precision }))
         }
         "precisiontimestamptz" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
-            Ok(Some(BuiltinType::PrecisionTimestampTz { precision }))
+            Ok(Some(BasicBuiltinType::PrecisionTimestampTz { precision }))
         }
         "interval_day" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=9))?;
-            Ok(Some(BuiltinType::IntervalDay { precision }))
+            Ok(Some(BasicBuiltinType::IntervalDay { precision }))
         }
         "interval_compound" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], None)?;
-            Ok(Some(BuiltinType::IntervalCompound { precision }))
+            Ok(Some(BasicBuiltinType::IntervalCompound { precision }))
         }
         _ => Ok(None),
     }
@@ -1141,7 +1152,7 @@ mod tests {
     use std::iter::FromIterator;
 
     /// Create a [ConcreteType] from a [BuiltinType]
-    fn concretize(builtin: BuiltinType) -> ConcreteType {
+    fn concretize(builtin: BasicBuiltinType) -> ConcreteType {
         ConcreteType::builtin(builtin, false)
     }
 
@@ -1205,21 +1216,21 @@ mod tests {
     #[test]
     fn test_builtin_scalar_parsing() {
         let cases = vec![
-            ("bool", Some(BuiltinType::Boolean)),
-            ("i8", Some(BuiltinType::I8)),
-            ("i16", Some(BuiltinType::I16)),
-            ("i32", Some(BuiltinType::I32)),
-            ("i64", Some(BuiltinType::I64)),
-            ("fp32", Some(BuiltinType::Fp32)),
-            ("fp64", Some(BuiltinType::Fp64)),
-            ("STRING", Some(BuiltinType::String)),
-            ("binary", Some(BuiltinType::Binary)),
-            ("uuid", Some(BuiltinType::Uuid)),
-            ("date", Some(BuiltinType::Date)),
-            ("interval_year", Some(BuiltinType::IntervalYear)),
-            ("time", Some(BuiltinType::Time)),
-            ("timestamp", Some(BuiltinType::Timestamp)),
-            ("timestamp_tz", Some(BuiltinType::TimestampTz)),
+            ("bool", Some(BasicBuiltinType::Boolean)),
+            ("i8", Some(BasicBuiltinType::I8)),
+            ("i16", Some(BasicBuiltinType::I16)),
+            ("i32", Some(BasicBuiltinType::I32)),
+            ("i64", Some(BasicBuiltinType::I64)),
+            ("fp32", Some(BasicBuiltinType::Fp32)),
+            ("fp64", Some(BasicBuiltinType::Fp64)),
+            ("STRING", Some(BasicBuiltinType::String)),
+            ("binary", Some(BasicBuiltinType::Binary)),
+            ("uuid", Some(BasicBuiltinType::Uuid)),
+            ("date", Some(BasicBuiltinType::Date)),
+            ("interval_year", Some(BasicBuiltinType::IntervalYear)),
+            ("time", Some(BasicBuiltinType::Time)),
+            ("timestamp", Some(BasicBuiltinType::Timestamp)),
+            ("timestamp_tz", Some(BasicBuiltinType::TimestampTz)),
             ("invalid", None),
         ];
 
@@ -1245,42 +1256,42 @@ mod tests {
         let cases = vec![
             (
                 "precisiontime<2>",
-                concretize(BuiltinType::PrecisionTime { precision: 2 }),
+                concretize(BasicBuiltinType::PrecisionTime { precision: 2 }),
             ),
             (
                 "precisiontimestamp<1>",
-                concretize(BuiltinType::PrecisionTimestamp { precision: 1 }),
+                concretize(BasicBuiltinType::PrecisionTimestamp { precision: 1 }),
             ),
             (
                 "precisiontimestamptz<5>",
-                concretize(BuiltinType::PrecisionTimestampTz { precision: 5 }),
+                concretize(BasicBuiltinType::PrecisionTimestampTz { precision: 5 }),
             ),
             (
                 "DECIMAL<10,2>",
-                concretize(BuiltinType::Decimal {
+                concretize(BasicBuiltinType::Decimal {
                     precision: 10,
                     scale: 2,
                 }),
             ),
             (
                 "fixedchar<12>",
-                concretize(BuiltinType::FixedChar { length: 12 }),
+                concretize(BasicBuiltinType::FixedChar { length: 12 }),
             ),
             (
                 "VarChar<42>",
-                concretize(BuiltinType::VarChar { length: 42 }),
+                concretize(BasicBuiltinType::VarChar { length: 42 }),
             ),
             (
                 "fixedbinary<8>",
-                concretize(BuiltinType::FixedBinary { length: 8 }),
+                concretize(BasicBuiltinType::FixedBinary { length: 8 }),
             ),
             (
                 "interval_day<7>",
-                concretize(BuiltinType::IntervalDay { precision: 7 }),
+                concretize(BasicBuiltinType::IntervalDay { precision: 7 }),
             ),
             (
                 "interval_compound<6>",
-                concretize(BuiltinType::IntervalCompound { precision: 6 }),
+                concretize(BasicBuiltinType::IntervalCompound { precision: 6 }),
             ),
         ];
 
@@ -1353,17 +1364,17 @@ mod tests {
         let cases = vec![
             (
                 "List<i32>",
-                ConcreteType::list(ConcreteType::builtin(BuiltinType::I32, false), false),
+                ConcreteType::list(ConcreteType::builtin(BasicBuiltinType::I32, false), false),
             ),
             (
                 "List<fp64?>",
-                ConcreteType::list(ConcreteType::builtin(BuiltinType::Fp64, true), false),
+                ConcreteType::list(ConcreteType::builtin(BasicBuiltinType::Fp64, true), false),
             ),
             (
                 "Map?<i64, string?>",
                 ConcreteType::map(
-                    ConcreteType::builtin(BuiltinType::I64, false),
-                    ConcreteType::builtin(BuiltinType::String, true),
+                    ConcreteType::builtin(BasicBuiltinType::I64, false),
+                    ConcreteType::builtin(BasicBuiltinType::String, true),
                     true,
                 ),
             ),
@@ -1371,8 +1382,8 @@ mod tests {
                 "Struct?<i8, string?>",
                 ConcreteType::r#struct(
                     vec![
-                        ConcreteType::builtin(BuiltinType::I8, false),
-                        ConcreteType::builtin(BuiltinType::String, true),
+                        ConcreteType::builtin(BasicBuiltinType::I8, false),
+                        ConcreteType::builtin(BasicBuiltinType::String, true),
                     ],
                     true,
                 ),
@@ -1405,7 +1416,10 @@ mod tests {
                     "Custom",
                     vec![
                         type_param("string?"),
-                        TypeParameter::Type(ConcreteType::builtin(BuiltinType::Boolean, false)),
+                        TypeParameter::Type(ConcreteType::builtin(
+                            BasicBuiltinType::Boolean,
+                            false,
+                        )),
                     ],
                     false,
                 ),
@@ -1590,11 +1604,11 @@ mod tests {
         let fields = vec![
             (
                 "x".to_string(),
-                ConcreteType::builtin(BuiltinType::Fp64, false),
+                ConcreteType::builtin(BasicBuiltinType::Fp64, false),
             ),
             (
                 "y".to_string(),
-                ConcreteType::builtin(BuiltinType::Fp64, false),
+                ConcreteType::builtin(BasicBuiltinType::Fp64, false),
             ),
         ];
         let (names, types): (Vec<_>, Vec<_>) = fields.into_iter().unzip();
@@ -1603,7 +1617,7 @@ mod tests {
             CustomType::new(
                 "AliasType".to_string(),
                 vec![],
-                Some(ConcreteType::builtin(BuiltinType::I32, false)),
+                Some(ConcreteType::builtin(BasicBuiltinType::I32, false)),
                 None,
                 Some("a test alias type".to_string()),
             )?,
@@ -1658,7 +1672,7 @@ mod tests {
             (
                 "alias",
                 RawType::String("i32".to_string()),
-                ConcreteType::builtin(BuiltinType::I32, false),
+                ConcreteType::builtin(BasicBuiltinType::I32, false),
             ),
             (
                 "named_struct",
@@ -1666,8 +1680,8 @@ mod tests {
                 ConcreteType::named_struct(
                     vec!["field1".to_string(), "field2".to_string()],
                     vec![
-                        ConcreteType::builtin(BuiltinType::Fp64, false),
-                        ConcreteType::builtin(BuiltinType::I32, true),
+                        ConcreteType::builtin(BasicBuiltinType::Fp64, false),
+                        ConcreteType::builtin(BasicBuiltinType::I32, true),
                     ],
                     false,
                 ),
@@ -1697,7 +1711,7 @@ mod tests {
                 },
                 "Alias",
                 Some("Alias type"),
-                Some(ConcreteType::builtin(BuiltinType::Binary, false)),
+                Some(ConcreteType::builtin(BasicBuiltinType::Binary, false)),
             ),
             (
                 "named_struct",
@@ -1713,8 +1727,8 @@ mod tests {
                 Some(ConcreteType::named_struct(
                     vec!["x".to_string(), "y".to_string()],
                     vec![
-                        ConcreteType::builtin(BuiltinType::Fp64, false),
-                        ConcreteType::builtin(BuiltinType::Fp64, true),
+                        ConcreteType::builtin(BasicBuiltinType::Fp64, false),
+                        ConcreteType::builtin(BasicBuiltinType::Fp64, true),
                     ],
                     false,
                 )),
