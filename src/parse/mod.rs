@@ -15,16 +15,16 @@
 use std::{error::Error, fmt::Debug};
 
 mod context;
-pub use context::Context;
+pub(crate) use context::Context;
 
 pub mod proto;
 pub mod text;
 
 mod typed;
-pub use typed::Anchor;
+use typed::Anchor;
 
 /// A parse trait.
-pub trait Parse<C: Context>: Debug + Sized {
+pub(crate) trait Parse<C: Context>: Debug + Sized {
     /// The parsed type.
     ///
     /// After parsing this type must be able to convert back. Note that it is

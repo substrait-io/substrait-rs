@@ -169,7 +169,14 @@ fn text(out_dir: &Path) -> Result<(), Box<dyn Error>> {
                     schema_path.display()
                 )
             });
-        let mut type_space = TypeSpace::new(TypeSpaceSettings::default().with_struct_builder(true));
+        let mut type_space = TypeSpace::new(
+            TypeSpaceSettings::default()
+                // Preserve field order in YAML objects (see Substrait #915) so
+                // struct field ordinals remain stable across parsers.
+                .with_map_type("::indexmap::IndexMap")
+                .with_struct_builder(true)
+                .with_derive("PartialEq".to_string()),
+        );
         type_space.add_ref_types(schema.definitions)?;
         type_space.add_type(&Schema::Object(schema.schema))?;
         out_file.write_fmt(format_args!(
