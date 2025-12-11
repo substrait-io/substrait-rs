@@ -10,9 +10,9 @@ use super::argument::{
     EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
 };
 use super::extensions::TypeContext;
-use super::parsed_type::TypeExprParam;
+use super::type_ast::TypeExprParam;
 use crate::parse::Parse;
-use crate::parse::text::simple_extensions::parsed_type::TypeParseError;
+use crate::parse::text::simple_extensions::type_ast::TypeParseError;
 use crate::text::simple_extensions::{
     EnumOptions as RawEnumOptions, SimpleExtensionsTypesItem, Type as RawType, TypeParamDefs,
     TypeParamDefsItem, TypeParamDefsItemType,

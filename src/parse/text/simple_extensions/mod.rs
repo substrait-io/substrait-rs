@@ -19,14 +19,14 @@ use thiserror::Error;
 pub mod argument;
 mod extensions;
 mod file;
-mod parsed_type;
 mod registry;
+mod type_ast;
 mod types;
 
 pub use extensions::SimpleExtensions;
 pub use file::ExtensionFile;
-pub use parsed_type::TypeExpr;
 pub use registry::Registry;
+pub use type_ast::TypeExpr;
 pub use types::{ConcreteType, CustomType, ExtensionTypeError};
 
 use crate::urn::Urn;
