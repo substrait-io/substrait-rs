@@ -2,13 +2,7 @@
 
 //! Parsing of [proto::PlanVersion].
 
-use crate::{
-    parse::{
-        Context as _, Parse,
-        proto::{ExtensionAnchors, Version},
-    },
-    proto,
-};
+use crate::{parse::proto::Version, proto};
 use thiserror::Error;
 
 use super::VersionError;
@@ -41,16 +35,15 @@ pub enum PlanVersionError {
     Version(#[from] VersionError),
 }
 
-impl Parse<ExtensionAnchors> for proto::PlanVersion {
-    type Parsed = PlanVersion;
+impl TryFrom<proto::PlanVersion> for PlanVersion {
     type Error = PlanVersionError;
 
-    fn parse(self, ctx: &mut ExtensionAnchors) -> Result<Self::Parsed, Self::Error> {
-        let proto::PlanVersion { version } = self;
+    fn try_from(value: proto::PlanVersion) -> Result<Self, Self::Error> {
+        let proto::PlanVersion { version } = value;
 
         // The version is required, and must be valid.
         let version = version
-            .map(|version| ctx.parse(version))
+            .map(Version::try_from)
             .transpose()?
             .ok_or(PlanVersionError::Missing)?;
 
@@ -73,17 +66,14 @@ impl From<PlanVersion> for proto::PlanVersion {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        parse::{proto::ExtensionAnchors, proto::VersionError},
-        version,
-    };
+    use crate::{parse::proto::VersionError, version};
 
     #[test]
     fn parse() -> Result<(), PlanVersionError> {
         let plan_version = proto::PlanVersion {
             version: Some(version::version()),
         };
-        plan_version.parse(&mut ExtensionAnchors::default())?;
+        PlanVersion::try_from(plan_version)?;
         Ok(())
     }
 
@@ -91,7 +81,7 @@ mod tests {
     fn missing() {
         let plan_version = proto::PlanVersion::default();
         assert_eq!(
-            plan_version.parse(&mut ExtensionAnchors::default()),
+            PlanVersion::try_from(plan_version),
             Err(PlanVersionError::Missing)
         );
     }
@@ -102,7 +92,7 @@ mod tests {
             version: Some(proto::Version::default()),
         };
         assert_eq!(
-            plan_version.parse(&mut ExtensionAnchors::default()),
+            PlanVersion::try_from(plan_version),
             Err(PlanVersionError::Version(VersionError::Missing))
         );
     }
