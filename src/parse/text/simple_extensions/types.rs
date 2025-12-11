@@ -802,7 +802,7 @@ impl fmt::Display for ConcreteTypeKind {
     }
 }
 
-/// A concrete, fully-resolved type instance
+/// A concrete, fully-resolved type instance with nullability.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConcreteType {
     /// The resolved type shape
@@ -929,6 +929,17 @@ impl From<ConcreteType> for RawType {
     }
 }
 
+/// Extract and validate an integer parameter for a built-in type.
+///
+/// For `DECIMAL<10,2>`, this validates that `10` (index 0) and `2` (index 1)
+/// are integers within their required ranges (precision 1-38, scale
+/// 0-precision).
+///
+/// - `type_name`: Type being validated (for error messages, e.g., "DECIMAL")
+/// - `index`: Parameter position (0-based, e.g., 0 for precision, 1 for scale);
+///   needed for error messages
+/// - `param`: The parameter to validate
+/// - `range`: Optional bounds to enforce (e.g., `Some(1..=38)` for precision)
 fn expect_integer_param(
     type_name: &str,
     index: usize,
@@ -1000,13 +1011,15 @@ fn expect_type_argument<'a>(
     }
 }
 
-fn type_expr_param_to_type_parameter<'a>(
-    param: TypeExprParam<'a>,
-) -> Result<TypeParameter, ExtensionTypeError> {
-    Ok(match param {
-        TypeExprParam::Integer(v) => TypeParameter::Integer(v),
-        TypeExprParam::Type(t) => TypeParameter::Type(ConcreteType::try_from(t)?),
-    })
+impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
+    type Error = ExtensionTypeError;
+
+    fn try_from(param: TypeExprParam<'a>) -> Result<Self, Self::Error> {
+        Ok(match param {
+            TypeExprParam::Integer(v) => TypeParameter::Integer(v),
+            TypeExprParam::Type(t) => TypeParameter::Type(ConcreteType::try_from(t)?),
+        })
+    }
 }
 
 /// Parse a builtin type. Returns an `ExtensionTypeError` if the type name is
@@ -1116,7 +1129,7 @@ impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
 
                 let parameters = params
                     .into_iter()
-                    .map(type_expr_param_to_type_parameter)
+                    .map(TypeParameter::try_from)
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(ConcreteType::extension_with_params(
                     name.to_string(),
@@ -1127,7 +1140,7 @@ impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
             TypeExpr::UserDefined(name, params, nullable) => {
                 let parameters = params
                     .into_iter()
-                    .map(type_expr_param_to_type_parameter)
+                    .map(TypeParameter::try_from)
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(ConcreteType::extension_with_params(
                     name.to_string(),
