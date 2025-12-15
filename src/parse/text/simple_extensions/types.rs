@@ -636,7 +636,16 @@ impl Parse<TypeContext> for SimpleExtensionsTypesItem {
 
         // Parse structure with context, so referenced extension types are recorded as linked
         let structure = match self.structure {
-            Some(structure_data) => Some(Parse::parse(structure_data, ctx)?),
+            Some(structure_data) => {
+                let parsed = Parse::parse(structure_data, ctx)?;
+                // Structure representation cannot be nullable
+                if parsed.nullable {
+                    return Err(ExtensionTypeError::StructureCannotBeNullable {
+                        type_string: parsed.to_string(),
+                    });
+                }
+                Some(parsed)
+            }
             None => None,
         };
 
@@ -661,12 +670,6 @@ impl Parse<TypeContext> for RawType {
                 let mut link = |name: &str| ctx.linked(name);
                 parsed_type.visit_references(&mut link);
                 let concrete = ConcreteType::try_from(parsed_type)?;
-
-                // Structure representation cannot be nullable
-                if concrete.nullable {
-                    return Err(ExtensionTypeError::StructureCannotBeNullable { type_string });
-                }
-
                 Ok(concrete)
             }
             RawType::Object(field_map) => {
@@ -1744,17 +1747,21 @@ mod tests {
     /// 'INTEGER?' - is that now equal to `i64??`
     #[test]
     fn test_nullable_structure_rejected() {
-        let cases = vec![RawType::String("i32?".to_string())];
+        let item = simple_extensions::SimpleExtensionsTypesItem {
+            name: "NullableInt".to_string(),
+            description: None,
+            parameters: None,
+            structure: Some(RawType::String("i32?".to_string())),
+            variadic: None,
+        };
 
-        for raw in cases {
-            let mut ctx = TypeContext::default();
-            let result = Parse::parse(raw, &mut ctx);
-            match result {
-                Err(ExtensionTypeError::StructureCannotBeNullable { type_string }) => {
-                    assert!(type_string.contains('?'));
-                }
-                other => panic!("Expected nullable structure error, got {other:?}"),
+        let mut ctx = TypeContext::default();
+        let result = Parse::parse(item, &mut ctx);
+        match result {
+            Err(ExtensionTypeError::StructureCannotBeNullable { type_string }) => {
+                assert!(type_string.contains('?'));
             }
+            other => panic!("Expected nullable structure error, got {other:?}"),
         }
     }
 }
