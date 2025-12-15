@@ -72,12 +72,6 @@ pub enum VersionError {
     Substrait(semver::Version, semver::VersionReq),
 }
 
-// The `Version` type is not context-sensitive, so we don't actually need the
-// `ExtensionAnchors`.
-//
-// But the `ExtensionAnchors` is the context type used for Substrait plans
-// overall, so we use it here for consistency; that and `version.parse(&mut ())`
-// is a bit awkward.
 impl TryFrom<proto::Version> for Version {
     type Error = VersionError;
 

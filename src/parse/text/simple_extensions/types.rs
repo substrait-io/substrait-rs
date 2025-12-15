@@ -848,12 +848,14 @@ impl ConcreteType {
         }
     }
 
-    /// Check if this type matches another type exactly
-    pub fn matches(&self, other: &ConcreteType) -> bool {
-        self == other
-    }
-
-    /// Check if this type is compatible with another type (considering nullability)
+    /// Check if this type (as a function argument) is compatible with another
+    /// type (as an input).
+    ///
+    /// Mainly checks nullability:
+    ///   - `i64?` is compatible with `i64` and `i64?` - both can be passed as
+    ///     arguments
+    ///   - `i64` is compatible with `i64` but NOT `i64?` - you can't pass a
+    ///     nullable type to a function that only accepts non-nullable arguments
     pub fn is_compatible_with(&self, other: &ConcreteType) -> bool {
         // Types must match exactly, but nullable types can accept non-nullable values
         self.kind == other.kind && (self.nullable || !other.nullable)
@@ -1436,33 +1438,31 @@ mod tests {
 
     #[test]
     fn test_type_round_trip_display() {
+        // (example, canonical form)
         let cases = vec![
-            ("i32", None),
-            ("I64?", Some("i64?")),
-            ("list<string>", None),
-            ("List<STRING?>", Some("list<string?>")),
-            ("map<i32, list<string>>", None),
-            ("struct<i8, string?>", None),
+            ("i32", "i32"),
+            ("I64?", "i64?"),
+            ("list<string>", "list<string>"),
+            ("List<STRING?>", "list<string?>"),
+            ("map<i32, list<string>>", "map<i32, list<string>>"),
+            ("struct<i8, string?>", "struct<i8, string?>"),
             (
                 "Struct<List<i32>, Map<string, list<i64?>>>",
-                Some("struct<list<i32>, map<string, list<i64?>>>"),
+                "struct<list<i32>, map<string, list<i64?>>>",
             ),
             (
                 "Map<List<I32?>, Struct<string, list<i64?>>>",
-                Some("map<list<i32?>, struct<string, list<i64?>>>"),
+                "map<list<i32?>, struct<string, list<i64?>>>",
             ),
-            ("u!custom<i32>", Some("custom<i32>")),
+            ("u!custom<i32>", "custom<i32>"),
         ];
 
         for (input, expected) in cases {
             let parsed = TypeExpr::parse(input).unwrap();
             let concrete = ConcreteType::try_from(parsed).unwrap();
             let actual = concrete.to_string();
-            if let Some(expected_display) = expected {
-                assert_eq!(actual, expected_display, "unexpected display for {input}");
-            } else {
-                assert_eq!(actual, input, "unexpected canonical output for {input}");
-            }
+
+            assert_eq!(actual, expected, "unexpected display for {input}");
         }
     }
 

@@ -14,7 +14,7 @@ use std::io::Read;
 #[derive(Debug)]
 pub struct ExtensionFile {
     /// The URN this extension was loaded from
-    pub urn: Urn,
+    pub(crate) urn: Urn,
     /// The extension data containing types and eventually functions
     pub(crate) extension: SimpleExtensions,
 }
