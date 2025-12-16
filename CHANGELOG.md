@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.62.2](https://github.com/substrait-io/substrait-rs/compare/v0.62.1...v0.62.2) - 2025-12-16
+
+### Added
+
+- add file descriptor bytes to substrait-rs ([#436](https://github.com/substrait-io/substrait-rs/pull/436))
+
 ## [0.62.1](https://github.com/substrait-io/substrait-rs/compare/v0.62.0...v0.62.1) - 2025-12-10
 
 ### Added
