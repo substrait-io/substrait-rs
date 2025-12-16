@@ -274,10 +274,9 @@ pub static EXTENSIONS: LazyLock<HashMap<Urn, SimpleExtensions>> = LazyLock::new(
 
 #[cfg(feature = "serde")]
 /// Serialize and deserialize implementations for proto types using `pbjson`
-fn serde(protos: &[impl AsRef<Path>], out_dir: PathBuf) -> Result<(), Box<dyn Error>> {
+fn serde(protos: &[impl AsRef<Path>], descriptor_path: PathBuf) -> Result<(), Box<dyn Error>> {
     use pbjson_build::Builder;
 
-    let descriptor_path = out_dir.join("proto_descriptor.bin");
     let mut cfg = Config::new();
     cfg.file_descriptor_set_path(&descriptor_path);
     cfg.compile_well_known_types()
@@ -327,11 +326,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .collect::<Vec<_>>();
 
+    let descriptor_path = out_dir.join("proto_descriptor.bin");
+
     #[cfg(feature = "serde")]
-    serde(&protos, out_dir)?;
+    serde(&protos, descriptor_path)?;
 
     #[cfg(not(feature = "serde"))]
-    Config::new().compile_protos(&protos, &[PROTO_ROOT])?;
+    Config::new()
+        .file_descriptor_set_path(&descriptor_path)
+        .compile_protos(&protos, &[PROTO_ROOT])?;
 
     Ok(())
 }

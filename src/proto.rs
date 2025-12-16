@@ -24,6 +24,13 @@ include!(concat!(env!("OUT_DIR"), "/substrait.rs"));
 #[cfg(feature = "serde")]
 include!(concat!(env!("OUT_DIR"), "/substrait.serde.rs"));
 
+/// The encoded file descriptor set for the Substrait protobuf definitions.
+///
+/// This can be used for protobuf reflection.
+#[cfg(feature = "embed-descriptor")]
+pub const FILE_DESCRIPTOR_SET: &[u8] =
+    include_bytes!(concat!(env!("OUT_DIR"), "/proto_descriptor.bin"));
+
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "serde")]
@@ -80,5 +87,16 @@ mod tests {
         );
         assert_eq!(plan.extension_urns.len(), 1);
         Ok(())
+    }
+
+    #[cfg(feature = "embed-descriptor")]
+    #[test]
+    fn file_descriptor_set_is_valid() {
+        use prost::Message;
+        let fds = prost_types::FileDescriptorSet::decode(super::FILE_DESCRIPTOR_SET).unwrap();
+        assert!(
+            fds.file.iter().any(|f| f.package() == "substrait"),
+            "expected substrait package in file descriptor set"
+        );
     }
 }
