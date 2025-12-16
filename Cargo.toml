@@ -26,6 +26,7 @@ include = [
 
 [features]
 default = []
+embed-descriptor = []
 extensions = ["dep:serde_yaml"]
 parse = ["dep:hex", "dep:thiserror", "semver"]
 protoc = ["dep:protobuf-src"]
