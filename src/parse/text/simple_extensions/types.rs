@@ -638,12 +638,10 @@ impl Parse<TypeContext> for SimpleExtensionsTypesItem {
         let structure = match self.structure {
             Some(structure_data) => {
                 let parsed = Parse::parse(structure_data, ctx)?;
-                // Structure representation cannot be nullable
-                if parsed.nullable {
-                    return Err(ExtensionTypeError::StructureCannotBeNullable {
-                        type_string: parsed.to_string(),
-                    });
-                }
+                // TODO: check that the structure is valid. The `Type::Object`
+                // form of `structure_data` is by definition a non-nullable `NSTRUCT`; however,
+                // what types allowed under the `Type::String` form is less clear in the spec:
+                // See https://github.com/substrait-io/substrait/issues/920.
                 Some(parsed)
             }
             None => None,
@@ -1740,28 +1738,5 @@ mod tests {
         }
 
         Ok(())
-    }
-
-    /// A type defined with a structure cannot be defined as nullable; e.g. if
-    /// you define 'Integer' as an alias for 'i64?', then what do you mean by
-    /// 'INTEGER?' - is that now equal to `i64??`
-    #[test]
-    fn test_nullable_structure_rejected() {
-        let item = simple_extensions::SimpleExtensionsTypesItem {
-            name: "NullableInt".to_string(),
-            description: None,
-            parameters: None,
-            structure: Some(RawType::String("i32?".to_string())),
-            variadic: None,
-        };
-
-        let mut ctx = TypeContext::default();
-        let result = Parse::parse(item, &mut ctx);
-        match result {
-            Err(ExtensionTypeError::StructureCannotBeNullable { type_string }) => {
-                assert!(type_string.contains('?'));
-            }
-            other => panic!("Expected nullable structure error, got {other:?}"),
-        }
     }
 }
