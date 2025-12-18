@@ -28,7 +28,7 @@ include = [
 default = []
 embed-descriptor = []
 extensions = ["dep:serde_yaml"]
-parse = ["dep:hex", "dep:thiserror", "semver"]
+parse = ["dep:hex", "dep:thiserror", "dep:serde_yaml", "semver"]
 protoc = ["dep:protobuf-src"]
 semver = ["dep:semver"]
 serde = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
@@ -39,12 +39,15 @@ pbjson = { version = "0.8.0", optional = true }
 pbjson-types = { version = "0.8.0", optional = true }
 prost = "0.14.1"
 prost-types = "0.14.1"
+# Required by generated text schemas: the typify-generated code emits
+# ::regress::Regex for `pattern` validations.
 regress = "0.10.4"
 semver = { version = "1.0.27", optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.145"
+serde_json = { version = "1.0.145", features = ["preserve_order"] }
 serde_yaml = { version = "0.9.34", optional = true }
 thiserror = { version = "2.0.17", optional = true }
+indexmap = { version = "2.7.0", features = ["serde"] }
 
 [build-dependencies]
 heck = "0.5.0"
