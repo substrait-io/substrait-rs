@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// A parsed [`simple_extensions::ArgumentsItem`].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ArgumentsItem {
     /// Arguments that support a fixed set of declared values as constant
     /// arguments.
@@ -230,7 +230,7 @@ pub enum EnumOptionsError {
 }
 
 /// Arguments that refer to a data value.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ValueArg {
     /// A human-readable name for this argument to help clarify use.
     name: Option<String>,
