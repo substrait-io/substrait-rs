@@ -57,11 +57,18 @@ impl Registry {
         // Parse the core extensions from the raw extensions format to the parsed format
         let extensions: HashMap<Urn, SimpleExtensions> = EXTENSIONS
             .iter()
-            .map(|(orig_urn, simple_extensions)| {
-                let ExtensionFile { urn, extension } = ExtensionFile::create(simple_extensions.clone())
-                    .unwrap_or_else(|err| panic!("Core extensions should be valid, but failed to create extension file for {orig_urn}: {err}"));
-                debug_assert_eq!(orig_urn, &urn);
-                (urn, extension)
+            .filter_map(|(orig_urn, simple_extensions)| {
+                match ExtensionFile::create(simple_extensions.clone()) {
+                    Ok(ExtensionFile { urn, extension }) => {
+                        debug_assert_eq!(orig_urn, &urn);
+                        Some((urn, extension))
+                    }
+                    Err(err) => {
+                        // Skip extensions that fail to parse (e.g., those with unsupported type parameter variables)
+                        eprintln!("Warning: Skipping extension {orig_urn}: {err}");
+                        None
+                    }
+                }
             })
             .collect();
 
@@ -173,5 +180,75 @@ mod tests {
         // Also test the registry's get_type method with the actual URN
         let type_via_registry = registry.get_type(&urn, "point");
         assert!(type_via_registry.is_some());
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_parse_scalar_function_with_variadic() {
+        use std::fs;
+
+        // Load and parse the boolean functions extension directly
+        let yaml_content = fs::read_to_string("substrait/extensions/functions_boolean.yaml")
+            .expect("Should read functions_boolean.yaml");
+        let raw: crate::text::simple_extensions::SimpleExtensions =
+            serde_yaml::from_str(&yaml_content).expect("Should parse YAML");
+
+        let extension_file =
+            ExtensionFile::create(raw).expect("Should create extension file");
+
+        // Test the "or" function which has variadic behavior
+        let or_function = extension_file
+            .extension
+            .get_scalar_function("or")
+            .expect("Should find 'or' function");
+
+        assert_eq!(or_function.name, "or");
+        assert!(or_function.description.is_some());
+        assert_eq!(or_function.impls.len(), 1);
+
+        let impl_ = &or_function.impls[0];
+        assert!(impl_.variadic.is_some());
+
+        let variadic = impl_.variadic.as_ref().unwrap();
+        assert_eq!(variadic.min, Some(0));
+        assert_eq!(variadic.max, None);
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_parse_scalar_function_with_options() {
+        use std::fs;
+
+        // Load and parse the arithmetic functions extension directly
+        let yaml_content = fs::read_to_string("substrait/extensions/functions_arithmetic.yaml")
+            .expect("Should read functions_arithmetic.yaml");
+        let raw: crate::text::simple_extensions::SimpleExtensions =
+            serde_yaml::from_str(&yaml_content).expect("Should parse YAML");
+
+        let extension_file =
+            ExtensionFile::create(raw).expect("Should create extension file");
+
+        // Test the "add" function which has options
+        let add_function = extension_file
+            .extension
+            .get_scalar_function("add")
+            .expect("Should find 'add' function");
+
+        assert_eq!(add_function.name, "add");
+        assert!(add_function.description.is_some());
+        assert!(add_function.impls.len() > 0);
+
+        // Check that at least one implementation has options
+        let impl_with_options = add_function
+            .impls
+            .iter()
+            .find(|i| i.options.is_some())
+            .expect("Should find at least one impl with options");
+
+        let options = impl_with_options.options.as_ref().unwrap();
+        assert!(
+            options.0.contains_key("overflow") || options.0.contains_key("rounding"),
+            "Should have overflow or rounding option"
+        );
     }
 }

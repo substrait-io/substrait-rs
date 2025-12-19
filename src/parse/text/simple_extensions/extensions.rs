@@ -9,7 +9,7 @@ use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use super::{SimpleExtensionsError, types::CustomType};
+use super::{scalar_functions::ScalarFunction, types::CustomType, SimpleExtensionsError};
 use crate::{
     parse::{Context, Parse},
     text::simple_extensions::SimpleExtensions as RawExtensions,
@@ -28,6 +28,8 @@ use crate::{
 pub struct SimpleExtensions {
     /// Types defined in this extension file
     types: HashMap<String, CustomType>,
+    /// Scalar functions defined in this extension file
+    scalar_functions: HashMap<String, ScalarFunction>,
 }
 
 impl SimpleExtensions {
@@ -59,6 +61,38 @@ impl SimpleExtensions {
         self.types.values()
     }
 
+    /// Check if a scalar function with the given name exists in the context
+    pub fn has_scalar_function(&self, name: &str) -> bool {
+        self.scalar_functions.contains_key(name)
+    }
+
+    /// Get a scalar function by name from the context
+    pub fn get_scalar_function(&self, name: &str) -> Option<&ScalarFunction> {
+        self.scalar_functions.get(name)
+    }
+
+    /// Get an iterator over all scalar functions in the context
+    pub fn scalar_functions(&self) -> impl Iterator<Item = &ScalarFunction> {
+        self.scalar_functions.values()
+    }
+
+    /// Add a scalar function to the context. Name must be unique.
+    pub(super) fn add_scalar_function(
+        &mut self,
+        scalar_function: ScalarFunction,
+    ) -> Result<(), SimpleExtensionsError> {
+        use std::collections::hash_map::Entry;
+        match self.scalar_functions.entry(scalar_function.name.clone()) {
+            Entry::Vacant(e) => {
+                e.insert(scalar_function);
+                Ok(())
+            }
+            Entry::Occupied(_) => Err(SimpleExtensionsError::DuplicateTypeName {
+                name: scalar_function.name.clone(),
+            }),
+        }
+    }
+
     /// Consume the parsed extension and return its types.
     pub(crate) fn into_types(self) -> HashMap<String, CustomType> {
         self.types
@@ -66,7 +100,7 @@ impl SimpleExtensions {
 }
 
 /// resolved or unresolved.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct TypeContext {
     /// Types that have been seen so far, now resolved.
     known: HashSet<String>,
@@ -98,7 +132,12 @@ impl Parse<TypeContext> for RawExtensions {
     type Error = super::SimpleExtensionsError;
 
     fn parse(self, ctx: &mut TypeContext) -> Result<Self::Parsed, Self::Error> {
-        let RawExtensions { urn, types, .. } = self;
+        let RawExtensions {
+            urn,
+            types,
+            scalar_functions,
+            ..
+        } = self;
         let urn = Urn::from_str(&urn)?;
         let mut extension = SimpleExtensions::default();
 
@@ -112,6 +151,11 @@ impl Parse<TypeContext> for RawExtensions {
             return Err(super::SimpleExtensionsError::UnresolvedTypeReference {
                 type_name: missing.clone(),
             });
+        }
+
+        for scalar_fn in scalar_functions {
+            let parsed_fn = ScalarFunction::from_raw(scalar_fn, ctx)?;
+            extension.add_scalar_function(parsed_fn)?;
         }
 
         Ok((urn, extension))
@@ -135,5 +179,51 @@ impl From<(Urn, SimpleExtensions)> for RawExtensions {
             types,
             window_functions: vec![],
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::text::simple_extensions::{
+        ReturnValue, ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem as RawImpl,
+        Type as RawType,
+    };
+
+    #[test]
+    fn test_parse_extensions_with_scalar_functions() {
+        let raw_impl = RawImpl {
+            args: None,
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("i32".to_string())),
+            implementation: None,
+        };
+
+        let raw_scalar_fn = RawScalarFunction {
+            name: "add".to_string(),
+            description: Some("Addition function".to_string()),
+            impls: vec![raw_impl],
+        };
+
+        let raw_extensions = RawExtensions {
+            urn: "extension:example.com:test".to_string(),
+            aggregate_functions: vec![],
+            dependencies: IndexMap::new(),
+            scalar_functions: vec![raw_scalar_fn],
+            type_variations: vec![],
+            types: vec![],
+            window_functions: vec![],
+        };
+
+        let mut ctx = TypeContext::default();
+        let (urn, extensions) = raw_extensions.parse(&mut ctx).expect("Parse should succeed");
+
+        assert_eq!(urn.to_string(), "extension:example.com:test");
+        assert_eq!(extensions.scalar_functions.len(), 1);
+        assert!(extensions.scalar_functions.contains_key("add"));
     }
 }
