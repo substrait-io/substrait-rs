@@ -40,15 +40,50 @@ impl FromStr for Urn {
     type Err = InvalidUrn;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.split_once(':')
-            .filter(|(extension, _)| *extension == "extension")
-            .map(|(_, segments)| segments)
-            .and_then(|segments| segments.split_once(':'))
-            .filter(|(owner, id)| !owner.is_empty() && !id.is_empty())
-            .map(|(owner, id)| Urn {
-                owner: owner.to_owned(),
-                id: id.to_owned(),
+        let mut parts = s.split(':');
+        match (parts.next(), parts.next(), parts.next(), parts.next()) {
+            (Some("extension"), Some(owner), Some(id), None)
+                if !owner.is_empty() && !id.is_empty() =>
+            {
+                Ok(Urn {
+                    owner: owner.to_string(),
+                    id: id.to_string(),
+                })
+            }
+            _ => Err(InvalidUrn),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_parse_valid_urn() {
+        let valid_urn = "extension:io.substrait:fake_functions";
+        let result = valid_urn.parse::<Urn>();
+        assert_eq!(
+            result,
+            Ok(Urn {
+                owner: "io.substrait".to_string(),
+                id: "fake_functions".to_string()
             })
-            .ok_or(InvalidUrn)
+        );
+    }
+
+    #[test]
+    fn parse_fail_invalid_urns() {
+        let invalid_urns = vec![
+            "io.substrait:something",         // missing "extension:" at beginning
+            "other_type:substrait:something", // incorrect type at beginning
+            "extension:something",            // doesn't have both owner and id
+            "extension:one:two:three",        //has too many parts
+            "extension::id",                  //missing owner
+            "extension:owner:",               //missing id
+        ];
+        for invalid_urn in invalid_urns {
+            assert_eq!(invalid_urn.parse::<Urn>(), Err(InvalidUrn))
+        }
     }
 }
