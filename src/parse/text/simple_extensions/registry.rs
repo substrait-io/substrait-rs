@@ -6,19 +6,20 @@
 //! - **Global Registry**: Immutable, reusable across plans, URI+name based lookup
 //! - **Local Registry**: Per-plan, anchor-based, references Global Registry (TODO)
 //!
-//! Currently only type definitions are supported. Function parsing will be added in a future update.
-//!
 //! This module is only available when the `parse` feature is enabled.
 
 use std::collections::{HashMap, hash_map::Entry};
 
-use super::{ExtensionFile, SimpleExtensions, SimpleExtensionsError, types::CustomType};
+use super::{
+    scalar_functions::ScalarFunction, ExtensionFile, SimpleExtensions, SimpleExtensionsError,
+    types::CustomType,
+};
 use crate::urn::Urn;
 
 /// Extension Registry that manages Substrait extensions
 ///
 /// This registry is immutable and reusable across multiple plans.
-/// It provides URN + name based lookup for extension types. Function parsing will be added in a future update.
+/// It provides URN + name based lookup for extension types and scalar functions.
 #[derive(Debug)]
 pub struct Registry {
     /// Pre-validated extension files
@@ -82,6 +83,11 @@ impl Registry {
     /// Get a type by URN and name
     pub fn get_type(&self, urn: &Urn, name: &str) -> Option<&CustomType> {
         self.get_extension(urn)?.get_type(name)
+    }
+
+    /// Get a scalar function by URN and name
+    pub fn get_scalar_function(&self, urn: &Urn, name: &str) -> Option<&ScalarFunction> {
+        self.get_extension(urn)?.get_scalar_function(name)
     }
 }
 
@@ -165,10 +171,9 @@ mod tests {
         let registry = Registry::from_core_extensions();
         assert!(registry.extensions().count() > 0);
 
-        // Find the unknown.yaml extension dynamically
-        let urn = Urn::from_str("extension:io.substrait:extension_types").unwrap();
+        let types_urn = Urn::from_str("extension:io.substrait:extension_types").unwrap();
         let core_extension = registry
-            .get_extension(&urn)
+            .get_extension(&types_urn)
             .expect("Should find extension_types extension");
 
         let point_type = core_extension.get_type("point");
@@ -177,9 +182,19 @@ mod tests {
             "Should find 'point' type in unknown.yaml extension"
         );
 
-        // Also test the registry's get_type method with the actual URN
-        let type_via_registry = registry.get_type(&urn, "point");
+        let type_via_registry = registry.get_type(&types_urn, "point");
         assert!(type_via_registry.is_some());
+
+        // Test scalar function lookup
+        let functions_urn = Urn::from_str("extension:io.substrait:functions_boolean").unwrap();
+        let or_function = registry.get_scalar_function(&functions_urn, "or");
+        assert!(
+            or_function.is_some(),
+            "Should find 'or' function in functions_boolean extension"
+        );
+
+        let and_function = registry.get_scalar_function(&functions_urn, "and");
+        assert!(and_function.is_some());
     }
 
     #[cfg(feature = "extensions")]
