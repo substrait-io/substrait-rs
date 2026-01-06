@@ -9,7 +9,7 @@ use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use super::{scalar_functions::ScalarFunction, types::CustomType, SimpleExtensionsError};
+use super::{SimpleExtensionsError, scalar_functions::ScalarFunction, types::CustomType};
 use crate::{
     parse::{Context, Parse},
     text::simple_extensions::SimpleExtensions as RawExtensions,
@@ -220,7 +220,9 @@ mod tests {
         };
 
         let mut ctx = TypeContext::default();
-        let (urn, extensions) = raw_extensions.parse(&mut ctx).expect("Parse should succeed");
+        let (urn, extensions) = raw_extensions
+            .parse(&mut ctx)
+            .expect("Parse should succeed");
 
         assert_eq!(urn.to_string(), "extension:example.com:test");
         assert_eq!(extensions.scalar_functions.len(), 1);

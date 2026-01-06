@@ -20,9 +20,9 @@ pub mod argument;
 mod extensions;
 mod file;
 mod registry;
+mod scalar_functions;
 mod type_ast;
 mod types;
-mod scalar_functions;
 
 pub use extensions::SimpleExtensions;
 pub use file::ExtensionFile;

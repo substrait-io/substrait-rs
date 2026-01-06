@@ -6,8 +6,8 @@
 //! YAML files, validating constraints and resolving type strings to concrete types.
 
 use crate::text::simple_extensions::{
-    Options as RawOptions, ScalarFunction as RawScalarFunction,
-    ScalarFunctionImplsItem as RawImpl, VariadicBehavior as RawVariadicBehavior,
+    Options as RawOptions, ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem as RawImpl,
+    VariadicBehavior as RawVariadicBehavior,
 };
 
 use super::argument::{ArgumentsItem, ArgumentsItemError};
@@ -104,10 +104,7 @@ pub struct Impl {
 
 impl Impl {
     /// Parse an implementation from raw YAML, resolving types with the provided context
-    pub(super) fn from_raw(
-        raw: RawImpl,
-        ctx: &TypeContext,
-    ) -> Result<Self, ScalarFunctionError> {
+    pub(super) fn from_raw(raw: RawImpl, ctx: &TypeContext) -> Result<Self, ScalarFunctionError> {
         // Parse the RawType into ConcreteType using the TypeContext
         // TODO: Support type parameter variables in function signatures (e.g., `decimal<P1,S1>`).
         // Currently, type parameters must be integer literals. To support variables, we would need:
@@ -119,21 +116,18 @@ impl Impl {
         let return_type = raw.return_.0.parse(&mut ctx_clone)?;
 
         // Convert and validate variadic behavior if present
-        let variadic = raw
-            .variadic
-            .map(|v| v.try_into())
-            .transpose()?;
+        let variadic = raw.variadic.map(|v| v.try_into()).transpose()?;
 
         // Parse and validate arguments
         let args = match raw.args {
-            Some(a) => a
-                .0
-                .into_iter()
-                .map(|raw_arg| {
-                    let mut ctx_clone = ctx.clone();
-                    raw_arg.parse(&mut ctx_clone)
-                })
-                .collect::<Result<Vec<_>, _>>()?,
+            Some(a) => {
+                a.0.into_iter()
+                    .map(|raw_arg| {
+                        let mut ctx_clone = ctx.clone();
+                        raw_arg.parse(&mut ctx_clone)
+                    })
+                    .collect::<Result<Vec<_>, _>>()?
+            }
             None => Vec::new(),
         };
 
@@ -204,12 +198,12 @@ impl std::convert::TryFrom<RawVariadicBehavior> for VariadicBehavior {
         };
 
         let parameter_consistency = match raw.parameter_consistency {
-            Some(crate::text::simple_extensions::VariadicBehaviorParameterConsistency::Consistent) => {
-                ParameterConsistency::Consistent
-            }
-            Some(crate::text::simple_extensions::VariadicBehaviorParameterConsistency::Inconsistent) => {
-                ParameterConsistency::Inconsistent
-            }
+            Some(
+                crate::text::simple_extensions::VariadicBehaviorParameterConsistency::Consistent,
+            ) => ParameterConsistency::Consistent,
+            Some(
+                crate::text::simple_extensions::VariadicBehaviorParameterConsistency::Inconsistent,
+            ) => ParameterConsistency::Inconsistent,
             None => ParameterConsistency::Consistent, // Default to CONSISTENT
         };
 
@@ -262,9 +256,9 @@ mod tests {
     use super::*;
     use crate::parse::text::simple_extensions::types::BasicBuiltinType;
     use crate::text::simple_extensions::{
-        ArgumentsItem as RawArgumentItem, Options as RawOptions,
-        OptionsValue as RawOptionValue, ReturnValue, ScalarFunctionImplsItem as RawImpl,
-        Type as RawType, VariadicBehavior as RawVariadicBehavior, VariadicBehaviorParameterConsistency,
+        ArgumentsItem as RawArgumentItem, Options as RawOptions, OptionsValue as RawOptionValue,
+        ReturnValue, ScalarFunctionImplsItem as RawImpl, Type as RawType,
+        VariadicBehavior as RawVariadicBehavior, VariadicBehaviorParameterConsistency,
     };
 
     fn raw_impl_minimal() -> RawImpl {
@@ -396,7 +390,10 @@ mod tests {
         let variadic = result.unwrap();
         assert_eq!(variadic.min, Some(1));
         assert_eq!(variadic.max, Some(10));
-        assert_eq!(variadic.parameter_consistency, ParameterConsistency::Consistent);
+        assert_eq!(
+            variadic.parameter_consistency,
+            ParameterConsistency::Consistent
+        );
     }
 
     #[test]
@@ -412,7 +409,10 @@ mod tests {
         assert!(result.is_ok());
 
         let variadic = result.unwrap();
-        assert_eq!(variadic.parameter_consistency, ParameterConsistency::Consistent);
+        assert_eq!(
+            variadic.parameter_consistency,
+            ParameterConsistency::Consistent
+        );
     }
 
     #[test]

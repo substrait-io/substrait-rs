@@ -11,7 +11,7 @@
 use std::collections::{HashMap, hash_map::Entry};
 
 use super::{
-    scalar_functions::ScalarFunction, ExtensionFile, SimpleExtensions, SimpleExtensionsError,
+    ExtensionFile, SimpleExtensions, SimpleExtensionsError, scalar_functions::ScalarFunction,
     types::CustomType,
 };
 use crate::urn::Urn;
@@ -208,8 +208,7 @@ mod tests {
         let raw: crate::text::simple_extensions::SimpleExtensions =
             serde_yaml::from_str(&yaml_content).expect("Should parse YAML");
 
-        let extension_file =
-            ExtensionFile::create(raw).expect("Should create extension file");
+        let extension_file = ExtensionFile::create(raw).expect("Should create extension file");
 
         // Test the "or" function which has variadic behavior
         let or_function = extension_file
@@ -240,8 +239,7 @@ mod tests {
         let raw: crate::text::simple_extensions::SimpleExtensions =
             serde_yaml::from_str(&yaml_content).expect("Should parse YAML");
 
-        let extension_file =
-            ExtensionFile::create(raw).expect("Should create extension file");
+        let extension_file = ExtensionFile::create(raw).expect("Should create extension file");
 
         // Test the "add" function which has options
         let add_function = extension_file
