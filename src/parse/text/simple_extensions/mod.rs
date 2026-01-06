@@ -67,4 +67,10 @@ pub enum SimpleExtensionsError {
         /// The repeated type name
         name: String,
     },
+    /// Duplicate function definition within the same extension
+    #[error("duplicate function definition for `{name}`")]
+    DuplicateFunctionName {
+        /// The repeated function name
+        name: String,
+    },
 }

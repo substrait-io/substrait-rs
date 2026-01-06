@@ -33,6 +33,14 @@ pub enum ScalarFunctionError {
         /// The invalid value
         value: f64,
     },
+    /// Variadic min is greater than max
+    #[error("Variadic min ({min}) must be less than or equal to max ({max})")]
+    VariadicMinGreaterThanMax {
+        /// The minimum value
+        min: u32,
+        /// The maximum value
+        max: u32,
+    },
     /// Error parsing function argument
     #[error("Argument error: {0}")]
     ArgumentError(#[from] ArgumentsItemError),
@@ -54,9 +62,13 @@ pub struct ScalarFunction {
 
 impl ScalarFunction {
     /// Parse a scalar function from raw YAML, resolving types with the provided context
+    ///
+    /// Note: ctx is `&mut` to match the Parse trait, but is not actually mutated
+    /// during function parsing since argument types remain as raw strings and are
+    /// not parsed to ConcreteType. See #444.
     pub(super) fn from_raw(
         raw: RawScalarFunction,
-        ctx: &TypeContext,
+        ctx: &mut TypeContext,
     ) -> Result<Self, ScalarFunctionError> {
         if raw.impls.is_empty() {
             return Err(ScalarFunctionError::NoImplementations { name: raw.name });
@@ -104,7 +116,14 @@ pub struct Impl {
 
 impl Impl {
     /// Parse an implementation from raw YAML, resolving types with the provided context
-    pub(super) fn from_raw(raw: RawImpl, ctx: &TypeContext) -> Result<Self, ScalarFunctionError> {
+    ///
+    /// Note: ctx is `&mut` to match the Parse trait, but is not actually mutated
+    /// during function parsing since argument types remain as raw strings and are
+    /// not parsed to ConcreteType. See #444.
+    pub(super) fn from_raw(
+        raw: RawImpl,
+        ctx: &mut TypeContext,
+    ) -> Result<Self, ScalarFunctionError> {
         // Parse the RawType into ConcreteType using the TypeContext
         // TODO: Support type parameter variables in function signatures (e.g., `decimal<P1,S1>`).
         // Currently, type parameters must be integer literals. To support variables, we would need:
@@ -112,8 +131,7 @@ impl Impl {
         // - Add type variable declarations to function implementations
         // - Implement an expression language for computed return types
         // - Add type variable binding during function call matching
-        let mut ctx_clone = ctx.clone();
-        let return_type = raw.return_.0.parse(&mut ctx_clone)?;
+        let return_type = raw.return_.0.parse(ctx)?;
 
         // Convert and validate variadic behavior if present
         let variadic = raw.variadic.map(|v| v.try_into()).transpose()?;
@@ -122,10 +140,7 @@ impl Impl {
         let args = match raw.args {
             Some(a) => {
                 a.0.into_iter()
-                    .map(|raw_arg| {
-                        let mut ctx_clone = ctx.clone();
-                        raw_arg.parse(&mut ctx_clone)
-                    })
+                    .map(|raw_arg| raw_arg.parse(ctx))
                     .collect::<Result<Vec<_>, _>>()?
             }
             None => Vec::new(),
@@ -196,6 +211,15 @@ impl std::convert::TryFrom<RawVariadicBehavior> for VariadicBehavior {
         } else {
             None
         };
+
+        if let (Some(min_val), Some(max_val)) = (min, max) {
+            if min_val > max_val {
+                return Err(ScalarFunctionError::VariadicMinGreaterThanMax {
+                    min: min_val,
+                    max: max_val,
+                });
+            }
+        }
 
         let parameter_consistency = match raw.parameter_consistency {
             Some(
@@ -277,8 +301,8 @@ mod tests {
     #[test]
     fn test_minimal_impl_parsing() {
         let raw = raw_impl_minimal();
-        let ctx = TypeContext::default();
-        let result = Impl::from_raw(raw, &ctx);
+        let mut ctx = TypeContext::default();
+        let result = Impl::from_raw(raw, &mut ctx);
         assert!(result.is_ok());
         let impl_ = result.unwrap();
         assert!(impl_.args.is_empty());
@@ -329,8 +353,8 @@ mod tests {
             implementation: None,
         };
 
-        let ctx = TypeContext::default();
-        let impl_ = Impl::from_raw(raw_impl, &ctx).expect("parsing should succeed");
+        let mut ctx = TypeContext::default();
+        let impl_ = Impl::from_raw(raw_impl, &mut ctx).expect("parsing should succeed");
 
         // Construct the expected parsed argument
         use crate::parse::Parse;
@@ -432,8 +456,8 @@ mod tests {
             implementation: None,
         };
 
-        let ctx = TypeContext::default();
-        let result = Impl::from_raw(raw_impl, &ctx);
+        let mut ctx = TypeContext::default();
+        let result = Impl::from_raw(raw_impl, &mut ctx);
         assert!(result.is_err());
         match result.unwrap_err() {
             ScalarFunctionError::InvalidVariadicBehavior { field, value } => {
@@ -461,8 +485,8 @@ mod tests {
             implementation: None,
         };
 
-        let ctx = TypeContext::default();
-        let result = Impl::from_raw(raw_impl, &ctx);
+        let mut ctx = TypeContext::default();
+        let result = Impl::from_raw(raw_impl, &mut ctx);
         assert!(result.is_err());
         match result.unwrap_err() {
             ScalarFunctionError::InvalidVariadicBehavior { field, value } => {
@@ -490,8 +514,8 @@ mod tests {
             implementation: None,
         };
 
-        let ctx = TypeContext::default();
-        let result = Impl::from_raw(raw_impl, &ctx);
+        let mut ctx = TypeContext::default();
+        let result = Impl::from_raw(raw_impl, &mut ctx);
         assert!(result.is_err());
         match result.unwrap_err() {
             ScalarFunctionError::InvalidVariadicBehavior { field, value } => {
@@ -499,6 +523,35 @@ mod tests {
                 assert_eq!(value, -5.0);
             }
             _ => panic!("Expected InvalidVariadicBehavior error"),
+        }
+    }
+
+    #[test]
+    fn test_variadic_behavior_min_greater_than_max() {
+        let raw_impl = RawImpl {
+            args: None,
+            options: None,
+            variadic: Some(RawVariadicBehavior {
+                min: Some(10.0),
+                max: Some(5.0),
+                parameter_consistency: None,
+            }),
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("i32".to_string())),
+            implementation: None,
+        };
+
+        let mut ctx = TypeContext::default();
+        let result = Impl::from_raw(raw_impl, &mut ctx);
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ScalarFunctionError::VariadicMinGreaterThanMax { min, max } => {
+                assert_eq!(min, 10);
+                assert_eq!(max, 5);
+            }
+            _ => panic!("Expected VariadicMinGreaterThanMax error"),
         }
     }
 
@@ -528,8 +581,8 @@ mod tests {
             description: Some("Addition function".to_string()),
             impls: vec![raw_impl_minimal()],
         };
-        let ctx = TypeContext::default();
-        let result = ScalarFunction::from_raw(raw, &ctx);
+        let mut ctx = TypeContext::default();
+        let result = ScalarFunction::from_raw(raw, &mut ctx);
         assert!(result.is_ok());
         let func = result.unwrap();
         assert_eq!(func.name, "add");
@@ -544,8 +597,8 @@ mod tests {
             description: Some("Function with no implementations".to_string()),
             impls: vec![],
         };
-        let ctx = TypeContext::default();
-        let result = ScalarFunction::from_raw(raw, &ctx);
+        let mut ctx = TypeContext::default();
+        let result = ScalarFunction::from_raw(raw, &mut ctx);
         assert!(result.is_err());
         match result.unwrap_err() {
             ScalarFunctionError::NoImplementations { name } => {
