@@ -249,7 +249,7 @@ mod tests {
 
         assert_eq!(add_function.name, "add");
         assert!(add_function.description.is_some());
-        assert!(add_function.impls.len() > 0);
+        assert!(!add_function.impls.is_empty());
 
         // Check that at least one implementation has options
         let impl_with_options = add_function
