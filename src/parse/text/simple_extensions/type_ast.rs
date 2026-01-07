@@ -18,27 +18,27 @@
 
 use crate::parse::text::simple_extensions::types::is_builtin_type_name;
 
-/// A parsed type expression from a type string, with lifetime tied to the original string.
+/// A parsed type expression from a type string.
 #[derive(Clone, Debug, PartialEq)]
-pub enum TypeExpr<'a> {
+pub enum TypeExpr {
     /// A type with a name, optional parameters, and nullability
-    Simple(&'a str, Vec<TypeExprParam<'a>>, bool),
+    Simple(String, Vec<TypeExprParam>, bool),
     /// A user-defined extension type, indicated by `u!Name`, with optional
     /// parameters and nullability
-    UserDefined(&'a str, Vec<TypeExprParam<'a>>, bool),
+    UserDefined(String, Vec<TypeExprParam>, bool),
     /// Type variable (e.g., any1, any2)
     TypeVariable(u32, bool),
 }
 
 /// A parsed parameter to a parameterized type
 #[derive(Clone, Debug, PartialEq)]
-pub enum TypeExprParam<'a> {
+pub enum TypeExprParam {
     /// A nested type parameter
-    Type(TypeExpr<'a>),
+    Type(TypeExpr),
     /// An integer literal parameter
     Integer(i64),
     /// An integer variable parameter (e.g., P, P1, S, L1)
-    IntegerVariable(&'a str),
+    IntegerVariable(String),
 }
 
 #[derive(Debug, PartialEq, thiserror::Error)]
@@ -57,9 +57,9 @@ pub enum TypeParseError {
     UnexpectedToken(String),
 }
 
-impl<'a> TypeExpr<'a> {
+impl TypeExpr {
     /// Parse a type string into a [`TypeExpr`].
-    pub fn parse(type_str: &'a str) -> Result<Self, TypeParseError> {
+    pub fn parse(type_str: &str) -> Result<Self, TypeParseError> {
         // Handle type variables like any1, any2, etc.
         if let Some(suffix) = type_str.strip_prefix("any") {
             let (middle, nullable) = match suffix.strip_suffix('?') {
@@ -77,22 +77,21 @@ impl<'a> TypeExpr<'a> {
             None => (false, type_str),
         };
 
-        let (name_and_nullable, params): (&'a str, Vec<TypeExprParam<'a>>) =
-            match rest.split_once('<') {
-                Some((n, p)) => match p.strip_suffix('>') {
-                    Some(p) => (n, parse_params(p)?),
-                    None => return Err(TypeParseError::ExpectedClosingAngleBracket(p.to_string())),
-                },
-                None => (rest, vec![]),
-            };
+        let (name_and_nullable, params) = match rest.split_once('<') {
+            Some((n, p)) => match p.strip_suffix('>') {
+                Some(p) => (n, parse_params(p)?),
+                None => return Err(TypeParseError::ExpectedClosingAngleBracket(p.to_string())),
+            },
+            None => (rest, vec![]),
+        };
 
         if name_and_nullable.contains('[') || name_and_nullable.contains(']') {
             return Err(TypeParseError::UnsupportedVariation(type_str.to_string()));
         }
 
         let (name, nullable) = match name_and_nullable.strip_suffix('?') {
-            Some(name) => (name, true),
-            None => (name_and_nullable, false),
+            Some(name) => (name.to_string(), true),
+            None => (name_and_nullable.to_string(), false),
         };
 
         if user_defined {
@@ -133,7 +132,7 @@ impl<'a> TypeExpr<'a> {
     }
 }
 
-fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
+fn parse_params(s: &str) -> Result<Vec<TypeExprParam>, TypeParseError> {
     let mut result = Vec::new();
     let mut start = 0;
     let mut depth = 0;
@@ -161,7 +160,7 @@ fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError
     Ok(result)
 }
 
-fn parse_param<'a>(s: &'a str) -> Result<TypeExprParam<'a>, TypeParseError> {
+fn parse_param(s: &str) -> Result<TypeExprParam, TypeParseError> {
     // Try integer literal
     if let Ok(i) = s.parse::<i64>() {
         return Ok(TypeExprParam::Integer(i));
@@ -173,7 +172,7 @@ fn parse_param<'a>(s: &'a str) -> Result<TypeExprParam<'a>, TypeParseError> {
         let mut chars = s.chars();
         if let Some(first) = chars.next() {
             if first.is_uppercase() && chars.all(|c| c.is_ascii_digit()) {
-                return Ok(TypeExprParam::IntegerVariable(s));
+                return Ok(TypeExprParam::IntegerVariable(s.to_string()));
             }
         }
     }
@@ -186,23 +185,23 @@ fn parse_param<'a>(s: &'a str) -> Result<TypeExprParam<'a>, TypeParseError> {
 mod tests {
     use super::*;
 
-    fn parse(expr: &str) -> TypeExpr<'_> {
+    fn parse(expr: &str) -> TypeExpr {
         TypeExpr::parse(expr).expect("parse succeeds")
     }
 
     #[test]
     fn test_simple_types() {
         let cases = vec![
-            ("i32", TypeExpr::Simple("i32", vec![], false)),
-            ("i32?", TypeExpr::Simple("i32", vec![], true)),
-            ("MAP", TypeExpr::Simple("MAP", vec![], false)),
-            ("timestamp", TypeExpr::Simple("timestamp", vec![], false)),
+            ("i32", TypeExpr::Simple("i32".to_string(), vec![], false)),
+            ("i32?", TypeExpr::Simple("i32".to_string(), vec![], true)),
+            ("MAP", TypeExpr::Simple("MAP".to_string(), vec![], false)),
+            ("timestamp", TypeExpr::Simple("timestamp".to_string(), vec![], false)),
             (
                 "timestamp_tz?",
-                TypeExpr::Simple("timestamp_tz", vec![], true),
+                TypeExpr::Simple("timestamp_tz".to_string(), vec![], true),
             ),
-            ("time", TypeExpr::Simple("time", vec![], false)),
-            ("any", TypeExpr::Simple("any", vec![], false)),
+            ("time", TypeExpr::Simple("time".to_string(), vec![], false)),
+            ("any", TypeExpr::Simple("any".to_string(), vec![], false)),
         ];
 
         for (expr, expected) in cases {
@@ -232,14 +231,14 @@ mod tests {
             (
                 "u!geo?<i32?, point<i32, i32>>",
                 TypeExpr::UserDefined(
-                    "geo",
+                    "geo".to_string(),
                     vec![
-                        TypeExprParam::Type(TypeExpr::Simple("i32", vec![], true)),
+                        TypeExprParam::Type(TypeExpr::Simple("i32".to_string(), vec![], true)),
                         TypeExprParam::Type(TypeExpr::Simple(
-                            "point",
+                            "point".to_string(),
                             vec![
-                                TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
-                                TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
+                                TypeExprParam::Type(TypeExpr::Simple("i32".to_string(), vec![], false)),
+                                TypeExprParam::Type(TypeExpr::Simple("i32".to_string(), vec![], false)),
                             ],
                             false,
                         )),
@@ -250,10 +249,10 @@ mod tests {
             (
                 "Map?<i32, string>",
                 TypeExpr::Simple(
-                    "Map",
+                    "Map".to_string(),
                     vec![
-                        TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
-                        TypeExprParam::Type(TypeExpr::Simple("string", vec![], false)),
+                        TypeExprParam::Type(TypeExpr::Simple("i32".to_string(), vec![], false)),
+                        TypeExprParam::Type(TypeExpr::Simple("string".to_string(), vec![], false)),
                     ],
                     true,
                 ),
@@ -381,7 +380,7 @@ pub struct TypeDerivation {
     /// Intermediate assignment statements
     pub statements: Vec<DerivationStatement>,
     /// Final result type expression
-    pub result_type: TypeExpr<'static>,
+    pub result_type: TypeExpr,
 }
 
 impl TypeDerivation {
@@ -429,9 +428,7 @@ impl TypeDerivation {
         // Last line must be a type
         let last_line = lines[lines.len() - 1];
 
-        // Leak the string to create a 'static reference, then parse
-        let static_str: &'static str = Box::leak(last_line.to_string().into_boxed_str());
-        let result_type = TypeExpr::parse(static_str)
+        let result_type = TypeExpr::parse(last_line)
             .map_err(|_| TypeParseError::MissingResultType(last_line.to_string()))?;
 
         Ok(TypeDerivation {

@@ -327,15 +327,15 @@ mod tests {
             ],
             // DECIMAL<prec, scale>
             result_type: TypeExpr::Simple(
-                Box::leak("DECIMAL".to_string().into_boxed_str()),
+                "DECIMAL".to_string(),
                 vec![
                     TypeExprParam::Type(TypeExpr::Simple(
-                        Box::leak("prec".to_string().into_boxed_str()),
+                        "prec".to_string(),
                         vec![],
                         false,
                     )),
                     TypeExprParam::Type(TypeExpr::Simple(
-                        Box::leak("scale".to_string().into_boxed_str()),
+                        "scale".to_string(),
                         vec![],
                         false,
                     )),

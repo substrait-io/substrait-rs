@@ -1218,7 +1218,7 @@ impl From<ConcreteType> for RawType {
 fn expect_integer_param(
     type_name: &str,
     index: usize,
-    param: &TypeExprParam<'_>,
+    param: &TypeExprParam,
     range: Option<RangeInclusive<i32>>,
 ) -> Result<i32, ExtensionTypeError> {
     let value = match param {
@@ -1256,7 +1256,7 @@ fn expect_integer_param(
 /// error if not. Assumes a fixed number of expected parameters.
 fn expect_param_len(
     type_name: &str,
-    params: &[TypeExprParam<'_>],
+    params: &[TypeExprParam],
     expected: usize,
 ) -> Result<(), ExtensionTypeError> {
     if params.len() != expected {
@@ -1271,10 +1271,10 @@ fn expect_param_len(
 
 /// Helper function - expect a type parameter, and return the [ConcreteType] if it is a [TypeExpr]
 /// or an error if not.
-fn expect_type_argument<'a>(
+fn expect_type_argument(
     type_name: &str,
     index: usize,
-    param: TypeExprParam<'a>,
+    param: TypeExprParam,
 ) -> Result<ConcreteType, ExtensionTypeError> {
     match param {
         TypeExprParam::Type(t) => ConcreteType::try_from(t),
@@ -1289,10 +1289,10 @@ fn expect_type_argument<'a>(
 }
 
 /// Helper function - expect a type parameter for signature types
-fn expect_signature_type_argument<'a>(
+fn expect_signature_type_argument(
     type_name: &str,
     index: usize,
-    param: TypeExprParam<'a>,
+    param: TypeExprParam,
 ) -> Result<SignatureType, ExtensionTypeError> {
     match param {
         TypeExprParam::Type(t) => SignatureType::try_from(t),
@@ -1310,7 +1310,7 @@ fn expect_signature_type_argument<'a>(
 fn expect_int_param(
     type_name: &str,
     index: usize,
-    param: &TypeExprParam<'_>,
+    param: &TypeExprParam,
 ) -> Result<IntParam, ExtensionTypeError> {
     match param {
         TypeExprParam::Integer(v) => {
@@ -1333,31 +1333,27 @@ fn expect_int_param(
     }
 }
 
-impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
+impl TryFrom<TypeExprParam> for TypeParameter {
     type Error = ExtensionTypeError;
 
-    fn try_from(param: TypeExprParam<'a>) -> Result<Self, Self::Error> {
+    fn try_from(param: TypeExprParam) -> Result<Self, Self::Error> {
         Ok(match param {
             TypeExprParam::Integer(v) => TypeParameter::Integer(v),
             TypeExprParam::Type(t) => TypeParameter::Type(ConcreteType::try_from(t)?),
             TypeExprParam::IntegerVariable(name) => {
-                return Err(ExtensionTypeError::UnresolvedIntegerVariable {
-                    name: name.to_string(),
-                });
+                return Err(ExtensionTypeError::UnresolvedIntegerVariable { name });
             }
         })
     }
 }
 
-impl<'a> TryFrom<TypeExprParam<'a>> for SignatureTypeParameter {
+impl TryFrom<TypeExprParam> for SignatureTypeParameter {
     type Error = ExtensionTypeError;
 
-    fn try_from(param: TypeExprParam<'a>) -> Result<Self, Self::Error> {
+    fn try_from(param: TypeExprParam) -> Result<Self, Self::Error> {
         Ok(match param {
             TypeExprParam::Integer(v) => SignatureTypeParameter::Integer(v),
-            TypeExprParam::IntegerVariable(name) => {
-                SignatureTypeParameter::IntegerVariable(name.to_string())
-            }
+            TypeExprParam::IntegerVariable(name) => SignatureTypeParameter::IntegerVariable(name),
             TypeExprParam::Type(t) => {
                 SignatureTypeParameter::Type(Box::new(SignatureType::try_from(t)?))
             }
@@ -1368,10 +1364,10 @@ impl<'a> TryFrom<TypeExprParam<'a>> for SignatureTypeParameter {
 /// Parse a builtin type. Returns an `ExtensionTypeError` if the type name is
 /// matched, but parameters are incorrect; returns `Some(None)` if the type is
 /// not known.
-fn parse_builtin<'a>(
+fn parse_builtin(
     display_name: &str,
     lower_name: &str,
-    params: &[TypeExprParam<'a>],
+    params: &[TypeExprParam],
 ) -> Result<Option<BasicBuiltinType>, ExtensionTypeError> {
     if let Some(builtin) = primitive_builtin(lower_name) {
         expect_param_len(display_name, params, 0)?;
@@ -1433,10 +1429,10 @@ fn parse_builtin<'a>(
     }
 }
 
-impl<'a> TryFrom<TypeExpr<'a>> for SignatureType {
+impl TryFrom<TypeExpr> for SignatureType {
     type Error = ExtensionTypeError;
 
-    fn try_from(parsed_type: TypeExpr<'a>) -> Result<Self, Self::Error> {
+    fn try_from(parsed_type: TypeExpr) -> Result<Self, Self::Error> {
         match parsed_type {
             TypeExpr::Simple(name, params, nullable) => {
                 let lower = name.to_ascii_lowercase();
@@ -1444,9 +1440,9 @@ impl<'a> TryFrom<TypeExpr<'a>> for SignatureType {
                 // Handle compound types first
                 match lower.as_str() {
                     "list" => {
-                        expect_param_len(name, &params, 1)?;
+                        expect_param_len(&name, &params, 1)?;
                         let element = expect_signature_type_argument(
-                            name,
+                            &name,
                             0,
                             params.into_iter().next().unwrap(),
                         )?;
@@ -1456,10 +1452,10 @@ impl<'a> TryFrom<TypeExpr<'a>> for SignatureType {
                         });
                     }
                     "map" => {
-                        expect_param_len(name, &params, 2)?;
+                        expect_param_len(&name, &params, 2)?;
                         let mut iter = params.into_iter();
-                        let key = expect_signature_type_argument(name, 0, iter.next().unwrap())?;
-                        let value = expect_signature_type_argument(name, 1, iter.next().unwrap())?;
+                        let key = expect_signature_type_argument(&name, 0, iter.next().unwrap())?;
+                        let value = expect_signature_type_argument(&name, 1, iter.next().unwrap())?;
                         return Ok(SignatureType {
                             kind: SignatureTypeKind::Map {
                                 key: Box::new(key),
@@ -1472,7 +1468,7 @@ impl<'a> TryFrom<TypeExpr<'a>> for SignatureType {
                         let field_types = params
                             .into_iter()
                             .enumerate()
-                            .map(|(idx, param)| expect_signature_type_argument(name, idx, param))
+                            .map(|(idx, param)| expect_signature_type_argument(&name, idx, param))
                             .collect::<Result<Vec<_>, _>>()?;
                         return Ok(SignatureType {
                             kind: SignatureTypeKind::Struct(field_types),
@@ -1510,73 +1506,73 @@ impl<'a> TryFrom<TypeExpr<'a>> for SignatureType {
                 // Handle parameterized builtins - convert parameters to IntParam
                 match lower.as_str() {
                     "fixedchar" => {
-                        expect_param_len(name, &params, 1)?;
-                        let length = expect_int_param(name, 0, &params[0])?;
+                        expect_param_len(&name, &params, 1)?;
+                        let length = expect_int_param(&name, 0, &params[0])?;
                         return Ok(SignatureType {
                             kind: SignatureTypeKind::FixedChar { length },
                             nullable,
                         });
                     }
                     "varchar" => {
-                        expect_param_len(name, &params, 1)?;
-                        let length = expect_int_param(name, 0, &params[0])?;
+                        expect_param_len(&name, &params, 1)?;
+                        let length = expect_int_param(&name, 0, &params[0])?;
                         return Ok(SignatureType {
                             kind: SignatureTypeKind::VarChar { length },
                             nullable,
                         });
                     }
                     "fixedbinary" => {
-                        expect_param_len(name, &params, 1)?;
-                        let length = expect_int_param(name, 0, &params[0])?;
+                        expect_param_len(&name, &params, 1)?;
+                        let length = expect_int_param(&name, 0, &params[0])?;
                         return Ok(SignatureType {
                             kind: SignatureTypeKind::FixedBinary { length },
                             nullable,
                         });
                     }
                     "decimal" => {
-                        expect_param_len(name, &params, 2)?;
-                        let precision = expect_int_param(name, 0, &params[0])?;
-                        let scale = expect_int_param(name, 1, &params[1])?;
+                        expect_param_len(&name, &params, 2)?;
+                        let precision = expect_int_param(&name, 0, &params[0])?;
+                        let scale = expect_int_param(&name, 1, &params[1])?;
                         return Ok(SignatureType {
                             kind: SignatureTypeKind::Decimal { precision, scale },
                             nullable,
                         });
                     }
                     "precisiontime" => {
-                        expect_param_len(name, &params, 1)?;
-                        let precision = expect_int_param(name, 0, &params[0])?;
+                        expect_param_len(&name, &params, 1)?;
+                        let precision = expect_int_param(&name, 0, &params[0])?;
                         return Ok(SignatureType {
                             kind: SignatureTypeKind::PrecisionTime { precision },
                             nullable,
                         });
                     }
                     "precisiontimestamp" => {
-                        expect_param_len(name, &params, 1)?;
-                        let precision = expect_int_param(name, 0, &params[0])?;
+                        expect_param_len(&name, &params, 1)?;
+                        let precision = expect_int_param(&name, 0, &params[0])?;
                         return Ok(SignatureType {
                             kind: SignatureTypeKind::PrecisionTimestamp { precision },
                             nullable,
                         });
                     }
                     "precisiontimestamptz" => {
-                        expect_param_len(name, &params, 1)?;
-                        let precision = expect_int_param(name, 0, &params[0])?;
+                        expect_param_len(&name, &params, 1)?;
+                        let precision = expect_int_param(&name, 0, &params[0])?;
                         return Ok(SignatureType {
                             kind: SignatureTypeKind::PrecisionTimestampTz { precision },
                             nullable,
                         });
                     }
                     "interval_day" => {
-                        expect_param_len(name, &params, 1)?;
-                        let precision = expect_int_param(name, 0, &params[0])?;
+                        expect_param_len(&name, &params, 1)?;
+                        let precision = expect_int_param(&name, 0, &params[0])?;
                         return Ok(SignatureType {
                             kind: SignatureTypeKind::IntervalDay { precision },
                             nullable,
                         });
                     }
                     "interval_compound" => {
-                        expect_param_len(name, &params, 1)?;
-                        let precision = expect_int_param(name, 0, &params[0])?;
+                        expect_param_len(&name, &params, 1)?;
+                        let precision = expect_int_param(&name, 0, &params[0])?;
                         return Ok(SignatureType {
                             kind: SignatureTypeKind::IntervalCompound { precision },
                             nullable,
@@ -1592,7 +1588,7 @@ impl<'a> TryFrom<TypeExpr<'a>> for SignatureType {
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(SignatureType {
                     kind: SignatureTypeKind::Extension {
-                        name: name.to_string(),
+                        name,
                         parameters,
                     },
                     nullable,
@@ -1605,7 +1601,7 @@ impl<'a> TryFrom<TypeExpr<'a>> for SignatureType {
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(SignatureType {
                     kind: SignatureTypeKind::Extension {
-                        name: name.to_string(),
+                        name,
                         parameters,
                     },
                     nullable,
@@ -1757,40 +1753,40 @@ impl TryFrom<SignatureType> for ConcreteType {
     }
 }
 
-impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
+impl TryFrom<TypeExpr> for ConcreteType {
     type Error = ExtensionTypeError;
 
-    fn try_from(parsed_type: TypeExpr<'a>) -> Result<Self, Self::Error> {
+    fn try_from(parsed_type: TypeExpr) -> Result<Self, Self::Error> {
         match parsed_type {
             TypeExpr::Simple(name, params, nullable) => {
                 let lower = name.to_ascii_lowercase();
 
                 match lower.as_str() {
                     "list" => {
-                        expect_param_len(name, &params, 1)?;
+                        expect_param_len(&name, &params, 1)?;
                         let element =
-                            expect_type_argument(name, 0, params.into_iter().next().unwrap())?;
+                            expect_type_argument(&name, 0, params.into_iter().next().unwrap())?;
                         return Ok(ConcreteType::list(element, nullable));
                     }
                     "map" => {
-                        expect_param_len(name, &params, 2)?;
+                        expect_param_len(&name, &params, 2)?;
                         let mut iter = params.into_iter();
-                        let key = expect_type_argument(name, 0, iter.next().unwrap())?;
-                        let value = expect_type_argument(name, 1, iter.next().unwrap())?;
+                        let key = expect_type_argument(&name, 0, iter.next().unwrap())?;
+                        let value = expect_type_argument(&name, 1, iter.next().unwrap())?;
                         return Ok(ConcreteType::map(key, value, nullable));
                     }
                     "struct" => {
                         let field_types = params
                             .into_iter()
                             .enumerate()
-                            .map(|(idx, param)| expect_type_argument(name, idx, param))
+                            .map(|(idx, param)| expect_type_argument(&name, idx, param))
                             .collect::<Result<Vec<_>, _>>()?;
                         return Ok(ConcreteType::r#struct(field_types, nullable));
                     }
                     _ => {}
                 }
 
-                if let Some(builtin) = parse_builtin(name, lower.as_str(), &params)? {
+                if let Some(builtin) = parse_builtin(&name, lower.as_str(), &params)? {
                     return Ok(ConcreteType::builtin(builtin, nullable));
                 }
 
@@ -1799,7 +1795,7 @@ impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
                     .map(TypeParameter::try_from)
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(ConcreteType::extension_with_params(
-                    name.to_string(),
+                    name,
                     parameters,
                     nullable,
                 ))
@@ -1810,7 +1806,7 @@ impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
                     .map(TypeParameter::try_from)
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(ConcreteType::extension_with_params(
-                    name.to_string(),
+                    name,
                     parameters,
                     nullable,
                 ))
