@@ -10,7 +10,7 @@ use super::argument::{
     EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
 };
 use super::extensions::TypeContext;
-use super::type_ast::TypeExprParam;
+use super::type_ast::{TypeDerivation, TypeExprParam};
 use crate::parse::Parse;
 use crate::parse::text::simple_extensions::type_ast::TypeParseError;
 use crate::text::simple_extensions::{
@@ -63,6 +63,35 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}{}", self.0, self.2, self.1)
+    }
+}
+
+/// Integer parameter for signature types - can be concrete or a variable
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum IntParam {
+    /// Concrete integer value
+    Concrete(i32),
+    /// Variable name (e.g., "P", "S", "L1")
+    Variable(String),
+}
+
+impl fmt::Display for IntParam {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            IntParam::Concrete(v) => write!(f, "{}", v),
+            IntParam::Variable(v) => write!(f, "{}", v),
+        }
+    }
+}
+
+impl TryFrom<IntParam> for i32 {
+    type Error = ExtensionTypeError;
+
+    fn try_from(p: IntParam) -> Result<i32, Self::Error> {
+        match p {
+            IntParam::Concrete(v) => Ok(v),
+            IntParam::Variable(name) => Err(ExtensionTypeError::UnresolvedIntegerVariable { name }),
+        }
     }
 }
 
@@ -488,6 +517,18 @@ pub enum ExtensionTypeError {
     /// Error parsing type
     #[error("Error parsing type: {0}")]
     ParseType(#[from] TypeParseError),
+    /// Unresolved type variable in signature
+    #[error("Cannot convert signature to concrete type: unresolved type variable any{id}")]
+    UnresolvedTypeVariable {
+        /// The type variable ID
+        id: u8,
+    },
+    /// Unresolved integer variable in signature
+    #[error("Cannot convert signature to concrete type: unresolved integer variable '{name}'")]
+    UnresolvedIntegerVariable {
+        /// The variable name
+        name: String,
+    },
 }
 
 /// Error types for TypeParam validation
@@ -637,12 +678,14 @@ impl Parse<TypeContext> for SimpleExtensionsTypesItem {
         // Parse structure with context, so referenced extension types are recorded as linked
         let structure = match self.structure {
             Some(structure_data) => {
-                let parsed = Parse::parse(structure_data, ctx)?;
+                let parsed: SignatureType = Parse::parse(structure_data, ctx)?;
+                // Type definitions must be concrete (no type variables)
+                let concrete = ConcreteType::try_from(parsed)?;
                 // TODO: check that the structure is valid. The `Type::Object`
                 // form of `structure_data` is by definition a non-nullable `NSTRUCT`; however,
                 // what types allowed under the `Type::String` form is less clear in the spec:
                 // See https://github.com/substrait-io/substrait/issues/920.
-                Some(parsed)
+                Some(concrete)
             }
             None => None,
         };
@@ -658,7 +701,7 @@ impl Parse<TypeContext> for SimpleExtensionsTypesItem {
 }
 
 impl Parse<TypeContext> for RawType {
-    type Parsed = ConcreteType;
+    type Parsed = SignatureType;
     type Error = ExtensionTypeError;
 
     fn parse(self, ctx: &mut TypeContext) -> Result<Self::Parsed, Self::Error> {
@@ -667,8 +710,8 @@ impl Parse<TypeContext> for RawType {
                 let parsed_type = TypeExpr::parse(&type_string)?;
                 let mut link = |name: &str| ctx.linked(name);
                 parsed_type.visit_references(&mut link);
-                let concrete = ConcreteType::try_from(parsed_type)?;
-                Ok(concrete)
+                let signature = SignatureType::try_from(parsed_type)?;
+                Ok(signature)
             }
             RawType::Object(field_map) => {
                 // Type structure in Substrait must preserve field order (see
@@ -690,21 +733,51 @@ impl Parse<TypeContext> for RawType {
                     let parsed_field_type = TypeExpr::parse(&type_string)?;
                     let mut link = |name: &str| ctx.linked(name);
                     parsed_field_type.visit_references(&mut link);
-                    let field_concrete_type = ConcreteType::try_from(parsed_field_type)?;
+                    let field_signature_type = SignatureType::try_from(parsed_field_type)?;
 
                     if fields
-                        .insert(field_name.clone(), field_concrete_type)
+                        .insert(field_name.clone(), field_signature_type)
                         .is_some()
                     {
                         return Err(ExtensionTypeError::DuplicateFieldName { field_name });
                     }
                 }
 
-                Ok(ConcreteType {
-                    kind: ConcreteTypeKind::NamedStruct { fields },
+                Ok(SignatureType {
+                    kind: SignatureTypeKind::NamedStruct { fields },
                     nullable: false,
                 })
             }
+        }
+    }
+}
+
+/// Parse a return type, which can be either a simple type or a type derivation expression
+pub fn parse_return_type(
+    raw_type: RawType,
+    ctx: &mut TypeContext,
+) -> Result<ReturnType, ExtensionTypeError> {
+    match raw_type {
+        RawType::String(type_string) => {
+            // Detect derivation: multi-line with at least one `=` assignment
+            if type_string.contains('\n') && type_string.contains('=') {
+                let derivation = TypeDerivation::parse(&type_string)?;
+                // Visit references in the final result type
+                let mut link = |name: &str| ctx.linked(name);
+                derivation.result_type.visit_references(&mut link);
+                Ok(ReturnType::Derivation(derivation))
+            } else {
+                let parsed_type = TypeExpr::parse(&type_string)?;
+                let mut link = |name: &str| ctx.linked(name);
+                parsed_type.visit_references(&mut link);
+                let signature = SignatureType::try_from(parsed_type)?;
+                Ok(ReturnType::Type(signature))
+            }
+        }
+        RawType::Object(field_map) => {
+            // Struct types are always simple types, not derivations
+            let signature = RawType::Object(field_map).parse(ctx)?;
+            Ok(ReturnType::Type(signature))
         }
     }
 }
@@ -771,6 +844,232 @@ impl fmt::Display for ConcreteTypeKind {
             }
         }
     }
+}
+
+/// Type parameters that can appear in function signatures (may contain variables)
+#[derive(Clone, Debug, PartialEq)]
+pub enum SignatureTypeParameter {
+    /// Integer literal parameter
+    Integer(i64),
+    /// Integer variable parameter (e.g., P, P1, S, L1)
+    IntegerVariable(String),
+    /// Nested type parameter
+    Type(Box<SignatureType>),
+}
+
+impl fmt::Display for SignatureTypeParameter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SignatureTypeParameter::Integer(i) => write!(f, "{i}"),
+            SignatureTypeParameter::IntegerVariable(v) => write!(f, "{v}"),
+            SignatureTypeParameter::Type(t) => write!(f, "{t}"),
+        }
+    }
+}
+
+/// Signature type kinds - can contain variables
+#[derive(Clone, Debug, PartialEq)]
+pub enum SignatureTypeKind {
+    // Non-parameterized builtin types
+    /// Boolean type - `bool`
+    Boolean,
+    /// 8-bit signed integer - `i8`
+    I8,
+    /// 16-bit signed integer - `i16`
+    I16,
+    /// 32-bit signed integer - `i32`
+    I32,
+    /// 64-bit signed integer - `i64`
+    I64,
+    /// 32-bit floating point - `fp32`
+    Fp32,
+    /// 64-bit floating point - `fp64`
+    Fp64,
+    /// Variable-length string - `string`
+    String,
+    /// Variable-length binary data - `binary`
+    Binary,
+    /// Naive Timestamp
+    Timestamp,
+    /// Timestamp with time zone - `timestamp_tz`
+    TimestampTz,
+    /// Calendar date - `date`
+    Date,
+    /// Time of day - `time`
+    Time,
+    /// Year-month interval - `interval_year`
+    IntervalYear,
+    /// 128-bit UUID - `uuid`
+    Uuid,
+
+    // Parameterized builtin types - use IntParam for parameters
+    /// Fixed-length character string: `FIXEDCHAR<L>`
+    FixedChar {
+        /// Length (can be concrete or variable)
+        length: IntParam,
+    },
+    /// Variable-length character string: `VARCHAR<L>`
+    VarChar {
+        /// Maximum length (can be concrete or variable)
+        length: IntParam,
+    },
+    /// Fixed-length binary data: `FIXEDBINARY<L>`
+    FixedBinary {
+        /// Length (can be concrete or variable)
+        length: IntParam,
+    },
+    /// Fixed-point decimal: `DECIMAL<P, S>`
+    Decimal {
+        /// Precision (can be concrete or variable)
+        precision: IntParam,
+        /// Scale (can be concrete or variable)
+        scale: IntParam,
+    },
+    /// Time with sub-second precision: `PRECISIONTIME<P>`
+    PrecisionTime {
+        /// Sub-second precision (can be concrete or variable)
+        precision: IntParam,
+    },
+    /// Timestamp with sub-second precision: `PRECISIONTIMESTAMP<P>`
+    PrecisionTimestamp {
+        /// Sub-second precision (can be concrete or variable)
+        precision: IntParam,
+    },
+    /// Timezone-aware timestamp with precision: `PRECISIONTIMESTAMPTZ<P>`
+    PrecisionTimestampTz {
+        /// Sub-second precision (can be concrete or variable)
+        precision: IntParam,
+    },
+    /// Day-time interval: `INTERVAL_DAY<P>`
+    IntervalDay {
+        /// Sub-second precision (can be concrete or variable)
+        precision: IntParam,
+    },
+    /// Compound interval: `INTERVAL_COMPOUND<P>`
+    IntervalCompound {
+        /// Sub-second precision (can be concrete or variable)
+        precision: IntParam,
+    },
+
+    // Extension and compound types
+    /// Extension type with optional parameters (may contain variables)
+    Extension {
+        /// Extension type name
+        name: String,
+        /// Type parameters (may include integer variables like P, S)
+        parameters: Vec<SignatureTypeParameter>,
+    },
+    /// List type with element type
+    List(Box<SignatureType>),
+    /// Map type with key and value types
+    Map {
+        /// Key type
+        key: Box<SignatureType>,
+        /// Value type
+        value: Box<SignatureType>,
+    },
+    /// Struct type (ordered fields without names)
+    Struct(Vec<SignatureType>),
+    /// Named struct type (ordered fields with names)
+    NamedStruct {
+        /// Ordered field names and types
+        fields: IndexMap<String, SignatureType>,
+    },
+    /// Type variable (e.g., any1, any2)
+    TypeVariable {
+        /// Type variable identifier (1-255)
+        id: u8,
+    },
+}
+
+impl fmt::Display for SignatureTypeKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            // Primitives
+            SignatureTypeKind::Boolean => write!(f, "bool"),
+            SignatureTypeKind::I8 => write!(f, "i8"),
+            SignatureTypeKind::I16 => write!(f, "i16"),
+            SignatureTypeKind::I32 => write!(f, "i32"),
+            SignatureTypeKind::I64 => write!(f, "i64"),
+            SignatureTypeKind::Fp32 => write!(f, "fp32"),
+            SignatureTypeKind::Fp64 => write!(f, "fp64"),
+            SignatureTypeKind::String => write!(f, "string"),
+            SignatureTypeKind::Binary => write!(f, "binary"),
+            SignatureTypeKind::Timestamp => write!(f, "timestamp"),
+            SignatureTypeKind::TimestampTz => write!(f, "timestamp_tz"),
+            SignatureTypeKind::Date => write!(f, "date"),
+            SignatureTypeKind::Time => write!(f, "time"),
+            SignatureTypeKind::IntervalYear => write!(f, "interval_year"),
+            SignatureTypeKind::Uuid => write!(f, "uuid"),
+            // Parameterized builtins
+            SignatureTypeKind::FixedChar { length } => write!(f, "FIXEDCHAR<{}>", length),
+            SignatureTypeKind::VarChar { length } => write!(f, "VARCHAR<{}>", length),
+            SignatureTypeKind::FixedBinary { length } => write!(f, "FIXEDBINARY<{}>", length),
+            SignatureTypeKind::Decimal { precision, scale } => {
+                write!(f, "DECIMAL<{}, {}>", precision, scale)
+            }
+            SignatureTypeKind::PrecisionTime { precision } => {
+                write!(f, "PRECISIONTIME<{}>", precision)
+            }
+            SignatureTypeKind::PrecisionTimestamp { precision } => {
+                write!(f, "PRECISIONTIMESTAMP<{}>", precision)
+            }
+            SignatureTypeKind::PrecisionTimestampTz { precision } => {
+                write!(f, "PRECISIONTIMESTAMPTZ<{}>", precision)
+            }
+            SignatureTypeKind::IntervalDay { precision } => {
+                write!(f, "INTERVAL_DAY<{}>", precision)
+            }
+            SignatureTypeKind::IntervalCompound { precision } => {
+                write!(f, "INTERVAL_COMPOUND<{}>", precision)
+            }
+            // Compound types
+            SignatureTypeKind::Extension { name, parameters } => {
+                write!(f, "{name}")?;
+                write_separated(f, parameters.iter(), "<", ">", ", ")
+            }
+            SignatureTypeKind::List(elem) => write!(f, "list<{elem}>"),
+            SignatureTypeKind::Map { key, value } => write!(f, "map<{key}, {value}>"),
+            SignatureTypeKind::Struct(types) => {
+                write_separated(f, types.iter(), "struct<", ">", ", ")
+            }
+            SignatureTypeKind::NamedStruct { fields } => {
+                let kvs = fields.iter().map(|(k, v)| KeyValueDisplay(k, v, ": "));
+                write_separated(f, kvs, "{", "}", ", ")
+            }
+            SignatureTypeKind::TypeVariable { id } => write!(f, "any{id}"),
+        }
+    }
+}
+
+/// A type as it appears in function signatures (can contain variables)
+#[derive(Clone, Debug, PartialEq)]
+pub struct SignatureType {
+    /// The type shape (may contain variables)
+    pub kind: SignatureTypeKind,
+    /// Whether this type is nullable
+    pub nullable: bool,
+}
+
+impl fmt::Display for SignatureType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.kind)?;
+        if self.nullable {
+            write!(f, "?")?;
+        }
+        Ok(())
+    }
+}
+
+/// Return type of a function implementation
+///
+/// Can either be a simple type or a complex type derivation expression.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ReturnType {
+    /// Simple type (e.g., "i64", "varchar<L1>", "any1")
+    Type(SignatureType),
+    /// Type derivation expression (multi-line with intermediate computations)
+    Derivation(TypeDerivation),
 }
 
 /// A concrete, fully-resolved type instance with nullability.
@@ -873,6 +1172,22 @@ impl fmt::Display for ConcreteType {
     }
 }
 
+impl From<SignatureType> for RawType {
+    fn from(val: SignatureType) -> Self {
+        match val.kind {
+            SignatureTypeKind::NamedStruct { fields } => {
+                let map = Map::from_iter(
+                    fields
+                        .into_iter()
+                        .map(|(name, ty)| (name, serde_json::Value::String(ty.to_string()))),
+                );
+                RawType::Object(map)
+            }
+            _ => RawType::String(val.to_string()),
+        }
+    }
+}
+
 impl From<ConcreteType> for RawType {
     fn from(val: ConcreteType) -> Self {
         match val.kind {
@@ -963,10 +1278,57 @@ fn expect_type_argument<'a>(
 ) -> Result<ConcreteType, ExtensionTypeError> {
     match param {
         TypeExprParam::Type(t) => ConcreteType::try_from(t),
-        TypeExprParam::Integer(_) => Err(ExtensionTypeError::InvalidParameterKind {
+        TypeExprParam::Integer(_) | TypeExprParam::IntegerVariable(_) => {
+            Err(ExtensionTypeError::InvalidParameterKind {
+                type_name: type_name.to_string(),
+                index,
+                expected: "a type",
+            })
+        }
+    }
+}
+
+/// Helper function - expect a type parameter for signature types
+fn expect_signature_type_argument<'a>(
+    type_name: &str,
+    index: usize,
+    param: TypeExprParam<'a>,
+) -> Result<SignatureType, ExtensionTypeError> {
+    match param {
+        TypeExprParam::Type(t) => SignatureType::try_from(t),
+        TypeExprParam::Integer(_) | TypeExprParam::IntegerVariable(_) => {
+            Err(ExtensionTypeError::InvalidParameterKind {
+                type_name: type_name.to_string(),
+                index,
+                expected: "a type",
+            })
+        }
+    }
+}
+
+/// Extract an integer parameter (concrete or variable) from a type expression parameter
+fn expect_int_param(
+    type_name: &str,
+    index: usize,
+    param: &TypeExprParam<'_>,
+) -> Result<IntParam, ExtensionTypeError> {
+    match param {
+        TypeExprParam::Integer(v) => {
+            let v: i32 =
+                (*v).try_into()
+                    .map_err(|_| ExtensionTypeError::InvalidParameterValue {
+                        type_name: type_name.to_string(),
+                        index,
+                        value: *v,
+                        expected: "a valid i32",
+                    })?;
+            Ok(IntParam::Concrete(v))
+        }
+        TypeExprParam::IntegerVariable(name) => Ok(IntParam::Variable(name.to_string())),
+        TypeExprParam::Type(_) => Err(ExtensionTypeError::InvalidParameterKind {
             type_name: type_name.to_string(),
             index,
-            expected: "a type",
+            expected: "an integer or integer variable",
         }),
     }
 }
@@ -978,6 +1340,27 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
         Ok(match param {
             TypeExprParam::Integer(v) => TypeParameter::Integer(v),
             TypeExprParam::Type(t) => TypeParameter::Type(ConcreteType::try_from(t)?),
+            TypeExprParam::IntegerVariable(name) => {
+                return Err(ExtensionTypeError::UnresolvedIntegerVariable {
+                    name: name.to_string(),
+                });
+            }
+        })
+    }
+}
+
+impl<'a> TryFrom<TypeExprParam<'a>> for SignatureTypeParameter {
+    type Error = ExtensionTypeError;
+
+    fn try_from(param: TypeExprParam<'a>) -> Result<Self, Self::Error> {
+        Ok(match param {
+            TypeExprParam::Integer(v) => SignatureTypeParameter::Integer(v),
+            TypeExprParam::IntegerVariable(name) => {
+                SignatureTypeParameter::IntegerVariable(name.to_string())
+            }
+            TypeExprParam::Type(t) => {
+                SignatureTypeParameter::Type(Box::new(SignatureType::try_from(t)?))
+            }
         })
     }
 }
@@ -1047,6 +1430,330 @@ fn parse_builtin<'a>(
             Ok(Some(BasicBuiltinType::IntervalCompound { precision }))
         }
         _ => Ok(None),
+    }
+}
+
+impl<'a> TryFrom<TypeExpr<'a>> for SignatureType {
+    type Error = ExtensionTypeError;
+
+    fn try_from(parsed_type: TypeExpr<'a>) -> Result<Self, Self::Error> {
+        match parsed_type {
+            TypeExpr::Simple(name, params, nullable) => {
+                let lower = name.to_ascii_lowercase();
+
+                // Handle compound types first
+                match lower.as_str() {
+                    "list" => {
+                        expect_param_len(name, &params, 1)?;
+                        let element = expect_signature_type_argument(
+                            name,
+                            0,
+                            params.into_iter().next().unwrap(),
+                        )?;
+                        return Ok(SignatureType {
+                            kind: SignatureTypeKind::List(Box::new(element)),
+                            nullable,
+                        });
+                    }
+                    "map" => {
+                        expect_param_len(name, &params, 2)?;
+                        let mut iter = params.into_iter();
+                        let key = expect_signature_type_argument(name, 0, iter.next().unwrap())?;
+                        let value = expect_signature_type_argument(name, 1, iter.next().unwrap())?;
+                        return Ok(SignatureType {
+                            kind: SignatureTypeKind::Map {
+                                key: Box::new(key),
+                                value: Box::new(value),
+                            },
+                            nullable,
+                        });
+                    }
+                    "struct" => {
+                        let field_types = params
+                            .into_iter()
+                            .enumerate()
+                            .map(|(idx, param)| expect_signature_type_argument(name, idx, param))
+                            .collect::<Result<Vec<_>, _>>()?;
+                        return Ok(SignatureType {
+                            kind: SignatureTypeKind::Struct(field_types),
+                            nullable,
+                        });
+                    }
+                    _ => {}
+                }
+
+                // Handle primitives (no parameters)
+                if params.is_empty() {
+                    let primitive = match lower.as_str() {
+                        "bool" | "boolean" => Some(SignatureTypeKind::Boolean),
+                        "i8" => Some(SignatureTypeKind::I8),
+                        "i16" => Some(SignatureTypeKind::I16),
+                        "i32" => Some(SignatureTypeKind::I32),
+                        "i64" => Some(SignatureTypeKind::I64),
+                        "fp32" => Some(SignatureTypeKind::Fp32),
+                        "fp64" => Some(SignatureTypeKind::Fp64),
+                        "string" => Some(SignatureTypeKind::String),
+                        "binary" => Some(SignatureTypeKind::Binary),
+                        "timestamp" => Some(SignatureTypeKind::Timestamp),
+                        "timestamp_tz" => Some(SignatureTypeKind::TimestampTz),
+                        "date" => Some(SignatureTypeKind::Date),
+                        "time" => Some(SignatureTypeKind::Time),
+                        "interval_year" => Some(SignatureTypeKind::IntervalYear),
+                        "uuid" => Some(SignatureTypeKind::Uuid),
+                        _ => None,
+                    };
+                    if let Some(kind) = primitive {
+                        return Ok(SignatureType { kind, nullable });
+                    }
+                }
+
+                // Handle parameterized builtins - convert parameters to IntParam
+                match lower.as_str() {
+                    "fixedchar" => {
+                        expect_param_len(name, &params, 1)?;
+                        let length = expect_int_param(name, 0, &params[0])?;
+                        return Ok(SignatureType {
+                            kind: SignatureTypeKind::FixedChar { length },
+                            nullable,
+                        });
+                    }
+                    "varchar" => {
+                        expect_param_len(name, &params, 1)?;
+                        let length = expect_int_param(name, 0, &params[0])?;
+                        return Ok(SignatureType {
+                            kind: SignatureTypeKind::VarChar { length },
+                            nullable,
+                        });
+                    }
+                    "fixedbinary" => {
+                        expect_param_len(name, &params, 1)?;
+                        let length = expect_int_param(name, 0, &params[0])?;
+                        return Ok(SignatureType {
+                            kind: SignatureTypeKind::FixedBinary { length },
+                            nullable,
+                        });
+                    }
+                    "decimal" => {
+                        expect_param_len(name, &params, 2)?;
+                        let precision = expect_int_param(name, 0, &params[0])?;
+                        let scale = expect_int_param(name, 1, &params[1])?;
+                        return Ok(SignatureType {
+                            kind: SignatureTypeKind::Decimal { precision, scale },
+                            nullable,
+                        });
+                    }
+                    "precisiontime" => {
+                        expect_param_len(name, &params, 1)?;
+                        let precision = expect_int_param(name, 0, &params[0])?;
+                        return Ok(SignatureType {
+                            kind: SignatureTypeKind::PrecisionTime { precision },
+                            nullable,
+                        });
+                    }
+                    "precisiontimestamp" => {
+                        expect_param_len(name, &params, 1)?;
+                        let precision = expect_int_param(name, 0, &params[0])?;
+                        return Ok(SignatureType {
+                            kind: SignatureTypeKind::PrecisionTimestamp { precision },
+                            nullable,
+                        });
+                    }
+                    "precisiontimestamptz" => {
+                        expect_param_len(name, &params, 1)?;
+                        let precision = expect_int_param(name, 0, &params[0])?;
+                        return Ok(SignatureType {
+                            kind: SignatureTypeKind::PrecisionTimestampTz { precision },
+                            nullable,
+                        });
+                    }
+                    "interval_day" => {
+                        expect_param_len(name, &params, 1)?;
+                        let precision = expect_int_param(name, 0, &params[0])?;
+                        return Ok(SignatureType {
+                            kind: SignatureTypeKind::IntervalDay { precision },
+                            nullable,
+                        });
+                    }
+                    "interval_compound" => {
+                        expect_param_len(name, &params, 1)?;
+                        let precision = expect_int_param(name, 0, &params[0])?;
+                        return Ok(SignatureType {
+                            kind: SignatureTypeKind::IntervalCompound { precision },
+                            nullable,
+                        });
+                    }
+                    _ => {}
+                }
+
+                // Otherwise treat as extension type (may have variables)
+                let parameters = params
+                    .into_iter()
+                    .map(SignatureTypeParameter::try_from)
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(SignatureType {
+                    kind: SignatureTypeKind::Extension {
+                        name: name.to_string(),
+                        parameters,
+                    },
+                    nullable,
+                })
+            }
+            TypeExpr::UserDefined(name, params, nullable) => {
+                let parameters = params
+                    .into_iter()
+                    .map(SignatureTypeParameter::try_from)
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(SignatureType {
+                    kind: SignatureTypeKind::Extension {
+                        name: name.to_string(),
+                        parameters,
+                    },
+                    nullable,
+                })
+            }
+            TypeExpr::TypeVariable(id, nullable) => {
+                if id > 255 {
+                    return Err(ExtensionTypeError::InvalidAnyTypeVariable {
+                        id,
+                        nullability: nullable,
+                    });
+                }
+                Ok(SignatureType {
+                    kind: SignatureTypeKind::TypeVariable { id: id as u8 },
+                    nullable,
+                })
+            }
+        }
+    }
+}
+
+impl TryFrom<SignatureType> for ConcreteType {
+    type Error = ExtensionTypeError;
+
+    fn try_from(sig: SignatureType) -> Result<Self, Self::Error> {
+        let kind = match sig.kind {
+            // Type variables cannot be concrete
+            SignatureTypeKind::TypeVariable { id } => {
+                return Err(ExtensionTypeError::UnresolvedTypeVariable { id });
+            }
+
+            // Primitives - pass through directly
+            SignatureTypeKind::Boolean => ConcreteTypeKind::Builtin(BasicBuiltinType::Boolean),
+            SignatureTypeKind::I8 => ConcreteTypeKind::Builtin(BasicBuiltinType::I8),
+            SignatureTypeKind::I16 => ConcreteTypeKind::Builtin(BasicBuiltinType::I16),
+            SignatureTypeKind::I32 => ConcreteTypeKind::Builtin(BasicBuiltinType::I32),
+            SignatureTypeKind::I64 => ConcreteTypeKind::Builtin(BasicBuiltinType::I64),
+            SignatureTypeKind::Fp32 => ConcreteTypeKind::Builtin(BasicBuiltinType::Fp32),
+            SignatureTypeKind::Fp64 => ConcreteTypeKind::Builtin(BasicBuiltinType::Fp64),
+            SignatureTypeKind::String => ConcreteTypeKind::Builtin(BasicBuiltinType::String),
+            SignatureTypeKind::Binary => ConcreteTypeKind::Builtin(BasicBuiltinType::Binary),
+            SignatureTypeKind::Timestamp => ConcreteTypeKind::Builtin(BasicBuiltinType::Timestamp),
+            SignatureTypeKind::TimestampTz => {
+                ConcreteTypeKind::Builtin(BasicBuiltinType::TimestampTz)
+            }
+            SignatureTypeKind::Date => ConcreteTypeKind::Builtin(BasicBuiltinType::Date),
+            SignatureTypeKind::Time => ConcreteTypeKind::Builtin(BasicBuiltinType::Time),
+            SignatureTypeKind::IntervalYear => {
+                ConcreteTypeKind::Builtin(BasicBuiltinType::IntervalYear)
+            }
+            SignatureTypeKind::Uuid => ConcreteTypeKind::Builtin(BasicBuiltinType::Uuid),
+
+            // Parameterized builtins - convert IntParam to i32, rejecting variables
+            SignatureTypeKind::FixedChar { length } => {
+                ConcreteTypeKind::Builtin(BasicBuiltinType::FixedChar {
+                    length: length.try_into()?,
+                })
+            }
+            SignatureTypeKind::VarChar { length } => {
+                ConcreteTypeKind::Builtin(BasicBuiltinType::VarChar {
+                    length: length.try_into()?,
+                })
+            }
+            SignatureTypeKind::FixedBinary { length } => {
+                ConcreteTypeKind::Builtin(BasicBuiltinType::FixedBinary {
+                    length: length.try_into()?,
+                })
+            }
+            SignatureTypeKind::Decimal { precision, scale } => {
+                ConcreteTypeKind::Builtin(BasicBuiltinType::Decimal {
+                    precision: precision.try_into()?,
+                    scale: scale.try_into()?,
+                })
+            }
+            SignatureTypeKind::PrecisionTime { precision } => {
+                ConcreteTypeKind::Builtin(BasicBuiltinType::PrecisionTime {
+                    precision: precision.try_into()?,
+                })
+            }
+            SignatureTypeKind::PrecisionTimestamp { precision } => {
+                ConcreteTypeKind::Builtin(BasicBuiltinType::PrecisionTimestamp {
+                    precision: precision.try_into()?,
+                })
+            }
+            SignatureTypeKind::PrecisionTimestampTz { precision } => {
+                ConcreteTypeKind::Builtin(BasicBuiltinType::PrecisionTimestampTz {
+                    precision: precision.try_into()?,
+                })
+            }
+            SignatureTypeKind::IntervalDay { precision } => {
+                ConcreteTypeKind::Builtin(BasicBuiltinType::IntervalDay {
+                    precision: precision.try_into()?,
+                })
+            }
+            SignatureTypeKind::IntervalCompound { precision } => {
+                ConcreteTypeKind::Builtin(BasicBuiltinType::IntervalCompound {
+                    precision: precision.try_into()?,
+                })
+            }
+
+            // Compound types - recursively convert
+            SignatureTypeKind::List(element) => {
+                ConcreteTypeKind::List(Box::new((*element).try_into()?))
+            }
+            SignatureTypeKind::Map { key, value } => ConcreteTypeKind::Map {
+                key: Box::new((*key).try_into()?),
+                value: Box::new((*value).try_into()?),
+            },
+            SignatureTypeKind::Struct(fields) => {
+                let concrete_fields = fields
+                    .into_iter()
+                    .map(ConcreteType::try_from)
+                    .collect::<Result<Vec<_>, _>>()?;
+                ConcreteTypeKind::Struct(concrete_fields)
+            }
+            SignatureTypeKind::NamedStruct { fields } => {
+                let concrete_fields = fields
+                    .into_iter()
+                    .map(|(name, sig_type)| Ok((name, ConcreteType::try_from(sig_type)?)))
+                    .collect::<Result<IndexMap<String, ConcreteType>, ExtensionTypeError>>()?;
+                ConcreteTypeKind::NamedStruct {
+                    fields: concrete_fields,
+                }
+            }
+            SignatureTypeKind::Extension { name, parameters } => {
+                let concrete_params = parameters
+                    .into_iter()
+                    .map(|p| match p {
+                        SignatureTypeParameter::Integer(i) => Ok(TypeParameter::Integer(i)),
+                        SignatureTypeParameter::IntegerVariable(v) => {
+                            Err(ExtensionTypeError::UnresolvedIntegerVariable { name: v })
+                        }
+                        SignatureTypeParameter::Type(t) => {
+                            Ok(TypeParameter::Type((*t).try_into()?))
+                        }
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                ConcreteTypeKind::Extension {
+                    name,
+                    parameters: concrete_params,
+                }
+            }
+        };
+
+        Ok(ConcreteType {
+            kind,
+            nullable: sig.nullable,
+        })
     }
 }
 
@@ -1183,6 +1890,12 @@ mod tests {
         RawType::Object(map)
     }
 
+    /// Parse a string into a [SignatureType]
+    fn parse_signature_type(expr: &str) -> SignatureType {
+        let parsed = TypeExpr::parse(expr).unwrap();
+        SignatureType::try_from(parsed).unwrap()
+    }
+
     #[test]
     fn test_builtin_scalar_parsing() {
         let cases = vec![
@@ -1269,6 +1982,206 @@ mod tests {
             let found = parse_simple(expr);
             assert_eq!(found, expected, "unexpected type for {expr}");
         }
+    }
+
+    #[test]
+    fn test_types_with_integer_variables() {
+        let cases = vec![
+            (
+                "decimal<P,S>",
+                SignatureType {
+                    kind: SignatureTypeKind::Decimal {
+                        precision: IntParam::Variable("P".to_string()),
+                        scale: IntParam::Variable("S".to_string()),
+                    },
+                    nullable: false,
+                },
+            ),
+            (
+                "varchar<L1>",
+                SignatureType {
+                    kind: SignatureTypeKind::VarChar {
+                        length: IntParam::Variable("L1".to_string()),
+                    },
+                    nullable: false,
+                },
+            ),
+            (
+                "fixedchar<L>",
+                SignatureType {
+                    kind: SignatureTypeKind::FixedChar {
+                        length: IntParam::Variable("L".to_string()),
+                    },
+                    nullable: false,
+                },
+            ),
+            (
+                "fixedbinary<N>",
+                SignatureType {
+                    kind: SignatureTypeKind::FixedBinary {
+                        length: IntParam::Variable("N".to_string()),
+                    },
+                    nullable: false,
+                },
+            ),
+            (
+                "precisiontime<P>",
+                SignatureType {
+                    kind: SignatureTypeKind::PrecisionTime {
+                        precision: IntParam::Variable("P".to_string()),
+                    },
+                    nullable: false,
+                },
+            ),
+            (
+                "decimal<10,S>",
+                SignatureType {
+                    kind: SignatureTypeKind::Decimal {
+                        precision: IntParam::Concrete(10),
+                        scale: IntParam::Variable("S".to_string()),
+                    },
+                    nullable: false,
+                },
+            ),
+        ];
+
+        for (expr, expected) in cases {
+            let found = parse_signature_type(expr);
+            assert_eq!(found, expected, "unexpected type for {expr}");
+        }
+    }
+
+    #[test]
+    fn test_types_with_type_variables() {
+        let cases = vec![
+            (
+                "any1",
+                SignatureType {
+                    kind: SignatureTypeKind::TypeVariable { id: 1 },
+                    nullable: false,
+                },
+            ),
+            (
+                "any2?",
+                SignatureType {
+                    kind: SignatureTypeKind::TypeVariable { id: 2 },
+                    nullable: true,
+                },
+            ),
+            (
+                "any10",
+                SignatureType {
+                    kind: SignatureTypeKind::TypeVariable { id: 10 },
+                    nullable: false,
+                },
+            ),
+            (
+                "list<any1>",
+                SignatureType {
+                    kind: SignatureTypeKind::List(Box::new(SignatureType {
+                        kind: SignatureTypeKind::TypeVariable { id: 1 },
+                        nullable: false,
+                    })),
+                    nullable: false,
+                },
+            ),
+            (
+                "map<any1, any2>",
+                SignatureType {
+                    kind: SignatureTypeKind::Map {
+                        key: Box::new(SignatureType {
+                            kind: SignatureTypeKind::TypeVariable { id: 1 },
+                            nullable: false,
+                        }),
+                        value: Box::new(SignatureType {
+                            kind: SignatureTypeKind::TypeVariable { id: 2 },
+                            nullable: false,
+                        }),
+                    },
+                    nullable: false,
+                },
+            ),
+        ];
+
+        for (expr, expected) in cases {
+            let found = parse_signature_type(expr);
+            assert_eq!(found, expected, "unexpected type for {expr}");
+        }
+    }
+
+    #[test]
+    fn test_multiline_type_expression_parsing() {
+        use super::super::extensions::TypeContext;
+        use crate::text::simple_extensions::Type as RawType;
+
+        // Test how multi-line type derivation expressions are parsed (like in functions_arithmetic_decimal.yaml)
+        let return_str = "init_scale = max(S1,S2)\ninit_prec = init_scale + max(P1 - S1, P2 - S2) + 1\nmin_scale = min(init_scale, 6)\ndelta = init_prec - 38\nprec = min(init_prec, 38)\nscale_after_borrow = max(init_scale - delta, min_scale)\nscale = init_prec > 38 ? scale_after_borrow : init_scale\nDECIMAL<prec, scale>";
+
+        let raw_type = RawType::String(return_str.to_string());
+        let mut ctx = TypeContext::default();
+        let return_type =
+            parse_return_type(raw_type, &mut ctx).expect("Failed to parse return type");
+
+        // This should parse as a Derivation with statements and a result type
+        match return_type {
+            ReturnType::Derivation(derivation) => {
+                // Should have 7 assignment statements
+                assert_eq!(derivation.statements.len(), 7);
+
+                // Check first statement
+                assert_eq!(derivation.statements[0].variable, "init_scale");
+
+                // Check last statement before result type
+                assert_eq!(derivation.statements[6].variable, "scale");
+
+                // Result type should be DECIMAL with parameters
+                match &derivation.result_type {
+                    TypeExpr::Simple(name, params, nullable) => {
+                        assert_eq!(name, &"DECIMAL");
+                        assert_eq!(params.len(), 2);
+                        assert!(!nullable);
+                    }
+                    _ => panic!(
+                        "Expected Simple type for result, got: {:?}",
+                        derivation.result_type
+                    ),
+                }
+            }
+            ReturnType::Type(_) => panic!("Expected Derivation, got Type"),
+        }
+    }
+
+    #[test]
+    fn test_signature_with_variables_cannot_convert_to_concrete() {
+        // Test that SignatureType with integer variables cannot convert to ConcreteType
+        let sig = parse_signature_type("decimal<P,S>");
+        let result = ConcreteType::try_from(sig);
+        assert!(
+            matches!(result, Err(ExtensionTypeError::UnresolvedIntegerVariable { name }) if name == "P"),
+            "Expected UnresolvedIntegerVariable error for P"
+        );
+
+        // Test that SignatureType with type variables cannot convert to ConcreteType
+        let sig = parse_signature_type("any1");
+        let result = ConcreteType::try_from(sig);
+        assert!(
+            matches!(
+                result,
+                Err(ExtensionTypeError::UnresolvedTypeVariable { id: 1 })
+            ),
+            "Expected UnresolvedTypeVariable error for any1"
+        );
+
+        // Test nested case - list with type variable
+        let sig = parse_signature_type("list<any2>");
+        let result = ConcreteType::try_from(sig);
+        assert!(
+            matches!(
+                result,
+                Err(ExtensionTypeError::UnresolvedTypeVariable { id: 2 })
+            ),
+            "Expected UnresolvedTypeVariable error for any2 in list"
+        );
     }
 
     #[test]
@@ -1659,8 +2572,9 @@ mod tests {
 
         for (label, raw, expected) in cases {
             let mut ctx = TypeContext::default();
-            let parsed = Parse::parse(raw, &mut ctx)?;
-            assert_eq!(parsed, expected, "unexpected type for {label}");
+            let parsed: SignatureType = Parse::parse(raw, &mut ctx)?;
+            let concrete = ConcreteType::try_from(parsed)?;
+            assert_eq!(concrete, expected, "unexpected type for {label}");
         }
 
         Ok(())

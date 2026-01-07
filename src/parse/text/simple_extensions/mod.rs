@@ -28,8 +28,13 @@ pub use extensions::SimpleExtensions;
 pub use file::ExtensionFile;
 pub use registry::Registry;
 pub use scalar_functions::{ParameterConsistency, ScalarFunction};
-pub use type_ast::TypeExpr;
-pub use types::{ConcreteType, CustomType, ExtensionTypeError};
+pub use type_ast::{
+    BinaryOperator, DerivationExpr, DerivationStatement, TypeDerivation, TypeExpr, UnaryOperator,
+};
+pub use types::{
+    ConcreteType, CustomType, ExtensionTypeError, IntParam, ReturnType, SignatureType,
+    SignatureTypeKind, SignatureTypeParameter,
+};
 
 use crate::urn::Urn;
 

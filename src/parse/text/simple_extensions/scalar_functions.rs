@@ -12,7 +12,7 @@ use crate::text::simple_extensions::{
 
 use super::argument::{ArgumentsItem, ArgumentsItemError};
 use super::extensions::TypeContext;
-use super::types::{ConcreteType, ExtensionTypeError};
+use super::types::{ExtensionTypeError, ReturnType, parse_return_type};
 use crate::parse::Parse;
 use thiserror::Error;
 
@@ -103,11 +103,15 @@ pub struct Impl {
     pub deterministic: Option<crate::text::simple_extensions::Deterministic>,
     /// How the function handles null inputs and produces nullable outputs
     pub nullability: Option<crate::text::simple_extensions::NullabilityHandling>,
-    /// Return type resolved from string to concrete type representation
+    /// Return type, which may be a simple type or a type derivation expression
     ///
-    /// The raw YAML contains a type string (e.g., "i64", "varchar<L1>") which is
-    /// parsed into a `ConcreteType` with full structural information.
-    pub return_type: ConcreteType,
+    /// The raw YAML contains either:
+    /// - A simple type string (e.g., "i64", "varchar<L1>", "any1", "decimal<P,S>")
+    /// - A multi-line type derivation expression with intermediate computations
+    ///
+    /// Simple types are parsed into `ReturnType::Type(SignatureType)`.
+    /// Multi-line expressions are parsed into `ReturnType::Derivation(TypeDerivation)`.
+    pub return_type: ReturnType,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
     /// Maps language identifiers to implementation source code snippets.
@@ -124,14 +128,8 @@ impl Impl {
         raw: RawImpl,
         ctx: &mut TypeContext,
     ) -> Result<Self, ScalarFunctionError> {
-        // Parse the RawType into ConcreteType using the TypeContext
-        // TODO: Support type parameter variables in function signatures (e.g., `decimal<P1,S1>`).
-        // Currently, type parameters must be integer literals. To support variables, we would need:
-        // - Extend TypeExprParam to include a Variable(String) variant
-        // - Add type variable declarations to function implementations
-        // - Implement an expression language for computed return types
-        // - Add type variable binding during function call matching
-        let return_type = raw.return_.0.parse(ctx)?;
+        // Parse the return type - may be a simple type or a type derivation expression
+        let return_type = parse_return_type(raw.return_.0, ctx)?;
 
         // Convert and validate variadic behavior if present
         let variadic = raw.variadic.map(|v| v.try_into()).transpose()?;
@@ -280,7 +278,6 @@ impl From<&RawOptions> for Options {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::text::simple_extensions::types::BasicBuiltinType;
     use crate::text::simple_extensions::{
         ArgumentsItem as RawArgumentItem, Options as RawOptions, OptionsValue as RawOptionValue,
         ReturnValue, ScalarFunctionImplsItem as RawImpl, Type as RawType,
@@ -395,7 +392,12 @@ mod tests {
             session_dependent: None,
             deterministic: None,
             nullability: None,
-            return_type: ConcreteType::builtin(BasicBuiltinType::I64, false),
+            return_type: ReturnType::Type(
+                crate::parse::text::simple_extensions::types::SignatureType {
+                    kind: crate::parse::text::simple_extensions::types::SignatureTypeKind::I64,
+                    nullable: false,
+                },
+            ),
             implementation: None,
         };
 
@@ -607,6 +609,264 @@ mod tests {
                 assert_eq!(name, "empty_function");
             }
             _ => panic!("Expected NoImplementations error"),
+        }
+    }
+
+    #[test]
+    fn test_function_with_type_variable_return() {
+        // Test that functions with type variable return types (like any1) parse correctly
+        let raw_impl = RawImpl {
+            args: None,
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("any1".to_string())),
+            implementation: None,
+        };
+
+        let mut ctx = TypeContext::default();
+        let result = Impl::from_raw(raw_impl, &mut ctx);
+        assert!(result.is_ok(), "Should parse type variable return type");
+
+        let impl_ = result.unwrap();
+        match &impl_.return_type {
+            ReturnType::Type(sig_type) => {
+                match sig_type.kind {
+                    crate::parse::text::simple_extensions::types::SignatureTypeKind::TypeVariable {
+                        id,
+                    } => {
+                        assert_eq!(id, 1, "Type variable any1 should have id 1");
+                    }
+                    _ => panic!("Expected TypeVariable kind"),
+                }
+                assert!(!sig_type.nullable);
+            }
+            _ => panic!("Expected Type return type, not Derivation"),
+        }
+    }
+
+    #[test]
+    fn test_function_with_integer_parameter_variables() {
+        // Test that functions with integer parameter variables (like decimal<P,S>) parse correctly
+        let raw_impl = RawImpl {
+            args: None,
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("decimal<P,S>".to_string())),
+            implementation: None,
+        };
+
+        let mut ctx = TypeContext::default();
+        let result = Impl::from_raw(raw_impl, &mut ctx);
+        assert!(
+            result.is_ok(),
+            "Should parse integer parameter variables in return type"
+        );
+
+        let impl_ = result.unwrap();
+        match &impl_.return_type {
+            ReturnType::Type(sig_type) => match &sig_type.kind {
+                crate::parse::text::simple_extensions::types::SignatureTypeKind::Decimal {
+                    precision,
+                    scale,
+                } => {
+                    // Check first parameter is IntegerVariable "P"
+                    match precision {
+                        crate::parse::text::simple_extensions::types::IntParam::Variable(var) => {
+                            assert_eq!(var, "P");
+                        }
+                        _ => panic!("Expected IntegerVariable for precision parameter"),
+                    }
+
+                    // Check second parameter is IntegerVariable "S"
+                    match scale {
+                        crate::parse::text::simple_extensions::types::IntParam::Variable(var) => {
+                            assert_eq!(var, "S");
+                        }
+                        _ => panic!("Expected IntegerVariable for scale parameter"),
+                    }
+                }
+                _ => panic!("Expected Decimal kind for decimal<P,S>"),
+            },
+            _ => panic!("Expected Type return type, not Derivation"),
+        }
+    }
+
+    #[test]
+    fn test_function_with_nullable_type_variable() {
+        // Test that nullable type variables parse correctly
+        let raw_impl = RawImpl {
+            args: None,
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("any1?".to_string())),
+            implementation: None,
+        };
+
+        let mut ctx = TypeContext::default();
+        let result = Impl::from_raw(raw_impl, &mut ctx);
+        assert!(result.is_ok(), "Should parse nullable type variable");
+
+        let impl_ = result.unwrap();
+        match &impl_.return_type {
+            ReturnType::Type(sig_type) => {
+                match sig_type.kind {
+                    crate::parse::text::simple_extensions::types::SignatureTypeKind::TypeVariable {
+                        id,
+                    } => {
+                        assert_eq!(id, 1);
+                    }
+                    _ => panic!("Expected TypeVariable kind"),
+                }
+                assert!(sig_type.nullable);
+            }
+            _ => panic!("Expected Type return type, not Derivation"),
+        }
+    }
+
+    #[test]
+    fn test_parameterized_builtin_with_variable() {
+        // Test that parameterized builtins with variables (like varchar<L1>) are handled
+        let raw_impl = RawImpl {
+            args: None,
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("varchar<L1>".to_string())),
+            implementation: None,
+        };
+
+        let mut ctx = TypeContext::default();
+        let result = Impl::from_raw(raw_impl, &mut ctx);
+        assert!(
+            result.is_ok(),
+            "Should parse parameterized builtin with variable: {:?}",
+            result.err()
+        );
+
+        let impl_ = result.unwrap();
+        // With variables, varchar is represented directly as VarChar variant
+        match &impl_.return_type {
+            ReturnType::Type(sig_type) => match &sig_type.kind {
+                crate::parse::text::simple_extensions::types::SignatureTypeKind::VarChar {
+                    length,
+                } => match length {
+                    crate::parse::text::simple_extensions::types::IntParam::Variable(var) => {
+                        assert_eq!(var, "L1");
+                    }
+                    _ => panic!("Expected IntegerVariable for varchar parameter"),
+                },
+                _ => panic!("Expected VarChar kind for varchar<L1>"),
+            },
+            _ => panic!("Expected Type return type, not Derivation"),
+        }
+    }
+
+    #[test]
+    fn test_parameterized_builtin_concrete_vs_variable() {
+        let mut ctx = TypeContext::default();
+
+        // varchar<10> with concrete parameter should parse as Builtin
+        let concrete_impl = RawImpl {
+            args: None,
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("varchar<10>".to_string())),
+            implementation: None,
+        };
+        let result = Impl::from_raw(concrete_impl, &mut ctx).unwrap();
+        match &result.return_type {
+            ReturnType::Type(sig_type) => match &sig_type.kind {
+                crate::parse::text::simple_extensions::types::SignatureTypeKind::VarChar {
+                    length,
+                } => match length {
+                    crate::parse::text::simple_extensions::types::IntParam::Concrete(v) => {
+                        assert_eq!(*v, 10);
+                    }
+                    _ => panic!("Expected Concrete integer for varchar<10>"),
+                },
+                _ => panic!("Expected VarChar for varchar<10>"),
+            },
+            _ => panic!("Expected Type return type, not Derivation"),
+        }
+
+        // varchar<L1> with variable should also parse as VarChar
+        let variable_impl = RawImpl {
+            args: None,
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("varchar<L1>".to_string())),
+            implementation: None,
+        };
+        let result = Impl::from_raw(variable_impl, &mut ctx).unwrap();
+        match &result.return_type {
+            ReturnType::Type(sig_type) => match &sig_type.kind {
+                crate::parse::text::simple_extensions::types::SignatureTypeKind::VarChar {
+                    length,
+                } => match length {
+                    crate::parse::text::simple_extensions::types::IntParam::Variable(var) => {
+                        assert_eq!(var, "L1");
+                    }
+                    _ => panic!("Expected Variable for varchar<L1>"),
+                },
+                _ => panic!("Expected VarChar for varchar<L1>"),
+            },
+            _ => panic!("Expected Type return type, not Derivation"),
+        }
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_core_functions_with_type_variables_parse() {
+        // Test that we can load core extensions that contain functions with type variables
+        use crate::parse::text::simple_extensions::Registry;
+        use crate::urn::Urn;
+        use std::str::FromStr;
+
+        let registry = Registry::from_core_extensions();
+
+        // Test a function from functions_comparison that uses any1
+        let comparison_urn = Urn::from_str("extension:io.substrait:functions_comparison").unwrap();
+        if let Some(func) = registry.get_scalar_function(&comparison_urn, "equal") {
+            assert_eq!(func.name, "equal");
+            assert!(
+                !func.impls.is_empty(),
+                "equal function should have implementations"
+            );
+
+            // Check that at least one implementation has a return type
+            // Just verify it parsed without checking the exact structure
+            // since different versions may have different signatures
+            assert!(
+                !func.impls.is_empty(),
+                "Function should have at least one implementation with a return type"
+            );
+        }
+
+        // Test a function from functions_arithmetic that uses decimal<P,S>
+        let arithmetic_urn = Urn::from_str("extension:io.substrait:functions_arithmetic").unwrap();
+        if let Some(func) = registry.get_scalar_function(&arithmetic_urn, "add") {
+            assert_eq!(func.name, "add");
+            assert!(
+                !func.impls.is_empty(),
+                "add function should have implementations"
+            );
         }
     }
 }

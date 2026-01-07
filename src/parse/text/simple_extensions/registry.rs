@@ -64,11 +64,10 @@ impl Registry {
                         debug_assert_eq!(orig_urn, &urn);
                         Some((urn, extension))
                     }
-                    Err(err) => {
-                        // Skip extensions that fail to parse (e.g., those with unsupported type parameter variables)
-                        eprintln!("Warning: Skipping extension {orig_urn}: {err}");
-                        None
-                    }
+                    // Skip extensions with known validation errors in the source files
+                    Err(SimpleExtensionsError::DuplicateFunctionName { .. }) => None,
+                    // All other errors should not occur with well-formed core extensions
+                    Err(err) => panic!("Unexpected error parsing core extension {orig_urn}: {err}"),
                 }
             })
             .collect();
@@ -195,6 +194,203 @@ mod tests {
 
         let and_function = registry.get_scalar_function(&functions_urn, "and");
         assert!(and_function.is_some());
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_core_scalar_functions_parse_correctly() {
+        use super::super::types::ReturnType;
+        use crate::parse::text::simple_extensions::type_ast::TypeDerivation;
+
+        let registry = Registry::from_core_extensions();
+
+        // Test 1: decimal<P,S> with integer parameter variables
+        let decimal_urn =
+            Urn::from_str("extension:io.substrait:functions_arithmetic_decimal").unwrap();
+        let add_func = registry.get_scalar_function(&decimal_urn, "add").unwrap();
+
+        assert_eq!(add_func.impls.len(), 1);
+
+        // The return type should be a Derivation - manually construct the expected AST
+        let impl_ = &add_func.impls[0];
+
+        use crate::parse::text::simple_extensions::type_ast::{
+            BinaryOperator, DerivationExpr, DerivationStatement, TypeExpr, TypeExprParam,
+        };
+
+        // Manually construct the expected derivation structure
+        let expected_derivation = TypeDerivation {
+            statements: vec![
+                // init_scale = max(S1,S2)
+                DerivationStatement {
+                    variable: "init_scale".to_string(),
+                    expression: DerivationExpr::FunctionCall {
+                        name: "max".to_string(),
+                        args: vec![
+                            DerivationExpr::Parameter("S1".to_string()),
+                            DerivationExpr::Parameter("S2".to_string()),
+                        ],
+                    },
+                },
+                // init_prec = init_scale + max(P1 - S1, P2 - S2) + 1
+                DerivationStatement {
+                    variable: "init_prec".to_string(),
+                    expression: DerivationExpr::BinaryOp {
+                        op: BinaryOperator::Add,
+                        left: Box::new(DerivationExpr::BinaryOp {
+                            op: BinaryOperator::Add,
+                            left: Box::new(DerivationExpr::Variable("init_scale".to_string())),
+                            right: Box::new(DerivationExpr::FunctionCall {
+                                name: "max".to_string(),
+                                args: vec![
+                                    DerivationExpr::BinaryOp {
+                                        op: BinaryOperator::Sub,
+                                        left: Box::new(DerivationExpr::Parameter("P1".to_string())),
+                                        right: Box::new(DerivationExpr::Parameter(
+                                            "S1".to_string(),
+                                        )),
+                                    },
+                                    DerivationExpr::BinaryOp {
+                                        op: BinaryOperator::Sub,
+                                        left: Box::new(DerivationExpr::Parameter("P2".to_string())),
+                                        right: Box::new(DerivationExpr::Parameter(
+                                            "S2".to_string(),
+                                        )),
+                                    },
+                                ],
+                            }),
+                        }),
+                        right: Box::new(DerivationExpr::Literal(1)),
+                    },
+                },
+                // min_scale = min(init_scale, 6)
+                DerivationStatement {
+                    variable: "min_scale".to_string(),
+                    expression: DerivationExpr::FunctionCall {
+                        name: "min".to_string(),
+                        args: vec![
+                            DerivationExpr::Variable("init_scale".to_string()),
+                            DerivationExpr::Literal(6),
+                        ],
+                    },
+                },
+                // delta = init_prec - 38
+                DerivationStatement {
+                    variable: "delta".to_string(),
+                    expression: DerivationExpr::BinaryOp {
+                        op: BinaryOperator::Sub,
+                        left: Box::new(DerivationExpr::Variable("init_prec".to_string())),
+                        right: Box::new(DerivationExpr::Literal(38)),
+                    },
+                },
+                // prec = min(init_prec, 38)
+                DerivationStatement {
+                    variable: "prec".to_string(),
+                    expression: DerivationExpr::FunctionCall {
+                        name: "min".to_string(),
+                        args: vec![
+                            DerivationExpr::Variable("init_prec".to_string()),
+                            DerivationExpr::Literal(38),
+                        ],
+                    },
+                },
+                // scale_after_borrow = max(init_scale - delta, min_scale)
+                DerivationStatement {
+                    variable: "scale_after_borrow".to_string(),
+                    expression: DerivationExpr::FunctionCall {
+                        name: "max".to_string(),
+                        args: vec![
+                            DerivationExpr::BinaryOp {
+                                op: BinaryOperator::Sub,
+                                left: Box::new(DerivationExpr::Variable("init_scale".to_string())),
+                                right: Box::new(DerivationExpr::Variable("delta".to_string())),
+                            },
+                            DerivationExpr::Variable("min_scale".to_string()),
+                        ],
+                    },
+                },
+                // scale = init_prec > 38 ? scale_after_borrow : init_scale
+                DerivationStatement {
+                    variable: "scale".to_string(),
+                    expression: DerivationExpr::Conditional {
+                        condition: Box::new(DerivationExpr::BinaryOp {
+                            op: BinaryOperator::Gt,
+                            left: Box::new(DerivationExpr::Variable("init_prec".to_string())),
+                            right: Box::new(DerivationExpr::Literal(38)),
+                        }),
+                        then_expr: Box::new(DerivationExpr::Variable(
+                            "scale_after_borrow".to_string(),
+                        )),
+                        else_expr: Box::new(DerivationExpr::Variable("init_scale".to_string())),
+                    },
+                },
+            ],
+            // DECIMAL<prec, scale>
+            result_type: TypeExpr::Simple(
+                Box::leak("DECIMAL".to_string().into_boxed_str()),
+                vec![
+                    TypeExprParam::Type(TypeExpr::Simple(
+                        Box::leak("prec".to_string().into_boxed_str()),
+                        vec![],
+                        false,
+                    )),
+                    TypeExprParam::Type(TypeExpr::Simple(
+                        Box::leak("scale".to_string().into_boxed_str()),
+                        vec![],
+                        false,
+                    )),
+                ],
+                false,
+            ),
+        };
+
+        match &impl_.return_type {
+            ReturnType::Derivation(derivation) => {
+                assert_eq!(
+                    derivation, &expected_derivation,
+                    "Derivation should match expected structure"
+                );
+            }
+            ReturnType::Type(_) => panic!("Expected Derivation return type, got Type"),
+        }
+
+        // Check arguments
+        assert_eq!(impl_.args.len(), 2);
+
+        // Check options
+        assert!(impl_.options.is_some());
+        let options = impl_.options.as_ref().unwrap();
+        assert!(options.0.contains_key("overflow"));
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_core_functions_with_type_variables() {
+        use crate::parse::text::simple_extensions::types::{
+            ReturnType, SignatureType, SignatureTypeKind,
+        };
+
+        let registry = Registry::from_core_extensions();
+
+        // Test a function that uses type variables - equal function
+        let comparison_urn = Urn::from_str("extension:io.substrait:functions_comparison").unwrap();
+        let equal_func = registry
+            .get_scalar_function(&comparison_urn, "equal")
+            .unwrap();
+
+        assert!(!equal_func.impls.is_empty());
+
+        // equal takes two any1 arguments and returns boolean
+        let impl_ = &equal_func.impls[0];
+
+        let expected_return = ReturnType::Type(SignatureType {
+            kind: SignatureTypeKind::Boolean,
+            nullable: false,
+        });
+        assert_eq!(impl_.return_type, expected_return);
+
+        // Verify it has two arguments
+        assert_eq!(impl_.args.len(), 2, "equal should have exactly 2 arguments");
     }
 
     #[cfg(feature = "extensions")]
