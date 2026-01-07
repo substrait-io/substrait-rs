@@ -1587,10 +1587,7 @@ impl TryFrom<TypeExpr> for SignatureType {
                     .map(SignatureTypeParameter::try_from)
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(SignatureType {
-                    kind: SignatureTypeKind::Extension {
-                        name,
-                        parameters,
-                    },
+                    kind: SignatureTypeKind::Extension { name, parameters },
                     nullable,
                 })
             }
@@ -1600,10 +1597,7 @@ impl TryFrom<TypeExpr> for SignatureType {
                     .map(SignatureTypeParameter::try_from)
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(SignatureType {
-                    kind: SignatureTypeKind::Extension {
-                        name,
-                        parameters,
-                    },
+                    kind: SignatureTypeKind::Extension { name, parameters },
                     nullable,
                 })
             }
@@ -1795,9 +1789,7 @@ impl TryFrom<TypeExpr> for ConcreteType {
                     .map(TypeParameter::try_from)
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(ConcreteType::extension_with_params(
-                    name,
-                    parameters,
-                    nullable,
+                    name, parameters, nullable,
                 ))
             }
             TypeExpr::UserDefined(name, params, nullable) => {
@@ -1806,9 +1798,7 @@ impl TryFrom<TypeExpr> for ConcreteType {
                     .map(TypeParameter::try_from)
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(ConcreteType::extension_with_params(
-                    name,
-                    parameters,
-                    nullable,
+                    name, parameters, nullable,
                 ))
             }
             TypeExpr::TypeVariable(id, nullability) => {

@@ -195,7 +195,10 @@ mod tests {
             ("i32", TypeExpr::Simple("i32".to_string(), vec![], false)),
             ("i32?", TypeExpr::Simple("i32".to_string(), vec![], true)),
             ("MAP", TypeExpr::Simple("MAP".to_string(), vec![], false)),
-            ("timestamp", TypeExpr::Simple("timestamp".to_string(), vec![], false)),
+            (
+                "timestamp",
+                TypeExpr::Simple("timestamp".to_string(), vec![], false),
+            ),
             (
                 "timestamp_tz?",
                 TypeExpr::Simple("timestamp_tz".to_string(), vec![], true),
@@ -237,8 +240,16 @@ mod tests {
                         TypeExprParam::Type(TypeExpr::Simple(
                             "point".to_string(),
                             vec![
-                                TypeExprParam::Type(TypeExpr::Simple("i32".to_string(), vec![], false)),
-                                TypeExprParam::Type(TypeExpr::Simple("i32".to_string(), vec![], false)),
+                                TypeExprParam::Type(TypeExpr::Simple(
+                                    "i32".to_string(),
+                                    vec![],
+                                    false,
+                                )),
+                                TypeExprParam::Type(TypeExpr::Simple(
+                                    "i32".to_string(),
+                                    vec![],
+                                    false,
+                                )),
                             ],
                             false,
                         )),

@@ -58,16 +58,13 @@ impl Registry {
         // Parse the core extensions from the raw extensions format to the parsed format
         let extensions: HashMap<Urn, SimpleExtensions> = EXTENSIONS
             .iter()
-            .filter_map(|(orig_urn, simple_extensions)| {
+            .map(|(orig_urn, simple_extensions)| {
                 match ExtensionFile::create(simple_extensions.clone()) {
                     Ok(ExtensionFile { urn, extension }) => {
                         debug_assert_eq!(orig_urn, &urn);
-                        Some((urn, extension))
+                        (urn, extension)
                     }
-                    // Skip extensions with known validation errors in the source files
-                    Err(SimpleExtensionsError::DuplicateFunctionName { .. }) => None,
-                    // All other errors should not occur with well-formed core extensions
-                    Err(err) => panic!("Unexpected error parsing core extension {orig_urn}: {err}"),
+                    Err(err) => panic!("Error parsing core extension {orig_urn}: {err}"),
                 }
             })
             .collect();
@@ -329,16 +326,8 @@ mod tests {
             result_type: TypeExpr::Simple(
                 "DECIMAL".to_string(),
                 vec![
-                    TypeExprParam::Type(TypeExpr::Simple(
-                        "prec".to_string(),
-                        vec![],
-                        false,
-                    )),
-                    TypeExprParam::Type(TypeExpr::Simple(
-                        "scale".to_string(),
-                        vec![],
-                        false,
-                    )),
+                    TypeExprParam::Type(TypeExpr::Simple("prec".to_string(), vec![], false)),
+                    TypeExprParam::Type(TypeExpr::Simple("scale".to_string(), vec![], false)),
                 ],
                 false,
             ),

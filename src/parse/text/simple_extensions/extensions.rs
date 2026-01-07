@@ -75,7 +75,13 @@ impl SimpleExtensions {
         self.scalar_functions.values()
     }
 
-    /// Add a scalar function to the context. Name must be unique.
+    /// Add a scalar function to the context, merging with existing functions of the same name.
+    ///
+    /// When duplicate function names are encountered, implementations are merged (unioned).
+    /// If descriptions differ, the description is dropped. This matches the behavior of
+    /// substrait-java and substrait-python implementations.
+    ///
+    /// See: https://github.com/substrait-io/substrait/issues/931
     pub(super) fn add_scalar_function(
         &mut self,
         scalar_function: ScalarFunction,
@@ -86,9 +92,19 @@ impl SimpleExtensions {
                 e.insert(scalar_function);
                 Ok(())
             }
-            Entry::Occupied(_) => Err(SimpleExtensionsError::DuplicateFunctionName {
-                name: scalar_function.name.clone(),
-            }),
+            Entry::Occupied(mut e) => {
+                let existing = e.get_mut();
+
+                // Union the implementations
+                existing.impls.extend(scalar_function.impls);
+
+                // Drop description if they differ
+                if existing.description != scalar_function.description {
+                    existing.description = None;
+                }
+
+                Ok(())
+            }
         }
     }
 
@@ -235,8 +251,8 @@ mod tests {
     }
 
     #[test]
-    fn test_duplicate_function_name_error() {
-        let raw_impl = RawImpl {
+    fn test_duplicate_function_name_merges_implementations() {
+        let raw_impl1 = RawImpl {
             args: None,
             options: None,
             variadic: None,
@@ -247,16 +263,27 @@ mod tests {
             implementation: None,
         };
 
+        let raw_impl2 = RawImpl {
+            args: None,
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("i64".to_string())),
+            implementation: None,
+        };
+
         let raw_scalar_fn1 = RawScalarFunction {
             name: "add".to_string(),
             description: Some("Addition function".to_string()),
-            impls: vec![raw_impl.clone()],
+            impls: vec![raw_impl1],
         };
 
         let raw_scalar_fn2 = RawScalarFunction {
             name: "add".to_string(),
             description: Some("Another addition function".to_string()),
-            impls: vec![raw_impl],
+            impls: vec![raw_impl2],
         };
 
         let raw_extensions = RawExtensions {
@@ -270,15 +297,24 @@ mod tests {
         };
 
         let mut ctx = TypeContext::default();
-        let result = raw_extensions.parse(&mut ctx);
+        let (_urn, extensions) = raw_extensions
+            .parse(&mut ctx)
+            .expect("Parse should succeed");
 
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            SimpleExtensionsError::DuplicateFunctionName { name } => {
-                assert_eq!(name, "add");
-            }
-            other => panic!("Expected DuplicateFunctionName error, got: {:?}", other),
-        }
+        // Verify function exists and has merged implementations
+        let add_fn = extensions
+            .scalar_functions
+            .get("add")
+            .expect("add function should exist");
+        assert_eq!(
+            add_fn.impls.len(),
+            2,
+            "Should have merged 2 implementations"
+        );
+        assert_eq!(
+            add_fn.description, None,
+            "Description should be None when descriptions differ"
+        );
     }
 
     #[test]
