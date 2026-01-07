@@ -44,10 +44,10 @@ prost-types = "0.14.1"
 regress = "0.10.4"
 semver = { version = "1.0.27", optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = { version = "1.0.145", features = ["preserve_order"] }
+serde_json = { version = "1.0.149", features = ["preserve_order"] }
 serde_yaml = { version = "0.9.34", optional = true }
 thiserror = { version = "2.0.17", optional = true }
-indexmap = { version = "2.7.0", features = ["serde"] }
+indexmap = { version = "2.13.0", features = ["serde"] }
 
 [build-dependencies]
 heck = "0.5.0"
@@ -58,7 +58,7 @@ protobuf-src = { version = "2.1.1", optional = true }
 schemars = "0.8.22"
 semver = "1.0.27"
 serde_yaml = "0.9.34"
-syn = "2.0.111"
+syn = "2.0.114"
 typify = "0.5.0"
 walkdir = "2.5.0"
 
