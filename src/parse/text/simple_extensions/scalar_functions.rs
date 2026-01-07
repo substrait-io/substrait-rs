@@ -170,8 +170,10 @@ pub struct VariadicBehavior {
     /// Maximum number of variadic arguments (non-negative integer)
     pub max: Option<u32>,
     /// Whether all variadic arguments must have the same type
-    /// Defaults to CONSISTENT when not specified in YAML
-    /// TODO: Verify this default behavior against the Substrait specification
+    ///
+    /// Only applicable when the variadic argument contains type parameters.
+    /// The spec does not currently define a default; this implementation uses CONSISTENT.
+    /// See: https://github.com/substrait-io/substrait/issues/928
     pub parameter_consistency: ParameterConsistency,
 }
 
