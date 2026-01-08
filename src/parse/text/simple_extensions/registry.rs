@@ -76,6 +76,11 @@ impl Registry {
     pub fn get_type(&self, urn: &Urn, name: &str) -> Option<&CustomType> {
         self.get_extension(urn)?.get_type(name)
     }
+
+    /// Get a scalar function by URN and name
+    pub fn get_scalar_function(&self, urn: &Urn, name: &str) -> Option<&super::ScalarFunction> {
+        self.get_extension(urn)?.get_scalar_function(name)
+    }
 }
 
 #[cfg(test)]
@@ -173,5 +178,35 @@ mod tests {
         // Also test the registry's get_type method with the actual URN
         let type_via_registry = registry.get_type(&urn, "point");
         assert!(type_via_registry.is_some());
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_scalar_function_lookup() {
+        let registry = Registry::from_core_extensions();
+
+        let functions_arithmetic_urn =
+            Urn::from_str("extension:io.substrait:functions_arithmetic").unwrap();
+
+        let add_function = registry.get_scalar_function(&functions_arithmetic_urn, "add");
+        assert!(
+            add_function.is_some(),
+            "Should find 'add' function in functions_arithmetic extension"
+        );
+
+        let add = add_function.unwrap();
+        assert_eq!(add.name, "add");
+        assert!(
+            !add.impls.is_empty(),
+            "add function should have implementations"
+        );
+
+        let missing_function =
+            registry.get_scalar_function(&functions_arithmetic_urn, "nonexistent");
+        assert!(missing_function.is_none());
+
+        let wrong_urn = Urn::from_str("extension:example.com:test").unwrap();
+        let wrong_urn_lookup = registry.get_scalar_function(&wrong_urn, "add");
+        assert!(wrong_urn_lookup.is_none());
     }
 }

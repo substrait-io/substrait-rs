@@ -239,7 +239,7 @@ pub fn is_builtin_type_name(name: &str) -> bool {
 /// Parse a primitive (no type parameters) builtin type name
 fn primitive_builtin(lower_name: &str) -> Option<BasicBuiltinType> {
     match lower_name {
-        "bool" => Some(BasicBuiltinType::Boolean),
+        "bool" | "boolean" => Some(BasicBuiltinType::Boolean),
         "i8" => Some(BasicBuiltinType::I8),
         "i16" => Some(BasicBuiltinType::I16),
         "i32" => Some(BasicBuiltinType::I32),

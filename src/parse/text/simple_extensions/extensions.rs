@@ -9,25 +9,24 @@ use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use super::{SimpleExtensionsError, types::CustomType};
+use super::{SimpleExtensionsError, scalar_functions::ScalarFunction, types::CustomType};
 use crate::{
     parse::{Context, Parse},
     text::simple_extensions::SimpleExtensions as RawExtensions,
     urn::Urn,
 };
 
-/// The contents (types) in an [`ExtensionFile`](super::file::ExtensionFile).
+/// The contents (types and functions) in an [`ExtensionFile`](super::file::ExtensionFile).
 ///
 /// This structure stores and provides access to the individual objects defined
 /// in an [`ExtensionFile`](super::file::ExtensionFile); [`SimpleExtensions`]
 /// represents the contents of an extensions file.
-///
-/// Currently, only the [`CustomType`]s are included; any scalar, window, or
-/// aggregate functions are not yet included.
 #[derive(Clone, Debug, Default)]
 pub struct SimpleExtensions {
     /// Types defined in this extension file
     types: HashMap<String, CustomType>,
+    /// Scalar functions defined in this extension file
+    scalar_functions: HashMap<String, ScalarFunction>,
 }
 
 impl SimpleExtensions {
@@ -62,6 +61,51 @@ impl SimpleExtensions {
     /// Consume the parsed extension and return its types.
     pub(crate) fn into_types(self) -> HashMap<String, CustomType> {
         self.types
+    }
+
+    /// Add a scalar function to the context, merging with existing functions of the same name.
+    ///
+    /// When duplicate function names are encountered, implementations are merged (unioned).
+    /// If descriptions differ, the description is dropped. This matches the behavior of
+    /// substrait-java and substrait-python implementations.
+    ///
+    /// See: https://github.com/substrait-io/substrait/issues/931
+    pub(super) fn add_scalar_function(
+        &mut self,
+        scalar_function: ScalarFunction,
+    ) -> Result<(), SimpleExtensionsError> {
+        use std::collections::hash_map::Entry;
+        match self.scalar_functions.entry(scalar_function.name.clone()) {
+            Entry::Vacant(e) => {
+                e.insert(scalar_function);
+                Ok(())
+            }
+            Entry::Occupied(mut e) => {
+                let existing = e.get_mut();
+                // Union the implementations
+                existing.impls.extend(scalar_function.impls);
+                // Drop description if they differ
+                if existing.description != scalar_function.description {
+                    existing.description = None;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    /// Check if a scalar function with the given name exists
+    pub fn has_scalar_function(&self, name: &str) -> bool {
+        self.scalar_functions.contains_key(name)
+    }
+
+    /// Get a scalar function by name
+    pub fn get_scalar_function(&self, name: &str) -> Option<&ScalarFunction> {
+        self.scalar_functions.get(name)
+    }
+
+    /// Get an iterator over all scalar functions
+    pub fn scalar_functions(&self) -> impl Iterator<Item = &ScalarFunction> {
+        self.scalar_functions.values()
     }
 }
 
@@ -98,13 +142,23 @@ impl Parse<TypeContext> for RawExtensions {
     type Error = super::SimpleExtensionsError;
 
     fn parse(self, ctx: &mut TypeContext) -> Result<Self::Parsed, Self::Error> {
-        let RawExtensions { urn, types, .. } = self;
+        let RawExtensions {
+            urn,
+            types,
+            scalar_functions,
+            ..
+        } = self;
         let urn = Urn::from_str(&urn)?;
         let mut extension = SimpleExtensions::default();
 
         for type_item in types {
             let custom_type = Parse::parse(type_item, ctx)?;
             extension.add_type(&custom_type)?;
+        }
+
+        for scalar_fn in scalar_functions {
+            let parsed_fn = ScalarFunction::from_raw(scalar_fn, ctx)?;
+            extension.add_scalar_function(parsed_fn)?;
         }
 
         if let Some(missing) = ctx.linked.iter().next() {
