@@ -112,7 +112,7 @@ types:
 urn: extension:example.com:unresolved
 types:
   - name: "Alias"
-    structure: List<Map<string, MissingType>>
+    structure: List<Map<string, u!MissingType>>
 "#;
 
     #[test]
