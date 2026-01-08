@@ -2,32 +2,33 @@
 
 //! Validated simple extensions: [`SimpleExtensions`].
 //!
-//! Currently only type definitions are supported; function parsing will be
-//! added in a future update.
+//! This module provides access to parsed and validated extension types and scalar functions.
 
 use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use super::{SimpleExtensionsError, types::CustomType};
+use super::{SimpleExtensionsError, scalar_functions::ScalarFunction, types::CustomType};
 use crate::{
     parse::{Context, Parse},
     text::simple_extensions::SimpleExtensions as RawExtensions,
     urn::Urn,
 };
 
-/// The contents (types) in an [`ExtensionFile`](super::file::ExtensionFile).
+/// The contents (types and scalar functions) in an [`ExtensionFile`](super::file::ExtensionFile).
 ///
 /// This structure stores and provides access to the individual objects defined
 /// in an [`ExtensionFile`](super::file::ExtensionFile); [`SimpleExtensions`]
 /// represents the contents of an extensions file.
 ///
-/// Currently, only the [`CustomType`]s are included; any scalar, window, or
-/// aggregate functions are not yet included.
+/// Currently, [`CustomType`]s and scalar functions are included. Window and
+/// aggregate functions will be added in future updates.
 #[derive(Clone, Debug, Default)]
 pub struct SimpleExtensions {
     /// Types defined in this extension file
     types: HashMap<String, CustomType>,
+    /// Scalar functions defined in this extension file
+    scalar_functions: HashMap<String, ScalarFunction>,
 }
 
 impl SimpleExtensions {
@@ -59,6 +60,54 @@ impl SimpleExtensions {
         self.types.values()
     }
 
+    /// Check if a scalar function with the given name exists in the context
+    pub fn has_scalar_function(&self, name: &str) -> bool {
+        self.scalar_functions.contains_key(name)
+    }
+
+    /// Get a scalar function by name from the context
+    pub fn get_scalar_function(&self, name: &str) -> Option<&ScalarFunction> {
+        self.scalar_functions.get(name)
+    }
+
+    /// Get an iterator over all scalar functions in the context
+    pub fn scalar_functions(&self) -> impl Iterator<Item = &ScalarFunction> {
+        self.scalar_functions.values()
+    }
+
+    /// Add a scalar function to the context, merging with existing functions of the same name.
+    ///
+    /// When duplicate function names are encountered, implementations are merged (unioned).
+    /// If descriptions differ, the description is dropped. This matches the behavior of
+    /// substrait-java and substrait-python implementations.
+    ///
+    /// See: https://github.com/substrait-io/substrait/issues/931
+    pub(super) fn add_scalar_function(
+        &mut self,
+        scalar_function: ScalarFunction,
+    ) -> Result<(), SimpleExtensionsError> {
+        use std::collections::hash_map::Entry;
+        match self.scalar_functions.entry(scalar_function.name.clone()) {
+            Entry::Vacant(e) => {
+                e.insert(scalar_function);
+                Ok(())
+            }
+            Entry::Occupied(mut e) => {
+                let existing = e.get_mut();
+
+                // Union the implementations
+                existing.impls.extend(scalar_function.impls);
+
+                // Drop description if they differ
+                if existing.description != scalar_function.description {
+                    existing.description = None;
+                }
+
+                Ok(())
+            }
+        }
+    }
+
     /// Consume the parsed extension and return its types.
     pub(crate) fn into_types(self) -> HashMap<String, CustomType> {
         self.types
@@ -66,7 +115,7 @@ impl SimpleExtensions {
 }
 
 /// resolved or unresolved.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct TypeContext {
     /// Types that have been seen so far, now resolved.
     known: HashSet<String>,
@@ -98,7 +147,12 @@ impl Parse<TypeContext> for RawExtensions {
     type Error = super::SimpleExtensionsError;
 
     fn parse(self, ctx: &mut TypeContext) -> Result<Self::Parsed, Self::Error> {
-        let RawExtensions { urn, types, .. } = self;
+        let RawExtensions {
+            urn,
+            types,
+            scalar_functions,
+            ..
+        } = self;
         let urn = Urn::from_str(&urn)?;
         let mut extension = SimpleExtensions::default();
 
@@ -113,6 +167,16 @@ impl Parse<TypeContext> for RawExtensions {
                 type_name: missing.clone(),
             });
         }
+
+        for scalar_fn in scalar_functions {
+            let parsed_fn = ScalarFunction::from_raw(scalar_fn, ctx)?;
+            extension.add_scalar_function(parsed_fn)?;
+        }
+
+        // NOTE: We don't check ctx.linked here because argument types in functions
+        // are not currently parsed to ConcreteType during function parsing - they remain
+        // as raw strings. This means undefined custom types in function signatures won't
+        // be caught until runtime. See: #444
 
         Ok((urn, extension))
     }
@@ -134,6 +198,174 @@ impl From<(Urn, SimpleExtensions)> for RawExtensions {
             type_variations: vec![],
             types,
             window_functions: vec![],
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::text::simple_extensions::{
+        Arguments, ArgumentsItem as RawArgumentItem, ReturnValue,
+        ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem as RawImpl, Type as RawType,
+        ValueArg,
+    };
+
+    #[test]
+    fn test_parse_extensions_with_scalar_functions() {
+        let raw_impl = RawImpl {
+            args: None,
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("i32".to_string())),
+            implementation: None,
+        };
+
+        let raw_scalar_fn = RawScalarFunction {
+            name: "add".to_string(),
+            description: Some("Addition function".to_string()),
+            impls: vec![raw_impl],
+        };
+
+        let raw_extensions = RawExtensions {
+            urn: "extension:example.com:test".to_string(),
+            aggregate_functions: vec![],
+            dependencies: IndexMap::new(),
+            scalar_functions: vec![raw_scalar_fn],
+            type_variations: vec![],
+            types: vec![],
+            window_functions: vec![],
+        };
+
+        let mut ctx = TypeContext::default();
+        let (urn, extensions) = raw_extensions
+            .parse(&mut ctx)
+            .expect("Parse should succeed");
+
+        assert_eq!(urn.to_string(), "extension:example.com:test");
+        assert_eq!(extensions.scalar_functions.len(), 1);
+        assert!(extensions.scalar_functions.contains_key("add"));
+    }
+
+    #[test]
+    fn test_duplicate_function_name_merges_implementations() {
+        let raw_impl1 = RawImpl {
+            args: None,
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("i32".to_string())),
+            implementation: None,
+        };
+
+        let raw_impl2 = RawImpl {
+            args: None,
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("i64".to_string())),
+            implementation: None,
+        };
+
+        let raw_scalar_fn1 = RawScalarFunction {
+            name: "add".to_string(),
+            description: Some("Addition function".to_string()),
+            impls: vec![raw_impl1],
+        };
+
+        let raw_scalar_fn2 = RawScalarFunction {
+            name: "add".to_string(),
+            description: Some("Another addition function".to_string()),
+            impls: vec![raw_impl2],
+        };
+
+        let raw_extensions = RawExtensions {
+            urn: "extension:example.com:test".to_string(),
+            aggregate_functions: vec![],
+            dependencies: IndexMap::new(),
+            scalar_functions: vec![raw_scalar_fn1, raw_scalar_fn2],
+            type_variations: vec![],
+            types: vec![],
+            window_functions: vec![],
+        };
+
+        let mut ctx = TypeContext::default();
+        let (_urn, extensions) = raw_extensions
+            .parse(&mut ctx)
+            .expect("Parse should succeed");
+
+        // Verify function exists and has merged implementations
+        let add_fn = extensions
+            .scalar_functions
+            .get("add")
+            .expect("add function should exist");
+        assert_eq!(
+            add_fn.impls.len(),
+            2,
+            "Should have merged 2 implementations"
+        );
+        assert_eq!(
+            add_fn.description, None,
+            "Description should be None when descriptions differ"
+        );
+    }
+
+    #[test]
+    #[ignore = "Known issue: argument types are not parsed during function parsing, so undefined custom types in function signatures are not detected. See #444"]
+    fn test_function_with_undefined_type_reference() {
+        let raw_impl = RawImpl {
+            args: Some(Arguments(vec![RawArgumentItem::ValueArg(ValueArg {
+                name: Some("x".to_string()),
+                description: None,
+                value: RawType::String("u!NonExistentCustomType".to_string()),
+                constant: None,
+            })])),
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("i32".to_string())),
+            implementation: None,
+        };
+
+        let raw_scalar_fn = RawScalarFunction {
+            name: "test_fn".to_string(),
+            description: Some("Function that references undefined type".to_string()),
+            impls: vec![raw_impl],
+        };
+
+        let raw_extensions = RawExtensions {
+            urn: "extension:example.com:test".to_string(),
+            aggregate_functions: vec![],
+            dependencies: IndexMap::new(),
+            scalar_functions: vec![raw_scalar_fn],
+            type_variations: vec![],
+            types: vec![],
+            window_functions: vec![],
+        };
+
+        let mut ctx = TypeContext::default();
+        let result = raw_extensions.parse(&mut ctx);
+
+        // This test demonstrates the known issue: currently this will succeed
+        // when it should fail with UnresolvedTypeReference
+        assert!(
+            result.is_err(),
+            "Should error when function references undefined custom type"
+        );
+        match result.unwrap_err() {
+            SimpleExtensionsError::UnresolvedTypeReference { type_name } => {
+                assert_eq!(type_name, "NonExistentCustomType");
+            }
+            other => panic!("Expected UnresolvedTypeReference error, got: {:?}", other),
         }
     }
 }
