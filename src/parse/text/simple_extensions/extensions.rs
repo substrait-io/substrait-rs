@@ -2,8 +2,7 @@
 
 //! Validated simple extensions: [`SimpleExtensions`].
 //!
-//! Currently only type definitions are supported; function parsing will be
-//! added in a future update.
+//! Both type definitions and scalar function definitions are supported.
 
 use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
@@ -157,8 +156,17 @@ impl Parse<TypeContext> for RawExtensions {
         }
 
         for scalar_fn in scalar_functions {
-            let parsed_fn = ScalarFunction::from_raw(scalar_fn, ctx)?;
-            extension.add_scalar_function(parsed_fn)?;
+            match ScalarFunction::from_raw(scalar_fn, ctx) {
+                Ok(parsed_fn) => {
+                    extension.add_scalar_function(parsed_fn)?;
+                }
+                Err(super::scalar_functions::ScalarFunctionError::NotYetImplemented(_)) => {
+                    // Skip functions with unimplemented features (e.g., type derivations)
+                    // These will be supported in a future update
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
 
         if let Some(missing) = ctx.linked.iter().next() {

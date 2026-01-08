@@ -43,6 +43,9 @@ pub enum ScalarFunctionError {
     /// Error parsing function argument
     #[error("Argument error: {0}")]
     ArgumentError(#[from] ArgumentsItemError),
+    /// Feature not yet implemented
+    #[error("Not yet implemented: {0}")]
+    NotYetImplemented(String),
 }
 
 /// A validated scalar function definition with one or more implementations
@@ -100,7 +103,7 @@ pub struct Impl {
     pub nullability: Option<crate::text::simple_extensions::NullabilityHandling>,
     /// Return type as a string
     ///
-    /// The raw YAML type string (e.g., "i64", "varchar<L1>", "any1").
+    /// The raw YAML type string (e.g., `"i64"`, `"varchar<L1>"`, `"any1"`).
     /// In this basic implementation, the type string is stored as-is without parsing.
     pub return_type: String,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
@@ -120,11 +123,22 @@ impl Impl {
     ) -> Result<Self, ScalarFunctionError> {
         // Extract the return type string
         let return_type = match raw.return_.0 {
-            crate::text::simple_extensions::Type::String(s) => s,
+            crate::text::simple_extensions::Type::String(s) => {
+                // Multiline strings indicate type derivation expressions
+                // See: https://github.com/substrait-io/substrait-rs/issues/449
+                if s.contains('\n') {
+                    return Err(ScalarFunctionError::NotYetImplemented(
+                        "Type derivation expressions - issue #449".to_string(),
+                    ));
+                }
+                s
+            }
             crate::text::simple_extensions::Type::Object(_) => {
-                // For this basic implementation, we'll just convert complex types to a string
-                // This would be properly handled in a later PR
-                "complex_type".to_string()
+                // Struct return types (YAML syntactic sugar) are not yet supported
+                // See: https://github.com/substrait-io/substrait-rs/issues/450
+                return Err(ScalarFunctionError::NotYetImplemented(
+                    "Struct return types - issue #450".to_string(),
+                ));
             }
         };
 
@@ -221,5 +235,152 @@ impl From<&RawOptions> for Options {
                 .map(|(k, v)| (k.clone(), v.values.clone()))
                 .collect(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_variadic_min_greater_than_max() {
+        let raw = RawVariadicBehavior {
+            min: Some(5.0),
+            max: Some(3.0),
+            parameter_consistency: None,
+        };
+        let result = VariadicBehavior::try_from(raw);
+        assert!(matches!(
+            result,
+            Err(ScalarFunctionError::VariadicMinGreaterThanMax { min: 5, max: 3 })
+        ));
+    }
+
+    #[test]
+    fn test_variadic_negative_min() {
+        let raw = RawVariadicBehavior {
+            min: Some(-1.0),
+            max: None,
+            parameter_consistency: None,
+        };
+        let result = VariadicBehavior::try_from(raw);
+        assert!(matches!(
+            result,
+            Err(ScalarFunctionError::InvalidVariadicBehavior { field, value })
+            if field == "min" && value == -1.0
+        ));
+    }
+
+    #[test]
+    fn test_variadic_negative_max() {
+        let raw = RawVariadicBehavior {
+            min: None,
+            max: Some(-2.5),
+            parameter_consistency: None,
+        };
+        let result = VariadicBehavior::try_from(raw);
+        assert!(matches!(
+            result,
+            Err(ScalarFunctionError::InvalidVariadicBehavior { field, value })
+            if field == "max" && value == -2.5
+        ));
+    }
+
+    #[test]
+    fn test_variadic_valid() {
+        let raw = RawVariadicBehavior {
+            min: Some(1.0),
+            max: Some(5.0),
+            parameter_consistency: None,
+        };
+        let result = VariadicBehavior::try_from(raw).unwrap();
+        assert_eq!(result.min, Some(1));
+        assert_eq!(result.max, Some(5));
+    }
+
+    #[test]
+    fn test_variadic_none_values() {
+        let raw = RawVariadicBehavior {
+            min: None,
+            max: None,
+            parameter_consistency: None,
+        };
+        let result = VariadicBehavior::try_from(raw).unwrap();
+        assert_eq!(result.min, None);
+        assert_eq!(result.max, None);
+    }
+
+    #[test]
+    fn test_no_implementations_error() {
+        use crate::text::simple_extensions::ScalarFunction as RawScalarFunction;
+
+        let raw = RawScalarFunction {
+            name: "empty_function".to_string(),
+            description: None,
+            impls: vec![],
+        };
+
+        let mut ctx = super::super::extensions::TypeContext::default();
+        let result = ScalarFunction::from_raw(raw, &mut ctx);
+
+        assert!(matches!(
+            result,
+            Err(ScalarFunctionError::NoImplementations { name })
+            if name == "empty_function"
+        ));
+    }
+
+    #[test]
+    fn test_scalar_function_with_single_impl() {
+        use crate::text::simple_extensions::{
+            ReturnValue, ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem, Type,
+        };
+
+        let raw = RawScalarFunction {
+            name: "add".to_string(),
+            description: Some("Addition function".to_string()),
+            impls: vec![ScalarFunctionImplsItem {
+                args: None,
+                options: None,
+                variadic: None,
+                session_dependent: None,
+                deterministic: None,
+                nullability: None,
+                return_: ReturnValue(Type::String("i32".to_string())),
+                implementation: None,
+            }],
+        };
+
+        let mut ctx = super::super::extensions::TypeContext::default();
+        let result = ScalarFunction::from_raw(raw, &mut ctx).unwrap();
+
+        assert_eq!(result.name, "add");
+        assert_eq!(result.description, Some("Addition function".to_string()));
+        assert_eq!(result.impls.len(), 1);
+        assert_eq!(result.impls[0].return_type, "i32");
+    }
+
+    #[test]
+    fn test_options_conversion() {
+        use crate::text::simple_extensions::{Options as RawOptions, OptionsValue};
+        use indexmap::IndexMap;
+
+        let mut raw_map = IndexMap::new();
+        raw_map.insert(
+            "overflow".to_string(),
+            OptionsValue {
+                values: vec!["SILENT".to_string(), "ERROR".to_string()],
+                description: None,
+            },
+        );
+
+        let raw = RawOptions(raw_map);
+        let options = Options::from(&raw);
+
+        assert_eq!(options.0.len(), 1);
+        assert_eq!(
+            options.0.get("overflow").unwrap(),
+            &vec!["SILENT".to_string(), "ERROR".to_string()]
+        );
     }
 }
