@@ -1066,7 +1066,7 @@ impl fmt::Display for SignatureType {
 /// Can either be a simple type or a complex type derivation expression.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ReturnType {
-    /// Simple type (e.g., "i64", "varchar<L1>", "any1")
+    /// Simple type (e.g., "i64", "`varchar<L1>`", "any1")
     Type(SignatureType),
     /// Type derivation expression (multi-line with intermediate computations)
     Derivation(TypeDerivation),
