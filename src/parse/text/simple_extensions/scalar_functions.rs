@@ -12,6 +12,8 @@ use crate::text::simple_extensions::{
 
 use super::argument::{ArgumentsItem, ArgumentsItemError};
 use super::extensions::TypeContext;
+use super::type_ast::{TypeExpr, TypeParseError};
+use super::types::{ConcreteType, ExtensionTypeError};
 use crate::parse::Parse;
 use thiserror::Error;
 
@@ -43,6 +45,12 @@ pub enum ScalarFunctionError {
     /// Error parsing function argument
     #[error("Argument error: {0}")]
     ArgumentError(#[from] ArgumentsItemError),
+    /// Error parsing type in function signature
+    #[error("Type error: {0}")]
+    TypeError(#[from] ExtensionTypeError),
+    /// Error parsing type expression
+    #[error("Type parse error: {0}")]
+    TypeParseError(#[from] TypeParseError),
     /// Feature not yet implemented
     #[error("Not yet implemented: {0}")]
     NotYetImplemented(String),
@@ -101,11 +109,12 @@ pub struct Impl {
     pub deterministic: Option<crate::text::simple_extensions::Deterministic>,
     /// How the function handles null inputs and produces nullable outputs
     pub nullability: Option<crate::text::simple_extensions::NullabilityHandling>,
-    /// Return type as a string
+    /// Return type resolved to a concrete type
     ///
-    /// The raw YAML type string (e.g., `"i64"`, `"varchar<L1>"`, `"any1"`).
-    /// In this basic implementation, the type string is stored as-is without parsing.
-    pub return_type: String,
+    /// The raw YAML type string is parsed and validated. Only concrete types
+    /// (without type variables) are supported; functions with type variables
+    /// are skipped in this basic implementation.
+    pub return_type: ConcreteType,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
     /// Maps language identifiers to implementation source code snippets.
@@ -114,14 +123,11 @@ pub struct Impl {
 
 impl Impl {
     /// Parse an implementation from raw YAML, resolving types with the provided context
-    ///
-    /// Note: ctx is `&mut` to match the Parse trait, but is not actually mutated
-    /// during function parsing since argument types remain as raw strings.
     pub(super) fn from_raw(
         raw: RawImpl,
-        _ctx: &mut TypeContext,
+        ctx: &mut TypeContext,
     ) -> Result<Self, ScalarFunctionError> {
-        // Extract the return type string
+        // Parse and validate the return type
         let return_type = match raw.return_.0 {
             crate::text::simple_extensions::Type::String(s) => {
                 // Multiline strings indicate type derivation expressions
@@ -131,7 +137,41 @@ impl Impl {
                         "Type derivation expressions - issue #449".to_string(),
                     ));
                 }
-                s
+
+                // Parse the type string into TypeExpr
+                let type_expr = TypeExpr::parse(&s)?;
+
+                // Track custom type references (but not type parameters like P, L, S)
+                // This validates that referenced extension types actually exist
+                type_expr.visit_references(&mut |name| ctx.linked(name));
+
+                // Try to convert to ConcreteType (fails if it has type variables)
+                match ConcreteType::try_from(type_expr) {
+                    Ok(concrete) => {
+                        // Successfully parsed to concrete type
+                        concrete
+                    }
+                    Err(ExtensionTypeError::InvalidAnyTypeVariable { .. }) |
+                    Err(ExtensionTypeError::InvalidParameter(_)) |
+                    Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
+                        // Type has type/parameter variables (any1, L1, P, etc.) - not yet supported
+                        // See: https://github.com/substrait-io/substrait-rs/issues/452
+                        return Err(ScalarFunctionError::NotYetImplemented(
+                            "Type variables in function signatures - issue #452".to_string(),
+                        ));
+                    }
+                    Err(ExtensionTypeError::UnknownTypeName { name }) => {
+                        // Unknown type name - missing u! prefix
+                        // This should fail, not be silently skipped
+                        return Err(ScalarFunctionError::TypeError(
+                            ExtensionTypeError::UnknownTypeName { name }
+                        ));
+                    }
+                    Err(e) => {
+                        // Other errors should also fail
+                        return Err(ScalarFunctionError::TypeError(e));
+                    }
+                }
             }
             crate::text::simple_extensions::Type::Object(_) => {
                 // Struct return types (YAML syntactic sugar) are not yet supported
@@ -149,7 +189,7 @@ impl Impl {
         let args = match raw.args {
             Some(a) => {
                 a.0.into_iter()
-                    .map(|raw_arg| raw_arg.parse(_ctx))
+                    .map(|raw_arg| raw_arg.parse(ctx))
                     .collect::<Result<Vec<_>, _>>()?
             }
             None => Vec::new(),
@@ -357,7 +397,17 @@ mod tests {
         assert_eq!(result.name, "add");
         assert_eq!(result.description, Some("Addition function".to_string()));
         assert_eq!(result.impls.len(), 1);
-        assert_eq!(result.impls[0].return_type, "i32");
+
+        // Verify return type is properly parsed to ConcreteType
+        use super::super::types::{BasicBuiltinType, ConcreteTypeKind};
+        let return_type = &result.impls[0].return_type;
+        assert!(!return_type.nullable, "i32 should not be nullable");
+        match &return_type.kind {
+            ConcreteTypeKind::Builtin(BasicBuiltinType::I32) => {
+                // Expected - test passes
+            }
+            other => panic!("Expected I32, got {:?}", other),
+        }
     }
 
     #[test]

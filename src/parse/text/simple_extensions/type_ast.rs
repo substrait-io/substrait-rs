@@ -16,8 +16,6 @@
 //
 // Therefore, the grammar is manually implemented.
 
-use crate::parse::text::simple_extensions::types::is_builtin_type_name;
-
 /// A parsed type expression from a type string, with lifetime tied to the original string.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeExpr<'a> {
@@ -108,10 +106,10 @@ impl<'a> TypeExpr<'a> {
                     }
                 }
             }
-            TypeExpr::Simple(name, params, _) => {
-                if !is_builtin_type_name(name) {
-                    on_ext(name);
-                }
+            TypeExpr::Simple(_name, params, _) => {
+                // Simple types should only be builtins.
+                // Extension types MUST use u! prefix and appear as UserDefined.
+                // We don't track Simple types as extension references - they'll error during conversion.
                 for p in params {
                     if let TypeExprParam::Type(t) = p {
                         t.visit_references(on_ext);
@@ -246,7 +244,7 @@ mod tests {
             ("DECIMAL<10,2>", Vec::<String>::new()),
             ("List<string>", Vec::<String>::new()),
             ("u!custom<i32>", vec!["custom".to_string()]),
-            ("Geo<string>", vec!["Geo".to_string()]),
+            ("u!Geo<string>", vec!["Geo".to_string()]),
         ];
 
         for (expr, expected_refs) in cases {

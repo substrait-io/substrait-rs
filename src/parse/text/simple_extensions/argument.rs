@@ -272,6 +272,13 @@ impl ValueArg {
     pub fn constant(&self) -> bool {
         self.constant.unwrap_or(false)
     }
+
+    /// Returns the value type of this argument.
+    ///
+    /// See [`simple_extensions::ValueArg::value`].
+    pub fn value(&self) -> &simple_extensions::Type {
+        &self.value
+    }
 }
 
 impl<C: Context> Parse<C> for simple_extensions::ValueArg {
