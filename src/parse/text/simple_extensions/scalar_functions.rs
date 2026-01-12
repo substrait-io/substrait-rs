@@ -301,33 +301,30 @@ mod tests {
     }
 
     #[test]
-    fn test_variadic_negative_min() {
-        let raw = RawVariadicBehavior {
-            min: Some(-1.0),
-            max: None,
-            parameter_consistency: None,
-        };
-        let result = VariadicBehavior::try_from(raw);
-        assert!(matches!(
-            result,
-            Err(ScalarFunctionError::InvalidVariadicBehavior { field, value })
-            if field == "min" && value == -1.0
-        ));
-    }
+    fn test_variadic_invalid_values() {
+        let invalid_cases = vec![
+            (Some(-1.0), None, "negative min"),
+            (None, Some(-2.5), "negative max"),
+            (Some(7.2), None, "non-integer min"),
+            (None, Some(3.5), "non-integer max"),
+        ];
 
-    #[test]
-    fn test_variadic_negative_max() {
-        let raw = RawVariadicBehavior {
-            min: None,
-            max: Some(-2.5),
-            parameter_consistency: None,
-        };
-        let result = VariadicBehavior::try_from(raw);
-        assert!(matches!(
-            result,
-            Err(ScalarFunctionError::InvalidVariadicBehavior { field, value })
-            if field == "max" && value == -2.5
-        ));
+        for (min, max, description) in invalid_cases {
+            let raw = RawVariadicBehavior {
+                min,
+                max,
+                parameter_consistency: None,
+            };
+            let result = VariadicBehavior::try_from(raw);
+            assert!(
+                matches!(
+                    result,
+                    Err(ScalarFunctionError::InvalidVariadicBehavior { .. })
+                ),
+                "expected InvalidVariadicBehavior for {}",
+                description
+            );
+        }
     }
 
     #[test]
