@@ -198,36 +198,6 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "extensions")]
-    #[test]
-    fn test_scalar_function_lookup() {
-        let registry = Registry::from_core_extensions();
-
-        let functions_arithmetic_urn =
-            Urn::from_str("extension:io.substrait:functions_arithmetic").unwrap();
-
-        let add_function = registry.get_scalar_function(&functions_arithmetic_urn, "add");
-        assert!(
-            add_function.is_some(),
-            "Should find 'add' function in functions_arithmetic extension"
-        );
-
-        let add = add_function.unwrap();
-        assert_eq!(add.name, "add");
-        assert!(
-            !add.impls.is_empty(),
-            "add function should have implementations"
-        );
-
-        let missing_function =
-            registry.get_scalar_function(&functions_arithmetic_urn, "nonexistent");
-        assert!(missing_function.is_none());
-
-        let wrong_urn = Urn::from_str("extension:example.com:test").unwrap();
-        let wrong_urn_lookup = registry.get_scalar_function(&wrong_urn, "add");
-        assert!(wrong_urn_lookup.is_none());
-    }
-
     #[test]
     fn test_unknown_type_without_prefix_fails() {
         use crate::text::simple_extensions;

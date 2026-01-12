@@ -136,13 +136,8 @@ impl Impl {
                         "Type derivation expressions - issue #449".to_string(),
                     ));
                 }
-
-                // Parse the type string into TypeExpr
                 let type_expr = TypeExpr::parse(&s)?;
-
                 type_expr.visit_references(&mut |name| ctx.linked(name));
-
-                // Try to convert to ConcreteType (fails if it has type variables)
                 match ConcreteType::try_from(type_expr) {
                     Ok(concrete) => concrete,
                     Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
