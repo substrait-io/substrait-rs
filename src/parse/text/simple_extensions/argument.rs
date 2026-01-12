@@ -240,8 +240,7 @@ pub struct ValueArg {
 
     /// A fully defined type or a type expression.
     ///
-    /// TODO: parse this to a typed representation (likely using the `TypeExpr`
-    /// parser) so the caller does not have to interpret the raw string.
+    /// TODO(#452): parse this to a typed representation once type variables are supported.
     value: simple_extensions::Type,
 
     /// Whether this argument is required to be a constant for invocation. For
@@ -271,13 +270,6 @@ impl ValueArg {
     /// See [`simple_extensions::ValueArg::constant`].
     pub fn constant(&self) -> bool {
         self.constant.unwrap_or(false)
-    }
-
-    /// Returns the type of this value argument.
-    ///
-    /// See [`simple_extensions::ValueArg::value`].
-    pub fn type_(&self) -> &simple_extensions::Type {
-        &self.value
     }
 }
 
@@ -330,8 +322,7 @@ pub struct TypeArg {
 
     /// A partially or completely parameterized type. E.g. `List<K>` or `K`.
     ///
-    /// TODO: parse this to a typed representation (likely using the `TypeExpr`
-    /// parser) so the caller does not have to interpret the raw string.
+    /// TODO(#452): parse this to a typed representation once type variables are supported.
     type_: String,
 }
 
