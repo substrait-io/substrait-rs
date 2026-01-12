@@ -151,9 +151,9 @@ impl Impl {
                         // Successfully parsed to concrete type
                         concrete
                     }
-                    Err(ExtensionTypeError::InvalidAnyTypeVariable { .. }) |
-                    Err(ExtensionTypeError::InvalidParameter(_)) |
-                    Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
+                    Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
+                    | Err(ExtensionTypeError::InvalidParameter(_))
+                    | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
                         // Type has type/parameter variables (any1, L1, P, etc.) - not yet supported
                         // See: https://github.com/substrait-io/substrait-rs/issues/452
                         return Err(ScalarFunctionError::NotYetImplemented(
@@ -164,7 +164,7 @@ impl Impl {
                         // Unknown type name - missing u! prefix
                         // This should fail, not be silently skipped
                         return Err(ScalarFunctionError::TypeError(
-                            ExtensionTypeError::UnknownTypeName { name }
+                            ExtensionTypeError::UnknownTypeName { name },
                         ));
                     }
                     Err(e) => {

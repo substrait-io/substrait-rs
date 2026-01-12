@@ -360,7 +360,9 @@ mod tests {
     #[test]
     fn test_scalar_function_parses_completely() {
         use super::super::{
-            argument::ArgumentsItem, scalar_functions::{Impl, Options}, types::*,
+            argument::ArgumentsItem,
+            scalar_functions::{Impl, Options},
+            types::*,
         };
         use crate::parse::Parse;
         use crate::text::simple_extensions;

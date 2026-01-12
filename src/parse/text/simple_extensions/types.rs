@@ -233,7 +233,6 @@ impl fmt::Display for TypeParameter {
     }
 }
 
-
 /// Parse a primitive (no type parameters) builtin type name
 fn primitive_builtin(lower_name: &str) -> Option<BasicBuiltinType> {
     match lower_name {
@@ -422,7 +421,11 @@ pub enum ExtensionTypeError {
         nullability: bool,
     },
     /// Unknown type name (not a builtin, missing u! prefix for extension types)
-    #[error("Unknown type name: '{}'. Extension types must use the u! prefix (e.g., u!{})", name, name)]
+    #[error(
+        "Unknown type name: '{}'. Extension types must use the u! prefix (e.g., u!{})",
+        name,
+        name
+    )]
     UnknownTypeName {
         /// The unknown type name
         name: String,
