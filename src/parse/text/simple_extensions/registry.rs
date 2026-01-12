@@ -332,7 +332,7 @@ mod tests {
     fn test_scalar_function_parses_completely() {
         use super::super::{
             argument::ArgumentsItem,
-            scalar_functions::{Impl, Options},
+            scalar_functions::{Impl, NullabilityHandling, Options},
             types::*,
         };
         use crate::parse::Parse;
@@ -395,7 +395,7 @@ mod tests {
             variadic: None,
             session_dependent: None,
             deterministic: None,
-            nullability: None,
+            nullability: NullabilityHandling::Mirror,
             return_type: ConcreteType {
                 kind: ConcreteTypeKind::Builtin(BasicBuiltinType::I8),
                 nullable: false,

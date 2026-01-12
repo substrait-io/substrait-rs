@@ -106,8 +106,10 @@ pub struct Impl {
     pub session_dependent: Option<bool>,
     /// Whether the function is deterministic (same inputs always produce same output)
     pub deterministic: Option<bool>,
-    /// How the function handles null inputs and produces nullable outputs
-    pub nullability: Option<NullabilityHandling>,
+    /// How the function handles null inputs and produces nullable outputs.
+    ///
+    /// Defaults to [`NullabilityHandling::Mirror`] per the Substrait spec.
+    pub nullability: NullabilityHandling,
     /// Return type resolved to a concrete type
     ///
     /// The raw YAML type string is parsed and validated. Only concrete types
@@ -183,7 +185,10 @@ impl Impl {
             variadic,
             session_dependent: raw.session_dependent.map(|b| b.0),
             deterministic: raw.deterministic.map(|b| b.0),
-            nullability: raw.nullability.map(Into::into),
+            nullability: raw
+                .nullability
+                .map(Into::into)
+                .unwrap_or(NullabilityHandling::Mirror),
             return_type,
             implementation: raw.implementation.map(|i| i.0.into_iter().collect()),
         })
