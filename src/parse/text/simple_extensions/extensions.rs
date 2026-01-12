@@ -92,9 +92,7 @@ impl SimpleExtensions {
     ///
     /// Unions the implementations and drops the description if they differ.
     fn merge_scalar_function(existing: &mut ScalarFunction, new: ScalarFunction) {
-        // Union the implementations
         existing.impls.extend(new.impls);
-        // Drop description if they differ
         if existing.description != new.description {
             existing.description = None;
         }

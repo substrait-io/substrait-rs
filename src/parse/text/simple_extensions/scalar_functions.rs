@@ -403,12 +403,10 @@ mod tests {
         use super::super::types::{BasicBuiltinType, ConcreteTypeKind};
         let return_type = &result.impls[0].return_type;
         assert!(!return_type.nullable, "i32 should not be nullable");
-        match &return_type.kind {
-            ConcreteTypeKind::Builtin(BasicBuiltinType::I32) => {
-                // Expected - test passes
-            }
-            other => panic!("Expected I32, got {:?}", other),
-        }
+        assert!(matches!(
+            &return_type.kind,
+            ConcreteTypeKind::Builtin(BasicBuiltinType::I32)
+        ));
     }
 
     #[test]
