@@ -273,10 +273,10 @@ impl ValueArg {
         self.constant.unwrap_or(false)
     }
 
-    /// Returns the value type of this argument.
+    /// Returns the type of this value argument.
     ///
     /// See [`simple_extensions::ValueArg::value`].
-    pub fn value(&self) -> &simple_extensions::Type {
+    pub fn type_(&self) -> &simple_extensions::Type {
         &self.value
     }
 }
