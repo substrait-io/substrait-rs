@@ -94,6 +94,9 @@ impl Registry {
 #[cfg(test)]
 mod tests {
     use super::{ExtensionFile, Registry};
+    use crate::parse::text::simple_extensions::{
+        SimpleExtensionsError, scalar_functions::ScalarFunctionError, types::ExtensionTypeError,
+    };
     use crate::text::simple_extensions::{SimpleExtensions, SimpleExtensionsTypesItem};
     use crate::urn::Urn;
     use std::str::FromStr;
@@ -262,25 +265,27 @@ mod tests {
         );
 
         match result {
-            Err(crate::parse::text::simple_extensions::SimpleExtensionsError::ScalarFunctionError(
-                crate::parse::text::simple_extensions::scalar_functions::ScalarFunctionError::TypeError(
-                    crate::parse::text::simple_extensions::types::ExtensionTypeError::UnknownTypeName { name }
-                )
-            )) => {
+            Err(SimpleExtensionsError::ScalarFunctionError(ScalarFunctionError::TypeError(
+                ExtensionTypeError::UnknownTypeName { name },
+            ))) => {
                 assert_eq!(name, "point");
             }
             other => panic!("Expected UnknownTypeName error, got {:?}", other),
         }
     }
 
-    #[test]
-    fn test_custom_type_validation() {
+    /// Helper to create a minimal extension with a scalar function returning a custom type
+    fn extension_with_custom_type_reference(
+        urn: &str,
+        function_name: &str,
+        return_type: &str,
+        defined_types: Vec<&str>,
+    ) -> SimpleExtensions {
         use crate::text::simple_extensions;
 
-        // Extension with type and function that references it with u! prefix - should succeed
-        let valid_extension = SimpleExtensions {
+        SimpleExtensions {
             scalar_functions: vec![simple_extensions::ScalarFunction {
-                name: "get_point".to_string(),
+                name: function_name.to_string(),
                 description: None,
                 impls: vec![simple_extensions::ScalarFunctionImplsItem {
                     args: None,
@@ -290,7 +295,7 @@ mod tests {
                     deterministic: None,
                     nullability: None,
                     return_: simple_extensions::ReturnValue(simple_extensions::Type::String(
-                        "u!point".to_string(), // Extension types MUST use u! prefix
+                        return_type.to_string(),
                     )),
                     implementation: None,
                 }],
@@ -299,57 +304,53 @@ mod tests {
             window_functions: vec![],
             dependencies: Default::default(),
             type_variations: vec![],
-            types: vec![SimpleExtensionsTypesItem {
-                name: "point".to_string(),
-                description: None,
-                parameters: None,
-                structure: None,
-                variadic: None,
-            }],
-            urn: "extension:example.com:valid".to_string(),
-        };
-
-        // Extension with function that references non-existent type - should fail
-        let invalid_extension = SimpleExtensions {
-            scalar_functions: vec![simple_extensions::ScalarFunction {
-                name: "get_rectangle".to_string(),
-                description: None,
-                impls: vec![simple_extensions::ScalarFunctionImplsItem {
-                    args: None,
-                    options: None,
+            types: defined_types
+                .into_iter()
+                .map(|name| SimpleExtensionsTypesItem {
+                    name: name.to_string(),
+                    description: None,
+                    parameters: None,
+                    structure: None,
                     variadic: None,
-                    session_dependent: None,
-                    deterministic: None,
-                    nullability: None,
-                    return_: simple_extensions::ReturnValue(simple_extensions::Type::String(
-                        "u!rectangle".to_string(), // This type doesn't exist
-                    )),
-                    implementation: None,
-                }],
-            }],
-            aggregate_functions: vec![],
-            window_functions: vec![],
-            dependencies: Default::default(),
-            type_variations: vec![],
-            types: vec![],
-            urn: "extension:example.com:invalid".to_string(),
-        };
+                })
+                .collect(),
+            urn: urn.to_string(),
+        }
+    }
 
-        // Valid case: type exists in same extension
-        let valid_result = ExtensionFile::create(valid_extension);
+    #[test]
+    fn test_custom_type_reference_valid() {
+        let extension = extension_with_custom_type_reference(
+            "extension:example.com:valid",
+            "get_point",
+            "u!point",
+            vec!["point"],
+        );
+
+        let result = ExtensionFile::create(extension);
         assert!(
-            valid_result.is_ok(),
+            result.is_ok(),
             "Should succeed when referenced type exists with u! prefix"
         );
+    }
 
-        // Invalid case: type doesn't exist
-        let invalid_result = ExtensionFile::create(invalid_extension);
+    #[test]
+    fn test_custom_type_reference_missing() {
+        let extension = extension_with_custom_type_reference(
+            "extension:example.com:invalid",
+            "get_rectangle",
+            "u!rectangle",
+            vec![], // rectangle type not defined
+        );
+
+        let result = ExtensionFile::create(extension);
         assert!(
-            invalid_result.is_err(),
+            result.is_err(),
             "Should fail when referenced type doesn't exist"
         );
-        match invalid_result {
-            Err(crate::parse::text::simple_extensions::SimpleExtensionsError::UnresolvedTypeReference { type_name }) => {
+
+        match result {
+            Err(SimpleExtensionsError::UnresolvedTypeReference { type_name }) => {
                 assert_eq!(type_name, "rectangle");
             }
             other => panic!("Expected UnresolvedTypeReference error, got {:?}", other),
@@ -372,7 +373,6 @@ mod tests {
         let functions_arithmetic_urn =
             Urn::from_str("extension:io.substrait:functions_arithmetic").unwrap();
 
-        // Get the "add" function from functions_arithmetic.yaml
         let add = registry
             .get_scalar_function(&functions_arithmetic_urn, "add")
             .expect("add function should exist");
@@ -433,7 +433,6 @@ mod tests {
             implementation: None,
         };
 
-        // Compare the actual first implementation to the expected
         assert_eq!(&add.impls[0], &expected_impl);
     }
 }

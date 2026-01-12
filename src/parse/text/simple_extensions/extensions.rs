@@ -25,6 +25,8 @@ pub struct SimpleExtensions {
     /// Types defined in this extension file
     types: HashMap<String, CustomType>,
     /// Scalar functions defined in this extension file
+    ///
+    /// TODO: Add support for window functions (issue #446) and aggregate functions (issue #447)
     scalar_functions: HashMap<String, ScalarFunction>,
 }
 
@@ -80,15 +82,21 @@ impl SimpleExtensions {
                 Ok(())
             }
             Entry::Occupied(mut e) => {
-                let existing = e.get_mut();
-                // Union the implementations
-                existing.impls.extend(scalar_function.impls);
-                // Drop description if they differ
-                if existing.description != scalar_function.description {
-                    existing.description = None;
-                }
+                Self::merge_scalar_function(e.get_mut(), scalar_function);
                 Ok(())
             }
+        }
+    }
+
+    /// Merge a new scalar function into an existing one.
+    ///
+    /// Unions the implementations and drops the description if they differ.
+    fn merge_scalar_function(existing: &mut ScalarFunction, new: ScalarFunction) {
+        // Union the implementations
+        existing.impls.extend(new.impls);
+        // Drop description if they differ
+        if existing.description != new.description {
+            existing.description = None;
         }
     }
 
