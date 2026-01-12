@@ -59,7 +59,7 @@ impl Registry {
             .iter()
             .filter_map(|(orig_urn, simple_extensions)| {
                 // Skip extensions with bugs where they reference extension types without u! prefix
-                // See: https://github.com/substrait-io/substrait/issues/903
+                // See: https://github.com/substrait-io/substrait/issues/935
                 let urn_str = orig_urn.to_string();
                 if urn_str == "extension:io.substrait:extension_types" ||
                    urn_str == "extension:io.substrait:unknown" {
@@ -190,7 +190,7 @@ mod tests {
         let type_via_registry = registry.get_type(&urn, "geometry");
         assert!(type_via_registry.is_some());
 
-        // Verify extension_types is skipped due to u! prefix bug
+        // Verify extension_types is skipped due to u! prefix bug (substrait#935)
         let extension_types_urn = Urn::from_str("extension:io.substrait:extension_types").unwrap();
         assert!(
             registry.get_extension(&extension_types_urn).is_none(),
