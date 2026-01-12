@@ -8,7 +8,8 @@
 use std::collections::HashMap;
 
 use crate::text::simple_extensions::{
-    Options as RawOptions, ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem as RawImpl,
+    NullabilityHandling as RawNullabilityHandling, Options as RawOptions,
+    ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem as RawImpl, Type as RawType,
     VariadicBehavior as RawVariadicBehavior,
 };
 
@@ -130,7 +131,7 @@ impl Impl {
     ) -> Result<Self, ScalarFunctionError> {
         // Parse and validate the return type
         let return_type = match raw.return_.0 {
-            crate::text::simple_extensions::Type::String(s) => {
+            RawType::String(s) => {
                 // Multiline strings indicate type derivation expressions
                 // See: https://github.com/substrait-io/substrait-rs/issues/449
                 if s.contains('\n') {
@@ -159,7 +160,7 @@ impl Impl {
                     Err(e) => return Err(ScalarFunctionError::TypeError(e)),
                 }
             }
-            crate::text::simple_extensions::Type::Object(_) => {
+            RawType::Object(_) => {
                 // Struct return types (YAML syntactic sugar) are not yet supported
                 // See: https://github.com/substrait-io/substrait-rs/issues/450
                 return Err(ScalarFunctionError::NotYetImplemented(
@@ -256,13 +257,12 @@ pub enum NullabilityHandling {
     Discrete,
 }
 
-impl From<crate::text::simple_extensions::NullabilityHandling> for NullabilityHandling {
-    fn from(raw: crate::text::simple_extensions::NullabilityHandling) -> Self {
-        use crate::text::simple_extensions::NullabilityHandling as Raw;
+impl From<RawNullabilityHandling> for NullabilityHandling {
+    fn from(raw: RawNullabilityHandling) -> Self {
         match raw {
-            Raw::Mirror => NullabilityHandling::Mirror,
-            Raw::DeclaredOutput => NullabilityHandling::DeclaredOutput,
-            Raw::Discrete => NullabilityHandling::Discrete,
+            RawNullabilityHandling::Mirror => NullabilityHandling::Mirror,
+            RawNullabilityHandling::DeclaredOutput => NullabilityHandling::DeclaredOutput,
+            RawNullabilityHandling::Discrete => NullabilityHandling::Discrete,
         }
     }
 }
