@@ -2,6 +2,10 @@
 
 //! Parsed type AST used by the simple extensions type parser.
 //!
+//! This module provides syntactic parsing of Substrait type strings into an AST.
+//! It does NOT validate that type names are valid builtins or that extension types exist -
+//! semantic validation occurs later when converting to [`ConcreteType`](super::types::ConcreteType).
+//!
 //! This module is based on the official substrait type grammar defined
 //! [here](https://github.com/substrait-io/substrait/blob/5f031b69ed211e1ec307be3db7989d64c65d33a2/grammar/SubstraitType.g4).
 
@@ -17,14 +21,22 @@
 // Therefore, the grammar is manually implemented.
 
 /// A parsed type expression from a type string, with lifetime tied to the original string.
+///
+/// This represents the syntactic structure only - type names are not validated.
+/// Convert to [`ConcreteType`](super::types::ConcreteType) for semantic validation.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeExpr<'a> {
-    /// A type with a name, optional parameters, and nullability
+    /// A type without the `u!` prefix (expected to be a builtin like `i32`, `List`, etc.)
+    ///
+    /// Contains: (name, parameters, nullable)
     Simple(&'a str, Vec<TypeExprParam<'a>>, bool),
-    /// A user-defined extension type, indicated by `u!Name`, with optional
-    /// parameters and nullability
+    /// A user-defined extension type with the `u!` prefix (e.g., `u!geometry`)
+    ///
+    /// Contains: (name without `u!` prefix, parameters, nullable)
     UserDefined(&'a str, Vec<TypeExprParam<'a>>, bool),
-    /// Type variable (e.g., any1, any2)
+    /// Type variable (e.g., `any1`, `any2`)
+    ///
+    /// Contains: (variable id, nullable)
     TypeVariable(u32, bool),
 }
 
@@ -98,7 +110,6 @@ impl<'a> TypeExpr<'a> {
     {
         match self {
             TypeExpr::UserDefined(name, params, _) => {
-                // Strip u! prefix when reporting linkage
                 on_ext(name);
                 for p in params {
                     if let TypeExprParam::Type(t) = p {
@@ -107,9 +118,6 @@ impl<'a> TypeExpr<'a> {
                 }
             }
             TypeExpr::Simple(_name, params, _) => {
-                // Simple types should only be builtins.
-                // Extension types MUST use u! prefix and appear as UserDefined.
-                // We don't track Simple types as extension references - they'll error during conversion.
                 for p in params {
                     if let TypeExprParam::Type(t) = p {
                         t.visit_references(on_ext);

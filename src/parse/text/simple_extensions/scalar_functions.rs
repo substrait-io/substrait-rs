@@ -5,6 +5,8 @@
 //! This module provides typed wrappers around scalar functions parsed from extension
 //! YAML files, validating constraints and resolving type strings to concrete types.
 
+use std::collections::HashMap;
+
 use crate::text::simple_extensions::{
     Options as RawOptions, ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem as RawImpl,
     VariadicBehavior as RawVariadicBehavior,
@@ -69,9 +71,6 @@ pub struct ScalarFunction {
 
 impl ScalarFunction {
     /// Parse a scalar function from raw YAML, resolving types with the provided context
-    ///
-    /// Note: ctx is `&mut` to match the Parse trait, but is not actually mutated
-    /// during function parsing since argument types remain as raw strings.
     pub(super) fn from_raw(
         raw: RawScalarFunction,
         ctx: &mut TypeContext,
@@ -104,11 +103,11 @@ pub struct Impl {
     /// Variadic argument behavior
     pub variadic: Option<VariadicBehavior>,
     /// Whether the function output depends on session state (e.g., timezone, locale)
-    pub session_dependent: Option<crate::text::simple_extensions::SessionDependent>,
+    pub session_dependent: Option<bool>,
     /// Whether the function is deterministic (same inputs always produce same output)
-    pub deterministic: Option<crate::text::simple_extensions::Deterministic>,
+    pub deterministic: Option<bool>,
     /// How the function handles null inputs and produces nullable outputs
-    pub nullability: Option<crate::text::simple_extensions::NullabilityHandling>,
+    pub nullability: Option<NullabilityHandling>,
     /// Return type resolved to a concrete type
     ///
     /// The raw YAML type string is parsed and validated. Only concrete types
@@ -118,7 +117,7 @@ pub struct Impl {
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
     /// Maps language identifiers to implementation source code snippets.
-    pub implementation: Option<std::collections::HashMap<String, String>>,
+    pub implementation: Option<HashMap<String, String>>,
 }
 
 impl Impl {
@@ -141,16 +140,11 @@ impl Impl {
                 // Parse the type string into TypeExpr
                 let type_expr = TypeExpr::parse(&s)?;
 
-                // Track custom type references (but not type parameters like P, L, S)
-                // This validates that referenced extension types actually exist
                 type_expr.visit_references(&mut |name| ctx.linked(name));
 
                 // Try to convert to ConcreteType (fails if it has type variables)
                 match ConcreteType::try_from(type_expr) {
-                    Ok(concrete) => {
-                        // Successfully parsed to concrete type
-                        concrete
-                    }
+                    Ok(concrete) => concrete,
                     Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
                     | Err(ExtensionTypeError::InvalidParameter(_))
                     | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
@@ -161,16 +155,11 @@ impl Impl {
                         ));
                     }
                     Err(ExtensionTypeError::UnknownTypeName { name }) => {
-                        // Unknown type name - missing u! prefix
-                        // This should fail, not be silently skipped
                         return Err(ScalarFunctionError::TypeError(
                             ExtensionTypeError::UnknownTypeName { name },
                         ));
                     }
-                    Err(e) => {
-                        // Other errors should also fail
-                        return Err(ScalarFunctionError::TypeError(e));
-                    }
+                    Err(e) => return Err(ScalarFunctionError::TypeError(e)),
                 }
             }
             crate::text::simple_extensions::Type::Object(_) => {
@@ -182,10 +171,8 @@ impl Impl {
             }
         };
 
-        // Convert and validate variadic behavior if present
         let variadic = raw.variadic.map(|v| v.try_into()).transpose()?;
 
-        // Parse and validate arguments (but note: in this basic version we're not parsing their types)
         let args = match raw.args {
             Some(a) => {
                 a.0.into_iter()
@@ -199,9 +186,9 @@ impl Impl {
             args,
             options: raw.options.as_ref().map(Options::from),
             variadic,
-            session_dependent: raw.session_dependent,
-            deterministic: raw.deterministic,
-            nullability: raw.nullability,
+            session_dependent: raw.session_dependent.map(|b| b.0),
+            deterministic: raw.deterministic.map(|b| b.0),
+            nullability: raw.nullability.map(Into::into),
             return_type,
             implementation: raw.implementation.map(|i| i.0.into_iter().collect()),
         })
@@ -211,9 +198,9 @@ impl Impl {
 /// Validated variadic behavior with min/max constraints
 #[derive(Clone, Debug, PartialEq)]
 pub struct VariadicBehavior {
-    /// Minimum number of arguments (None = 0)
-    pub min: Option<u32>,
-    /// Maximum number of arguments (None = unlimited)
+    /// Minimum number of arguments
+    pub min: u32,
+    /// Maximum number of arguments (unlimited when None)
     pub max: Option<u32>,
 }
 
@@ -221,24 +208,23 @@ impl TryFrom<RawVariadicBehavior> for VariadicBehavior {
     type Error = ScalarFunctionError;
 
     fn try_from(raw: RawVariadicBehavior) -> Result<Self, Self::Error> {
-        let min = raw
-            .min
-            .map(|v| {
-                if v < 0.0 {
-                    Err(ScalarFunctionError::InvalidVariadicBehavior {
+        let min = match raw.min {
+            Some(v) => {
+                if v < 0.0 || v.fract() != 0.0 {
+                    return Err(ScalarFunctionError::InvalidVariadicBehavior {
                         field: "min".to_string(),
                         value: v,
-                    })
-                } else {
-                    Ok(v as u32)
+                    });
                 }
-            })
-            .transpose()?;
+                v as u32
+            }
+            None => 0,
+        };
 
         let max = raw
             .max
             .map(|v| {
-                if v < 0.0 {
+                if v < 0.0 || v.fract() != 0.0 {
                     Err(ScalarFunctionError::InvalidVariadicBehavior {
                         field: "max".to_string(),
                         value: v,
@@ -249,13 +235,9 @@ impl TryFrom<RawVariadicBehavior> for VariadicBehavior {
             })
             .transpose()?;
 
-        // Validate min <= max if both are present
-        if let (Some(min_val), Some(max_val)) = (min, max) {
-            if min_val > max_val {
-                return Err(ScalarFunctionError::VariadicMinGreaterThanMax {
-                    min: min_val,
-                    max: max_val,
-                });
+        if let Some(max_val) = max {
+            if min > max_val {
+                return Err(ScalarFunctionError::VariadicMinGreaterThanMax { min, max: max_val });
             }
         }
 
@@ -263,9 +245,31 @@ impl TryFrom<RawVariadicBehavior> for VariadicBehavior {
     }
 }
 
+/// How a function handles null inputs and produces nullable outputs
+#[derive(Clone, Debug, PartialEq)]
+pub enum NullabilityHandling {
+    /// Nullability of output mirrors the nullability of input(s)
+    Mirror,
+    /// Function explicitly declares the nullability of its output
+    DeclaredOutput,
+    /// Function handles nulls in a custom way per implementation
+    Discrete,
+}
+
+impl From<crate::text::simple_extensions::NullabilityHandling> for NullabilityHandling {
+    fn from(raw: crate::text::simple_extensions::NullabilityHandling) -> Self {
+        use crate::text::simple_extensions::NullabilityHandling as Raw;
+        match raw {
+            Raw::Mirror => NullabilityHandling::Mirror,
+            Raw::DeclaredOutput => NullabilityHandling::DeclaredOutput,
+            Raw::Discrete => NullabilityHandling::Discrete,
+        }
+    }
+}
+
 /// Validated function options
 #[derive(Clone, Debug, PartialEq)]
-pub struct Options(pub std::collections::HashMap<String, Vec<String>>);
+pub struct Options(pub HashMap<String, Vec<String>>);
 
 impl From<&RawOptions> for Options {
     fn from(raw: &RawOptions) -> Self {
@@ -334,7 +338,7 @@ mod tests {
             parameter_consistency: None,
         };
         let result = VariadicBehavior::try_from(raw).unwrap();
-        assert_eq!(result.min, Some(1));
+        assert_eq!(result.min, 1);
         assert_eq!(result.max, Some(5));
     }
 
@@ -346,7 +350,7 @@ mod tests {
             parameter_consistency: None,
         };
         let result = VariadicBehavior::try_from(raw).unwrap();
-        assert_eq!(result.min, None);
+        assert_eq!(result.min, 0);
         assert_eq!(result.max, None);
     }
 
