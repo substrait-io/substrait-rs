@@ -71,19 +71,14 @@ impl SimpleExtensions {
     /// substrait-java and substrait-python implementations.
     ///
     /// See: https://github.com/substrait-io/substrait/issues/931
-    pub(super) fn add_scalar_function(
-        &mut self,
-        scalar_function: ScalarFunction,
-    ) -> Result<(), SimpleExtensionsError> {
+    pub(super) fn add_scalar_function(&mut self, scalar_function: ScalarFunction) {
         use std::collections::hash_map::Entry;
         match self.scalar_functions.entry(scalar_function.name.clone()) {
             Entry::Vacant(e) => {
                 e.insert(scalar_function);
-                Ok(())
             }
             Entry::Occupied(mut e) => {
                 Self::merge_scalar_function(e.get_mut(), scalar_function);
-                Ok(())
             }
         }
     }
@@ -91,6 +86,7 @@ impl SimpleExtensions {
     /// Merge a new scalar function into an existing one.
     ///
     /// Unions the implementations and drops the description if they differ.
+    // TODO: Reject conflicting implementations instead of blindly merging.
     fn merge_scalar_function(existing: &mut ScalarFunction, new: ScalarFunction) {
         existing.impls.extend(new.impls);
         if existing.description != new.description {
@@ -164,7 +160,7 @@ impl Parse<TypeContext> for RawExtensions {
         for scalar_fn in scalar_functions {
             match ScalarFunction::from_raw(scalar_fn, ctx) {
                 Ok(parsed_fn) => {
-                    extension.add_scalar_function(parsed_fn)?;
+                    extension.add_scalar_function(parsed_fn);
                 }
                 Err(super::scalar_functions::ScalarFunctionError::NotYetImplemented(_)) => {
                     // Skip functions with unimplemented features (e.g., type derivations)
