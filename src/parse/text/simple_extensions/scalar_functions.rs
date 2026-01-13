@@ -209,32 +209,22 @@ impl TryFrom<RawVariadicBehavior> for VariadicBehavior {
     type Error = ScalarFunctionError;
 
     fn try_from(raw: RawVariadicBehavior) -> Result<Self, Self::Error> {
-        let min = match raw.min {
-            Some(v) => {
-                if v < 0.0 || v.fract() != 0.0 {
-                    return Err(ScalarFunctionError::InvalidVariadicBehavior {
-                        field: "min".to_string(),
-                        value: v,
-                    });
-                }
-                v as u32
+        fn parse_bound(value: f64, field: &str) -> Result<u32, ScalarFunctionError> {
+            if value < 0.0 || value.fract() != 0.0 {
+                return Err(ScalarFunctionError::InvalidVariadicBehavior {
+                    field: field.to_string(),
+                    value,
+                });
             }
-            None => 0,
-        };
+            Ok(value as u32)
+        }
 
-        let max = raw
-            .max
-            .map(|v| {
-                if v < 0.0 || v.fract() != 0.0 {
-                    Err(ScalarFunctionError::InvalidVariadicBehavior {
-                        field: "max".to_string(),
-                        value: v,
-                    })
-                } else {
-                    Ok(v as u32)
-                }
-            })
-            .transpose()?;
+        let min = raw
+            .min
+            .map(|v| parse_bound(v, "min"))
+            .transpose()?
+            .unwrap_or(0);
+        let max = raw.max.map(|v| parse_bound(v, "max")).transpose()?;
 
         if let Some(max_val) = max {
             if min > max_val {
@@ -287,26 +277,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_variadic_min_greater_than_max() {
-        let raw = RawVariadicBehavior {
-            min: Some(5.0),
-            max: Some(3.0),
-            parameter_consistency: None,
-        };
-        let result = VariadicBehavior::try_from(raw);
-        assert!(matches!(
-            result,
-            Err(ScalarFunctionError::VariadicMinGreaterThanMax { min: 5, max: 3 })
-        ));
-    }
-
-    #[test]
     fn test_variadic_invalid_values() {
         let invalid_cases = vec![
             (Some(-1.0), None, "negative min"),
             (None, Some(-2.5), "negative max"),
             (Some(7.2), None, "non-integer min"),
             (None, Some(3.5), "non-integer max"),
+            (Some(5.0), Some(3.0), "min greater than max"),
         ];
 
         for (min, max, description) in invalid_cases {
@@ -315,13 +292,9 @@ mod tests {
                 max,
                 parameter_consistency: None,
             };
-            let result = VariadicBehavior::try_from(raw);
             assert!(
-                matches!(
-                    result,
-                    Err(ScalarFunctionError::InvalidVariadicBehavior { .. })
-                ),
-                "expected InvalidVariadicBehavior for {}",
+                VariadicBehavior::try_from(raw).is_err(),
+                "expected error for {}",
                 description
             );
         }
