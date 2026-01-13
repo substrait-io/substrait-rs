@@ -27,7 +27,9 @@ mod types;
 pub use extensions::SimpleExtensions;
 pub use file::ExtensionFile;
 pub use registry::Registry;
-pub use scalar_functions::{Impl as ScalarFunctionImpl, Options, ScalarFunction, VariadicBehavior};
+pub use scalar_functions::{
+    Impl as ScalarFunctionImpl, NullabilityHandling, Options, ScalarFunction, VariadicBehavior,
+};
 pub use type_ast::TypeExpr;
 pub use types::{ConcreteType, CustomType, ExtensionTypeError};
 
