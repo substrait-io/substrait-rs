@@ -10,8 +10,7 @@ use std::collections::HashMap;
 use crate::text::simple_extensions::{
     NullabilityHandling as RawNullabilityHandling, Options as RawOptions,
     ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem as RawImpl, Type as RawType,
-    VariadicBehavior as RawVariadicBehavior,
-    VariadicBehaviorParameterConsistency,
+    VariadicBehavior as RawVariadicBehavior, VariadicBehaviorParameterConsistency,
 };
 
 use super::argument::{ArgumentsItem, ArgumentsItemError};
@@ -247,7 +246,9 @@ impl From<VariadicBehaviorParameterConsistency> for ParameterConsistency {
     fn from(raw: VariadicBehaviorParameterConsistency) -> Self {
         match raw {
             VariadicBehaviorParameterConsistency::Consistent => ParameterConsistency::Consistent,
-            VariadicBehaviorParameterConsistency::Inconsistent => ParameterConsistency::Inconsistent,
+            VariadicBehaviorParameterConsistency::Inconsistent => {
+                ParameterConsistency::Inconsistent
+            }
         }
     }
 }
