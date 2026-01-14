@@ -11,6 +11,8 @@
 //!   extension file.
 //! * [`CustomType`] / [`ConcreteType`] – type definitions and resolved type
 //!   structures used when checking function signatures.
+//! * [`ScalarFunction`] – validated scalar function definitions with resolved
+//!   signatures.
 //! * [`Registry`] – a reusable lookup structure that stores validated extension
 //!   files and exposes typed access to their contents.
 
