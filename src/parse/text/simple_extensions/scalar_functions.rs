@@ -100,7 +100,7 @@ pub struct Impl {
     /// Function arguments with types and optional names/descriptions
     pub args: Vec<ArgumentsItem>,
     /// Configurable function options (e.g., overflow behavior, rounding modes)
-    pub options: Option<Options>,
+    pub options: Options,
     /// Variadic argument behavior
     pub variadic: Option<VariadicBehavior>,
     /// Whether the function output depends on session state (e.g., timezone, locale)
@@ -182,7 +182,7 @@ impl Impl {
 
         Ok(Impl {
             args,
-            options: raw.options.as_ref().map(Options::from),
+            options: raw.options.as_ref().map(Options::from).unwrap_or_default(),
             variadic,
             session_dependent: raw.session_dependent.map(|b| b.0),
             deterministic: raw.deterministic.map(|b| b.0),
@@ -258,7 +258,7 @@ impl From<RawNullabilityHandling> for NullabilityHandling {
 }
 
 /// Validated function options
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Options(pub HashMap<String, Vec<String>>);
 
 impl From<&RawOptions> for Options {
