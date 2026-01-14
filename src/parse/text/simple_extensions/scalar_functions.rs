@@ -11,6 +11,7 @@ use crate::text::simple_extensions::{
     NullabilityHandling as RawNullabilityHandling, Options as RawOptions,
     ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem as RawImpl, Type as RawType,
     VariadicBehavior as RawVariadicBehavior,
+    VariadicBehaviorParameterConsistency,
 };
 
 use super::argument::{ArgumentsItem, ArgumentsItemError};
@@ -101,7 +102,9 @@ pub struct Impl {
     pub args: Vec<ArgumentsItem>,
     /// Configurable function options (e.g., overflow behavior, rounding modes)
     pub options: Options,
-    /// Variadic argument behavior
+    /// Variadic argument behavior.
+    ///
+    /// `None` indicates the function is not variadic.
     pub variadic: Option<VariadicBehavior>,
     /// Whether the function output depends on session state (e.g., timezone, locale).
     ///
@@ -210,6 +213,43 @@ pub struct VariadicBehavior {
     pub min: u32,
     /// Maximum number of arguments (unlimited when None)
     pub max: Option<u32>,
+    /// Whether all variadic parameters must have the same type.
+    ///
+    /// `None` when the parameter is not specified in the YAML. We cannot assume a default
+    /// because the Substrait spec does not define default behavior for missing values
+    /// (see <https://github.com/substrait-io/substrait/issues/928>).
+    ///
+    /// TODO: Once the spec defines default behavior, apply it and change this to a non-Option
+    /// type (see issue #454).
+    pub parameter_consistency: Option<ParameterConsistency>,
+}
+
+/// Specifies whether variadic parameters must have consistent types.
+///
+/// When a function's last argument is variadic with a type parameter (e.g., `fn(A, B, C...)`),
+/// this controls type binding for the variadic arguments.
+///
+/// See: <https://github.com/substrait-io/substrait/issues/928>
+#[derive(Clone, Debug, PartialEq)]
+pub enum ParameterConsistency {
+    /// All variadic arguments must have the same concrete type.
+    ///
+    /// For example, if `C` binds to `i32`, all variadic arguments must be `i32`.
+    Consistent,
+    /// Each variadic argument can have a different type.
+    ///
+    /// Each instance of the variadic parameter can bind to different types
+    /// within the constraints of the type parameter.
+    Inconsistent,
+}
+
+impl From<VariadicBehaviorParameterConsistency> for ParameterConsistency {
+    fn from(raw: VariadicBehaviorParameterConsistency) -> Self {
+        match raw {
+            VariadicBehaviorParameterConsistency::Consistent => ParameterConsistency::Consistent,
+            VariadicBehaviorParameterConsistency::Inconsistent => ParameterConsistency::Inconsistent,
+        }
+    }
 }
 
 impl TryFrom<RawVariadicBehavior> for VariadicBehavior {
@@ -239,7 +279,11 @@ impl TryFrom<RawVariadicBehavior> for VariadicBehavior {
             }
         }
 
-        Ok(VariadicBehavior { min, max })
+        Ok(VariadicBehavior {
+            min,
+            max,
+            parameter_consistency: raw.parameter_consistency.map(Into::into),
+        })
     }
 }
 
