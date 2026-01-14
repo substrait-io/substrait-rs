@@ -3,6 +3,7 @@
 //! Validated simple extensions: [`SimpleExtensions`].
 //!
 //! Both type definitions and scalar function definitions are supported.
+//! Aggregate functions (see #447) and window functions (see #446) are not yet supported.
 
 use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
@@ -67,8 +68,7 @@ impl SimpleExtensions {
     /// Add a scalar function to the context, merging with existing functions of the same name.
     ///
     /// When duplicate function names are encountered, implementations are merged (unioned).
-    /// If descriptions differ, the description is dropped. This matches the behavior of
-    /// substrait-java and substrait-python implementations.
+    /// The existing description is kept if present, otherwise the new description is used.
     ///
     /// See: https://github.com/substrait-io/substrait/issues/931
     pub(super) fn add_scalar_function(&mut self, scalar_function: ScalarFunction) {
@@ -85,13 +85,12 @@ impl SimpleExtensions {
 
     /// Merge a new scalar function into an existing one.
     ///
-    /// Unions the implementations and drops the description if they differ.
+    /// Unions the implementations. Keeps the existing description if present,
+    /// otherwise uses the new description.
     // TODO: Reject conflicting implementations instead of blindly merging.
     fn merge_scalar_function(existing: &mut ScalarFunction, new: ScalarFunction) {
         existing.impls.extend(new.impls);
-        if existing.description != new.description {
-            existing.description = None;
-        }
+        existing.description = existing.description.or(new.description);
     }
 
     /// Check if a scalar function with the given name exists
