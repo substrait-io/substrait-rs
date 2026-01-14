@@ -45,11 +45,6 @@ impl SimpleExtensions {
         Ok(())
     }
 
-    /// Check if a type with the given name exists in the context
-    pub fn has_type(&self, name: &str) -> bool {
-        self.types.contains_key(name)
-    }
-
     /// Get a type by name from the context
     pub fn get_type(&self, name: &str) -> Option<&CustomType> {
         self.types.get(name)
@@ -91,11 +86,6 @@ impl SimpleExtensions {
     fn merge_scalar_function(existing: &mut ScalarFunction, new: ScalarFunction) {
         existing.impls.extend(new.impls);
         existing.description = existing.description.take().or(new.description);
-    }
-
-    /// Check if a scalar function with the given name exists
-    pub fn has_scalar_function(&self, name: &str) -> bool {
-        self.scalar_functions.contains_key(name)
     }
 
     /// Get a scalar function by name
