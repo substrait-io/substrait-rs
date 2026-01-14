@@ -58,7 +58,8 @@ impl Registry {
         let extensions: HashMap<Urn, SimpleExtensions> = EXTENSIONS
             .iter()
             .filter_map(|(orig_urn, simple_extensions)| {
-                // Skip extensions with bugs where they reference extension types without u! prefix
+                // Skip specific core extensions that have bugs (missing u! prefix on type references).
+                // Most core extensions are included; only these problematic ones are filtered out.
                 // See: https://github.com/substrait-io/substrait/issues/935
                 let urn_str = orig_urn.to_string();
                 if urn_str == "extension:io.substrait:extension_types" ||

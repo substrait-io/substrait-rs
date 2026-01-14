@@ -90,9 +90,7 @@ impl SimpleExtensions {
     // TODO: Reject conflicting implementations instead of blindly merging.
     fn merge_scalar_function(existing: &mut ScalarFunction, new: ScalarFunction) {
         existing.impls.extend(new.impls);
-        if existing.description.is_none() {
-            existing.description = new.description;
-        }
+        existing.description = existing.description.take().or(new.description);
     }
 
     /// Check if a scalar function with the given name exists
