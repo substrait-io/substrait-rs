@@ -103,10 +103,14 @@ pub struct Impl {
     pub options: Options,
     /// Variadic argument behavior
     pub variadic: Option<VariadicBehavior>,
-    /// Whether the function output depends on session state (e.g., timezone, locale)
-    pub session_dependent: Option<bool>,
-    /// Whether the function is deterministic (same inputs always produce same output)
-    pub deterministic: Option<bool>,
+    /// Whether the function output depends on session state (e.g., timezone, locale).
+    ///
+    /// Defaults to `false` per the Substrait spec.
+    pub session_dependent: bool,
+    /// Whether the function is deterministic (same inputs always produce same output).
+    ///
+    /// Defaults to `true` per the Substrait spec.
+    pub deterministic: bool,
     /// How the function handles null inputs and produces nullable outputs.
     ///
     /// Defaults to [`NullabilityHandling::Mirror`] per the Substrait spec.
@@ -184,8 +188,8 @@ impl Impl {
             args,
             options: raw.options.as_ref().map(Options::from).unwrap_or_default(),
             variadic,
-            session_dependent: raw.session_dependent.map(|b| b.0),
-            deterministic: raw.deterministic.map(|b| b.0),
+            session_dependent: raw.session_dependent.map(|b| b.0).unwrap_or(false),
+            deterministic: raw.deterministic.map(|b| b.0).unwrap_or(true),
             nullability: raw
                 .nullability
                 .map(Into::into)

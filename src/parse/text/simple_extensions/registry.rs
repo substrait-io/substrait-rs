@@ -380,7 +380,7 @@ mod tests {
                     .unwrap(),
                 ),
             ],
-            options: Some(Options({
+            options: Options({
                 let mut map = HashMap::new();
                 map.insert(
                     "overflow".to_string(),
@@ -391,10 +391,10 @@ mod tests {
                     ],
                 );
                 map
-            })),
+            }),
             variadic: None,
-            session_dependent: None,
-            deterministic: None,
+            session_dependent: false,
+            deterministic: true,
             nullability: NullabilityHandling::Mirror,
             return_type: ConcreteType {
                 kind: ConcreteTypeKind::Builtin(BasicBuiltinType::I8),
