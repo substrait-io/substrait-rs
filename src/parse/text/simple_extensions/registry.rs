@@ -400,7 +400,7 @@ mod tests {
                 kind: ConcreteTypeKind::Builtin(BasicBuiltinType::I8),
                 nullable: false,
             },
-            implementation: None,
+            implementation: HashMap::new(),
         };
 
         assert_eq!(&add.impls[0], &expected_impl);

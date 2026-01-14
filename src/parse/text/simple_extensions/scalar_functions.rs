@@ -124,7 +124,7 @@ pub struct Impl {
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
     /// Maps language identifiers to implementation source code snippets.
-    pub implementation: Option<HashMap<String, String>>,
+    pub implementation: HashMap<String, String>,
 }
 
 impl Impl {
@@ -195,7 +195,10 @@ impl Impl {
                 .map(Into::into)
                 .unwrap_or(NullabilityHandling::Mirror),
             return_type,
-            implementation: raw.implementation.map(|i| i.0.into_iter().collect()),
+            implementation: raw
+                .implementation
+                .map(|i| i.0.into_iter().collect())
+                .unwrap_or_default(),
         })
     }
 }
