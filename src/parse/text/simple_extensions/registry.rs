@@ -86,7 +86,10 @@ impl Registry {
         self.get_extension(urn)?.get_type(name)
     }
 
-    /// Get a scalar function by URN and name
+    /// Get a scalar function by URN and name.
+    ///
+    /// TODO: Add support for retrieving functions by their full signature shorthand
+    /// (e.g., "add:i32_i32").
     pub fn get_scalar_function(&self, urn: &Urn, name: &str) -> Option<&super::ScalarFunction> {
         self.get_extension(urn)?.get_scalar_function(name)
     }
