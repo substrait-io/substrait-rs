@@ -49,7 +49,10 @@ impl Registry {
         self.extensions.iter()
     }
 
-    /// Create a Global Registry from the built-in core extensions
+    /// Create a Global Registry from the built-in core extensions.
+    ///
+    /// Most core extensions are included. Some are skipped due to bugs in the upstream
+    /// YAML files (see <https://github.com/substrait-io/substrait/issues/935>).
     #[cfg(feature = "extensions")]
     pub fn from_core_extensions() -> Self {
         use crate::extensions::EXTENSIONS;
