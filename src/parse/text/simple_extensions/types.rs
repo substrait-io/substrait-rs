@@ -162,9 +162,7 @@ impl BasicBuiltinType {
                     | "decimal"
                     | "precisiontime"
                     | "precision_time"
-                    | "precisiontimestamp"
                     | "precision_timestamp"
-                    | "precisiontimestamptz"
                     | "precision_timestamp_tz"
                     | "interval_day"
                     | "interval_compound"
@@ -1025,20 +1023,17 @@ fn parse_builtin<'a>(
             let scale = expect_integer_param(display_name, 1, &params[1], Some(0..=precision))?;
             Ok(Some(BasicBuiltinType::Decimal { precision, scale }))
         }
-        // Should we accept both "precision_time" and "precisiontime"? The
-        // docs/spec say PRECISIONTIME. The protos use underscores, so it could
-        // show up in generated code, although maybe that's out of spec.
         "precisiontime" | "precision_time" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(BasicBuiltinType::PrecisionTime { precision }))
         }
-        "precisiontimestamp" | "precision_timestamp" => {
+        "precision_timestamp" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(BasicBuiltinType::PrecisionTimestamp { precision }))
         }
-        "precisiontimestamptz" | "precision_timestamp_tz" => {
+        "precision_timestamp_tz" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(BasicBuiltinType::PrecisionTimestampTz { precision }))
@@ -1232,11 +1227,11 @@ mod tests {
                 concretize(BasicBuiltinType::PrecisionTime { precision: 2 }),
             ),
             (
-                "precisiontimestamp<1>",
+                "precision_timestamp<1>",
                 concretize(BasicBuiltinType::PrecisionTimestamp { precision: 1 }),
             ),
             (
-                "precisiontimestamptz<5>",
+                "precision_timestamp_tz<5>",
                 concretize(BasicBuiltinType::PrecisionTimestampTz { precision: 5 }),
             ),
             (
@@ -1282,22 +1277,22 @@ mod tests {
             ("precisiontime<13>", "precisiontime", 0, 13, 0..=12),
             ("precisiontime<-1>", "precisiontime", 0, -1, 0..=12),
             (
-                "precisiontimestamp<13>",
-                "precisiontimestamp",
+                "precision_timestamp<13>",
+                "precision_timestamp",
                 0,
                 13,
                 0..=12,
             ),
             (
-                "precisiontimestamp<-1>",
-                "precisiontimestamp",
+                "precision_timestamp<-1>",
+                "precision_timestamp",
                 0,
                 -1,
                 0..=12,
             ),
             (
-                "precisiontimestamptz<20>",
-                "precisiontimestamptz",
+                "precision_timestamp_tz<20>",
+                "precision_timestamp_tz",
                 0,
                 20,
                 0..=12,
