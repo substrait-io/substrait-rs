@@ -49,7 +49,10 @@ impl Registry {
         self.extensions.iter()
     }
 
-    /// Create a Global Registry from the built-in core extensions
+    /// Create a Global Registry from the built-in core extensions.
+    ///
+    /// Most core extensions are included. Some are skipped due to bugs in the upstream
+    /// YAML files (see <https://github.com/substrait-io/substrait/issues/935>).
     #[cfg(feature = "extensions")]
     pub fn from_core_extensions() -> Self {
         use crate::extensions::EXTENSIONS;
@@ -57,11 +60,20 @@ impl Registry {
         // Parse the core extensions from the raw extensions format to the parsed format
         let extensions: HashMap<Urn, SimpleExtensions> = EXTENSIONS
             .iter()
-            .map(|(orig_urn, simple_extensions)| {
+            .filter_map(|(orig_urn, simple_extensions)| {
+                // Skip specific core extensions that have bugs (missing u! prefix on type references).
+                // Most core extensions are included; only these problematic ones are filtered out.
+                // See: https://github.com/substrait-io/substrait/issues/935
+                let urn_str = orig_urn.to_string();
+                if urn_str == "extension:io.substrait:extension_types" ||
+                   urn_str == "extension:io.substrait:unknown" {
+                    return None;
+                }
+
                 let ExtensionFile { urn, extension } = ExtensionFile::create(simple_extensions.clone())
                     .unwrap_or_else(|err| panic!("Core extensions should be valid, but failed to create extension file for {orig_urn}: {err}"));
                 debug_assert_eq!(orig_urn, &urn);
-                (urn, extension)
+                Some((urn, extension))
             })
             .collect();
 
@@ -76,11 +88,22 @@ impl Registry {
     pub fn get_type(&self, urn: &Urn, name: &str) -> Option<&CustomType> {
         self.get_extension(urn)?.get_type(name)
     }
+
+    /// Get a scalar function by URN and name.
+    ///
+    /// TODO: Add support for retrieving functions by their full signature shorthand
+    /// (e.g., "add:i32_i32").
+    pub fn get_scalar_function(&self, urn: &Urn, name: &str) -> Option<&super::ScalarFunction> {
+        self.get_extension(urn)?.get_scalar_function(name)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{ExtensionFile, Registry};
+    use crate::parse::text::simple_extensions::{
+        SimpleExtensionsError, scalar_functions::ScalarFunctionError, types::ExtensionTypeError,
+    };
     use crate::text::simple_extensions::{SimpleExtensions, SimpleExtensionsTypesItem};
     use crate::urn::Urn;
     use std::str::FromStr;
@@ -158,20 +181,235 @@ mod tests {
         let registry = Registry::from_core_extensions();
         assert!(registry.extensions().count() > 0);
 
-        // Find the unknown.yaml extension dynamically
-        let urn = Urn::from_str("extension:io.substrait:extension_types").unwrap();
+        // Test that functions_geometry.yaml loaded correctly with its geometry type
+        let urn = Urn::from_str("extension:io.substrait:functions_geometry").unwrap();
         let core_extension = registry
             .get_extension(&urn)
-            .expect("Should find extension_types extension");
+            .expect("Should find functions_geometry extension");
 
-        let point_type = core_extension.get_type("point");
+        let geometry_type = core_extension.get_type("geometry");
         assert!(
-            point_type.is_some(),
-            "Should find 'point' type in unknown.yaml extension"
+            geometry_type.is_some(),
+            "Should find 'geometry' type in functions_geometry extension"
         );
 
         // Also test the registry's get_type method with the actual URN
-        let type_via_registry = registry.get_type(&urn, "point");
+        let type_via_registry = registry.get_type(&urn, "geometry");
         assert!(type_via_registry.is_some());
+
+        // Verify extension_types is skipped due to u! prefix bug (substrait#935)
+        let extension_types_urn = Urn::from_str("extension:io.substrait:extension_types").unwrap();
+        assert!(
+            registry.get_extension(&extension_types_urn).is_none(),
+            "extension_types should be skipped due to missing u! prefix bug"
+        );
+    }
+
+    #[test]
+    fn test_unknown_type_without_prefix_fails() {
+        use crate::text::simple_extensions;
+
+        // Function that references a type without u! prefix - should fail with UnknownTypeName
+        let invalid_extension = SimpleExtensions {
+            scalar_functions: vec![simple_extensions::ScalarFunction {
+                name: "bad_function".to_string(),
+                description: None,
+                impls: vec![simple_extensions::ScalarFunctionImplsItem {
+                    args: None,
+                    options: None,
+                    variadic: None,
+                    session_dependent: None,
+                    deterministic: None,
+                    nullability: None,
+                    return_: simple_extensions::ReturnValue(simple_extensions::Type::String(
+                        "point".to_string(), // Missing u! prefix - this is an error, not NYI
+                    )),
+                    implementation: None,
+                }],
+            }],
+            aggregate_functions: vec![],
+            window_functions: vec![],
+            dependencies: Default::default(),
+            type_variations: vec![],
+            types: vec![],
+            urn: "extension:example.com:invalid".to_string(),
+        };
+
+        let result = ExtensionFile::create(invalid_extension);
+        assert!(
+            result.is_err(),
+            "Should fail when type is missing u! prefix"
+        );
+
+        match result {
+            Err(SimpleExtensionsError::ScalarFunctionError(ScalarFunctionError::TypeError(
+                ExtensionTypeError::UnknownTypeName { name },
+            ))) => {
+                assert_eq!(name, "point");
+            }
+            other => panic!("Expected UnknownTypeName error, got {:?}", other),
+        }
+    }
+
+    /// Helper to create a minimal extension with a scalar function returning a custom type
+    fn extension_with_custom_type_reference(
+        urn: &str,
+        function_name: &str,
+        return_type: &str,
+        defined_types: Vec<&str>,
+    ) -> SimpleExtensions {
+        use crate::text::simple_extensions;
+
+        SimpleExtensions {
+            scalar_functions: vec![simple_extensions::ScalarFunction {
+                name: function_name.to_string(),
+                description: None,
+                impls: vec![simple_extensions::ScalarFunctionImplsItem {
+                    args: None,
+                    options: None,
+                    variadic: None,
+                    session_dependent: None,
+                    deterministic: None,
+                    nullability: None,
+                    return_: simple_extensions::ReturnValue(simple_extensions::Type::String(
+                        return_type.to_string(),
+                    )),
+                    implementation: None,
+                }],
+            }],
+            aggregate_functions: vec![],
+            window_functions: vec![],
+            dependencies: Default::default(),
+            type_variations: vec![],
+            types: defined_types
+                .into_iter()
+                .map(|name| SimpleExtensionsTypesItem {
+                    name: name.to_string(),
+                    description: None,
+                    parameters: None,
+                    structure: None,
+                    variadic: None,
+                })
+                .collect(),
+            urn: urn.to_string(),
+        }
+    }
+
+    #[test]
+    fn test_custom_type_reference_valid() {
+        let extension = extension_with_custom_type_reference(
+            "extension:example.com:valid",
+            "get_point",
+            "u!point",
+            vec!["point"],
+        );
+
+        let result = ExtensionFile::create(extension);
+        assert!(
+            result.is_ok(),
+            "Should succeed when referenced type exists with u! prefix"
+        );
+    }
+
+    #[test]
+    fn test_custom_type_reference_missing() {
+        let extension = extension_with_custom_type_reference(
+            "extension:example.com:invalid",
+            "get_rectangle",
+            "u!rectangle",
+            vec![], // rectangle type not defined
+        );
+
+        let result = ExtensionFile::create(extension);
+        assert!(
+            result.is_err(),
+            "Should fail when referenced type doesn't exist"
+        );
+
+        match result {
+            Err(SimpleExtensionsError::UnresolvedTypeReference { type_name }) => {
+                assert_eq!(type_name, "rectangle");
+            }
+            other => panic!("Expected UnresolvedTypeReference error, got {:?}", other),
+        }
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_scalar_function_parses_completely() {
+        use super::super::{
+            argument::ArgumentsItem,
+            scalar_functions::{Impl, NullabilityHandling, Options},
+            types::*,
+        };
+        use crate::parse::Parse;
+        use crate::text::simple_extensions;
+        use std::collections::HashMap;
+
+        let registry = Registry::from_core_extensions();
+        let functions_arithmetic_urn =
+            Urn::from_str("extension:io.substrait:functions_arithmetic").unwrap();
+
+        let add = registry
+            .get_scalar_function(&functions_arithmetic_urn, "add")
+            .expect("add function should exist");
+
+        // Verify function-level metadata
+        assert_eq!(add.name, "add");
+        assert_eq!(add.description, Some("Add two values.".to_string()));
+        assert!(
+            !add.impls.is_empty(),
+            "add should have at least one implementation"
+        );
+
+        // Create the expected first implementation (i8 + i8 -> i8)
+        let mut ctx = super::super::extensions::TypeContext::default();
+        let expected_impl = Impl {
+            args: vec![
+                ArgumentsItem::ValueArgument(
+                    simple_extensions::ValueArg {
+                        name: Some("x".to_string()),
+                        description: None,
+                        value: simple_extensions::Type::String("i8".to_string()),
+                        constant: None,
+                    }
+                    .parse(&mut ctx)
+                    .unwrap(),
+                ),
+                ArgumentsItem::ValueArgument(
+                    simple_extensions::ValueArg {
+                        name: Some("y".to_string()),
+                        description: None,
+                        value: simple_extensions::Type::String("i8".to_string()),
+                        constant: None,
+                    }
+                    .parse(&mut ctx)
+                    .unwrap(),
+                ),
+            ],
+            options: Options({
+                let mut map = HashMap::new();
+                map.insert(
+                    "overflow".to_string(),
+                    vec![
+                        "SILENT".to_string(),
+                        "SATURATE".to_string(),
+                        "ERROR".to_string(),
+                    ],
+                );
+                map
+            }),
+            variadic: None,
+            session_dependent: false,
+            deterministic: true,
+            nullability: NullabilityHandling::Mirror,
+            return_type: ConcreteType {
+                kind: ConcreteTypeKind::Builtin(BasicBuiltinType::I8),
+                nullable: false,
+            },
+            implementation: HashMap::new(),
+        };
+
+        assert_eq!(&add.impls[0], &expected_impl);
     }
 }

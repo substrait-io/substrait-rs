@@ -12,7 +12,7 @@ use crate::{
 };
 
 /// A parsed [`simple_extensions::ArgumentsItem`].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ArgumentsItem {
     /// Arguments that support a fixed set of declared values as constant
     /// arguments.
@@ -230,7 +230,7 @@ pub enum EnumOptionsError {
 }
 
 /// Arguments that refer to a data value.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ValueArg {
     /// A human-readable name for this argument to help clarify use.
     name: Option<String>,
@@ -240,8 +240,7 @@ pub struct ValueArg {
 
     /// A fully defined type or a type expression.
     ///
-    /// TODO: parse this to a typed representation (likely using the `TypeExpr`
-    /// parser) so the caller does not have to interpret the raw string.
+    /// TODO(#452): parse this to a typed representation once type variables are supported.
     value: simple_extensions::Type,
 
     /// Whether this argument is required to be a constant for invocation. For
@@ -323,8 +322,7 @@ pub struct TypeArg {
 
     /// A partially or completely parameterized type. E.g. `List<K>` or `K`.
     ///
-    /// TODO: parse this to a typed representation (likely using the `TypeExpr`
-    /// parser) so the caller does not have to interpret the raw string.
+    /// TODO(#452): parse this to a typed representation once type variables are supported.
     type_: String,
 }
 

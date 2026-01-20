@@ -161,8 +161,9 @@ impl BasicBuiltinType {
                     | "fixedbinary"
                     | "decimal"
                     | "precisiontime"
-                    | "precisiontimestamp"
-                    | "precisiontimestamptz"
+                    | "precision_time"
+                    | "precision_timestamp"
+                    | "precision_timestamp_tz"
                     | "interval_day"
                     | "interval_compound"
             )
@@ -230,16 +231,10 @@ impl fmt::Display for TypeParameter {
     }
 }
 
-/// Check if a name corresponds to any built-in type (scalar or container)
-pub fn is_builtin_type_name(name: &str) -> bool {
-    let lower = name.to_ascii_lowercase();
-    BasicBuiltinType::is_name(&lower) || matches!(lower.as_str(), "list" | "map" | "struct")
-}
-
 /// Parse a primitive (no type parameters) builtin type name
 fn primitive_builtin(lower_name: &str) -> Option<BasicBuiltinType> {
     match lower_name {
-        "bool" => Some(BasicBuiltinType::Boolean),
+        "bool" | "boolean" => Some(BasicBuiltinType::Boolean),
         "i8" => Some(BasicBuiltinType::I8),
         "i16" => Some(BasicBuiltinType::I16),
         "i32" => Some(BasicBuiltinType::I32),
@@ -422,6 +417,16 @@ pub enum ExtensionTypeError {
         id: u32,
         /// Whether the type variable is nullable
         nullability: bool,
+    },
+    /// Unknown type name (not a builtin, missing u! prefix for extension types)
+    #[error(
+        "Unknown type name: '{}'. Extension types must use the u! prefix (e.g., u!{})",
+        name,
+        name
+    )]
+    UnknownTypeName {
+        /// The unknown type name
+        name: String,
     },
     /// Parameter validation failed
     #[error("Invalid parameter: {0}")]
@@ -1018,20 +1023,17 @@ fn parse_builtin<'a>(
             let scale = expect_integer_param(display_name, 1, &params[1], Some(0..=precision))?;
             Ok(Some(BasicBuiltinType::Decimal { precision, scale }))
         }
-        // Should we accept both "precision_time" and "precisiontime"? The
-        // docs/spec say PRECISIONTIME. The protos use underscores, so it could
-        // show up in generated code, although maybe that's out of spec.
-        "precisiontime" => {
+        "precisiontime" | "precision_time" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(BasicBuiltinType::PrecisionTime { precision }))
         }
-        "precisiontimestamp" => {
+        "precision_timestamp" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(BasicBuiltinType::PrecisionTimestamp { precision }))
         }
-        "precisiontimestamptz" => {
+        "precision_timestamp_tz" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(BasicBuiltinType::PrecisionTimestampTz { precision }))
@@ -1087,15 +1089,11 @@ impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
                     return Ok(ConcreteType::builtin(builtin, nullable));
                 }
 
-                let parameters = params
-                    .into_iter()
-                    .map(TypeParameter::try_from)
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(ConcreteType::extension_with_params(
-                    name.to_string(),
-                    parameters,
-                    nullable,
-                ))
+                // Simple types that aren't builtins are unknown
+                // Extension types MUST use the u! prefix
+                Err(ExtensionTypeError::UnknownTypeName {
+                    name: name.to_string(),
+                })
             }
             TypeExpr::UserDefined(name, params, nullable) => {
                 let parameters = params
@@ -1229,11 +1227,11 @@ mod tests {
                 concretize(BasicBuiltinType::PrecisionTime { precision: 2 }),
             ),
             (
-                "precisiontimestamp<1>",
+                "precision_timestamp<1>",
                 concretize(BasicBuiltinType::PrecisionTimestamp { precision: 1 }),
             ),
             (
-                "precisiontimestamptz<5>",
+                "precision_timestamp_tz<5>",
                 concretize(BasicBuiltinType::PrecisionTimestampTz { precision: 5 }),
             ),
             (
@@ -1279,22 +1277,22 @@ mod tests {
             ("precisiontime<13>", "precisiontime", 0, 13, 0..=12),
             ("precisiontime<-1>", "precisiontime", 0, -1, 0..=12),
             (
-                "precisiontimestamp<13>",
-                "precisiontimestamp",
+                "precision_timestamp<13>",
+                "precision_timestamp",
                 0,
                 13,
                 0..=12,
             ),
             (
-                "precisiontimestamp<-1>",
-                "precisiontimestamp",
+                "precision_timestamp<-1>",
+                "precision_timestamp",
                 0,
                 -1,
                 0..=12,
             ),
             (
-                "precisiontimestamptz<20>",
-                "precisiontimestamptz",
+                "precision_timestamp_tz<20>",
+                "precision_timestamp_tz",
                 0,
                 20,
                 0..=12,
@@ -1377,11 +1375,11 @@ mod tests {
                 ),
             ),
             (
-                "Geo?<List<i32?>>",
+                "u!Geo?<List<i32?>>",
                 extension("Geo", vec![type_param("List<i32?>")], true),
             ),
             (
-                "Custom<string?, bool>",
+                "u!Custom<string?, bool>",
                 extension(
                     "Custom",
                     vec![

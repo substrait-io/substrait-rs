@@ -11,6 +11,8 @@
 //!   extension file.
 //! * [`CustomType`] / [`ConcreteType`] – type definitions and resolved type
 //!   structures used when checking function signatures.
+//! * [`ScalarFunction`] – validated scalar function definitions with resolved
+//!   signatures.
 //! * [`Registry`] – a reusable lookup structure that stores validated extension
 //!   files and exposes typed access to their contents.
 
@@ -20,12 +22,16 @@ pub mod argument;
 mod extensions;
 mod file;
 mod registry;
+mod scalar_functions;
 mod type_ast;
 mod types;
 
 pub use extensions::SimpleExtensions;
 pub use file::ExtensionFile;
 pub use registry::Registry;
+pub use scalar_functions::{
+    Impl as ScalarFunctionImpl, NullabilityHandling, Options, ScalarFunction, VariadicBehavior,
+};
 pub use type_ast::TypeExpr;
 pub use types::{ConcreteType, CustomType, ExtensionTypeError};
 
@@ -40,6 +46,9 @@ pub enum SimpleExtensionsError {
     /// Extension type error
     #[error("Extension type error: {0}")]
     ExtensionTypeError(#[from] ExtensionTypeError),
+    /// Scalar function error
+    #[error("Scalar function error: {0}")]
+    ScalarFunctionError(#[from] scalar_functions::ScalarFunctionError),
     /// Failed to parse SimpleExtensions YAML
     #[error("YAML parse error: {0}")]
     YamlParse(#[from] serde_yaml::Error),
