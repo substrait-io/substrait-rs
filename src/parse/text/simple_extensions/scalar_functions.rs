@@ -14,8 +14,9 @@ use crate::text::simple_extensions::{
 };
 
 use super::argument::{ArgumentsItem, ArgumentsItemError};
+use super::derivation::TypeDerivation;
 use super::extensions::TypeContext;
-use super::type_ast::{TypeExpr, TypeParseError};
+use super::type_ast::{DerivationExpr, DerivationParseError, TypeExpr, TypeParseError};
 use super::types::{ConcreteType, ExtensionTypeError};
 use crate::parse::Parse;
 use thiserror::Error;
@@ -54,6 +55,9 @@ pub enum ScalarFunctionError {
     /// Error parsing type expression
     #[error("Type parse error: {0}")]
     TypeParseError(#[from] TypeParseError),
+    /// Error parsing type derivation expression
+    #[error("Derivation parse error: {0}")]
+    DerivationParseError(#[from] DerivationParseError),
     /// Feature not yet implemented
     #[error("Not yet implemented: {0}")]
     NotYetImplemented(String),
@@ -117,12 +121,11 @@ pub struct Impl {
     ///
     /// Defaults to [`NullabilityHandling::Mirror`] per the Substrait spec.
     pub nullability: NullabilityHandling,
-    /// Return type resolved to a concrete type
+    /// Return type of the function implementation.
     ///
-    /// The raw YAML type string is parsed and validated. Only concrete types
-    /// (without type variables) are supported; functions with type variables
-    /// are skipped in this basic implementation.
-    pub return_type: ConcreteType,
+    /// Can be either a concrete type (e.g., `i32`) or a type derivation expression
+    /// for parameterized types like DECIMAL where the return type depends on input types.
+    pub return_type: ReturnType,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
     /// Maps language identifiers to implementation source code snippets.
@@ -139,31 +142,35 @@ impl Impl {
         let return_type = match raw.return_.0 {
             RawType::String(s) => {
                 // Multiline strings indicate type derivation expressions
-                // See: https://github.com/substrait-io/substrait-rs/issues/449
                 if s.contains('\n') {
-                    return Err(ScalarFunctionError::NotYetImplemented(
-                        "Type derivation expressions - issue #449".to_string(),
-                    ));
-                }
-                let type_expr = TypeExpr::parse(&s)?;
-                type_expr.visit_references(&mut |name| ctx.linked(name));
-                match ConcreteType::try_from(type_expr) {
-                    Ok(concrete) => concrete,
-                    Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
-                    | Err(ExtensionTypeError::InvalidParameter(_))
-                    | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
-                        // Type has type/parameter variables (any1, L1, P, etc.) - not yet supported
-                        // See: https://github.com/substrait-io/substrait-rs/issues/452
-                        return Err(ScalarFunctionError::NotYetImplemented(
-                            "Type variables in function signatures - issue #452".to_string(),
-                        ));
+                    let derivation_expr = DerivationExpr::parse(&s)?;
+                    // Visit type references in the result type
+                    derivation_expr
+                        .result_type
+                        .visit_references(&mut |name| ctx.linked(name));
+                    let derivation = TypeDerivation::from(derivation_expr);
+                    ReturnType::Derivation(derivation)
+                } else {
+                    let type_expr = TypeExpr::parse(&s)?;
+                    type_expr.visit_references(&mut |name| ctx.linked(name));
+                    match ConcreteType::try_from(type_expr) {
+                        Ok(concrete) => ReturnType::Concrete(concrete),
+                        Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
+                        | Err(ExtensionTypeError::InvalidParameter(_))
+                        | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
+                            // Type has type/parameter variables (any1, L1, P, etc.) - not yet supported
+                            // See: https://github.com/substrait-io/substrait-rs/issues/452
+                            return Err(ScalarFunctionError::NotYetImplemented(
+                                "Type variables in function signatures - issue #452".to_string(),
+                            ));
+                        }
+                        Err(ExtensionTypeError::UnknownTypeName { name }) => {
+                            return Err(ScalarFunctionError::TypeError(
+                                ExtensionTypeError::UnknownTypeName { name },
+                            ));
+                        }
+                        Err(e) => return Err(ScalarFunctionError::TypeError(e)),
                     }
-                    Err(ExtensionTypeError::UnknownTypeName { name }) => {
-                        return Err(ScalarFunctionError::TypeError(
-                            ExtensionTypeError::UnknownTypeName { name },
-                        ));
-                    }
-                    Err(e) => return Err(ScalarFunctionError::TypeError(e)),
                 }
             }
             RawType::Object(_) => {
@@ -299,6 +306,29 @@ pub enum NullabilityHandling {
     Discrete,
 }
 
+/// The return type of a function implementation.
+///
+/// Return types can be either:
+/// - A concrete type (e.g., `i32`, `fp64`, `DECIMAL<38,10>`)
+/// - A type derivation expression that computes the return type based on input parameter values
+///
+/// Type derivation expressions are multiline programs used for parameterized types like DECIMAL,
+/// where the return precision and scale depend on the input types:
+///
+/// ```yaml
+/// return: |-
+///   init_scale = max(S1,S2)
+///   prec = min(P1 + P2, 38)
+///   DECIMAL<prec, init_scale>
+/// ```
+#[derive(Clone, Debug, PartialEq)]
+pub enum ReturnType {
+    /// A concrete, resolved type
+    Concrete(ConcreteType),
+    /// A type derivation expression to evaluate at type-checking time
+    Derivation(TypeDerivation),
+}
+
 impl From<RawNullabilityHandling> for NullabilityHandling {
     fn from(raw: RawNullabilityHandling) -> Self {
         match raw {
@@ -426,12 +456,16 @@ mod tests {
 
         // Verify return type is properly parsed to ConcreteType
         use super::super::types::{BasicBuiltinType, ConcreteTypeKind};
-        let return_type = &result.impls[0].return_type;
-        assert!(!return_type.nullable, "i32 should not be nullable");
-        assert!(matches!(
-            &return_type.kind,
-            ConcreteTypeKind::Builtin(BasicBuiltinType::I32)
-        ));
+        match &result.impls[0].return_type {
+            ReturnType::Concrete(return_type) => {
+                assert!(!return_type.nullable, "i32 should not be nullable");
+                assert!(matches!(
+                    &return_type.kind,
+                    ConcreteTypeKind::Builtin(BasicBuiltinType::I32)
+                ));
+            }
+            ReturnType::Derivation(_) => panic!("expected Concrete, got Derivation"),
+        }
     }
 
     #[test]

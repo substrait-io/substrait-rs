@@ -10,9 +10,9 @@
 //!
 //! This module is only available when the `parse` feature is enabled.
 
-use std::collections::{HashMap, hash_map::Entry};
+use std::collections::{hash_map::Entry, HashMap};
 
-use super::{ExtensionFile, SimpleExtensions, SimpleExtensionsError, types::CustomType};
+use super::{types::CustomType, ExtensionFile, SimpleExtensions, SimpleExtensionsError};
 use crate::urn::Urn;
 
 /// Extension Registry that manages Substrait extensions
@@ -102,7 +102,7 @@ impl Registry {
 mod tests {
     use super::{ExtensionFile, Registry};
     use crate::parse::text::simple_extensions::{
-        SimpleExtensionsError, scalar_functions::ScalarFunctionError, types::ExtensionTypeError,
+        scalar_functions::ScalarFunctionError, types::ExtensionTypeError, SimpleExtensionsError,
     };
     use crate::text::simple_extensions::{SimpleExtensions, SimpleExtensionsTypesItem};
     use crate::urn::Urn;
@@ -145,11 +145,9 @@ mod tests {
         let collected: Vec<&Urn> = registry.extensions().map(|(urn, _)| urn).collect();
         assert_eq!(collected.len(), 2);
         for urn in urns {
-            assert!(
-                collected
-                    .iter()
-                    .any(|candidate| candidate.to_string() == urn)
-            );
+            assert!(collected
+                .iter()
+                .any(|candidate| candidate.to_string() == urn));
         }
     }
 
@@ -339,7 +337,7 @@ mod tests {
     fn test_scalar_function_parses_completely() {
         use super::super::{
             argument::ArgumentsItem,
-            scalar_functions::{Impl, NullabilityHandling, Options},
+            scalar_functions::{Impl, NullabilityHandling, Options, ReturnType},
             types::*,
         };
         use crate::parse::Parse;
@@ -403,13 +401,72 @@ mod tests {
             session_dependent: false,
             deterministic: true,
             nullability: NullabilityHandling::Mirror,
-            return_type: ConcreteType {
+            return_type: ReturnType::Concrete(ConcreteType {
                 kind: ConcreteTypeKind::Builtin(BasicBuiltinType::I8),
                 nullable: false,
-            },
+            }),
             implementation: HashMap::new(),
         };
 
         assert_eq!(&add.impls[0], &expected_impl);
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_decimal_arithmetic_derivations() {
+        use super::super::{
+            scalar_functions::ReturnType,
+            types::{BasicBuiltinType, ConcreteTypeKind},
+        };
+        use std::collections::HashMap;
+
+        let registry = Registry::from_core_extensions();
+        let decimal_urn =
+            Urn::from_str("extension:io.substrait:functions_arithmetic_decimal").unwrap();
+
+        let add = registry
+            .get_scalar_function(&decimal_urn, "add")
+            .expect("decimal add function should exist");
+
+        assert_eq!(add.name, "add");
+        assert!(!add.impls.is_empty());
+
+        // Find the decimal implementation (should have a derivation return type)
+        let decimal_impl = add
+            .impls
+            .iter()
+            .find(|impl_| matches!(&impl_.return_type, ReturnType::Derivation(_)))
+            .expect("should have at least one implementation with type derivation");
+
+        // Extract the derivation and evaluate it
+        let derivation = match &decimal_impl.return_type {
+            ReturnType::Derivation(d) => d,
+            _ => panic!("expected Derivation"),
+        };
+
+        // Test: DECIMAL<10,2> + DECIMAL<5,3> should produce DECIMAL<12,3>
+        // Based on the formula:
+        //   init_scale = max(S1, S2) = max(2, 3) = 3
+        //   init_prec = init_scale + max(P1 - S1, P2 - S2) + 1 = 3 + max(10-2, 5-3) + 1 = 3 + 8 + 1 = 12
+        //   prec = min(init_prec, 38) = min(12, 38) = 12
+        //   scale = init_prec > 38 ? scale_after_borrow : init_scale = 12 > 38 ? ... : 3 = 3
+        let params = HashMap::from([
+            ("P1".to_string(), 10_i64),
+            ("S1".to_string(), 2),
+            ("P2".to_string(), 5),
+            ("S2".to_string(), 3),
+        ]);
+
+        let result = derivation
+            .evaluate(params)
+            .expect("evaluation should succeed");
+
+        match result.kind {
+            ConcreteTypeKind::Builtin(BasicBuiltinType::Decimal { precision, scale }) => {
+                assert_eq!(precision, 12, "precision should be 12");
+                assert_eq!(scale, 3, "scale should be 3");
+            }
+            _ => panic!("expected Decimal type, got {:?}", result.kind),
+        }
     }
 }

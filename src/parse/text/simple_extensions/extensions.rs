@@ -9,7 +9,7 @@ use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use super::{SimpleExtensionsError, scalar_functions::ScalarFunction, types::CustomType};
+use super::{scalar_functions::ScalarFunction, types::CustomType, SimpleExtensionsError};
 use crate::{
     parse::{Context, Parse},
     text::simple_extensions::SimpleExtensions as RawExtensions,

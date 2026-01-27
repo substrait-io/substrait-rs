@@ -19,6 +19,7 @@
 use thiserror::Error;
 
 pub mod argument;
+pub mod derivation;
 mod extensions;
 mod file;
 mod registry;
@@ -26,13 +27,15 @@ mod scalar_functions;
 mod type_ast;
 mod types;
 
+pub use derivation::{EvalError, TypeDerivation};
 pub use extensions::SimpleExtensions;
 pub use file::ExtensionFile;
 pub use registry::Registry;
 pub use scalar_functions::{
-    Impl as ScalarFunctionImpl, NullabilityHandling, Options, ScalarFunction, VariadicBehavior,
+    Impl as ScalarFunctionImpl, NullabilityHandling, Options, ReturnType, ScalarFunction,
+    VariadicBehavior,
 };
-pub use type_ast::TypeExpr;
+pub use type_ast::{DerivationParseError, TypeExpr};
 pub use types::{ConcreteType, CustomType, ExtensionTypeError};
 
 use crate::urn::Urn;

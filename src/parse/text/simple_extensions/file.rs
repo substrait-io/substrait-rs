@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{CustomType, SimpleExtensions, SimpleExtensionsError};
-use crate::parse::Parse;
 use crate::parse::text::simple_extensions::extensions::TypeContext;
+use crate::parse::Parse;
 use crate::text::simple_extensions::SimpleExtensions as RawExtensions;
 use crate::urn::Urn;
 use std::io::Read;
