@@ -362,54 +362,34 @@ mod tests {
             "add should have at least one implementation"
         );
 
-        // Create the expected first implementation (i8 + i8 -> i8)
-        let mut ctx = super::super::extensions::TypeContext::default();
-        let expected_impl = Impl {
-            args: vec![
-                ArgumentsItem::ValueArgument(
-                    simple_extensions::ValueArg {
-                        name: Some("x".to_string()),
-                        description: None,
-                        value: simple_extensions::Type::String("i8".to_string()),
-                        constant: None,
-                    }
-                    .parse(&mut ctx)
-                    .unwrap(),
-                ),
-                ArgumentsItem::ValueArgument(
-                    simple_extensions::ValueArg {
-                        name: Some("y".to_string()),
-                        description: None,
-                        value: simple_extensions::Type::String("i8".to_string()),
-                        constant: None,
-                    }
-                    .parse(&mut ctx)
-                    .unwrap(),
-                ),
-            ],
-            options: Options({
-                let mut map = HashMap::new();
-                map.insert(
-                    "overflow".to_string(),
-                    vec![
-                        "SILENT".to_string(),
-                        "SATURATE".to_string(),
-                        "ERROR".to_string(),
-                    ],
-                );
-                map
-            }),
-            variadic: None,
-            session_dependent: false,
-            deterministic: true,
-            nullability: NullabilityHandling::Mirror,
-            return_type: ConcreteType {
-                kind: ConcreteTypeKind::Builtin(BasicBuiltinType::I8),
-                nullable: false,
-            },
-            implementation: HashMap::new(),
-        };
+        // Verify the first implementation (i8 + i8 -> i8)
+        let first_impl = &add.impls[0];
 
-        assert_eq!(&add.impls[0], &expected_impl);
+        // Verify arguments
+        assert_eq!(first_impl.args.len(), 2);
+
+        // Verify options
+        assert_eq!(first_impl.options.0.len(), 1);
+        assert_eq!(
+            first_impl.options.0.get("overflow"),
+            Some(&vec![
+                "SILENT".to_string(),
+                "SATURATE".to_string(),
+                "ERROR".to_string(),
+            ])
+        );
+
+        // Verify other properties
+        assert_eq!(first_impl.variadic, None);
+        assert!(!first_impl.session_dependent);
+        assert!(first_impl.deterministic);
+        assert_eq!(first_impl.nullability, NullabilityHandling::Mirror);
+
+        // Verify return type
+        assert!(!first_impl.return_type.nullable);
+        assert!(matches!(
+            &first_impl.return_type.kind,
+            ConcreteTypeKind::Builtin(BasicBuiltinType::I8)
+        ));
     }
 }

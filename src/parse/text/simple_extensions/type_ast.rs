@@ -41,12 +41,30 @@ pub enum TypeExpr<'a> {
 }
 
 /// A parsed parameter to a parameterized type
+///
+/// Note the asymmetry: type variables (`any1`, `any2`) appear as `Type(TypeExpr::TypeVariable(...))`
+/// rather than having their own variant, while other parameter variables (`P1`, `S1`, `L1`) have
+/// their own `IntegerParam` variant. This is based on patterns observed in Substrait YAML files:
+///
+/// - **Type variables (`any1`, `any2`) match whole types**: They can appear as standalone types
+///   (e.g., `first_value(any1) -> any1`) or as type parameters (e.g., `list<any1>`). They
+///   represent "some type T" that must be consistent across uses.
+///
+/// - **Other parameter variables (`P1`, `S1`, `L1`) appear to be integer parameters**: In practice,
+///   these appear ONLY as parameters to types like `decimal<P1, S1>` or `varchar<L1>`, representing
+///   precision, scale, or length. We assume these are integer-valued, but the Substrait spec may
+///   support other parameter types in the future.
+///
+/// See <https://github.com/substrait-io/substrait-rs/issues/452> for more context on type
+/// variables in function signatures.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeExprParam<'a> {
-    /// A nested type parameter
+    /// A nested type parameter (including type variables like `any1`)
     Type(TypeExpr<'a>),
     /// An integer literal parameter
     Integer(i64),
+    /// An integer parameter variable (e.g., `P1`, `S1`, `L1`)
+    IntegerParam(&'a str),
 }
 
 #[derive(Debug, PartialEq, thiserror::Error)]
@@ -158,10 +176,46 @@ fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError
 }
 
 fn parse_param<'a>(s: &'a str) -> Result<TypeExprParam<'a>, TypeParseError> {
+    // Integer literal
     if let Ok(i) = s.parse::<i64>() {
         return Ok(TypeExprParam::Integer(i));
     }
+
+    // If it's a simple identifier without type syntax (no <, >, ?, u!),
+    // treat it as an integer parameter variable (like P1, S1, L1).
+    // This is needed for function signatures like `decimal<P1, S1>`.
+    if is_integer_param_name(s) {
+        return Ok(TypeExprParam::IntegerParam(s));
+    }
+
+    // Otherwise parse as a nested type
     Ok(TypeExprParam::Type(TypeExpr::parse(s)?))
+}
+
+/// Returns true if the string looks like an integer parameter variable name.
+///
+/// Integer parameter variables follow the pattern used in Substrait YAML files:
+/// - Single letter, optionally followed by digits
+/// - Examples: `P`, `P1`, `S`, `S1`, `L1`, `l1`
+/// - Used in types like `decimal<P1,S1>`, `varchar<L1>`
+/// - Excludes known builtin types (i8, i16, i32, i64, fp32, fp64) to avoid ambiguity
+fn is_integer_param_name(s: &str) -> bool {
+    if s.is_empty() {
+        return false;
+    }
+
+    let mut chars = s.chars();
+    let first = chars.next().unwrap();
+
+    if !first.is_ascii_alphabetic() {
+        return false;
+    }
+
+    if !chars.all(|c| c.is_ascii_digit()) {
+        return false;
+    }
+
+    !matches!(s, "i8" | "i16" | "i32" | "i64" | "fp32" | "fp64")
 }
 
 #[cfg(test)]
@@ -238,6 +292,36 @@ mod tests {
                         TypeExprParam::Type(TypeExpr::Simple("string", vec![], false)),
                     ],
                     true,
+                ),
+            ),
+            // Test integer parameter variables
+            (
+                "decimal<P1, S1>",
+                TypeExpr::Simple(
+                    "decimal",
+                    vec![
+                        TypeExprParam::IntegerParam("P1"),
+                        TypeExprParam::IntegerParam("S1"),
+                    ],
+                    false,
+                ),
+            ),
+            (
+                "varchar<L1>",
+                TypeExpr::Simple("varchar", vec![TypeExprParam::IntegerParam("L1")], false),
+            ),
+            // Test lowercase parameter variables (used in actual Substrait YAML)
+            (
+                "fixedchar<l1>",
+                TypeExpr::Simple("fixedchar", vec![TypeExprParam::IntegerParam("l1")], false),
+            ),
+            // Test that builtin types are NOT treated as parameter variables
+            (
+                "list<i32>",
+                TypeExpr::Simple(
+                    "list",
+                    vec![TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false))],
+                    false,
                 ),
             ),
         ];

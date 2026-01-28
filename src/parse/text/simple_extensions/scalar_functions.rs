@@ -5,7 +5,7 @@
 //! This module provides typed wrappers around scalar functions parsed from extension
 //! YAML files, validating constraints and resolving type strings to concrete types.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::text::simple_extensions::{
     NullabilityHandling as RawNullabilityHandling, Options as RawOptions,
@@ -94,6 +94,15 @@ impl ScalarFunction {
     }
 }
 
+/// Collected type parameter variables from a function signature
+#[derive(Clone, Debug, Default, PartialEq)]
+struct TypeParams {
+    /// Integer parameter variable names (e.g., P1, S1, L1)
+    integers: HashSet<String>,
+    /// Type variable IDs (e.g., any1 → 1, any2 → 2)
+    types: HashSet<u32>,
+}
+
 /// A single function implementation (overload) with signature and resolved types
 #[derive(Clone, Debug, PartialEq)]
 pub struct Impl {
@@ -127,6 +136,12 @@ pub struct Impl {
     ///
     /// Maps language identifiers to implementation source code snippets.
     pub implementation: HashMap<String, String>,
+    /// Type parameter variables extracted from the function signature
+    ///
+    /// Tracks integer parameter variables (P1, S1, L1) and type variables (any1, any2)
+    /// used in the function arguments and return type. Private because this is an
+    /// internal detail used for validation.
+    type_params: TypeParams,
 }
 
 impl Impl {
@@ -186,6 +201,21 @@ impl Impl {
             None => Vec::new(),
         };
 
+        // Extract type parameter variables from function arguments
+        let mut type_params = TypeParams::default();
+        for arg in &args {
+            if let ArgumentsItem::ValueArgument(value_arg) = arg {
+                // Extract integer parameter variables (P1, S1, L1, etc.)
+                type_params
+                    .integers
+                    .extend(value_arg.value().integer_param_names());
+                // Extract type variable IDs (any1 → 1, any2 → 2, etc.)
+                type_params
+                    .types
+                    .extend(value_arg.value().type_variable_ids());
+            }
+        }
+
         Ok(Impl {
             args,
             options: raw.options.as_ref().map(Options::from).unwrap_or_default(),
@@ -201,6 +231,7 @@ impl Impl {
                 .implementation
                 .map(|i| i.0.into_iter().collect())
                 .unwrap_or_default(),
+            type_params,
         })
     }
 }
@@ -456,5 +487,99 @@ mod tests {
             options.0.get("overflow").unwrap(),
             &vec!["SILENT".to_string(), "ERROR".to_string()]
         );
+    }
+
+    #[test]
+    fn test_parameter_variables_extraction() {
+        use crate::text::simple_extensions::{
+            Arguments, ArgumentsItem as RawArgumentsItem, ReturnValue,
+            ScalarFunctionImplsItem as RawImpl, Type as RawType, ValueArg as RawValueArg,
+        };
+
+        let mut ctx = super::super::extensions::TypeContext::default();
+
+        // Create a function with decimal<P1,S1> and decimal<P2,S2> arguments
+        let raw_impl = RawImpl {
+            args: Some(Arguments(vec![
+                RawArgumentsItem::ValueArg(RawValueArg {
+                    name: Some("x".to_string()),
+                    description: None,
+                    value: RawType::String("decimal<P1,S1>".to_string()),
+                    constant: None,
+                }),
+                RawArgumentsItem::ValueArg(RawValueArg {
+                    name: Some("y".to_string()),
+                    description: None,
+                    value: RawType::String("decimal<P2,S2>".to_string()),
+                    constant: None,
+                }),
+            ])),
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("i32".to_string())),
+            implementation: None,
+        };
+
+        let result = Impl::from_raw(raw_impl, &mut ctx).unwrap();
+
+        // Verify that parameter variables were extracted
+        assert_eq!(result.type_params.integers.len(), 4);
+        assert!(result.type_params.integers.contains("P1"));
+        assert!(result.type_params.integers.contains("S1"));
+        assert!(result.type_params.integers.contains("P2"));
+        assert!(result.type_params.integers.contains("S2"));
+        assert_eq!(result.type_params.types.len(), 0);
+
+        // Verify arguments were parsed correctly
+        assert_eq!(result.args.len(), 2);
+    }
+
+    #[test]
+    fn test_type_variables_extraction() {
+        use crate::text::simple_extensions::{
+            Arguments, ArgumentsItem as RawArgumentsItem, ReturnValue,
+            ScalarFunctionImplsItem as RawImpl, Type as RawType, ValueArg as RawValueArg,
+        };
+
+        let mut ctx = super::super::extensions::TypeContext::default();
+
+        // Create a function with any1 and any2 type variables
+        let raw_impl = RawImpl {
+            args: Some(Arguments(vec![
+                RawArgumentsItem::ValueArg(RawValueArg {
+                    name: Some("x".to_string()),
+                    description: None,
+                    value: RawType::String("any1".to_string()),
+                    constant: None,
+                }),
+                RawArgumentsItem::ValueArg(RawValueArg {
+                    name: Some("y".to_string()),
+                    description: None,
+                    value: RawType::String("any2".to_string()),
+                    constant: None,
+                }),
+            ])),
+            options: None,
+            variadic: None,
+            session_dependent: None,
+            deterministic: None,
+            nullability: None,
+            return_: ReturnValue(RawType::String("bool".to_string())),
+            implementation: None,
+        };
+
+        let result = Impl::from_raw(raw_impl, &mut ctx).unwrap();
+
+        // Verify that type variables were extracted
+        assert_eq!(result.type_params.integers.len(), 0);
+        assert_eq!(result.type_params.types.len(), 2);
+        assert!(result.type_params.types.contains(&1)); // any1 → 1
+        assert!(result.type_params.types.contains(&2)); // any2 → 2
+
+        // Verify arguments were parsed correctly
+        assert_eq!(result.args.len(), 2);
     }
 }

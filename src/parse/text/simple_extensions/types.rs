@@ -19,6 +19,7 @@ use crate::text::simple_extensions::{
 };
 use indexmap::IndexMap;
 use serde_json::{Map, Value};
+use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fmt;
 use std::ops::RangeInclusive;
@@ -218,6 +219,8 @@ pub enum TypeParameter {
     Integer(i64),
     /// Type parameter (nested type)
     Type(ConcreteType),
+    /// Integer parameter variable (e.g., P1, S1, L1) used in function signatures
+    IntegerVariable(String),
     // TODO: Add support for other type parameters, as described in
     // https://github.com/substrait-io/substrait/blob/35101020d961eda48f8dd1aafbc794c9e5cac077/proto/substrait/type.proto#L250-L265
 }
@@ -227,6 +230,7 @@ impl fmt::Display for TypeParameter {
         match self {
             TypeParameter::Integer(i) => write!(f, "{i}"),
             TypeParameter::Type(t) => write!(f, "{t}"),
+            TypeParameter::IntegerVariable(name) => write!(f, "{name}"),
         }
     }
 }
@@ -894,6 +898,302 @@ impl From<ConcreteType> for RawType {
     }
 }
 
+/// A type in a function signature that may contain parameter variables.
+///
+/// Unlike [`ConcreteType`], this can have unresolved parameter variables like `P1`, `S1`
+/// in expressions such as `decimal<P1, S1>`. Used for function argument types where
+/// parameters are bound when the function is called.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ParameterizedType {
+    /// The type structure (builtin, extension, container, etc.)
+    pub kind: ParameterizedTypeKind,
+    /// Whether this type is nullable
+    pub nullable: bool,
+}
+
+/// The kind of a parameterized type
+#[derive(Clone, Debug, PartialEq)]
+pub enum ParameterizedTypeKind {
+    /// A builtin type with potentially variable parameters
+    Builtin(ParameterizedBuiltinType),
+    /// User-defined extension type
+    Extension {
+        /// Extension type name
+        name: String,
+        /// Type parameters (may include variables)
+        params: Vec<TypeParameter>,
+    },
+    /// List container
+    List(Box<ParameterizedType>),
+    /// Map container
+    Map {
+        /// Key type
+        key: Box<ParameterizedType>,
+        /// Value type
+        value: Box<ParameterizedType>,
+    },
+    /// Struct (anonymous)
+    Struct(Vec<ParameterizedType>),
+    /// Named struct
+    NamedStruct {
+        /// Named fields
+        fields: IndexMap<String, ParameterizedType>,
+    },
+    /// Type variable (any1, any2, etc.)
+    AnyType {
+        /// Type variable ID (any1 → 1, any2 → 2, etc.)
+        id: u32,
+    },
+}
+
+/// Builtin types with potentially variable parameters
+#[derive(Clone, Debug, PartialEq)]
+pub enum ParameterizedBuiltinType {
+    /// Boolean type
+    Boolean,
+    /// 8-bit signed integer
+    I8,
+    /// 16-bit signed integer
+    I16,
+    /// 32-bit signed integer
+    I32,
+    /// 64-bit signed integer
+    I64,
+    /// 32-bit floating point
+    Fp32,
+    /// 64-bit floating point
+    Fp64,
+    /// Variable-length string
+    String,
+    /// Variable-length binary
+    Binary,
+    /// Timestamp without timezone
+    Timestamp,
+    /// Timestamp with timezone
+    TimestampTz,
+    /// Date
+    Date,
+    /// Time
+    Time,
+    /// Year-month interval
+    IntervalYear,
+    /// UUID
+    Uuid,
+    /// Wildcard type that matches any type (different from type variables like any1, any2)
+    Any,
+    /// Decimal with precision and scale (may be variables like P1, S1)
+    Decimal {
+        /// Precision parameter
+        precision: TypeParameter,
+        /// Scale parameter
+        scale: TypeParameter,
+    },
+    /// Variable-length character string
+    VarChar {
+        /// Length parameter
+        length: TypeParameter,
+    },
+    /// Fixed-length character string
+    FixedChar {
+        /// Length parameter
+        length: TypeParameter,
+    },
+    /// Fixed-length binary
+    FixedBinary {
+        /// Length parameter
+        length: TypeParameter,
+    },
+    /// Time with precision
+    PrecisionTime {
+        /// Precision parameter
+        precision: TypeParameter,
+    },
+    /// Timestamp with precision
+    PrecisionTimestamp {
+        /// Precision parameter
+        precision: TypeParameter,
+    },
+    /// Timestamp with timezone and precision
+    PrecisionTimestampTz {
+        /// Precision parameter
+        precision: TypeParameter,
+    },
+    /// Day-time interval with precision
+    IntervalDay {
+        /// Precision parameter
+        precision: TypeParameter,
+    },
+}
+
+impl fmt::Display for ParameterizedBuiltinType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ParameterizedBuiltinType::Boolean => f.write_str("bool"),
+            ParameterizedBuiltinType::I8 => f.write_str("i8"),
+            ParameterizedBuiltinType::I16 => f.write_str("i16"),
+            ParameterizedBuiltinType::I32 => f.write_str("i32"),
+            ParameterizedBuiltinType::I64 => f.write_str("i64"),
+            ParameterizedBuiltinType::Fp32 => f.write_str("fp32"),
+            ParameterizedBuiltinType::Fp64 => f.write_str("fp64"),
+            ParameterizedBuiltinType::String => f.write_str("string"),
+            ParameterizedBuiltinType::Binary => f.write_str("binary"),
+            ParameterizedBuiltinType::Timestamp => f.write_str("timestamp"),
+            ParameterizedBuiltinType::TimestampTz => f.write_str("timestamp_tz"),
+            ParameterizedBuiltinType::Date => f.write_str("date"),
+            ParameterizedBuiltinType::Time => f.write_str("time"),
+            ParameterizedBuiltinType::IntervalYear => f.write_str("interval_year"),
+            ParameterizedBuiltinType::Uuid => f.write_str("uuid"),
+            ParameterizedBuiltinType::Any => f.write_str("any"),
+            ParameterizedBuiltinType::FixedChar { length } => write!(f, "fixedchar<{length}>"),
+            ParameterizedBuiltinType::VarChar { length } => write!(f, "varchar<{length}>"),
+            ParameterizedBuiltinType::FixedBinary { length } => write!(f, "fixedbinary<{length}>"),
+            ParameterizedBuiltinType::Decimal { precision, scale } => {
+                write!(f, "decimal<{precision}, {scale}>")
+            }
+            ParameterizedBuiltinType::PrecisionTime { precision } => {
+                write!(f, "precision_time<{precision}>")
+            }
+            ParameterizedBuiltinType::PrecisionTimestamp { precision } => {
+                write!(f, "precision_timestamp<{precision}>")
+            }
+            ParameterizedBuiltinType::PrecisionTimestampTz { precision } => {
+                write!(f, "precision_timestamp_tz<{precision}>")
+            }
+            ParameterizedBuiltinType::IntervalDay { precision } => {
+                write!(f, "interval_day<{precision}>")
+            }
+        }
+    }
+}
+
+impl fmt::Display for ParameterizedTypeKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ParameterizedTypeKind::Builtin(b) => write!(f, "{b}"),
+            ParameterizedTypeKind::Extension { name, params } => {
+                write!(f, "{name}")?;
+                write_separated(f, params.iter(), "<", ">", ", ")
+            }
+            ParameterizedTypeKind::List(elem) => write!(f, "list<{elem}>"),
+            ParameterizedTypeKind::Map { key, value } => write!(f, "map<{key}, {value}>"),
+            ParameterizedTypeKind::Struct(types) => {
+                write_separated(f, types.iter(), "struct<", ">", ", ")
+            }
+            ParameterizedTypeKind::NamedStruct { fields } => {
+                let kvs = fields.iter().map(|(k, v)| KeyValueDisplay(k, v, ": "));
+                write_separated(f, kvs, "{", "}", ", ")
+            }
+            ParameterizedTypeKind::AnyType { id } => write!(f, "any{id}"),
+        }
+    }
+}
+
+impl fmt::Display for ParameterizedType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.kind)?;
+        if self.nullable {
+            write!(f, "?")?;
+        }
+        Ok(())
+    }
+}
+
+impl ParameterizedType {
+    /// Extract all integer parameter variable names (P1, S1, L1, etc.)
+    pub fn integer_param_names(&self) -> HashSet<String> {
+        let mut names = HashSet::new();
+        self.collect_integer_params(&mut names);
+        names
+    }
+
+    /// Extract all type variable IDs (any1 → 1, any2 → 2, etc.)
+    pub fn type_variable_ids(&self) -> HashSet<u32> {
+        let mut ids = HashSet::new();
+        self.collect_type_variables(&mut ids);
+        ids
+    }
+
+    fn collect_integer_params(&self, names: &mut HashSet<String>) {
+        match &self.kind {
+            ParameterizedTypeKind::Builtin(b) => b.collect_integer_params(names),
+            ParameterizedTypeKind::Extension { params, .. } => {
+                for param in params {
+                    if let TypeParameter::IntegerVariable(name) = param {
+                        names.insert(name.clone());
+                    }
+                }
+            }
+            ParameterizedTypeKind::List(elem) => elem.collect_integer_params(names),
+            ParameterizedTypeKind::Map { key, value } => {
+                key.collect_integer_params(names);
+                value.collect_integer_params(names);
+            }
+            ParameterizedTypeKind::Struct(types) => {
+                for t in types {
+                    t.collect_integer_params(names);
+                }
+            }
+            ParameterizedTypeKind::NamedStruct { fields } => {
+                for t in fields.values() {
+                    t.collect_integer_params(names);
+                }
+            }
+            ParameterizedTypeKind::AnyType { .. } => {}
+        }
+    }
+
+    fn collect_type_variables(&self, ids: &mut HashSet<u32>) {
+        match &self.kind {
+            ParameterizedTypeKind::AnyType { id } => {
+                ids.insert(*id);
+            }
+            ParameterizedTypeKind::List(elem) => elem.collect_type_variables(ids),
+            ParameterizedTypeKind::Map { key, value } => {
+                key.collect_type_variables(ids);
+                value.collect_type_variables(ids);
+            }
+            ParameterizedTypeKind::Struct(types) => {
+                for t in types {
+                    t.collect_type_variables(ids);
+                }
+            }
+            ParameterizedTypeKind::NamedStruct { fields } => {
+                for t in fields.values() {
+                    t.collect_type_variables(ids);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+impl ParameterizedBuiltinType {
+    fn collect_integer_params(&self, names: &mut HashSet<String>) {
+        match self {
+            ParameterizedBuiltinType::Decimal { precision, scale } => {
+                if let TypeParameter::IntegerVariable(name) = precision {
+                    names.insert(name.clone());
+                }
+                if let TypeParameter::IntegerVariable(name) = scale {
+                    names.insert(name.clone());
+                }
+            }
+            ParameterizedBuiltinType::VarChar { length }
+            | ParameterizedBuiltinType::FixedChar { length }
+            | ParameterizedBuiltinType::FixedBinary { length }
+            | ParameterizedBuiltinType::PrecisionTime { precision: length }
+            | ParameterizedBuiltinType::PrecisionTimestamp { precision: length }
+            | ParameterizedBuiltinType::PrecisionTimestampTz { precision: length }
+            | ParameterizedBuiltinType::IntervalDay { precision: length } => {
+                if let TypeParameter::IntegerVariable(name) = length {
+                    names.insert(name.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 /// Extract and validate an integer parameter for a built-in type.
 ///
 /// For `DECIMAL<10,2>`, this validates that `10` (index 0) and `2` (index 1)
@@ -968,11 +1268,13 @@ fn expect_type_argument<'a>(
 ) -> Result<ConcreteType, ExtensionTypeError> {
     match param {
         TypeExprParam::Type(t) => ConcreteType::try_from(t),
-        TypeExprParam::Integer(_) => Err(ExtensionTypeError::InvalidParameterKind {
-            type_name: type_name.to_string(),
-            index,
-            expected: "a type",
-        }),
+        TypeExprParam::Integer(_) | TypeExprParam::IntegerParam(_) => {
+            Err(ExtensionTypeError::InvalidParameterKind {
+                type_name: type_name.to_string(),
+                index,
+                expected: "a type",
+            })
+        }
     }
 }
 
@@ -983,6 +1285,7 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
         Ok(match param {
             TypeExprParam::Integer(v) => TypeParameter::Integer(v),
             TypeExprParam::Type(t) => TypeParameter::Type(ConcreteType::try_from(t)?),
+            TypeExprParam::IntegerParam(name) => TypeParameter::IntegerVariable(name.to_string()),
         })
     }
 }
@@ -1110,6 +1413,271 @@ impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
                 Err(ExtensionTypeError::InvalidAnyTypeVariable { id, nullability })
             }
         }
+    }
+}
+
+impl<'a> TryFrom<TypeExpr<'a>> for ParameterizedType {
+    type Error = ExtensionTypeError;
+
+    fn try_from(expr: TypeExpr<'a>) -> Result<Self, Self::Error> {
+        match expr {
+            TypeExpr::Simple(name, params, nullable) => {
+                let lower = name.to_ascii_lowercase();
+
+                // Try to parse as builtin type
+                if let Some(builtin) = parse_parameterized_builtin(name, &lower, &params)? {
+                    return Ok(ParameterizedType {
+                        kind: ParameterizedTypeKind::Builtin(builtin),
+                        nullable,
+                    });
+                }
+
+                // Handle container types
+                match lower.as_str() {
+                    "list" => {
+                        if params.len() != 1 {
+                            return Err(ExtensionTypeError::InvalidParameterCount {
+                                type_name: name.to_string(),
+                                expected: 1,
+                                actual: params.len(),
+                            });
+                        }
+                        let elem_expr = match &params[0] {
+                            TypeExprParam::Type(t) => t.clone(),
+                            _ => {
+                                return Err(ExtensionTypeError::InvalidParameterKind {
+                                    type_name: name.to_string(),
+                                    index: 0,
+                                    expected: "a type",
+                                });
+                            }
+                        };
+                        let elem_type = ParameterizedType::try_from(elem_expr)?;
+                        Ok(ParameterizedType {
+                            kind: ParameterizedTypeKind::List(Box::new(elem_type)),
+                            nullable,
+                        })
+                    }
+                    "map" => {
+                        if params.len() != 2 {
+                            return Err(ExtensionTypeError::InvalidParameterCount {
+                                type_name: name.to_string(),
+                                expected: 2,
+                                actual: params.len(),
+                            });
+                        }
+                        let key_expr = match &params[0] {
+                            TypeExprParam::Type(t) => t.clone(),
+                            _ => {
+                                return Err(ExtensionTypeError::InvalidParameterKind {
+                                    type_name: name.to_string(),
+                                    index: 0,
+                                    expected: "a type",
+                                });
+                            }
+                        };
+                        let value_expr = match &params[1] {
+                            TypeExprParam::Type(t) => t.clone(),
+                            _ => {
+                                return Err(ExtensionTypeError::InvalidParameterKind {
+                                    type_name: name.to_string(),
+                                    index: 1,
+                                    expected: "a type",
+                                });
+                            }
+                        };
+                        let key_type = ParameterizedType::try_from(key_expr)?;
+                        let value_type = ParameterizedType::try_from(value_expr)?;
+                        Ok(ParameterizedType {
+                            kind: ParameterizedTypeKind::Map {
+                                key: Box::new(key_type),
+                                value: Box::new(value_type),
+                            },
+                            nullable,
+                        })
+                    }
+                    "struct" => {
+                        let field_types = params
+                            .into_iter()
+                            .enumerate()
+                            .map(|(i, p)| match p {
+                                TypeExprParam::Type(t) => ParameterizedType::try_from(t),
+                                _ => Err(ExtensionTypeError::InvalidParameterKind {
+                                    type_name: name.to_string(),
+                                    index: i,
+                                    expected: "a type",
+                                }),
+                            })
+                            .collect::<Result<Vec<_>, _>>()?;
+                        Ok(ParameterizedType {
+                            kind: ParameterizedTypeKind::Struct(field_types),
+                            nullable,
+                        })
+                    }
+                    _ => {
+                        // Unknown simple type - treat as an extension type reference
+                        // This handles custom types like "unknown" without the u! prefix
+                        let parameters = params
+                            .into_iter()
+                            .map(TypeParameter::try_from)
+                            .collect::<Result<Vec<_>, _>>()?;
+                        Ok(ParameterizedType {
+                            kind: ParameterizedTypeKind::Extension {
+                                name: name.to_string(),
+                                params: parameters,
+                            },
+                            nullable,
+                        })
+                    }
+                }
+            }
+            TypeExpr::UserDefined(name, params, nullable) => {
+                let parameters = params
+                    .into_iter()
+                    .map(TypeParameter::try_from)
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(ParameterizedType {
+                    kind: ParameterizedTypeKind::Extension {
+                        name: name.to_string(),
+                        params: parameters,
+                    },
+                    nullable,
+                })
+            }
+            TypeExpr::TypeVariable(id, nullable) => Ok(ParameterizedType {
+                kind: ParameterizedTypeKind::AnyType { id },
+                nullable,
+            }),
+        }
+    }
+}
+
+/// Parse a builtin type that may have parameter variables.
+/// Similar to `parse_builtin` but returns `ParameterizedBuiltinType`.
+fn parse_parameterized_builtin<'a>(
+    display_name: &str,
+    lower_name: &str,
+    params: &[TypeExprParam<'a>],
+) -> Result<Option<ParameterizedBuiltinType>, ExtensionTypeError> {
+    // Simple types without parameters
+    match lower_name {
+        "bool" | "boolean" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::Boolean));
+        }
+        "i8" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::I8));
+        }
+        "i16" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::I16));
+        }
+        "i32" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::I32));
+        }
+        "i64" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::I64));
+        }
+        "fp32" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::Fp32));
+        }
+        "fp64" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::Fp64));
+        }
+        "string" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::String));
+        }
+        "binary" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::Binary));
+        }
+        "timestamp" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::Timestamp));
+        }
+        "timestamp_tz" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::TimestampTz));
+        }
+        "date" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::Date));
+        }
+        "time" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::Time));
+        }
+        "interval_year" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::IntervalYear));
+        }
+        "uuid" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::Uuid));
+        }
+        "any" => {
+            expect_param_len(display_name, params, 0)?;
+            return Ok(Some(ParameterizedBuiltinType::Any));
+        }
+        _ => {}
+    }
+
+    // Parameterized types
+    match lower_name {
+        "fixedchar" => {
+            expect_param_len(display_name, params, 1)?;
+            let length = TypeParameter::try_from(params[0].clone())?;
+            Ok(Some(ParameterizedBuiltinType::FixedChar { length }))
+        }
+        "varchar" => {
+            expect_param_len(display_name, params, 1)?;
+            let length = TypeParameter::try_from(params[0].clone())?;
+            Ok(Some(ParameterizedBuiltinType::VarChar { length }))
+        }
+        "fixedbinary" => {
+            expect_param_len(display_name, params, 1)?;
+            let length = TypeParameter::try_from(params[0].clone())?;
+            Ok(Some(ParameterizedBuiltinType::FixedBinary { length }))
+        }
+        "decimal" => {
+            expect_param_len(display_name, params, 2)?;
+            let precision = TypeParameter::try_from(params[0].clone())?;
+            let scale = TypeParameter::try_from(params[1].clone())?;
+            Ok(Some(ParameterizedBuiltinType::Decimal { precision, scale }))
+        }
+        "precision_time" => {
+            expect_param_len(display_name, params, 1)?;
+            let precision = TypeParameter::try_from(params[0].clone())?;
+            Ok(Some(ParameterizedBuiltinType::PrecisionTime { precision }))
+        }
+        "precision_timestamp" => {
+            expect_param_len(display_name, params, 1)?;
+            let precision = TypeParameter::try_from(params[0].clone())?;
+            Ok(Some(ParameterizedBuiltinType::PrecisionTimestamp {
+                precision,
+            }))
+        }
+        "precision_timestamp_tz" => {
+            expect_param_len(display_name, params, 1)?;
+            let precision = TypeParameter::try_from(params[0].clone())?;
+            Ok(Some(ParameterizedBuiltinType::PrecisionTimestampTz {
+                precision,
+            }))
+        }
+        "interval_day" => {
+            expect_param_len(display_name, params, 1)?;
+            let precision = TypeParameter::try_from(params[0].clone())?;
+            Ok(Some(ParameterizedBuiltinType::IntervalDay { precision }))
+        }
+        // Container types (List, Map, Struct) - not handled here for now
+        // They would need recursive conversion
+        _ => Ok(None),
     }
 }
 

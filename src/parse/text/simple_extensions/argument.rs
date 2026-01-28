@@ -11,6 +11,9 @@ use crate::{
     text::simple_extensions,
 };
 
+use super::TypeExpr;
+use super::types::ParameterizedType;
+
 /// A parsed [`simple_extensions::ArgumentsItem`].
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArgumentsItem {
@@ -238,10 +241,8 @@ pub struct ValueArg {
     /// Additional description for this argument.
     description: Option<String>,
 
-    /// A fully defined type or a type expression.
-    ///
-    /// TODO(#452): parse this to a typed representation once type variables are supported.
-    value: simple_extensions::Type,
+    /// The type of this argument, which may contain parameter variables (e.g., `decimal<P1, S1>`)
+    value: ParameterizedType,
 
     /// Whether this argument is required to be a constant for invocation. For
     /// example, in some system a regular expression pattern would only be
@@ -271,6 +272,11 @@ impl ValueArg {
     pub fn constant(&self) -> bool {
         self.constant.unwrap_or(false)
     }
+
+    /// Returns the type of this argument.
+    pub fn value(&self) -> &ParameterizedType {
+        &self.value
+    }
 }
 
 impl<C: Context> Parse<C> for simple_extensions::ValueArg {
@@ -279,22 +285,41 @@ impl<C: Context> Parse<C> for simple_extensions::ValueArg {
     type Error = ArgumentsItemError;
 
     fn parse(self, _ctx: &mut C) -> Result<ValueArg, ArgumentsItemError> {
+        // Parse the type string into a ParameterizedType
+        let type_str = match &self.value {
+            simple_extensions::Type::String(s) => s.as_str(),
+            simple_extensions::Type::Object(_) => {
+                // Object types (named structs) not yet supported
+                return Err(ArgumentsItemError::EmptyOptionalField(
+                    "object types not yet supported".to_string(),
+                ));
+            }
+        };
+
+        let type_expr = TypeExpr::parse(type_str)
+            .map_err(|e| ArgumentsItemError::EmptyOptionalField(format!("invalid type: {}", e)))?;
+
+        let value = ParameterizedType::try_from(type_expr)
+            .map_err(|e| ArgumentsItemError::EmptyOptionalField(format!("invalid type: {}", e)))?;
+
         Ok(ValueArg {
             name: ArgumentsItem::parse_name(self.name)?,
             description: ArgumentsItem::parse_description(self.description)?,
-            value: self.value,
+            value,
             constant: self.constant,
         })
     }
 }
 
 impl From<ValueArg> for simple_extensions::ValueArg {
-    fn from(value: ValueArg) -> Self {
+    fn from(val: ValueArg) -> Self {
+        // Convert ParameterizedType back to a string representation using Display
+        let type_string = val.value.to_string();
         simple_extensions::ValueArg {
-            name: value.name,
-            description: value.description,
-            value: value.value,
-            constant: value.constant,
+            name: val.name,
+            description: val.description,
+            value: simple_extensions::Type::String(type_string),
+            constant: val.constant,
         }
     }
 }
@@ -381,6 +406,9 @@ impl From<TypeArg> for ArgumentsItem {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parse::text::simple_extensions::types::{
+        ParameterizedBuiltinType, ParameterizedType, ParameterizedTypeKind,
+    };
     use crate::text::simple_extensions;
     use crate::{parse::Context, text};
 
@@ -467,9 +495,11 @@ mod tests {
             }) => {
                 assert_eq!(name, Some("arg".to_string()));
                 assert_eq!(description, Some("desc".to_string()));
-                assert!(
-                    matches!(value, text::simple_extensions::Type::String(type_) if type_ == "i32")
-                );
+                // value is now a ParameterizedType - check it's I32
+                assert!(matches!(
+                    value.kind,
+                    ParameterizedTypeKind::Builtin(ParameterizedBuiltinType::I32)
+                ));
                 assert_eq!(constant, Some(true));
             }
             _ => unreachable!(),
@@ -634,10 +664,16 @@ mod tests {
 
     #[test]
     fn from_value_argument() {
+        // Create a simple ParameterizedType for testing
+        let param_type = ParameterizedType {
+            kind: ParameterizedTypeKind::Builtin(ParameterizedBuiltinType::I32),
+            nullable: false,
+        };
+
         let item: ArgumentsItem = ValueArg {
             name: Some("arg".to_string()),
             description: Some("desc".to_string()),
-            value: text::simple_extensions::Type::String("".to_string()),
+            value: param_type,
             constant: Some(true),
         }
         .into();
@@ -653,7 +689,7 @@ mod tests {
                 assert_eq!(name, Some("arg".to_string()));
                 assert_eq!(description, Some("desc".to_string()));
                 assert!(
-                    matches!(value, text::simple_extensions::Type::String(type_) if type_.is_empty())
+                    matches!(value, text::simple_extensions::Type::String(type_) if type_ == "i32")
                 );
                 assert_eq!(constant, Some(true));
             }
