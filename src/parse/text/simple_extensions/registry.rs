@@ -10,9 +10,9 @@
 //!
 //! This module is only available when the `parse` feature is enabled.
 
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{HashMap, hash_map::Entry};
 
-use super::{types::CustomType, ExtensionFile, SimpleExtensions, SimpleExtensionsError};
+use super::{ExtensionFile, SimpleExtensions, SimpleExtensionsError, types::CustomType};
 use crate::urn::Urn;
 
 /// Extension Registry that manages Substrait extensions
@@ -102,7 +102,7 @@ impl Registry {
 mod tests {
     use super::{ExtensionFile, Registry};
     use crate::parse::text::simple_extensions::{
-        scalar_functions::ScalarFunctionError, types::ExtensionTypeError, SimpleExtensionsError,
+        SimpleExtensionsError, scalar_functions::ScalarFunctionError, types::ExtensionTypeError,
     };
     use crate::text::simple_extensions::{SimpleExtensions, SimpleExtensionsTypesItem};
     use crate::urn::Urn;
@@ -145,9 +145,11 @@ mod tests {
         let collected: Vec<&Urn> = registry.extensions().map(|(urn, _)| urn).collect();
         assert_eq!(collected.len(), 2);
         for urn in urns {
-            assert!(collected
-                .iter()
-                .any(|candidate| candidate.to_string() == urn));
+            assert!(
+                collected
+                    .iter()
+                    .any(|candidate| candidate.to_string() == urn)
+            );
         }
     }
 

@@ -5,14 +5,14 @@
 //! This module provides a clean, type-safe wrapper around Substrait extension types,
 //! separating function signature patterns from concrete argument types.
 
+use super::TypeExpr;
 use super::argument::{
     EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
 };
 use super::extensions::TypeContext;
 use super::type_ast::TypeExprParam;
-use super::TypeExpr;
-use crate::parse::text::simple_extensions::type_ast::TypeParseError;
 use crate::parse::Parse;
+use crate::parse::text::simple_extensions::type_ast::TypeParseError;
 use crate::text::simple_extensions::{
     EnumOptions as RawEnumOptions, SimpleExtensionsTypesItem, Type as RawType, TypeParamDefs,
     TypeParamDefsItem, TypeParamDefsItemType,
@@ -1398,8 +1398,8 @@ impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
 mod tests {
     use super::super::extensions::TypeContext;
     use super::*;
-    use crate::parse::text::simple_extensions::argument::EnumOptions as ParsedEnumOptions;
     use crate::parse::text::simple_extensions::TypeExpr;
+    use crate::parse::text::simple_extensions::argument::EnumOptions as ParsedEnumOptions;
     use crate::text::simple_extensions;
     use std::iter::FromIterator;
 
