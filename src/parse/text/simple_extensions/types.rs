@@ -5,14 +5,14 @@
 //! This module provides a clean, type-safe wrapper around Substrait extension types,
 //! separating function signature patterns from concrete argument types.
 
-use super::TypeExpr;
 use super::argument::{
     EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
 };
 use super::extensions::TypeContext;
 use super::type_ast::TypeExprParam;
-use crate::parse::Parse;
+use super::TypeExpr;
 use crate::parse::text::simple_extensions::type_ast::TypeParseError;
+use crate::parse::Parse;
 use crate::text::simple_extensions::{
     EnumOptions as RawEnumOptions, SimpleExtensionsTypesItem, Type as RawType, TypeParamDefs,
     TypeParamDefsItem, TypeParamDefsItemType,
@@ -216,8 +216,16 @@ impl fmt::Display for BasicBuiltinType {
 pub enum TypeParameter {
     /// Integer parameter (e.g., precision, scale)
     Integer(i64),
-    /// Type parameter (nested type)
+    /// Type parameter (nested concrete type)
     Type(ConcreteType),
+    /// Named parameter reference (e.g., `P` in `DECIMAL<P, S>`)
+    ///
+    /// Used in function signatures where the actual value is determined at call time.
+    ParameterName(String),
+    /// Type expression parameter (may contain type variables)
+    ///
+    /// Used when a type parameter contains type variables like `List<any1>`.
+    TypeExpression(Box<TypeExpression>),
     // TODO: Add support for other type parameters, as described in
     // https://github.com/substrait-io/substrait/blob/35101020d961eda48f8dd1aafbc794c9e5cac077/proto/substrait/type.proto#L250-L265
 }
@@ -227,6 +235,8 @@ impl fmt::Display for TypeParameter {
         match self {
             TypeParameter::Integer(i) => write!(f, "{i}"),
             TypeParameter::Type(t) => write!(f, "{t}"),
+            TypeParameter::ParameterName(name) => write!(f, "{name}"),
+            TypeParameter::TypeExpression(expr) => write!(f, "{expr}"),
         }
     }
 }
@@ -894,6 +904,274 @@ impl From<ConcreteType> for RawType {
     }
 }
 
+/// A type variable reference (e.g., `any1`, `any2`).
+///
+/// Type variables are placeholders in function signatures that match any type.
+/// When the same variable appears multiple times (e.g., in arguments and return
+/// type), all occurrences must resolve to the same concrete type.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TypeVariable {
+    /// The numeric identifier (1, 2, etc. from `any1`, `any2`)
+    pub id: u32,
+    /// Whether this type variable reference is nullable
+    pub nullable: bool,
+}
+
+impl TypeVariable {
+    /// Create a new type variable
+    pub fn new(id: u32, nullable: bool) -> Self {
+        Self { id, nullable }
+    }
+}
+
+impl fmt::Display for TypeVariable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "any{}", self.id)?;
+        if self.nullable {
+            write!(f, "?")?;
+        }
+        Ok(())
+    }
+}
+
+/// A parameterized type that may contain parameter name references.
+///
+/// This is similar to [`ConcreteType`], but allows parameter names (like `P`, `S`)
+/// in place of concrete integer values. Used in function signatures where the
+/// actual parameter values are determined at call time.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ParameterizedType {
+    /// The type name (e.g., "precision_timestamp_tz", "DECIMAL")
+    pub name: String,
+    /// Type parameters, which may include concrete values or parameter names
+    pub parameters: Vec<TypeParameter>,
+    /// Whether this type is nullable
+    pub nullable: bool,
+}
+
+impl ParameterizedType {
+    /// Create a new parameterized type
+    pub fn new(name: String, parameters: Vec<TypeParameter>, nullable: bool) -> Self {
+        Self {
+            name,
+            parameters,
+            nullable,
+        }
+    }
+}
+
+impl fmt::Display for ParameterizedType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)?;
+        if self.nullable {
+            write!(f, "?")?;
+        }
+        write_separated(f, self.parameters.iter(), "<", ">", ", ")
+    }
+}
+
+/// A type expression that can be either a concrete type, a type variable,
+/// or a parameterized type with parameter name references.
+///
+/// This is used in function signatures where arguments or return types may
+/// reference type variables like `any1` or parameter names like `P` that
+/// are resolved at call time.
+#[derive(Clone, Debug, PartialEq)]
+pub enum TypeExpression {
+    /// A fully resolved concrete type
+    Concrete(ConcreteType),
+    /// A type variable reference (e.g., `any1`)
+    Variable(TypeVariable),
+    /// A parameterized type with parameter name references (e.g., `precision_timestamp_tz<P>`)
+    Parameterized(ParameterizedType),
+}
+
+impl TypeExpression {
+    /// Create a concrete type expression
+    pub fn concrete(ty: ConcreteType) -> Self {
+        Self::Concrete(ty)
+    }
+
+    /// Create a type variable expression
+    pub fn variable(id: u32, nullable: bool) -> Self {
+        Self::Variable(TypeVariable::new(id, nullable))
+    }
+
+    /// Create a parameterized type expression
+    pub fn parameterized(name: String, parameters: Vec<TypeParameter>, nullable: bool) -> Self {
+        Self::Parameterized(ParameterizedType::new(name, parameters, nullable))
+    }
+
+    /// Returns `true` if this is a concrete type
+    pub fn is_concrete(&self) -> bool {
+        matches!(self, Self::Concrete(_))
+    }
+
+    /// Returns `true` if this is a type variable
+    pub fn is_variable(&self) -> bool {
+        matches!(self, Self::Variable(_))
+    }
+
+    /// Returns `true` if this is a parameterized type
+    pub fn is_parameterized(&self) -> bool {
+        matches!(self, Self::Parameterized(_))
+    }
+
+    /// Returns the concrete type if this is a concrete type expression
+    pub fn as_concrete(&self) -> Option<&ConcreteType> {
+        match self {
+            Self::Concrete(ty) => Some(ty),
+            _ => None,
+        }
+    }
+
+    /// Returns the type variable if this is a type variable expression
+    pub fn as_variable(&self) -> Option<&TypeVariable> {
+        match self {
+            Self::Variable(var) => Some(var),
+            _ => None,
+        }
+    }
+
+    /// Returns the parameterized type if this is a parameterized type expression
+    pub fn as_parameterized(&self) -> Option<&ParameterizedType> {
+        match self {
+            Self::Parameterized(pt) => Some(pt),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for TypeExpression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Concrete(ty) => write!(f, "{ty}"),
+            Self::Variable(var) => write!(f, "{var}"),
+            Self::Parameterized(pt) => write!(f, "{pt}"),
+        }
+    }
+}
+
+impl From<ConcreteType> for TypeExpression {
+    fn from(ty: ConcreteType) -> Self {
+        Self::Concrete(ty)
+    }
+}
+
+impl From<TypeVariable> for TypeExpression {
+    fn from(var: TypeVariable) -> Self {
+        Self::Variable(var)
+    }
+}
+
+impl From<ParameterizedType> for TypeExpression {
+    fn from(pt: ParameterizedType) -> Self {
+        Self::Parameterized(pt)
+    }
+}
+
+impl From<TypeExpression> for RawType {
+    fn from(val: TypeExpression) -> Self {
+        RawType::String(val.to_string())
+    }
+}
+
+/// Check if any parameters in the list contain a ParameterName
+/// Check if any parameters contain parameter names (e.g., `P`, `S`)
+fn has_parameter_names(params: &[TypeExprParam<'_>]) -> bool {
+    params
+        .iter()
+        .any(|p| matches!(p, TypeExprParam::ParameterName(_)))
+}
+
+/// Check if any parameters contain type variables (e.g., `any1`, `any2`)
+fn has_type_variables(params: &[TypeExprParam<'_>]) -> bool {
+    params.iter().any(|p| match p {
+        TypeExprParam::Type(TypeExpr::TypeVariable(..)) => true,
+        TypeExprParam::Type(TypeExpr::Simple(_, nested, _))
+        | TypeExprParam::Type(TypeExpr::UserDefined(_, nested, _)) => has_type_variables(nested),
+        _ => false,
+    })
+}
+
+/// Check if any parameters are non-concrete (parameter names or type variables)
+fn has_non_concrete_params(params: &[TypeExprParam<'_>]) -> bool {
+    has_parameter_names(params) || has_type_variables(params)
+}
+
+impl<'a> TryFrom<TypeExpr<'a>> for TypeExpression {
+    type Error = ExtensionTypeError;
+
+    fn try_from(parsed_type: TypeExpr<'a>) -> Result<Self, Self::Error> {
+        match parsed_type {
+            TypeExpr::TypeVariable(id, nullable) => {
+                Ok(TypeExpression::Variable(TypeVariable::new(id, nullable)))
+            }
+            TypeExpr::Simple(name, params, nullable) if has_non_concrete_params(&params) => {
+                // This type has parameter names or type variables, so it's a parameterized type
+                let parameters = params
+                    .into_iter()
+                    .map(type_expr_param_to_type_parameter)
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(TypeExpression::Parameterized(ParameterizedType::new(
+                    name.to_string(),
+                    parameters,
+                    nullable,
+                )))
+            }
+            TypeExpr::UserDefined(name, params, nullable) if has_non_concrete_params(&params) => {
+                // User-defined type with parameter names or type variables
+                let parameters = params
+                    .into_iter()
+                    .map(type_expr_param_to_type_parameter)
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(TypeExpression::Parameterized(ParameterizedType::new(
+                    format!("u!{}", name),
+                    parameters,
+                    nullable,
+                )))
+            }
+            other => {
+                // Try to convert to concrete type first
+                match ConcreteType::try_from(other.clone()) {
+                    Ok(concrete) => Ok(TypeExpression::Concrete(concrete)),
+                    Err(ExtensionTypeError::UnknownTypeName { name }) => {
+                        // Unknown type name - could be an extension type defined elsewhere
+                        // Treat it as a parameterized type (extension reference)
+                        let (params, nullable) = match &other {
+                            TypeExpr::Simple(_, params, nullable) => (params.clone(), *nullable),
+                            _ => (vec![], false),
+                        };
+                        let parameters = params
+                            .into_iter()
+                            .map(type_expr_param_to_type_parameter)
+                            .collect::<Result<Vec<_>, _>>()?;
+                        Ok(TypeExpression::Parameterized(ParameterizedType::new(
+                            name, parameters, nullable,
+                        )))
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+        }
+    }
+}
+
+/// Convert a TypeExprParam to a TypeParameter, handling type variables specially
+fn type_expr_param_to_type_parameter(
+    param: TypeExprParam<'_>,
+) -> Result<TypeParameter, ExtensionTypeError> {
+    match param {
+        TypeExprParam::Integer(v) => Ok(TypeParameter::Integer(v)),
+        TypeExprParam::ParameterName(name) => Ok(TypeParameter::ParameterName(name.to_string())),
+        TypeExprParam::Type(type_expr) => {
+            // Convert the type expression to a TypeExpression, then wrap it
+            let expr = TypeExpression::try_from(type_expr)?;
+            Ok(TypeParameter::TypeExpression(Box::new(expr)))
+        }
+    }
+}
+
 /// Extract and validate an integer parameter for a built-in type.
 ///
 /// For `DECIMAL<10,2>`, this validates that `10` (index 0) and `2` (index 1)
@@ -968,11 +1246,13 @@ fn expect_type_argument<'a>(
 ) -> Result<ConcreteType, ExtensionTypeError> {
     match param {
         TypeExprParam::Type(t) => ConcreteType::try_from(t),
-        TypeExprParam::Integer(_) => Err(ExtensionTypeError::InvalidParameterKind {
-            type_name: type_name.to_string(),
-            index,
-            expected: "a type",
-        }),
+        TypeExprParam::Integer(_) | TypeExprParam::ParameterName(_) => {
+            Err(ExtensionTypeError::InvalidParameterKind {
+                type_name: type_name.to_string(),
+                index,
+                expected: "a type",
+            })
+        }
     }
 }
 
@@ -983,6 +1263,7 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
         Ok(match param {
             TypeExprParam::Integer(v) => TypeParameter::Integer(v),
             TypeExprParam::Type(t) => TypeParameter::Type(ConcreteType::try_from(t)?),
+            TypeExprParam::ParameterName(name) => TypeParameter::ParameterName(name.to_string()),
         })
     }
 }
@@ -1117,8 +1398,8 @@ impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
 mod tests {
     use super::super::extensions::TypeContext;
     use super::*;
-    use crate::parse::text::simple_extensions::TypeExpr;
     use crate::parse::text::simple_extensions::argument::EnumOptions as ParsedEnumOptions;
+    use crate::parse::text::simple_extensions::TypeExpr;
     use crate::text::simple_extensions;
     use std::iter::FromIterator;
 
@@ -1736,5 +2017,199 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn test_type_expression_concrete() {
+        let cases = vec![
+            ("i32", false),
+            ("string?", true),
+            ("List<i64>", false),
+            ("DECIMAL<10, 2>", false),
+        ];
+
+        for (input, expected_nullable) in cases {
+            let parsed = TypeExpr::parse(input).unwrap();
+            let expr = TypeExpression::try_from(parsed).unwrap();
+            assert!(
+                expr.is_concrete(),
+                "expected concrete type for {input}, got {:?}",
+                expr
+            );
+            let concrete = expr.as_concrete().unwrap();
+            assert_eq!(
+                concrete.nullable, expected_nullable,
+                "unexpected nullability for {input}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_type_expression_variable() {
+        let cases = vec![("any1", 1, false), ("any2?", 2, true), ("any99", 99, false)];
+
+        for (input, expected_id, expected_nullable) in cases {
+            let parsed = TypeExpr::parse(input).unwrap();
+            let expr = TypeExpression::try_from(parsed).unwrap();
+            assert!(
+                expr.is_variable(),
+                "expected type variable for {input}, got {:?}",
+                expr
+            );
+            let var = expr.as_variable().unwrap();
+            assert_eq!(var.id, expected_id, "unexpected id for {input}");
+            assert_eq!(
+                var.nullable, expected_nullable,
+                "unexpected nullability for {input}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_type_expression_parameterized_with_int_params() {
+        // Types with integer parameter names (P, S, L)
+        let cases = vec![
+            ("precision_timestamp_tz<P>", "precision_timestamp_tz", false),
+            ("DECIMAL<P, S>", "DECIMAL", false),
+            ("fixedchar?<L>", "fixedchar", true),
+        ];
+
+        for (input, expected_name, expected_nullable) in cases {
+            let parsed = TypeExpr::parse(input).unwrap();
+            let expr = TypeExpression::try_from(parsed).unwrap();
+            assert!(
+                expr.is_parameterized(),
+                "expected parameterized type for {input}, got {:?}",
+                expr
+            );
+            let pt = expr.as_parameterized().unwrap();
+            assert_eq!(pt.name, expected_name, "unexpected name for {input}");
+            assert_eq!(
+                pt.nullable, expected_nullable,
+                "unexpected nullability for {input}"
+            );
+            // All parameters should be ParameterName (integer parameters)
+            for param in &pt.parameters {
+                assert!(
+                    matches!(param, TypeParameter::ParameterName(_)),
+                    "expected ParameterName, got {:?}",
+                    param
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_type_expression_parameterized_with_type_variables() {
+        // Container types with type variable parameters (any1, any2)
+        let cases = vec![
+            ("List<any1>", "List", false, vec![("any1", 1, false)]),
+            ("List?<any2?>", "List", true, vec![("any2?", 2, true)]),
+            (
+                "Map<any1, any2>",
+                "Map",
+                false,
+                vec![("any1", 1, false), ("any2", 2, false)],
+            ),
+        ];
+
+        for (input, expected_name, expected_nullable, expected_vars) in cases {
+            let parsed = TypeExpr::parse(input).unwrap();
+            let expr = TypeExpression::try_from(parsed).unwrap();
+            assert!(
+                expr.is_parameterized(),
+                "expected parameterized type for {input}, got {:?}",
+                expr
+            );
+            let pt = expr.as_parameterized().unwrap();
+            assert_eq!(pt.name, expected_name, "unexpected name for {input}");
+            assert_eq!(
+                pt.nullable, expected_nullable,
+                "unexpected nullability for {input}"
+            );
+            assert_eq!(
+                pt.parameters.len(),
+                expected_vars.len(),
+                "unexpected parameter count for {input}"
+            );
+
+            for (param, (_, expected_id, expected_var_nullable)) in
+                pt.parameters.iter().zip(expected_vars.iter())
+            {
+                match param {
+                    TypeParameter::TypeExpression(expr) => {
+                        let var = expr
+                            .as_variable()
+                            .expect("expected type variable in parameter");
+                        assert_eq!(var.id, *expected_id, "unexpected var id for {input}");
+                        assert_eq!(
+                            var.nullable, *expected_var_nullable,
+                            "unexpected var nullability for {input}"
+                        );
+                    }
+                    other => panic!("expected TypeExpression, got {:?}", other),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_type_expression_unknown_type_becomes_parameterized() {
+        // Unknown type names should be treated as potential extension types
+        let parsed = TypeExpr::parse("custom_type").unwrap();
+        let expr = TypeExpression::try_from(parsed).unwrap();
+        assert!(
+            expr.is_parameterized(),
+            "expected parameterized type for unknown type, got {:?}",
+            expr
+        );
+        let pt = expr.as_parameterized().unwrap();
+        assert_eq!(pt.name, "custom_type");
+        assert!(pt.parameters.is_empty());
+        assert!(!pt.nullable);
+    }
+
+    #[test]
+    fn test_type_expression_display() {
+        let cases = vec![
+            ("i32", "i32"),
+            ("any1", "any1"),
+            ("any2?", "any2?"),
+            ("precision_timestamp_tz<P>", "precision_timestamp_tz<P>"),
+            ("DECIMAL<P, S>", "DECIMAL<P, S>"),
+        ];
+
+        for (input, expected) in cases {
+            let parsed = TypeExpr::parse(input).unwrap();
+            let expr = TypeExpression::try_from(parsed).unwrap();
+            assert_eq!(expr.to_string(), expected, "unexpected display for {input}");
+        }
+    }
+
+    #[test]
+    fn test_type_variable_display() {
+        assert_eq!(TypeVariable::new(1, false).to_string(), "any1");
+        assert_eq!(TypeVariable::new(2, true).to_string(), "any2?");
+        assert_eq!(TypeVariable::new(42, false).to_string(), "any42");
+    }
+
+    #[test]
+    fn test_parameterized_type_display() {
+        let pt = ParameterizedType::new(
+            "DECIMAL".to_string(),
+            vec![
+                TypeParameter::ParameterName("P".to_string()),
+                TypeParameter::ParameterName("S".to_string()),
+            ],
+            false,
+        );
+        assert_eq!(pt.to_string(), "DECIMAL<P, S>");
+
+        let pt_nullable = ParameterizedType::new(
+            "fixedchar".to_string(),
+            vec![TypeParameter::ParameterName("L".to_string())],
+            true,
+        );
+        assert_eq!(pt_nullable.to_string(), "fixedchar?<L>");
     }
 }
