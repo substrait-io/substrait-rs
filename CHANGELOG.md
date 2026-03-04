@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.62.3](https://github.com/substrait-io/substrait-rs/compare/v0.62.2...v0.62.3) - 2026-03-04
+
+### Added
+
+- basic handling of scalar functions ([#451](https://github.com/substrait-io/substrait-rs/pull/451))
+- add initial extension support ([#395](https://github.com/substrait-io/substrait-rs/pull/395))
+
 ## [0.62.2](https://github.com/substrait-io/substrait-rs/compare/v0.62.1...v0.62.2) - 2025-12-16
 
 ### Added
