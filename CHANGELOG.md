@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- *(deps,substrait)* update substrait submodule to v0.79.0 ([#466](https://github.com/substrait-io/substrait-rs/pull/466))
 - basic handling of scalar functions ([#451](https://github.com/substrait-io/substrait-rs/pull/451))
 - add initial extension support ([#395](https://github.com/substrait-io/substrait-rs/pull/395))
 
