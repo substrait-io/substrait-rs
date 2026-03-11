@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.63.0](https://github.com/substrait-io/substrait-rs/compare/v0.62.2...v0.63.0) - 2026-03-11
+
+### Added
+
+- *(deps,substrait)* [**breaking**] bump substrait from `92d2e75` to `2aaae7c` ([#469](https://github.com/substrait-io/substrait-rs/pull/469))
+- basic handling of scalar functions ([#451](https://github.com/substrait-io/substrait-rs/pull/451))
+- add initial extension support ([#395](https://github.com/substrait-io/substrait-rs/pull/395))
+
+### Fixed
+
+- bump version to 0.63.0 to skip yanked v0.62.3 ([#476](https://github.com/substrait-io/substrait-rs/pull/476))
+
+### Other
+
+- update Cargo.lock for v0.63.0 version bump ([#477](https://github.com/substrait-io/substrait-rs/pull/477))
+- release v0.62.3 ([#438](https://github.com/substrait-io/substrait-rs/pull/438))
+
 ## [0.62.3](https://github.com/substrait-io/substrait-rs/compare/v0.62.2...v0.62.3) - 2026-03-04
 
 ### Added
