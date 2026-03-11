@@ -611,6 +611,7 @@ impl From<CustomType> for SimpleExtensionsTypesItem {
         SimpleExtensionsTypesItem {
             name: value.name,
             description: value.description,
+            metadata: Default::default(),
             parameters,
             structure,
             variadic: value.variadic,
@@ -1672,6 +1673,7 @@ mod tests {
                 simple_extensions::SimpleExtensionsTypesItem {
                     name: "Alias".to_string(),
                     description: Some("Alias type".to_string()),
+                    metadata: Default::default(),
                     parameters: None,
                     structure: Some(RawType::String("BINARY".to_string())),
                     variadic: None,
@@ -1685,6 +1687,7 @@ mod tests {
                 simple_extensions::SimpleExtensionsTypesItem {
                     name: "Point".to_string(),
                     description: Some("A 2D point".to_string()),
+                    metadata: Default::default(),
                     parameters: None,
                     structure: Some(raw_named_struct(&[("x", "fp64"), ("y", "fp64?")])),
                     variadic: None,
@@ -1710,6 +1713,7 @@ mod tests {
                 simple_extensions::SimpleExtensionsTypesItem {
                     name: "Opaque".to_string(),
                     description: None,
+                    metadata: Default::default(),
                     parameters: None,
                     structure: None,
                     variadic: Some(true),

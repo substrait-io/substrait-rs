@@ -383,6 +383,7 @@ mod tests {
         let raw = RawScalarFunction {
             name: "empty_function".to_string(),
             description: None,
+            metadata: Default::default(),
             impls: vec![],
         };
 
@@ -405,6 +406,7 @@ mod tests {
         let raw = RawScalarFunction {
             name: "add".to_string(),
             description: Some("Addition function".to_string()),
+            metadata: Default::default(),
             impls: vec![ScalarFunctionImplsItem {
                 args: None,
                 options: None,
