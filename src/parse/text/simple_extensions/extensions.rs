@@ -183,6 +183,7 @@ impl From<(Urn, SimpleExtensions)> for RawExtensions {
             urn: urn.to_string(),
             aggregate_functions: vec![],
             dependencies: IndexMap::new(),
+            metadata: Default::default(),
             scalar_functions: vec![],
             type_variations: vec![],
             types,

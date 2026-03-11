@@ -114,6 +114,7 @@ mod tests {
             .map(|name| SimpleExtensionsTypesItem {
                 name: (*name).to_string(),
                 description: None,
+                metadata: Default::default(),
                 parameters: None,
                 structure: None,
                 variadic: None,
@@ -125,6 +126,7 @@ mod tests {
             aggregate_functions: vec![],
             window_functions: vec![],
             dependencies: Default::default(),
+            metadata: Default::default(),
             type_variations: vec![],
             types,
             urn: urn.to_string(),
@@ -214,6 +216,7 @@ mod tests {
             scalar_functions: vec![simple_extensions::ScalarFunction {
                 name: "bad_function".to_string(),
                 description: None,
+                metadata: Default::default(),
                 impls: vec![simple_extensions::ScalarFunctionImplsItem {
                     args: None,
                     options: None,
@@ -230,6 +233,7 @@ mod tests {
             aggregate_functions: vec![],
             window_functions: vec![],
             dependencies: Default::default(),
+            metadata: Default::default(),
             type_variations: vec![],
             types: vec![],
             urn: "extension:example.com:invalid".to_string(),
@@ -264,6 +268,7 @@ mod tests {
             scalar_functions: vec![simple_extensions::ScalarFunction {
                 name: function_name.to_string(),
                 description: None,
+                metadata: Default::default(),
                 impls: vec![simple_extensions::ScalarFunctionImplsItem {
                     args: None,
                     options: None,
@@ -280,12 +285,14 @@ mod tests {
             aggregate_functions: vec![],
             window_functions: vec![],
             dependencies: Default::default(),
+            metadata: Default::default(),
             type_variations: vec![],
             types: defined_types
                 .into_iter()
                 .map(|name| SimpleExtensionsTypesItem {
                     name: name.to_string(),
                     description: None,
+                    metadata: Default::default(),
                     parameters: None,
                     structure: None,
                     variadic: None,
