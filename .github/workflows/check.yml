@@ -14,6 +14,15 @@ jobs:
         with:
           licenses: Apache-2.0
 
+  lockfile:
+    name: Cargo.lock Sync
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo update --workspace
+      - run: git diff --exit-code Cargo.lock
+
   formatting:
     name: Formatting
     runs-on: ubuntu-24.04-arm
