@@ -69,6 +69,12 @@ When the Substrait version is bumped make sure to update your local submodule.
 git submodule update
 ```
 
+#### Substrait submodule bumps and semver
+
+Substrait proto bumps are handled automatically by Dependabot (see [dependabot.yml](.github/dependabot.yml)). These are always marked as breaking changes via the `feat(deps,substrait)!:` commit prefix, which causes release-plz to do a minor version bump (major post-1.0).
+
+If you need to bump the submodule manually and believe the change is non-breaking, you can omit the `!` marker. `cargo-semver-checks` runs as part of the release workflow and may catch breaking API changes, but it does not cover all possible semver violations. When in doubt, mark the change as breaking.
+
 Formatting, lints and tests are checked in the [Test](.github/workflows/test.yml) workflow.
 
 ### Docs
