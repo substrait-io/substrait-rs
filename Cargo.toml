@@ -41,13 +41,13 @@ prost = "0.14.1"
 prost-types = "0.14.1"
 # Required by generated text schemas: the typify-generated code emits
 # ::regress::Regex for `pattern` validations.
-regress = "0.10.4"
-semver = { version = "1.0.27", optional = true }
+regress = "0.11.1"
+semver = { version = "1.0.28", optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = { version = "1.0.145", features = ["preserve_order"] }
+serde_json = { version = "1.0.149", features = ["preserve_order"] }
 serde_yaml = { version = "0.9.34", optional = true }
-thiserror = { version = "2.0.17", optional = true }
-indexmap = { version = "2.7.0", features = ["serde"] }
+thiserror = { version = "2.0.18", optional = true }
+indexmap = { version = "2.13.1", features = ["serde"] }
 
 [build-dependencies]
 heck = "0.5.0"
@@ -56,10 +56,10 @@ prettyplease = "0.2.37"
 prost-build = { version = "0.14.1", default-features = false }
 protobuf-src = { version = "2.1.1", optional = true }
 schemars = "0.8.22"
-semver = "1.0.27"
+semver = "1.0.28"
 serde_yaml = "0.9.34"
-syn = "2.0.111"
-typify = "0.5.0"
+syn = "2.0.117"
+typify = "0.6.1"
 walkdir = "2.5.0"
 
 [package.metadata.docs.rs]
