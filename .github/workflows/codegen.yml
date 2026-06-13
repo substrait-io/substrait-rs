@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Codegen
+
+on: [push, pull_request]
+
+jobs:
+  antlr:
+    name: ANTLR parser in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: prefix-dev/setup-pixi@v0.8.1
+      - run: pixi run check-codegen
