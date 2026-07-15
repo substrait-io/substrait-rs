@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# pixi provides a reproducible environment for the code-generation steps that
+# need tools outside the Rust toolchain (currently a Java runtime to run ANTLR,
+# plus Python to drive it). The Rust toolchain itself is intentionally not
+# managed here: use rustup/cargo as usual. See `antlr/README.md`.
+
+[workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64", "win-64", "linux-aarch64"]
+
+[dependencies]
+# Java runtime to run the ANTLR jar.
+openjdk = ">=11"
+# Drives antlr/antlr.py.
+python = ">=3.10"
+
+[tasks]
+# Regenerate the committed ANTLR parser from the submodule grammar.
+gen-antlr = "python antlr/antlr.py"
+
+# Verify the committed ANTLR parser is in sync with the grammar (used in CI).
+check-codegen = "python antlr/antlr.py --ci-check"

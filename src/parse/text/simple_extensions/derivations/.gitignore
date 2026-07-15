@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# ANTLR scratch/cache directory, emitted by some IDE plugins.
+.antlr
