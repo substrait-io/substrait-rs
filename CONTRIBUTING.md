@@ -55,25 +55,15 @@ In environments where no `protoc` is available the `protoc` feature can be enabl
 cargo build --features protoc
 ```
 
-### Substrait submodule
+### Packaged Substrait crates
 
-There is a git submodule for [Substrait](https://github.com/substrait-io/substrait) that must be cloned when building from source.
+The generated Substrait types come from the packaged [`substrait-prost`](https://crates.io/crates/substrait-prost) and [`substrait-extensions`](https://crates.io/crates/substrait-extensions) crates, which are versioned to track the Substrait spec tag. They are pinned to an exact version in [Cargo.toml](Cargo.toml) and must always be bumped in lockstep (they share the same version). The Substrait version reported by [`substrait::version`](src/version.rs) is derived from the `substrait-prost` pin in [build.rs](build.rs), so no git submodule is needed to build from source.
 
-```shell
-git clone --recurse-submodules git@github.com:substrait-io/substrait-rs.git
-```
+#### Substrait version bumps and semver
 
-When the Substrait version is bumped make sure to update your local submodule.
+Substrait version bumps (raising the `substrait-prost`/`substrait-extensions` pin) are handled automatically by Dependabot (see [dependabot.yml](.github/dependabot.yml)), which groups both crates into a single PR. Because a spec bump can change generated types, treat these as potentially breaking: mark the commit with a `!` (e.g. `feat(deps,substrait)!:`), which causes release-plz to do a minor version bump (major post-1.0).
 
-```shell
-git submodule update
-```
-
-#### Substrait submodule bumps and semver
-
-Substrait proto bumps are handled automatically by Dependabot (see [dependabot.yml](.github/dependabot.yml)). These are always marked as breaking changes via the `feat(deps,substrait)!:` commit prefix, which causes release-plz to do a minor version bump (major post-1.0).
-
-If you need to bump the submodule manually and believe the change is non-breaking, you can omit the `!` marker. `cargo-semver-checks` runs as part of the release workflow and may catch breaking API changes, but it does not cover all possible semver violations. When in doubt, mark the change as breaking.
+If you believe a bump is non-breaking, you can omit the `!` marker. `cargo-semver-checks` runs as part of the release workflow and may catch breaking API changes, but it does not cover all possible semver violations. When in doubt, mark the change as breaking.
 
 Formatting, lints and tests are checked in the [Test](.github/workflows/test.yml) workflow.
 

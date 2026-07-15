@@ -3,7 +3,7 @@
 name = "substrait"
 version = "0.63.0"
 edition = "2024"
-rust-version = "1.85.1"
+rust-version = "1.88"
 description = "Cross-Language Serialization for Relational Algebra"
 documentation = "https://docs.rs/substrait"
 readme = "README.md"
@@ -11,37 +11,33 @@ homepage = "https://substrait.io"
 repository = "https://github.com/substrait-io/substrait-rs"
 license = "Apache-2.0"
 keywords = ["substrait"]
+# Only build.rs (which derives the Substrait version from the `substrait-prost`
+# pin) and the Rust sources are shipped; the generated types come from the
+# `substrait-prost` and `substrait-extensions` dependencies.
 build = "build.rs"
 include = [
     "LICENSE",
     "build.rs",
-    "gen/",
     "src/**/*.rs",
-    "substrait/LICENSE",
-    "substrait/README.md",
-    "substrait/extensions/**/*.yaml",
-    "substrait/proto/**/*.proto",
-    "substrait/text/**/*.yaml",
 ]
 
 [features]
 default = []
-embed-descriptor = []
+embed-descriptor = ["substrait-prost/embed-descriptor"]
 extensions = ["dep:serde_yaml"]
 parse = ["dep:hex", "dep:thiserror", "dep:serde_yaml", "semver"]
-protoc = ["dep:protobuf-src"]
+protoc = ["substrait-prost/protoc"]
 semver = ["dep:semver"]
-serde = ["dep:pbjson", "dep:pbjson-build", "dep:pbjson-types"]
+serde = ["substrait-prost/serde"]
 
 [dependencies]
+# Generated Substrait types, packaged from the spec. Pinned to an exact version
+# so the reported Substrait version (derived from this pin in build.rs) is
+# unambiguous. Both track the same spec tag and are bumped together.
+substrait-prost = "=0.87.0-alpha.4"
+substrait-extensions = "=0.87.0-alpha.4"
 hex = { version = "0.4.3", optional = true }
-pbjson = { version = "0.8.0", optional = true }
-pbjson-types = { version = "0.8.0", optional = true }
 prost = "0.14.1"
-prost-types = "0.14.1"
-# Required by generated text schemas: the typify-generated code emits
-# ::regress::Regex for `pattern` validations.
-regress = "0.10.4"
 semver = { version = "1.0.27", optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.145", features = ["preserve_order"] }
@@ -49,18 +45,15 @@ serde_yaml = { version = "0.9.34", optional = true }
 thiserror = { version = "2.0.17", optional = true }
 indexmap = { version = "2.7.0", features = ["serde"] }
 
+[dev-dependencies]
+# Only used by the `embed-descriptor` reflection test.
+prost-types = "0.14.1"
+
 [build-dependencies]
-heck = "0.5.0"
-pbjson-build = { version = "0.8.0", optional = true }
-prettyplease = "0.2.37"
-prost-build = { version = "0.14.1", default-features = false }
-protobuf-src = { version = "2.1.1", optional = true }
-schemars = "0.8.22"
+# Parse the exact `substrait-prost` version pin out of Cargo.toml to derive the
+# Substrait version constants.
 semver = "1.0.27"
-serde_yaml = "0.9.34"
-syn = "2.0.111"
-typify = "0.5.0"
-walkdir = "2.5.0"
+toml = "0.8.19"
 
 [package.metadata.docs.rs]
 all-features = true
