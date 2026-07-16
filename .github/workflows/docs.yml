@@ -22,7 +22,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          submodules: recursive
       - uses: dtolnay/rust-toolchain@nightly
         id: rust-toolchain
       - uses: dtolnay/install@cargo-docs-rs

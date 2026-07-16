@@ -10,11 +10,17 @@ updates:
     commit-message:
       prefix: "chore(deps,cargo)"
     groups:
+      # The packaged Substrait crates track the spec version and must be bumped
+      # in lockstep (they share an exact version pin). A bump corresponds to a
+      # Substrait version change; see the semver policy in CONTRIBUTING.md.
+      substrait:
+        applies-to: version-updates
+        patterns:
+          - "substrait-*"
       proto:
         applies-to: version-updates
         patterns:
           - "prost*"
-          - "pbjson*"
       cargo:
         applies-to: version-updates
         patterns:
@@ -28,14 +34,3 @@ updates:
       prefix: "chore(deps,github-actions)"
     ignore:
       - dependency-name: "dtolnay/rust-toolchain"
-
-  - package-ecosystem: "gitsubmodule"
-    directory: "/"
-    schedule:
-      # 4 hours after the weekly Substrait release cron job
-      # https://github.com/substrait-io/substrait/blob/90fce6a582c1009435d26b63083486ac1eed5906/.github/workflows/release.yml#L1-L6
-      interval: "weekly"
-      day: "sunday"
-      time: "06:00"
-    commit-message:
-      prefix: "feat(deps,substrait)!:"
