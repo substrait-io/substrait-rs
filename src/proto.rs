@@ -6,6 +6,7 @@
     clippy::needless_borrow,
     clippy::needless_borrows_for_generic_args,
     clippy::needless_lifetimes,
+    clippy::useless_borrows_in_formatting,
     rustdoc::invalid_html_tags
 )]
 
