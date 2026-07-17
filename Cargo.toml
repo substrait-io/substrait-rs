@@ -41,7 +41,7 @@ prost = "0.14.1"
 prost-types = "0.14.1"
 # Required by generated text schemas: the typify-generated code emits
 # ::regress::Regex for `pattern` validations.
-regress = "0.10.4"
+regress = "0.11.1"
 semver = { version = "1.0.27", optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.145", features = ["preserve_order"] }
@@ -59,7 +59,7 @@ schemars = "0.8.22"
 semver = "1.0.27"
 serde_yaml = "0.9.34"
 syn = "2.0.111"
-typify = "0.5.0"
+typify = "0.7.0"
 walkdir = "2.5.0"
 
 [package.metadata.docs.rs]
