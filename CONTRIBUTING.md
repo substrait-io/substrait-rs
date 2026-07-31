@@ -57,7 +57,7 @@ cargo build --features protoc
 
 ### Packaged Substrait crates
 
-The generated Substrait types come from the packaged [`substrait-prost`](https://crates.io/crates/substrait-prost) and [`substrait-extensions`](https://crates.io/crates/substrait-extensions) crates, which are versioned to track the Substrait spec tag. They are pinned to an exact version in [Cargo.toml](Cargo.toml) and must always be bumped in lockstep (they share the same version). The Substrait version reported by [`substrait::version`](src/version.rs) is derived from the `substrait-prost` pin in [build.rs](build.rs), so no git submodule is needed to build from source.
+The generated Substrait types come from the [`substrait-prost`](https://crates.io/crates/substrait-prost) and [`substrait-extensions`](https://crates.io/crates/substrait-extensions) crates, which are versioned to track the Substrait spec tag. They are pinned to an exact version in [Cargo.toml](Cargo.toml) and must always be bumped in lockstep (they share the same version). The Substrait version reported by [`substrait::version`](src/version.rs) is derived from the `substrait-prost` pin in [build.rs](build.rs).
 
 #### Substrait version bumps and semver
 
