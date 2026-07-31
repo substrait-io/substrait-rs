@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.64.0](https://github.com/substrait-io/substrait-rs/compare/v0.63.0...v0.64.0) - 2026-07-31
+
+### Added
+
+- [**breaking**] use packaged substrait-prost and substrait-extensions crates ([#507](https://github.com/substrait-io/substrait-rs/pull/507))
+
+### Other
+
+- fix clippy and rustdoc CI failures on newer toolchains ([#506](https://github.com/substrait-io/substrait-rs/pull/506))
+
 ## [0.63.0](https://github.com/substrait-io/substrait-rs/compare/v0.62.2...v0.63.0) - 2026-03-11
 
 ### Added
