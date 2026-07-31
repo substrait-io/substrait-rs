@@ -615,6 +615,8 @@ impl From<CustomType> for SimpleExtensionsTypesItem {
             parameters,
             structure,
             variadic: value.variadic,
+            // Not tracked by `CustomType`; default to no deprecation.
+            deprecated: None,
         }
     }
 }
@@ -1671,6 +1673,7 @@ mod tests {
             (
                 "alias",
                 simple_extensions::SimpleExtensionsTypesItem {
+                    deprecated: None,
                     name: "Alias".to_string(),
                     description: Some("Alias type".to_string()),
                     metadata: Default::default(),
@@ -1685,6 +1688,7 @@ mod tests {
             (
                 "named_struct",
                 simple_extensions::SimpleExtensionsTypesItem {
+                    deprecated: None,
                     name: "Point".to_string(),
                     description: Some("A 2D point".to_string()),
                     metadata: Default::default(),
@@ -1711,6 +1715,7 @@ mod tests {
             (
                 "no_structure",
                 simple_extensions::SimpleExtensionsTypesItem {
+                    deprecated: None,
                     name: "Opaque".to_string(),
                     description: None,
                     metadata: Default::default(),

@@ -30,11 +30,11 @@ impl ExtensionFile {
     pub fn create(extensions: RawExtensions) -> Result<Self, SimpleExtensionsError> {
         // Parse all types (may contain unresolved Extension(String) references)
         let mut ctx = TypeContext::default();
-        let (urn, extension) = Parse::parse(extensions, &mut ctx)?;
+        let file = Parse::parse(extensions, &mut ctx)?;
 
         // TODO: Use ctx.known/ctx.linked to validate unresolved references and cross-file links.
 
-        Ok(Self { urn, extension })
+        Ok(file)
     }
 
     /// Get a type by name
@@ -60,14 +60,13 @@ impl ExtensionFile {
     /// Convert the parsed extension file back into the raw text representation
     /// by value.
     pub fn into_raw(self) -> RawExtensions {
-        let ExtensionFile { urn, extension } = self;
-        RawExtensions::from((urn, extension))
+        self.into()
     }
 
     /// Convert the parsed extension file back into the raw text representation
     /// by reference.
     pub fn to_raw(&self) -> RawExtensions {
-        RawExtensions::from((self.urn.clone(), self.extension.clone()))
+        super::extensions::to_raw_extensions(self.urn.clone(), self.extension.clone())
     }
 
     /// Read an extension file from a reader.
@@ -83,6 +82,13 @@ impl ExtensionFile {
     pub fn read_from_str<S: AsRef<str>>(s: S) -> Result<Self, SimpleExtensionsError> {
         let raw: RawExtensions = serde_yaml::from_str(s.as_ref())?;
         Self::create(raw)
+    }
+}
+
+impl From<ExtensionFile> for RawExtensions {
+    fn from(file: ExtensionFile) -> Self {
+        let ExtensionFile { urn, extension } = file;
+        super::extensions::to_raw_extensions(urn, extension)
     }
 }
 

@@ -274,10 +274,10 @@ impl TryFrom<RawVariadicBehavior> for VariadicBehavior {
             .unwrap_or(0);
         let max = raw.max.map(|v| parse_bound(v, "max")).transpose()?;
 
-        if let Some(max_val) = max {
-            if min > max_val {
-                return Err(ScalarFunctionError::VariadicMinGreaterThanMax { min, max: max_val });
-            }
+        if let Some(max_val) = max
+            && min > max_val
+        {
+            return Err(ScalarFunctionError::VariadicMinGreaterThanMax { min, max: max_val });
         }
 
         Ok(VariadicBehavior {
@@ -381,6 +381,7 @@ mod tests {
         use crate::text::simple_extensions::ScalarFunction as RawScalarFunction;
 
         let raw = RawScalarFunction {
+            deprecated: None,
             name: "empty_function".to_string(),
             description: None,
             metadata: Default::default(),
@@ -404,11 +405,14 @@ mod tests {
         };
 
         let raw = RawScalarFunction {
+            deprecated: None,
             name: "add".to_string(),
             description: Some("Addition function".to_string()),
             metadata: Default::default(),
             impls: vec![ScalarFunctionImplsItem {
                 args: None,
+                deprecated: None,
+                description: None,
                 options: None,
                 variadic: None,
                 session_dependent: None,

@@ -1,36 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(
-    clippy::doc_overindented_list_items,
-    clippy::large_enum_variant,
-    clippy::needless_borrow,
-    clippy::needless_borrows_for_generic_args,
-    clippy::needless_lifetimes,
-    clippy::useless_borrows_in_formatting,
-    rustdoc::invalid_html_tags
-)]
-
 //! Generated types for the protobuf `substrait` package.
+//!
+//! These types are provided by the [`substrait-prost`](https://docs.rs/substrait-prost)
+//! crate and re-exported here. This includes the [`extensions`] submodule and,
+//! with the `embed-descriptor` feature, the `FILE_DESCRIPTOR_SET` constant.
 
-/// Generated types for the protobuf `substrait.extensions` package
-pub mod extensions {
-    include!(concat!(env!("OUT_DIR"), "/substrait.extensions.rs"));
-
-    #[cfg(feature = "serde")]
-    include!(concat!(env!("OUT_DIR"), "/substrait.extensions.serde.rs"));
-}
-
-include!(concat!(env!("OUT_DIR"), "/substrait.rs"));
-
-#[cfg(feature = "serde")]
-include!(concat!(env!("OUT_DIR"), "/substrait.serde.rs"));
-
-/// The encoded file descriptor set for the Substrait protobuf definitions.
-///
-/// This can be used for protobuf reflection.
-#[cfg(feature = "embed-descriptor")]
-pub const FILE_DESCRIPTOR_SET: &[u8] =
-    include_bytes!(concat!(env!("OUT_DIR"), "/proto_descriptor.bin"));
+pub use substrait_prost::*;
 
 #[cfg(test)]
 mod tests {

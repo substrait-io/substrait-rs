@@ -113,6 +113,7 @@ mod tests {
             .iter()
             .map(|name| SimpleExtensionsTypesItem {
                 name: (*name).to_string(),
+                deprecated: None,
                 description: None,
                 metadata: Default::default(),
                 parameters: None,
@@ -217,8 +218,11 @@ mod tests {
                 name: "bad_function".to_string(),
                 description: None,
                 metadata: Default::default(),
+                deprecated: None,
                 impls: vec![simple_extensions::ScalarFunctionImplsItem {
                     args: None,
+                    deprecated: None,
+                    description: None,
                     options: None,
                     variadic: None,
                     session_dependent: None,
@@ -269,8 +273,11 @@ mod tests {
                 name: function_name.to_string(),
                 description: None,
                 metadata: Default::default(),
+                deprecated: None,
                 impls: vec![simple_extensions::ScalarFunctionImplsItem {
                     args: None,
+                    deprecated: None,
+                    description: None,
                     options: None,
                     variadic: None,
                     session_dependent: None,
@@ -291,6 +298,7 @@ mod tests {
                 .into_iter()
                 .map(|name| SimpleExtensionsTypesItem {
                     name: name.to_string(),
+                    deprecated: None,
                     description: None,
                     metadata: Default::default(),
                     parameters: None,
