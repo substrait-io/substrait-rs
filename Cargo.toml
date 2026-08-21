@@ -34,8 +34,8 @@ serde = ["substrait-prost/serde"]
 # Generated Substrait types, packaged from the spec. Pinned to an exact version
 # so the reported Substrait version (derived from this pin in build.rs) is
 # unambiguous. Both track the same spec tag and are bumped together.
-substrait-prost = "=0.87.0"
-substrait-extensions = "=0.87.0"
+substrait-prost = "=0.101.0"
+substrait-extensions = "=0.101.0"
 hex = { version = "0.4.3", optional = true }
 prost = "0.14.1"
 semver = { version = "1.0.27", optional = true }
