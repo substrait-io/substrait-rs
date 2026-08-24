@@ -10,7 +10,7 @@ const SUBSTRAIT_DEP: &str = "substrait-prost";
 /// [`SUBSTRAIT_DEP`] dependency in this crate's `Cargo.toml`.
 ///
 /// The packaged Substrait crates are versioned to track the spec tag (e.g.
-/// `substrait-prost 0.87.0` corresponds to Substrait `v0.87.0`), and we
+/// `substrait-prost x.y.z` corresponds to Substrait `vx.y.z`), and we
 /// pin them to an exact version, so the requirement in `Cargo.toml` equals the
 /// resolved version. `Cargo.toml` is always present at `CARGO_MANIFEST_DIR`
 /// (including when this crate is consumed as a dependency), which makes this
@@ -28,9 +28,9 @@ fn substrait_version() -> Result<semver::Version, Box<dyn Error>> {
         .and_then(toml::Value::as_table)
         .and_then(|deps| deps.get(SUBSTRAIT_DEP))
         .and_then(|dep| match dep {
-            // `substrait-prost = "=0.87.0"`
+            // `substrait-prost = "=x.y.z"`
             toml::Value::String(version) => Some(version.as_str()),
-            // `substrait-prost = { version = "=0.87.0", ... }`
+            // `substrait-prost = { version = "=x.y.z", ... }`
             toml::Value::Table(table) => table.get("version").and_then(toml::Value::as_str),
             _ => None,
         })
