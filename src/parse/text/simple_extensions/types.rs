@@ -18,7 +18,7 @@ use crate::text::simple_extensions::{
     TypeParamDefsItem, TypeParamDefsItemType,
 };
 use indexmap::IndexMap;
-use serde_json::{Map, Value};
+use serde_json::Value;
 use std::convert::TryFrom;
 use std::fmt;
 use std::ops::RangeInclusive;
@@ -884,14 +884,12 @@ impl fmt::Display for ConcreteType {
 impl From<ConcreteType> for RawType {
     fn from(val: ConcreteType) -> Self {
         match val.kind {
-            ConcreteTypeKind::NamedStruct { fields } => {
-                let map = Map::from_iter(
-                    fields
-                        .into_iter()
-                        .map(|(name, ty)| (name, serde_json::Value::String(ty.to_string()))),
-                );
-                RawType::Object(map)
-            }
+            ConcreteTypeKind::NamedStruct { fields } => RawType::Object(
+                fields
+                    .into_iter()
+                    .map(|(name, ty)| (name, serde_json::Value::String(ty.to_string())))
+                    .collect(),
+            ),
             _ => RawType::String(val.to_string()),
         }
     }
@@ -1175,13 +1173,12 @@ mod tests {
     /// Create a raw named struct (e.g. straight from YAML) from field name and
     /// type pairs
     fn raw_named_struct(fields: &[(&str, &str)]) -> RawType {
-        let map = Map::from_iter(
+        RawType::Object(
             fields
                 .iter()
-                .map(|(name, ty)| ((*name).into(), serde_json::Value::String((*ty).into()))),
-        );
-
-        RawType::Object(map)
+                .map(|(name, ty)| ((*name).into(), serde_json::Value::String((*ty).into())))
+                .collect(),
+        )
     }
 
     #[test]
@@ -1472,11 +1469,12 @@ mod tests {
     /// round-tripping through RawType (Substrait #915).
     #[test]
     fn test_named_struct_field_order_stability() -> Result<(), ExtensionTypeError> {
-        let mut raw_fields = Map::new();
-        raw_fields.insert("beta".to_string(), Value::String("i32".to_string()));
-        raw_fields.insert("alpha".to_string(), Value::String("string?".to_string()));
-
-        let raw = RawType::Object(raw_fields);
+        let raw = RawType::Object(
+            [("beta", "i32"), ("alpha", "string?")]
+                .into_iter()
+                .map(|(name, ty)| (name.to_string(), Value::String(ty.to_string())))
+                .collect(),
+        );
         let mut ctx = TypeContext::default();
         let concrete = Parse::parse(raw, &mut ctx)?;
 
