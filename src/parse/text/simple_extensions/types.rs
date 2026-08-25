@@ -18,7 +18,7 @@ use crate::text::simple_extensions::{
     TypeParamDefsItem, TypeParamDefsItemType,
 };
 use indexmap::IndexMap;
-use serde_json::{Map, Value};
+use serde_json::Value;
 use std::convert::TryFrom;
 use std::fmt;
 use std::ops::RangeInclusive;
@@ -88,14 +88,8 @@ pub enum BasicBuiltinType {
     String,
     /// Variable-length binary data - `binary`
     Binary,
-    /// Naive Timestamp
-    Timestamp,
-    /// Timestamp with time zone - `timestamp_tz`
-    TimestampTz,
     /// Calendar date - `date`
     Date,
-    /// Time of day - `time`
-    Time,
     /// Year-month interval - `interval_year`
     IntervalYear,
     /// 128-bit UUID - `uuid`
@@ -182,10 +176,7 @@ impl fmt::Display for BasicBuiltinType {
             BasicBuiltinType::Fp64 => f.write_str("fp64"),
             BasicBuiltinType::String => f.write_str("string"),
             BasicBuiltinType::Binary => f.write_str("binary"),
-            BasicBuiltinType::Timestamp => f.write_str("timestamp"),
-            BasicBuiltinType::TimestampTz => f.write_str("timestamp_tz"),
             BasicBuiltinType::Date => f.write_str("date"),
-            BasicBuiltinType::Time => f.write_str("time"),
             BasicBuiltinType::IntervalYear => f.write_str("interval_year"),
             BasicBuiltinType::Uuid => f.write_str("uuid"),
             BasicBuiltinType::FixedChar { length } => write!(f, "FIXEDCHAR<{length}>"),
@@ -243,10 +234,7 @@ fn primitive_builtin(lower_name: &str) -> Option<BasicBuiltinType> {
         "fp64" => Some(BasicBuiltinType::Fp64),
         "string" => Some(BasicBuiltinType::String),
         "binary" => Some(BasicBuiltinType::Binary),
-        "timestamp" => Some(BasicBuiltinType::Timestamp),
-        "timestamp_tz" => Some(BasicBuiltinType::TimestampTz),
         "date" => Some(BasicBuiltinType::Date),
-        "time" => Some(BasicBuiltinType::Time),
         "interval_year" => Some(BasicBuiltinType::IntervalYear),
         "uuid" => Some(BasicBuiltinType::Uuid),
         _ => None,
@@ -884,14 +872,12 @@ impl fmt::Display for ConcreteType {
 impl From<ConcreteType> for RawType {
     fn from(val: ConcreteType) -> Self {
         match val.kind {
-            ConcreteTypeKind::NamedStruct { fields } => {
-                let map = Map::from_iter(
-                    fields
-                        .into_iter()
-                        .map(|(name, ty)| (name, serde_json::Value::String(ty.to_string()))),
-                );
-                RawType::Object(map)
-            }
+            ConcreteTypeKind::NamedStruct { fields } => RawType::Object(
+                fields
+                    .into_iter()
+                    .map(|(name, ty)| (name, serde_json::Value::String(ty.to_string())))
+                    .collect(),
+            ),
             _ => RawType::String(val.to_string()),
         }
     }
@@ -1175,13 +1161,12 @@ mod tests {
     /// Create a raw named struct (e.g. straight from YAML) from field name and
     /// type pairs
     fn raw_named_struct(fields: &[(&str, &str)]) -> RawType {
-        let map = Map::from_iter(
+        RawType::Object(
             fields
                 .iter()
-                .map(|(name, ty)| ((*name).into(), serde_json::Value::String((*ty).into()))),
-        );
-
-        RawType::Object(map)
+                .map(|(name, ty)| ((*name).into(), serde_json::Value::String((*ty).into())))
+                .collect(),
+        )
     }
 
     #[test]
@@ -1199,9 +1184,6 @@ mod tests {
             ("uuid", Some(BasicBuiltinType::Uuid)),
             ("date", Some(BasicBuiltinType::Date)),
             ("interval_year", Some(BasicBuiltinType::IntervalYear)),
-            ("time", Some(BasicBuiltinType::Time)),
-            ("timestamp", Some(BasicBuiltinType::Timestamp)),
-            ("timestamp_tz", Some(BasicBuiltinType::TimestampTz)),
             ("invalid", None),
         ];
 
@@ -1472,11 +1454,12 @@ mod tests {
     /// round-tripping through RawType (Substrait #915).
     #[test]
     fn test_named_struct_field_order_stability() -> Result<(), ExtensionTypeError> {
-        let mut raw_fields = Map::new();
-        raw_fields.insert("beta".to_string(), Value::String("i32".to_string()));
-        raw_fields.insert("alpha".to_string(), Value::String("string?".to_string()));
-
-        let raw = RawType::Object(raw_fields);
+        let raw = RawType::Object(
+            [("beta", "i32"), ("alpha", "string?")]
+                .into_iter()
+                .map(|(name, ty)| (name.to_string(), Value::String(ty.to_string())))
+                .collect(),
+        );
         let mut ctx = TypeContext::default();
         let concrete = Parse::parse(raw, &mut ctx)?;
 

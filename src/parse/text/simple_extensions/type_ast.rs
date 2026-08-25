@@ -178,12 +178,12 @@ mod tests {
             ("i32", TypeExpr::Simple("i32", vec![], false)),
             ("i32?", TypeExpr::Simple("i32", vec![], true)),
             ("MAP", TypeExpr::Simple("MAP", vec![], false)),
-            ("timestamp", TypeExpr::Simple("timestamp", vec![], false)),
+            ("date", TypeExpr::Simple("date", vec![], false)),
             (
-                "timestamp_tz?",
-                TypeExpr::Simple("timestamp_tz", vec![], true),
+                "interval_year?",
+                TypeExpr::Simple("interval_year", vec![], true),
             ),
-            ("time", TypeExpr::Simple("time", vec![], false)),
+            ("uuid", TypeExpr::Simple("uuid", vec![], false)),
             ("any", TypeExpr::Simple("any", vec![], false)),
         ];
 

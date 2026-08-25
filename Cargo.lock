@@ -557,7 +557,6 @@ version = "1.0.151"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c841b55ecdae098c80dcae9cf767f6f8a0c2cdb3416bbef72181df4d0fe73f14"
 dependencies = [
- "indexmap 2.14.0",
  "itoa",
  "memchr",
  "serde",
@@ -619,9 +618,9 @@ dependencies = [
 
 [[package]]
 name = "substrait-extensions"
-version = "0.87.0"
+version = "0.102.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73dfa39674c1af4b7951dc7a5c353c8be24593b395faac61ca82594a27b0cc44"
+checksum = "d33afcbcf85005f788199c2de7983caef24d858c6909391208f8aad2516db46d"
 dependencies = [
  "heck",
  "include_dir",
@@ -639,9 +638,9 @@ dependencies = [
 
 [[package]]
 name = "substrait-prost"
-version = "0.87.0"
+version = "0.102.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5aba90370eb71dc6e439c92f0e82c86afe44a42842b4d113a92693775a856f76"
+checksum = "ee6b74c488901400ff424a98b3505a105dd041de1aa9c355dad9f7f6115b4521"
 dependencies = [
  "pbjson",
  "pbjson-build",
