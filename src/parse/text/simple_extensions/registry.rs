@@ -50,9 +50,6 @@ impl Registry {
     }
 
     /// Create a Global Registry from the built-in core extensions.
-    ///
-    /// Most core extensions are included. Some are skipped due to bugs in the upstream
-    /// YAML files (see <https://github.com/substrait-io/substrait/issues/935>).
     #[cfg(feature = "extensions")]
     pub fn from_core_extensions() -> Self {
         use crate::extensions::EXTENSIONS;
@@ -60,20 +57,11 @@ impl Registry {
         // Parse the core extensions from the raw extensions format to the parsed format
         let extensions: HashMap<Urn, SimpleExtensions> = EXTENSIONS
             .iter()
-            .filter_map(|(orig_urn, simple_extensions)| {
-                // Skip specific core extensions that have bugs (missing u! prefix on type references).
-                // Most core extensions are included; only these problematic ones are filtered out.
-                // See: https://github.com/substrait-io/substrait/issues/935
-                let urn_str = orig_urn.to_string();
-                if urn_str == "extension:io.substrait:extension_types" ||
-                   urn_str == "extension:io.substrait:unknown" {
-                    return None;
-                }
-
+            .map(|(orig_urn, simple_extensions)| {
                 let ExtensionFile { urn, extension } = ExtensionFile::create(simple_extensions.clone())
                     .unwrap_or_else(|err| panic!("Core extensions should be valid, but failed to create extension file for {orig_urn}: {err}"));
                 debug_assert_eq!(orig_urn, &urn);
-                Some((urn, extension))
+                (urn, extension)
             })
             .collect();
 
@@ -200,11 +188,12 @@ mod tests {
         let type_via_registry = registry.get_type(&urn, "geometry");
         assert!(type_via_registry.is_some());
 
-        // Verify extension_types is skipped due to u! prefix bug (substrait#935)
-        let extension_types_urn = Urn::from_str("extension:io.substrait:extension_types").unwrap();
+        // `unsigned_integers` was added to the catalog in Substrait v0.101.0.
+        let unsigned_integers_urn =
+            Urn::from_str("extension:io.substrait:unsigned_integers").unwrap();
         assert!(
-            registry.get_extension(&extension_types_urn).is_none(),
-            "extension_types should be skipped due to missing u! prefix bug"
+            registry.get_extension(&unsigned_integers_urn).is_some(),
+            "unsigned_integers should be a core extension"
         );
     }
 
