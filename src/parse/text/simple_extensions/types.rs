@@ -88,14 +88,8 @@ pub enum BasicBuiltinType {
     String,
     /// Variable-length binary data - `binary`
     Binary,
-    /// Naive Timestamp
-    Timestamp,
-    /// Timestamp with time zone - `timestamp_tz`
-    TimestampTz,
     /// Calendar date - `date`
     Date,
-    /// Time of day - `time`
-    Time,
     /// Year-month interval - `interval_year`
     IntervalYear,
     /// 128-bit UUID - `uuid`
@@ -182,10 +176,7 @@ impl fmt::Display for BasicBuiltinType {
             BasicBuiltinType::Fp64 => f.write_str("fp64"),
             BasicBuiltinType::String => f.write_str("string"),
             BasicBuiltinType::Binary => f.write_str("binary"),
-            BasicBuiltinType::Timestamp => f.write_str("timestamp"),
-            BasicBuiltinType::TimestampTz => f.write_str("timestamp_tz"),
             BasicBuiltinType::Date => f.write_str("date"),
-            BasicBuiltinType::Time => f.write_str("time"),
             BasicBuiltinType::IntervalYear => f.write_str("interval_year"),
             BasicBuiltinType::Uuid => f.write_str("uuid"),
             BasicBuiltinType::FixedChar { length } => write!(f, "FIXEDCHAR<{length}>"),
@@ -243,10 +234,7 @@ fn primitive_builtin(lower_name: &str) -> Option<BasicBuiltinType> {
         "fp64" => Some(BasicBuiltinType::Fp64),
         "string" => Some(BasicBuiltinType::String),
         "binary" => Some(BasicBuiltinType::Binary),
-        "timestamp" => Some(BasicBuiltinType::Timestamp),
-        "timestamp_tz" => Some(BasicBuiltinType::TimestampTz),
         "date" => Some(BasicBuiltinType::Date),
-        "time" => Some(BasicBuiltinType::Time),
         "interval_year" => Some(BasicBuiltinType::IntervalYear),
         "uuid" => Some(BasicBuiltinType::Uuid),
         _ => None,
@@ -1196,9 +1184,6 @@ mod tests {
             ("uuid", Some(BasicBuiltinType::Uuid)),
             ("date", Some(BasicBuiltinType::Date)),
             ("interval_year", Some(BasicBuiltinType::IntervalYear)),
-            ("time", Some(BasicBuiltinType::Time)),
-            ("timestamp", Some(BasicBuiltinType::Timestamp)),
-            ("timestamp_tz", Some(BasicBuiltinType::TimestampTz)),
             ("invalid", None),
         ];
 
