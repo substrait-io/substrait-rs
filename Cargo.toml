@@ -40,7 +40,11 @@ hex = { version = "0.4.3", optional = true }
 prost = "0.14.1"
 semver = { version = "1.0.27", optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = { version = "1.0.145", features = ["preserve_order"] }
+# `preserve_order` is deliberately not enabled: it is a global feature, so
+# turning it on here would switch `serde_json::Map` to `indexmap::IndexMap`
+# for every crate in a downstream build with no way to opt out. Maps whose
+# order is significant use `indexmap` directly instead.
+serde_json = "1.0.145"
 serde_yaml = { version = "0.9.34", optional = true }
 thiserror = { version = "2.0.17", optional = true }
 indexmap = { version = "2.7.0", features = ["serde"] }
