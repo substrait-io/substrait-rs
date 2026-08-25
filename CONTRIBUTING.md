@@ -49,7 +49,13 @@ Substrait requires all contributors to sign the [Contributor License Agreement (
 - [Rust](https://rustup.rs)
 - [protoc (>=3.15)](https://github.com/protocolbuffers/protobuf/releases)
 
-In environments where no `protoc` is available the `protoc` feature can be enabled to build `protoc` from source:
+In environments where no `protoc` is available the `protox` feature can be enabled to compile the `.proto` files with [`protox`](https://docs.rs/protox), a pure-Rust protobuf compiler:
+
+```shell
+cargo build --features protox
+```
+
+Alternatively the `protoc` feature builds `protoc` from source:
 
 ```shell
 cargo build --features protoc
