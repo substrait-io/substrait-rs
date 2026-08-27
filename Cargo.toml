@@ -27,6 +27,7 @@ embed-descriptor = ["substrait-prost/embed-descriptor"]
 extensions = ["dep:serde_yaml"]
 parse = ["dep:hex", "dep:thiserror", "dep:serde_yaml", "semver"]
 protoc = ["substrait-prost/protoc"]
+protox = ["substrait-prost/protox"]
 semver = ["dep:semver"]
 serde = ["substrait-prost/serde"]
 
