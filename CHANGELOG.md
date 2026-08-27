@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.0](https://github.com/substrait-io/substrait-rs/compare/v0.64.1...v0.65.0) - 2026-08-27
+
+### Added
+
+- add a `protox` feature to allow building without a `protoc` binary ([#532](https://github.com/substrait-io/substrait-rs/pull/532))
+- *(deps,substrait)* [**breaking**] bump substrait from `0.87.0` to `0.102.0` ([#531](https://github.com/substrait-io/substrait-rs/pull/531))
+
 ## [0.64.1](https://github.com/substrait-io/substrait-rs/compare/v0.64.0...v0.64.1) - 2026-07-31
 
 ### Other
