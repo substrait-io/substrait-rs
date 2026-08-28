@@ -47,6 +47,11 @@ pub enum TypeExprParam<'a> {
     Type(TypeExpr<'a>),
     /// An integer literal parameter
     Integer(i64),
+    /// A named parameter reference (e.g., `P`, `S` in `DECIMAL<P, S>`)
+    ///
+    /// These are used in function signatures to indicate that the actual
+    /// parameter value is determined at call time based on input types.
+    ParameterName(&'a str),
 }
 
 #[derive(Debug, PartialEq, thiserror::Error)]
@@ -158,10 +163,97 @@ fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError
 }
 
 fn parse_param<'a>(s: &'a str) -> Result<TypeExprParam<'a>, TypeParseError> {
+    // Try to parse as integer literal first
     if let Ok(i) = s.parse::<i64>() {
         return Ok(TypeExprParam::Integer(i));
     }
+
+    // Check if this looks like a simple parameter name (single identifier, not a type)
+    // Parameter names are typically short identifiers like P, S, L, N
+    // They don't contain '<', '>', '?', '!' or other type-related syntax
+    if is_parameter_name(s) {
+        return Ok(TypeExprParam::ParameterName(s));
+    }
+
+    // Otherwise parse as a nested type
     Ok(TypeExprParam::Type(TypeExpr::parse(s)?))
+}
+
+/// Check if a string looks like an integer parameter name (e.g., `P`, `S`, `L1`)
+/// rather than a type expression.
+///
+/// Integer parameter names are identifiers that:
+/// - Don't contain type syntax characters like `<`, `>`, `?`, `!`
+/// - Don't match known type names
+/// - Are NOT type variables (any1, any2, etc.)
+/// - Typically are short uppercase identifiers, but we accept any valid identifier
+fn is_parameter_name(s: &str) -> bool {
+    // Must not be empty
+    if s.is_empty() {
+        return false;
+    }
+
+    // Must not contain type syntax
+    if s.contains('<') || s.contains('>') || s.contains('?') || s.contains('!') {
+        return false;
+    }
+
+    // Check for type variables (any1, any2, etc.) - these are types, not integer parameters
+    if is_type_variable(s) {
+        return false;
+    }
+
+    // Must be a valid identifier (start with letter or _, followed by letters, digits, _)
+    let mut chars = s.chars();
+    let first = match chars.next() {
+        Some(c) => c,
+        None => return false,
+    };
+
+    if !first.is_ascii_alphabetic() && first != '_' {
+        return false;
+    }
+
+    // All subsequent characters must be alphanumeric or underscore
+    if !chars.all(|c| c.is_ascii_alphanumeric() || c == '_') {
+        return false;
+    }
+
+    // Check that it's NOT a known type name (those should be parsed as types)
+    let lower = s.to_ascii_lowercase();
+    !matches!(
+        lower.as_str(),
+        "bool"
+            | "boolean"
+            | "i8"
+            | "i16"
+            | "i32"
+            | "i64"
+            | "fp32"
+            | "fp64"
+            | "string"
+            | "binary"
+            | "timestamp"
+            | "timestamp_tz"
+            | "date"
+            | "time"
+            | "interval_year"
+            | "uuid"
+            | "list"
+            | "map"
+            | "struct"
+            | "any"
+    )
+}
+
+/// Check if a string is a type variable pattern (any1, any2, any1?, any2?, etc.)
+fn is_type_variable(s: &str) -> bool {
+    let s = s.strip_suffix('?').unwrap_or(s);
+    if let Some(suffix) = s.strip_prefix("any") {
+        suffix.parse::<u32>().is_ok()
+    } else {
+        false
+    }
 }
 
 #[cfg(test)]
@@ -271,6 +363,70 @@ mod tests {
                 Err(TypeParseError::UnsupportedVariation(s)) => assert_eq!(s, expr),
                 other => panic!("expected UnsupportedVariation for {expr}, got {other:?}"),
             }
+        }
+    }
+
+    #[test]
+    fn test_parameter_names() {
+        // Integer parameter names like P, S, L
+        let cases = vec![
+            (
+                "DECIMAL<P, S>",
+                TypeExpr::Simple(
+                    "DECIMAL",
+                    vec![
+                        TypeExprParam::ParameterName("P"),
+                        TypeExprParam::ParameterName("S"),
+                    ],
+                    false,
+                ),
+            ),
+            (
+                "fixedchar?<L>",
+                TypeExpr::Simple("fixedchar", vec![TypeExprParam::ParameterName("L")], true),
+            ),
+            (
+                "precision_timestamp_tz<P>",
+                TypeExpr::Simple(
+                    "precision_timestamp_tz",
+                    vec![TypeExprParam::ParameterName("P")],
+                    false,
+                ),
+            ),
+        ];
+
+        for (expr, expected) in cases {
+            assert_eq!(parse(expr), expected, "unexpected parse for {expr}");
+        }
+    }
+
+    #[test]
+    fn test_type_variable_in_container() {
+        // any1 inside a container should be parsed as a type variable, not a parameter name
+        let cases = vec![
+            (
+                "List<any1>",
+                TypeExpr::Simple(
+                    "List",
+                    vec![TypeExprParam::Type(TypeExpr::TypeVariable(1, false))],
+                    false,
+                ),
+            ),
+            (
+                "Map<any1, any2?>",
+                TypeExpr::Simple(
+                    "Map",
+                    vec![
+                        TypeExprParam::Type(TypeExpr::TypeVariable(1, false)),
+                        TypeExprParam::Type(TypeExpr::TypeVariable(2, true)),
+                    ],
+                    false,
+                ),
+            ),
+        ];
+
+        for (expr, expected) in cases {
+            assert_eq!(parse(expr), expected, "unexpected parse for {expr}");
         }
     }
 }
