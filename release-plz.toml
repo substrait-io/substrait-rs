@@ -1,6 +1,44 @@
 [workspace]
 release_always = false
 
+# Extends release-plz's default changelog body with a "Breaking changes" section
+# that renders the `BREAKING CHANGE:` footer of each breaking commit. The default
+# template only emits the `[**breaking**]` marker and the summary line, which
+# drops the migration detail authors write in the footer.
+#
+# Everything up to the `has_breaking_desc` block is release-plz's default body.
+# A commit is only listed if its `breaking_description` differs from its summary:
+# for a `feat!:` commit with no footer git-cliff falls back to the summary, and
+# repeating it would be noise.
+[changelog]
+body = """
+## [{{ version }}]{%- if release_link -%}({{ release_link }}){% endif %} - {{ timestamp | date(format="%Y-%m-%d") }}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+
+{% for commit in commits %}
+{%- if commit.scope -%}
+- *({{commit.scope}})* {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message }}{%- if commit.links %} ({% for link in commit.links %}[{{link.text}}]({{link.href}}) {% endfor -%}){% endif %}
+{% else -%}
+- {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message }}
+{% endif -%}
+{% endfor -%}
+{% endfor %}
+{%- set_global has_breaking_desc = false -%}
+{%- for commit in commits -%}
+{%- if commit.breaking and commit.breaking_description and commit.breaking_description != commit.message -%}
+{%- set_global has_breaking_desc = true -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if has_breaking_desc %}
+### ⚠ Breaking changes
+{% for commit in commits %}{% if commit.breaking and commit.breaking_description and commit.breaking_description != commit.message %}
+**{{ commit.message }}**
+
+{{ commit.breaking_description }}
+{% endif %}{% endfor %}
+{%- endif %}"""
+
 [[package]]
 name = "substrait"
 publish_allow_dirty = true
