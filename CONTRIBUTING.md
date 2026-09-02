@@ -30,7 +30,7 @@ Substrait follows the [Conventional Commits specification](https://www.conventio
 
 The `Conventional Commits` job of the [Pull Request](.github/workflows/pull-request.yml) workflow check the Pull Request title and body and the resulting merge commit message.
 
-Pull requests are squash-merged, and squash is the only merge method enabled: the **PR title becomes the commit subject and the PR description becomes the commit body**, verbatim. Your local commit messages are discarded, so the description is the artifact to get right — and a trailer you did not type, such as a `Signed-off-by:` added by `git commit -s`, reaches history when the description is filled from a commit message (`gh pr create --fill`, or pasting) rather than written. [`.github/pull_request_template.md`](.github/pull_request_template.md) restates this where you write the description.
+Pull requests are squash-merged, and squash is the only merge method enabled: the **PR title becomes the commit subject and the PR description becomes the commit body**, verbatim. Your local commit messages are discarded, so the description is the artifact to get right — and a trailer you did not type, such as a `Signed-off-by:` added by `git commit -s`, reaches history when the description is filled from a commit message (`gh pr create --fill`, or pasting) rather than written.
 
 From that message release-plz publishes the **subject** of every commit — it is the line that appears in [CHANGELOG.md](CHANGELOG.md) and in the GitHub release notes — and, for a breaking change, the footer described [below](#breaking-changes). The rest of the description is not published. So write a title that stands on its own, and leave out of the description anything the diff and the CI checks already show:
 

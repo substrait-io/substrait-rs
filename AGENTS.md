@@ -47,9 +47,7 @@ group owns those bumps.
   by `git commit -s`, or a `Co-authored-by:` added by agent tooling, ends up in the body
   without anyone typing it.
 - **Keep descriptions high-signal.** Follow
-  [`CONTRIBUTING.md`](CONTRIBUTING.md#pull-requests) rather than
-  [`.github/pull_request_template.md`](.github/pull_request_template.md), which a PR opened
-  with an explicitly supplied body never shows you. Beyond forming a valid conventional
+  [`CONTRIBUTING.md`](CONTRIBUTING.md#pull-requests). Beyond forming a valid conventional
   commit, leave out the noise agents tend to add:
   - **Lists of files touched** — they're in the diff.
   - **Claims that CI-verified things pass** — e.g. "tests pass", "clippy clean". If they
@@ -79,9 +77,6 @@ group owns those bumps.
   A few existing files do not — `LICENSE`, the release-plz-generated `CHANGELOG.md`,
   `Cargo.lock`, and `CONTRIBUTING.md` — so copy whatever a neighbouring file of the same kind
   does rather than assuming either way.
-  [`.github/pull_request_template.md`](.github/pull_request_template.md) deliberately has
-  none: its contents are prefilled into every PR description, and a header there would be
-  pasted into commit bodies.
 - **Non-Rust files are Prettier-formatted**, including Markdown and YAML. Install and run it
   as [`CONTRIBUTING.md`](CONTRIBUTING.md#prettier) describes — the `prettier-plugin-toml`
   dependency is what makes TOML formatting match CI, so `npx prettier` without it will not
