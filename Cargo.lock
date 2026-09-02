@@ -798,9 +798,9 @@ dependencies = [
 
 [[package]]
 name = "substrait-extensions"
-version = "0.102.0"
+version = "0.103.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d33afcbcf85005f788199c2de7983caef24d858c6909391208f8aad2516db46d"
+checksum = "d16e78916cb339821a66d25fba05e7d4996f4d04667b579bc4b7841e47660ce0"
 dependencies = [
  "heck",
  "include_dir",
@@ -818,9 +818,9 @@ dependencies = [
 
 [[package]]
 name = "substrait-prost"
-version = "0.102.0"
+version = "0.103.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee6b74c488901400ff424a98b3505a105dd041de1aa9c355dad9f7f6115b4521"
+checksum = "3b70ffd80a880d2fcc3b7ca99d3285491e3c231846d6cb280eafee7694d8edde"
 dependencies = [
  "pbjson",
  "pbjson-build",
