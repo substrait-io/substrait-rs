@@ -11,6 +11,9 @@ use crate::{
     text::simple_extensions,
 };
 
+use super::type_ast::{TypeExpr, TypeParseError};
+use super::types::{ExtensionTypeError, TypeExpression};
+
 /// A parsed [`simple_extensions::ArgumentsItem`].
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArgumentsItem {
@@ -88,6 +91,14 @@ pub enum ArgumentsItemError {
     /// Empty optional field.
     #[error("the optional field `{0}` is empty and should be removed")]
     EmptyOptionalField(String),
+
+    /// Error parsing type expression.
+    #[error("error parsing type: {0}")]
+    TypeParse(#[from] TypeParseError),
+
+    /// Error converting type expression.
+    #[error("error converting type: {0}")]
+    TypeConversion(#[from] ExtensionTypeError),
 }
 
 /// Arguments that support a fixed set of declared values as constant arguments.
@@ -238,10 +249,8 @@ pub struct ValueArg {
     /// Additional description for this argument.
     description: Option<String>,
 
-    /// A fully defined type or a type expression.
-    ///
-    /// TODO(#452): parse this to a typed representation once type variables are supported.
-    value: simple_extensions::Type,
+    /// A fully defined type or a type variable reference.
+    value: TypeExpression,
 
     /// Whether this argument is required to be a constant for invocation. For
     /// example, in some system a regular expression pattern would only be
@@ -264,6 +273,13 @@ impl ValueArg {
         self.description.as_ref()
     }
 
+    /// Returns the type expression (concrete type or type variable) of this argument.
+    ///
+    /// See [`simple_extensions::ValueArg::value`].
+    pub fn value(&self) -> &TypeExpression {
+        &self.value
+    }
+
     /// Returns the constant of this argument.
     /// Defaults to `false` if the underlying value is `None`.
     ///
@@ -279,10 +295,26 @@ impl<C: Context> Parse<C> for simple_extensions::ValueArg {
     type Error = ArgumentsItemError;
 
     fn parse(self, _ctx: &mut C) -> Result<ValueArg, ArgumentsItemError> {
+        // Parse the type string into a TypeExpression
+        let type_string = match &self.value {
+            simple_extensions::Type::String(s) => s.as_str(),
+            simple_extensions::Type::Object(_) => {
+                // Object form is not supported for value arguments
+                // (it's only used for structure definitions in types)
+                return Err(ArgumentsItemError::TypeParse(
+                    TypeParseError::UnsupportedVariation(
+                        "object form not supported for value arguments".to_string(),
+                    ),
+                ));
+            }
+        };
+        let parsed_type = TypeExpr::parse(type_string)?;
+        let value = TypeExpression::try_from(parsed_type)?;
+
         Ok(ValueArg {
             name: ArgumentsItem::parse_name(self.name)?,
             description: ArgumentsItem::parse_description(self.description)?,
-            value: self.value,
+            value,
             constant: self.constant,
         })
     }
@@ -293,7 +325,7 @@ impl From<ValueArg> for simple_extensions::ValueArg {
         simple_extensions::ValueArg {
             name: value.name,
             description: value.description,
-            value: value.value,
+            value: value.value.into(),
             constant: value.constant,
         }
     }
@@ -321,9 +353,7 @@ pub struct TypeArg {
     description: Option<String>,
 
     /// A partially or completely parameterized type. E.g. `List<K>` or `K`.
-    ///
-    /// TODO(#452): parse this to a typed representation once type variables are supported.
-    type_: String,
+    type_: TypeExpression,
 }
 
 impl TypeArg {
@@ -340,6 +370,13 @@ impl TypeArg {
     pub fn description(&self) -> Option<&String> {
         self.description.as_ref()
     }
+
+    /// Returns the type expression (concrete type or type variable) of this argument.
+    ///
+    /// See [`simple_extensions::TypeArg::type_`].
+    pub fn type_(&self) -> &TypeExpression {
+        &self.type_
+    }
 }
 
 impl<C: Context> Parse<C> for simple_extensions::TypeArg {
@@ -348,10 +385,13 @@ impl<C: Context> Parse<C> for simple_extensions::TypeArg {
     type Error = ArgumentsItemError;
 
     fn parse(self, _ctx: &mut C) -> Result<TypeArg, ArgumentsItemError> {
+        let parsed_type = TypeExpr::parse(&self.type_)?;
+        let type_ = TypeExpression::try_from(parsed_type)?;
+
         Ok(TypeArg {
             name: ArgumentsItem::parse_name(self.name)?,
             description: ArgumentsItem::parse_description(self.description)?,
-            type_: self.type_,
+            type_,
         })
     }
 }
@@ -361,7 +401,7 @@ impl From<TypeArg> for simple_extensions::TypeArg {
         simple_extensions::TypeArg {
             name: value.name,
             description: value.description,
-            type_: value.type_,
+            type_: value.type_.to_string(),
         }
     }
 }
@@ -381,6 +421,9 @@ impl From<TypeArg> for ArgumentsItem {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parse::text::simple_extensions::types::{
+        BasicBuiltinType, ConcreteType, ConcreteTypeKind,
+    };
     use crate::text::simple_extensions;
     use crate::{parse::Context, text};
 
@@ -467,10 +510,54 @@ mod tests {
             }) => {
                 assert_eq!(name, Some("arg".to_string()));
                 assert_eq!(description, Some("desc".to_string()));
-                assert!(
-                    matches!(value, text::simple_extensions::Type::String(type_) if type_ == "i32")
+                // Check that the value was parsed into a TypeExpression::Concrete(i32)
+                let concrete = value.as_concrete().expect("expected concrete type");
+                assert_eq!(
+                    concrete.kind,
+                    ConcreteTypeKind::Builtin(BasicBuiltinType::I32)
                 );
+                assert!(!concrete.nullable);
                 assert_eq!(constant, Some(true));
+            }
+            _ => unreachable!(),
+        };
+        Ok(())
+    }
+
+    #[test]
+    fn parse_value_argument_with_type_variable() -> Result<(), ArgumentsItemError> {
+        let item = simple_extensions::ArgumentsItem::ValueArg(simple_extensions::ValueArg {
+            name: Some("x".to_string()),
+            description: None,
+            value: text::simple_extensions::Type::String("any1".to_string()),
+            constant: None,
+        });
+        let item = item.parse(&mut TestContext)?;
+        match item {
+            ArgumentsItem::ValueArgument(ValueArg { value, .. }) => {
+                let var = value.as_variable().expect("expected type variable");
+                assert_eq!(var.id, 1);
+                assert!(!var.nullable);
+            }
+            _ => unreachable!(),
+        };
+        Ok(())
+    }
+
+    #[test]
+    fn parse_value_argument_with_nullable_type_variable() -> Result<(), ArgumentsItemError> {
+        let item = simple_extensions::ArgumentsItem::ValueArg(simple_extensions::ValueArg {
+            name: None,
+            description: None,
+            value: text::simple_extensions::Type::String("any2?".to_string()),
+            constant: None,
+        });
+        let item = item.parse(&mut TestContext)?;
+        match item {
+            ArgumentsItem::ValueArgument(ValueArg { value, .. }) => {
+                let var = value.as_variable().expect("expected type variable");
+                assert_eq!(var.id, 2);
+                assert!(var.nullable);
             }
             _ => unreachable!(),
         };
@@ -482,7 +569,7 @@ mod tests {
         let type_argument = simple_extensions::ArgumentsItem::TypeArg(simple_extensions::TypeArg {
             name: Some("arg".to_string()),
             description: Some("desc".to_string()),
-            type_: "".to_string(),
+            type_: "i64".to_string(),
         });
         let item = type_argument.parse(&mut TestContext)?;
         match item {
@@ -493,7 +580,30 @@ mod tests {
             }) => {
                 assert_eq!(name, Some("arg".to_string()));
                 assert_eq!(description, Some("desc".to_string()));
-                assert_eq!(type_, "");
+                let concrete = type_.as_concrete().expect("expected concrete type");
+                assert_eq!(
+                    concrete.kind,
+                    ConcreteTypeKind::Builtin(BasicBuiltinType::I64)
+                );
+            }
+            _ => unreachable!(),
+        };
+        Ok(())
+    }
+
+    #[test]
+    fn parse_type_argument_with_type_variable() -> Result<(), ArgumentsItemError> {
+        let type_argument = simple_extensions::ArgumentsItem::TypeArg(simple_extensions::TypeArg {
+            name: Some("T".to_string()),
+            description: None,
+            type_: "any1".to_string(),
+        });
+        let item = type_argument.parse(&mut TestContext)?;
+        match item {
+            ArgumentsItem::TypeArgument(TypeArg { type_, .. }) => {
+                let var = type_.as_variable().expect("expected type variable");
+                assert_eq!(var.id, 1);
+                assert!(!var.nullable);
             }
             _ => unreachable!(),
         };
@@ -517,7 +627,7 @@ mod tests {
             simple_extensions::ArgumentsItem::TypeArg(simple_extensions::TypeArg {
                 name: None,
                 description: None,
-                type_: "".to_string(),
+                type_: "string".to_string(),
             }),
         ];
 
@@ -566,7 +676,7 @@ mod tests {
             simple_extensions::ArgumentsItem::TypeArg(simple_extensions::TypeArg {
                 name: Some("".to_string()),
                 description: None,
-                type_: "".to_string(),
+                type_: "i32".to_string(),
             }),
         ];
         for item in items {
@@ -591,7 +701,7 @@ mod tests {
             simple_extensions::ArgumentsItem::TypeArg(simple_extensions::TypeArg {
                 name: None,
                 description: Some("".to_string()),
-                type_: "".to_string(),
+                type_: "i32".to_string(),
             }),
         ];
         for item in items {
@@ -637,7 +747,7 @@ mod tests {
         let item: ArgumentsItem = ValueArg {
             name: Some("arg".to_string()),
             description: Some("desc".to_string()),
-            value: text::simple_extensions::Type::String("".to_string()),
+            value: TypeExpression::concrete(ConcreteType::builtin(BasicBuiltinType::I32, false)),
             constant: Some(true),
         }
         .into();
@@ -653,9 +763,35 @@ mod tests {
                 assert_eq!(name, Some("arg".to_string()));
                 assert_eq!(description, Some("desc".to_string()));
                 assert!(
-                    matches!(value, text::simple_extensions::Type::String(type_) if type_.is_empty())
+                    matches!(value, text::simple_extensions::Type::String(type_) if type_ == "i32")
                 );
                 assert_eq!(constant, Some(true));
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn from_value_argument_with_type_variable() {
+        let item: ArgumentsItem = ValueArg {
+            name: Some("x".to_string()),
+            description: None,
+            value: TypeExpression::variable(1, true),
+            constant: None,
+        }
+        .into();
+
+        let item: text::simple_extensions::ArgumentsItem = item.into();
+        match item {
+            text::simple_extensions::ArgumentsItem::ValueArg(simple_extensions::ValueArg {
+                name,
+                value,
+                ..
+            }) => {
+                assert_eq!(name, Some("x".to_string()));
+                assert!(
+                    matches!(value, text::simple_extensions::Type::String(type_) if type_ == "any1?")
+                );
             }
             _ => unreachable!(),
         }
@@ -666,7 +802,7 @@ mod tests {
         let item: ArgumentsItem = TypeArg {
             name: Some("arg".to_string()),
             description: Some("desc".to_string()),
-            type_: "".to_string(),
+            type_: TypeExpression::concrete(ConcreteType::builtin(BasicBuiltinType::I64, false)),
         }
         .into();
 
@@ -679,7 +815,30 @@ mod tests {
             }) => {
                 assert_eq!(name, Some("arg".to_string()));
                 assert_eq!(description, Some("desc".to_string()));
-                assert_eq!(type_, "");
+                assert_eq!(type_, "i64");
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn from_type_argument_with_type_variable() {
+        let item: ArgumentsItem = TypeArg {
+            name: Some("T".to_string()),
+            description: None,
+            type_: TypeExpression::variable(2, false),
+        }
+        .into();
+
+        let item: text::simple_extensions::ArgumentsItem = item.into();
+        match item {
+            text::simple_extensions::ArgumentsItem::TypeArg(simple_extensions::TypeArg {
+                name,
+                type_,
+                ..
+            }) => {
+                assert_eq!(name, Some("T".to_string()));
+                assert_eq!(type_, "any2");
             }
             _ => unreachable!(),
         }
