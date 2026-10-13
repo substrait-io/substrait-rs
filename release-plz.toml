@@ -2,14 +2,18 @@
 release_always = false
 
 # Extends release-plz's default changelog body with a "Breaking changes" section
-# that renders the `BREAKING CHANGE:` footer of each breaking commit. The default
+# that renders every `BREAKING CHANGE:` footer of each commit. The default
 # template only emits the `[**breaking**]` marker and the summary line, which
 # drops the migration detail authors write in the footer.
 #
 # Everything up to the `has_breaking_desc` block is release-plz's default body.
-# A commit is only listed if its `breaking_description` differs from its summary:
-# for a `feat!:` commit with no footer git-cliff falls back to the summary, and
-# repeating it would be noise.
+# The section iterates `commit.footers` rather than `commit.breaking_description`,
+# which holds only the first footer, so a commit with several footers keeps all
+# of them; a `feat!:` commit without a footer has none and is not repeated.
+#
+# git-cliff ends a footer at the next line that looks like `token: value`, so a
+# hand-wrapped footer whose continuation line starts with e.g. `serde_json::Map`
+# is cut short. Write each footer as one unwrapped paragraph.
 [changelog]
 body = """
 ## [{{ version }}]{%- if release_link -%}({{ release_link }}){% endif %} - {{ timestamp | date(format="%Y-%m-%d") }}
@@ -26,16 +30,17 @@ body = """
 {% endfor %}
 {%- set_global has_breaking_desc = false -%}
 {%- for commit in commits -%}
-{%- if commit.breaking and commit.breaking_description and commit.breaking_description != commit.message -%}
+{%- if commit.footers | filter(attribute="breaking", value=true) | length > 0 -%}
 {%- set_global has_breaking_desc = true -%}
 {%- endif -%}
 {%- endfor -%}
 {%- if has_breaking_desc %}
 ### ⚠ Breaking changes
-{% for commit in commits %}{% if commit.breaking and commit.breaking_description and commit.breaking_description != commit.message %}
+{% for commit in commits %}{% set breaking_footers = commit.footers | filter(attribute="breaking", value=true) %}{% if breaking_footers | length > 0 %}
 **{{ commit.message }}**
-
-{{ commit.breaking_description }}
+{% for footer in breaking_footers %}
+- {{ footer.value }}
+{%- endfor %}
 {% endif %}{% endfor %}
 {%- endif %}"""
 
