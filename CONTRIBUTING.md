@@ -48,6 +48,8 @@ The footer is the one part of the description that is published: the `[changelog
 
 Keep the footer **last, with nothing after it** — below the rationale and below any `Closes #NNN` line. The conventional-commits parser ends the note only at another `Key: value` footer or an issue reference. A trailing line that is neither — prose, or a bare tool-attribution line — is absorbed into the note and published verbatim, as if it were part of the migration instructions. Trailers like `Signed-off-by:` and `Co-authored-by:` do terminate it, so they are safe there, but a line without the `Key: value` shape is not. If the description has to carry such a line, put it _above_ the footer.
 
+Write each footer as **one unwrapped paragraph**, and give each separate break its own `BREAKING CHANGE:` footer. The parser also ends a footer at any line that _looks_ like `Key: value`, so a hand-wrapped continuation line that happens to start with something like `` `serde_json::Map` `` silently cuts the note short — in a way that still reads as complete.
+
 Writing the footer carefully matters because the subject line cannot carry the detail. v0.64.0 is the cautionary case: the footer of [#507](https://github.com/substrait-io/substrait-rs/pull/507) enumerates every affected `proto`, `text` and `parse` item, but the release notes for that version are a single summary line, because the changelog template rendered only subjects at the time. Putting the footer last also means the squash-merge message can be trimmed to just the subject and the footer in a single cut.
 
 ### Releases
