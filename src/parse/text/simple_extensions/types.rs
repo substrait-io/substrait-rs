@@ -889,6 +889,35 @@ impl From<ConcreteType> for RawType {
     }
 }
 
+/// A function-signature type, which may refer to a numbered type variable.
+///
+/// Variables are retained as written, not bound to argument types or resolved
+/// during parsing. Nested variables and named numeric parameters are not yet
+/// supported.
+#[derive(Clone, Debug, PartialEq)]
+pub enum TypeExpression {
+    /// A fully resolved type.
+    Concrete(ConcreteType),
+    /// A numbered type variable, such as `any1` or `any2?`.
+    Variable {
+        /// The variable identifier shared by references such as `any1`.
+        id: u32,
+        /// Whether the reference has an explicit `?` annotation.
+        nullable: bool,
+    },
+}
+
+impl<'a> TryFrom<TypeExpr<'a>> for TypeExpression {
+    type Error = ExtensionTypeError;
+
+    fn try_from(expression: TypeExpr<'a>) -> Result<Self, Self::Error> {
+        match expression {
+            TypeExpr::TypeVariable(id, nullable) => Ok(Self::Variable { id, nullable }),
+            other => ConcreteType::try_from(other).map(Self::Concrete),
+        }
+    }
+}
+
 /// Extract and validate an integer parameter for a built-in type.
 ///
 /// For `DECIMAL<10,2>`, this validates that `10` (index 0) and `2` (index 1)

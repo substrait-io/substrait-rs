@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Scalar function definitions with validated signatures and resolved types.
+//! Scalar function definitions parsed from extension YAML.
 //!
-//! This module provides typed wrappers around scalar functions parsed from extension
-//! YAML files, validating constraints and resolving type strings to concrete types.
+//! Return types retain numbered variables instead of requiring every type to be
+//! concrete. Variable binding and function resolution are not performed here.
 
 use std::collections::HashMap;
 
@@ -16,7 +16,7 @@ use crate::text::simple_extensions::{
 use super::argument::{ArgumentsItem, ArgumentsItemError};
 use super::extensions::TypeContext;
 use super::type_ast::{TypeExpr, TypeParseError};
-use super::types::{ConcreteType, ExtensionTypeError};
+use super::types::{ExtensionTypeError, TypeExpression};
 use crate::parse::Parse;
 use thiserror::Error;
 
@@ -71,7 +71,7 @@ pub struct ScalarFunction {
 }
 
 impl ScalarFunction {
-    /// Parse a scalar function from raw YAML, resolving types with the provided context
+    /// Parse a scalar function from raw YAML with the provided type context.
     pub(super) fn from_raw(
         raw: RawScalarFunction,
         ctx: &mut TypeContext,
@@ -94,7 +94,7 @@ impl ScalarFunction {
     }
 }
 
-/// A single function implementation (overload) with signature and resolved types
+/// A single function implementation (overload) with parsed signature types.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Impl {
     /// Function arguments with types and optional names/descriptions
@@ -117,12 +117,11 @@ pub struct Impl {
     ///
     /// Defaults to [`NullabilityHandling::Mirror`] per the Substrait spec.
     pub nullability: NullabilityHandling,
-    /// Return type resolved to a concrete type
+    /// The return type, retaining numbered variables such as `any1` and `any2?`.
     ///
-    /// The raw YAML type string is parsed and validated. Only concrete types
-    /// (without type variables) are supported; functions with type variables
-    /// are skipped in this basic implementation.
-    pub return_type: ConcreteType,
+    /// Variables are not bound or resolved during parsing. Functions with nested
+    /// variables or named numeric parameters are still skipped.
+    pub return_type: TypeExpression,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
     /// Maps language identifiers to implementation source code snippets.
@@ -130,7 +129,7 @@ pub struct Impl {
 }
 
 impl Impl {
-    /// Parse an implementation from raw YAML, resolving types with the provided context
+    /// Parse an implementation from raw YAML with the provided type context.
     pub(super) fn from_raw(
         raw: RawImpl,
         ctx: &mut TypeContext,
@@ -147,12 +146,12 @@ impl Impl {
                 }
                 let type_expr = TypeExpr::parse(&s)?;
                 type_expr.visit_references(&mut |name| ctx.linked(name));
-                match ConcreteType::try_from(type_expr) {
-                    Ok(concrete) => concrete,
+                match TypeExpression::try_from(type_expr) {
+                    Ok(expression) => expression,
                     Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
                     | Err(ExtensionTypeError::InvalidParameter(_))
                     | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
-                        // Type has type/parameter variables (any1, L1, P, etc.) - not yet supported
+                        // Nested type variables and named numeric parameters are not yet supported.
                         // See: https://github.com/substrait-io/substrait-rs/issues/452
                         return Err(ScalarFunctionError::NotYetImplemented(
                             "Type variables in function signatures - issue #452".to_string(),
@@ -430,14 +429,11 @@ mod tests {
         assert_eq!(result.description, Some("Addition function".to_string()));
         assert_eq!(result.impls.len(), 1);
 
-        // Verify return type is properly parsed to ConcreteType
-        use super::super::types::{BasicBuiltinType, ConcreteTypeKind};
-        let return_type = &result.impls[0].return_type;
-        assert!(!return_type.nullable, "i32 should not be nullable");
-        assert!(matches!(
-            &return_type.kind,
-            ConcreteTypeKind::Builtin(BasicBuiltinType::I32)
-        ));
+        use super::super::types::{BasicBuiltinType, ConcreteType};
+        assert_eq!(
+            result.impls[0].return_type,
+            TypeExpression::Concrete(ConcreteType::builtin(BasicBuiltinType::I32, false))
+        );
     }
 
     #[test]
