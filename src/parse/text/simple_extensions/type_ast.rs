@@ -61,7 +61,11 @@ impl<'a> TypeExpr<'a> {
     /// Parse a type string into a [`TypeExpr`].
     pub fn parse(type_str: &'a str) -> Result<Self, TypeParseError> {
         // Handle type variables like any1, any2, etc.
-        if let Some(suffix) = type_str.strip_prefix("any") {
+        if type_str
+            .get(..3)
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case("any"))
+        {
+            let suffix = &type_str[3..];
             let (middle, nullable) = match suffix.strip_suffix('?') {
                 Some(middle) => (middle, true),
                 None => (suffix, false),
@@ -197,6 +201,7 @@ mod tests {
         let cases = vec![
             ("any1", TypeExpr::TypeVariable(1, false)),
             ("any2?", TypeExpr::TypeVariable(2, true)),
+            ("ANY3?", TypeExpr::TypeVariable(3, true)),
         ];
 
         for (expr, expected) in cases {
