@@ -116,17 +116,17 @@ pub enum BasicBuiltinType {
         /// Scale (digits after decimal point), 0 <= S <= P
         scale: i32,
     },
-    /// Time with sub-second precision: `precisiontime<P>`
+    /// Time with sub-second precision: `precision_time<P>`
     PrecisionTime {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
         precision: i32,
     },
-    /// Timestamp with sub-second precision: `precisiontimestamp<P>`
+    /// Timestamp with sub-second precision: `precision_timestamp<P>`
     PrecisionTimestamp {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
         precision: i32,
     },
-    /// Timezone-aware timestamp with precision: `precisiontimestamptz<P>`
+    /// Timezone-aware timestamp with precision: `precision_timestamp_tz<P>`
     PrecisionTimestampTz {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
         precision: i32,
@@ -186,13 +186,13 @@ impl fmt::Display for BasicBuiltinType {
                 write!(f, "decimal<{precision}, {scale}>")
             }
             BasicBuiltinType::PrecisionTime { precision } => {
-                write!(f, "precisiontime<{precision}>")
+                write!(f, "precision_time<{precision}>")
             }
             BasicBuiltinType::PrecisionTimestamp { precision } => {
-                write!(f, "precisiontimestamp<{precision}>")
+                write!(f, "precision_timestamp<{precision}>")
             }
             BasicBuiltinType::PrecisionTimestampTz { precision } => {
-                write!(f, "precisiontimestamptz<{precision}>")
+                write!(f, "precision_timestamp_tz<{precision}>")
             }
             BasicBuiltinType::IntervalDay { precision } => write!(f, "interval_day<{precision}>"),
             BasicBuiltinType::IntervalCompound { precision } => {
@@ -1439,6 +1439,24 @@ mod tests {
 
             let output = concrete.to_string();
             assert_eq!(output, output.to_ascii_lowercase(), "display for {input}");
+        }
+    }
+
+    #[test]
+    fn test_precision_type_round_trip_display() {
+        for (input, expected) in [
+            ("PRECISION_TIME<3>", "precision_time<3>"),
+            ("PRECISION_TIMESTAMP<3>", "precision_timestamp<3>"),
+            ("PRECISION_TIMESTAMP_TZ<3>", "precision_timestamp_tz<3>"),
+        ] {
+            let concrete = parse_type(input);
+            let output = concrete.to_string();
+            assert_eq!(output, expected);
+            assert_eq!(parse_type(&output), concrete);
+
+            let raw: RawType = concrete.clone().into();
+            let mut ctx = TypeContext::default();
+            assert_eq!(raw.parse(&mut ctx).unwrap(), concrete);
         }
     }
 
