@@ -154,7 +154,6 @@ impl BasicBuiltinType {
                     | "varchar"
                     | "fixedbinary"
                     | "decimal"
-                    | "precisiontime"
                     | "precision_time"
                     | "precision_timestamp"
                     | "precision_timestamp_tz"
@@ -1012,7 +1011,7 @@ fn parse_builtin<'a>(
             let scale = expect_integer_param(display_name, 1, &params[1], Some(0..=precision))?;
             Ok(Some(BasicBuiltinType::Decimal { precision, scale }))
         }
-        "precisiontime" | "precision_time" => {
+        "precision_time" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(BasicBuiltinType::PrecisionTime { precision }))
@@ -1208,7 +1207,7 @@ mod tests {
     fn test_parameterized_builtin_types() {
         let cases = vec![
             (
-                "precisiontime<2>",
+                "precision_time<2>",
                 concretize(BasicBuiltinType::PrecisionTime { precision: 2 }),
             ),
             (
@@ -1259,8 +1258,8 @@ mod tests {
         use ExtensionTypeError::InvalidParameterRange;
 
         let cases = vec![
-            ("precisiontime<13>", "precisiontime", 0, 13, 0..=12),
-            ("precisiontime<-1>", "precisiontime", 0, -1, 0..=12),
+            ("precision_time<13>", "precision_time", 0, 13, 0..=12),
+            ("precision_time<-1>", "precision_time", 0, -1, 0..=12),
             (
                 "precision_timestamp<13>",
                 "precision_timestamp",
@@ -1439,6 +1438,23 @@ mod tests {
 
             let output = concrete.to_string();
             assert_eq!(output, output.to_ascii_lowercase(), "display for {input}");
+        }
+    }
+
+    #[test]
+    fn test_precision_types_require_underscores() {
+        for name in [
+            "precisiontime",
+            "precisiontimestamp",
+            "precisiontimestamptz",
+        ] {
+            for spelling in [name.to_string(), name.to_ascii_uppercase()] {
+                assert!(!BasicBuiltinType::is_name(&spelling));
+                assert_eq!(
+                    parse_type_result(&format!("{spelling}<3>")),
+                    Err(ExtensionTypeError::UnknownTypeName { name: spelling })
+                );
+            }
         }
     }
 
