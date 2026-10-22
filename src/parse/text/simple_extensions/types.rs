@@ -1438,6 +1438,28 @@ mod tests {
     }
 
     #[test]
+    fn test_builtin_type_display_lowercase() {
+        for input in [
+            "I32",
+            "FIXEDCHAR<5>",
+            "VARCHAR<10>",
+            "FIXEDBINARY<8>",
+            "DeCiMaL<10, 2>",
+            "PRECISION_TIME<3>",
+            "PRECISION_TIMESTAMP<3>",
+            "PRECISION_TIMESTAMP_TZ<3>",
+            "INTERVAL_DAY<3>",
+            "INTERVAL_COMPOUND<3>",
+        ] {
+            let concrete = parse_type(input);
+            assert_eq!(parse_type(&input.to_ascii_lowercase()), concrete);
+
+            let output = concrete.to_string();
+            assert_eq!(output, output.to_ascii_lowercase(), "display for {input}");
+        }
+    }
+
+    #[test]
     fn test_type_round_trip_display() {
         // (example, canonical form)
         let cases = vec![
