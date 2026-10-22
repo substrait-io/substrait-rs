@@ -94,22 +94,22 @@ pub enum BasicBuiltinType {
     IntervalYear,
     /// 128-bit UUID - `uuid`
     Uuid,
-    /// Fixed-length character string: `FIXEDCHAR<L>`
+    /// Fixed-length character string: `fixedchar<L>`
     FixedChar {
         /// Length (number of characters), must be >= 1
         length: i32,
     },
-    /// Variable-length character string: `VARCHAR<L>`
+    /// Variable-length character string: `varchar<L>`
     VarChar {
         /// Maximum length (number of characters), must be >= 1
         length: i32,
     },
-    /// Fixed-length binary data: `FIXEDBINARY<L>`
+    /// Fixed-length binary data: `fixedbinary<L>`
     FixedBinary {
         /// Length (number of bytes), must be >= 1
         length: i32,
     },
-    /// Fixed-point decimal: `DECIMAL<P, S>`
+    /// Fixed-point decimal: `decimal<P, S>`
     Decimal {
         /// Precision (total digits), <= 38
         precision: i32,
@@ -131,12 +131,12 @@ pub enum BasicBuiltinType {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
         precision: i32,
     },
-    /// Day-time interval: `INTERVAL_DAY<P>`
+    /// Day-time interval: `interval_day<P>`
     IntervalDay {
         /// Sub-second precision digits (0-9: seconds to nanoseconds)
         precision: i32,
     },
-    /// Compound interval: `INTERVAL_COMPOUND<P>`
+    /// Compound interval: `interval_compound<P>`
     IntervalCompound {
         /// Sub-second precision digits
         precision: i32,
@@ -177,15 +177,15 @@ impl BasicBuiltinType {
             Self::Date => "date",
             Self::IntervalYear => "interval_year",
             Self::Uuid => "uuid",
-            Self::FixedChar { .. } => "FIXEDCHAR",
-            Self::VarChar { .. } => "VARCHAR",
-            Self::FixedBinary { .. } => "FIXEDBINARY",
-            Self::Decimal { .. } => "DECIMAL",
+            Self::FixedChar { .. } => "fixedchar",
+            Self::VarChar { .. } => "varchar",
+            Self::FixedBinary { .. } => "fixedbinary",
+            Self::Decimal { .. } => "decimal",
             Self::PrecisionTime { .. } => "precision_time",
             Self::PrecisionTimestamp { .. } => "precision_timestamp",
             Self::PrecisionTimestampTz { .. } => "precision_timestamp_tz",
-            Self::IntervalDay { .. } => "INTERVAL_DAY",
-            Self::IntervalCompound { .. } => "INTERVAL_COMPOUND",
+            Self::IntervalDay { .. } => "interval_day",
+            Self::IntervalCompound { .. } => "interval_compound",
         };
         write!(f, "{name}{}", if nullable { "?" } else { "" })?;
         match self {
@@ -1459,19 +1459,20 @@ mod tests {
             ("Map?<string, List?<i32?>>", "map?<string, list?<i32?>>"),
             ("Struct?<i32, string?>", "struct?<i32, string?>"),
             ("struct<>", "struct<>"),
-            ("FIXEDCHAR?<5>", "FIXEDCHAR?<5>"),
-            ("VARCHAR?<10>", "VARCHAR?<10>"),
-            ("FIXEDBINARY?<8>", "FIXEDBINARY?<8>"),
-            ("DECIMAL?<10,2>", "DECIMAL?<10, 2>"),
-            ("precision_time<3>", "precision_time<3>"),
-            ("precision_timestamp<3>", "precision_timestamp<3>"),
-            ("precision_timestamp_tz<3>", "precision_timestamp_tz<3>"),
+            ("FIXEDCHAR?<5>", "fixedchar?<5>"),
+            ("VARCHAR?<10>", "varchar?<10>"),
+            ("FIXEDBINARY?<8>", "fixedbinary?<8>"),
+            ("DeCiMaL?<10,2>", "decimal?<10, 2>"),
+            ("PRECISION_TIME<3>", "precision_time<3>"),
+            ("PRECISION_TIMESTAMP<3>", "precision_timestamp<3>"),
+            ("PRECISION_TIMESTAMP_TZ<3>", "precision_timestamp_tz<3>"),
             ("precision_time?<3>", "precision_time?<3>"),
             ("precision_timestamp?<3>", "precision_timestamp?<3>"),
             ("precision_timestamp_tz?<3>", "precision_timestamp_tz?<3>"),
-            ("interval_day?<3>", "INTERVAL_DAY?<3>"),
-            ("interval_compound?<3>", "INTERVAL_COMPOUND?<3>"),
+            ("InTeRvAl_DaY?<3>", "interval_day?<3>"),
+            ("INTERVAL_COMPOUND?<3>", "interval_compound?<3>"),
             ("u!geometry?", "u!geometry?"),
+            ("u!CustomType?<i32>", "u!CustomType?<i32>"),
             ("u!custom<i32>", "u!custom<i32>"),
             ("u!custom?<i32, 5>", "u!custom?<i32, 5>"),
             ("list?<u!geometry?>", "list?<u!geometry?>"),
