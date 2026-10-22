@@ -425,9 +425,76 @@ scalar_functions:
         );
     }
 
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_core_function_with_nested_symbolic_return() {
+        let registry = Registry::from_core_extensions();
+        let urn = Urn::from_str("extension:io.substrait:functions_string").unwrap();
+        assert!(
+            registry
+                .get_scalar_function(&urn, "regexp_match_substring_all")
+                .is_some(),
+            "regexp_match_substring_all should not be skipped because it returns List<varchar<L1>>"
+        );
+    }
+
+    #[test]
+    fn test_nested_return_preserves_object_arguments() {
+        use super::super::{TypeExpression, argument::ArgumentsItem};
+        use crate::text::simple_extensions as raw;
+
+        let yaml = r#"urn: extension:example.com:nested
+scalar_functions:
+  - name: wrap_field
+    impls:
+      - args:
+          - value: {field: any1}
+        return: list<any1>
+"#;
+        let file = ExtensionFile::read_from_str(yaml).unwrap();
+        let urn = file.urn().clone();
+        let registry = Registry::new(vec![file]).unwrap();
+        let function = registry.get_scalar_function(&urn, "wrap_field").unwrap();
+        assert_eq!(
+            function.impls[0].return_type,
+            TypeExpression::List {
+                element: Box::new(TypeExpression::Variable {
+                    id: 1,
+                    nullable: false
+                }),
+                nullable: false,
+            }
+        );
+        let ArgumentsItem::ValueArgument(argument) = function.impls[0].args[0].clone() else {
+            panic!("expected value argument");
+        };
+        let argument: raw::ValueArg = argument.into();
+        let raw::Type::Object(fields) = argument.value else {
+            panic!("expected object-form type to be preserved");
+        };
+        assert_eq!(
+            fields["field"],
+            serde_json::Value::String("any1".to_string())
+        );
+    }
+
+    #[test]
+    fn test_missing_symbolic_type_reference() {
+        let raw = extension_with_custom_type_reference(
+            "extension:example.com:missing",
+            "wrap",
+            "list<u!missing<any1>>",
+            vec![],
+        );
+        assert!(matches!(
+            ExtensionFile::create(raw),
+            Err(SimpleExtensionsError::UnresolvedTypeReference { type_name }) if type_name == "missing"
+        ));
+    }
+
     #[test]
     fn test_unsupported_symbolic_returns_are_still_skipped() {
-        for return_type in ["list<any1>", "map<string, any1>"] {
+        for return_type in ["varchar<L + 1>", "decimal<P + 1, S>"] {
             let raw = extension_with_custom_type_reference(
                 "extension:example.com:unsupported",
                 "unsupported",

@@ -117,10 +117,10 @@ pub struct Impl {
     ///
     /// Defaults to [`NullabilityHandling::Mirror`] per the Substrait spec.
     pub nullability: NullabilityHandling,
-    /// The return type, retaining numbered variables and named numeric parameters.
+    /// The return type, retaining variables and parameters within nested types.
     ///
-    /// Variables are not bound or resolved during parsing. Functions with nested
-    /// symbolic types are still skipped.
+    /// Variables are not bound or resolved during parsing. Type derivation
+    /// expressions remain unsupported.
     pub return_type: TypeExpression,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
@@ -151,7 +151,7 @@ impl Impl {
                     Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
                     | Err(ExtensionTypeError::InvalidParameter(_))
                     | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
-                        // Nested symbolic types and numeric expressions are not yet supported.
+                        // General numeric expressions are not yet supported.
                         // See: https://github.com/substrait-io/substrait-rs/issues/452
                         return Err(ScalarFunctionError::NotYetImplemented(
                             "Type variables in function signatures - issue #452".to_string(),
