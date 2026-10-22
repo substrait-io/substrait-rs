@@ -1460,6 +1460,24 @@ mod tests {
     }
 
     #[test]
+    fn test_precision_type_round_trip_display() {
+        for (input, expected) in [
+            ("PRECISION_TIME<3>", "precision_time<3>"),
+            ("PRECISION_TIMESTAMP<3>", "precision_timestamp<3>"),
+            ("PRECISION_TIMESTAMP_TZ<3>", "precision_timestamp_tz<3>"),
+        ] {
+            let concrete = parse_type(input);
+            let output = concrete.to_string();
+            assert_eq!(output, expected);
+            assert_eq!(parse_type(&output), concrete);
+
+            let raw: RawType = concrete.clone().into();
+            let mut ctx = TypeContext::default();
+            assert_eq!(raw.parse(&mut ctx).unwrap(), concrete);
+        }
+    }
+
+    #[test]
     fn test_type_round_trip_display() {
         // (example, canonical form)
         let cases = vec![
@@ -1485,9 +1503,6 @@ mod tests {
             ("VARCHAR?<10>", "varchar?<10>"),
             ("FIXEDBINARY?<8>", "fixedbinary?<8>"),
             ("DeCiMaL?<10,2>", "decimal?<10, 2>"),
-            ("PRECISION_TIME<3>", "precision_time<3>"),
-            ("PRECISION_TIMESTAMP<3>", "precision_timestamp<3>"),
-            ("PRECISION_TIMESTAMP_TZ<3>", "precision_timestamp_tz<3>"),
             ("precision_time?<3>", "precision_time?<3>"),
             ("precision_timestamp?<3>", "precision_timestamp?<3>"),
             ("precision_timestamp_tz?<3>", "precision_timestamp_tz?<3>"),
