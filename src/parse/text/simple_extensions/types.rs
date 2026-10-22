@@ -163,6 +163,8 @@ impl BasicBuiltinType {
     }
 }
 
+/// Formats the full type spelling used in extension YAML, not the short name
+/// used in function signatures (e.g., `precision_timestamp<3>`, not `pts`).
 impl fmt::Display for BasicBuiltinType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
