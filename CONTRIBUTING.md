@@ -49,25 +49,27 @@ Substrait requires all contributors to sign the [Contributor License Agreement (
 - [Rust](https://rustup.rs)
 - [protoc (>=3.15)](https://github.com/protocolbuffers/protobuf/releases)
 
-In environments where no `protoc` is available the `protoc` feature can be enabled to build `protoc` from source:
+In environments where no `protoc` is available the `protox` feature can be enabled to compile the `.proto` files with [`protox`](https://docs.rs/protox), a pure-Rust protobuf compiler:
+
+```shell
+cargo build --features protox
+```
+
+Alternatively the `protoc` feature builds `protoc` from source:
 
 ```shell
 cargo build --features protoc
 ```
 
-### Substrait submodule
+### Packaged Substrait crates
 
-There is a git submodule for [Substrait](https://github.com/substrait-io/substrait) that must be cloned when building from source.
+The generated Substrait types come from the [`substrait-prost`](https://crates.io/crates/substrait-prost) and [`substrait-extensions`](https://crates.io/crates/substrait-extensions) crates, which are versioned to track the Substrait spec tag. They are pinned to an exact version in [Cargo.toml](Cargo.toml) and must always be bumped in lockstep (they share the same version). The Substrait version reported by [`substrait::version`](src/version.rs) is derived from the `substrait-prost` pin in [build.rs](build.rs).
 
-```shell
-git clone --recurse-submodules git@github.com:substrait-io/substrait-rs.git
-```
+#### Substrait version bumps and semver
 
-When the Substrait version is bumped make sure to update your local submodule.
+Substrait version bumps (raising the `substrait-prost`/`substrait-extensions` pin) are handled automatically by Dependabot (see [dependabot.yml](.github/dependabot.yml)), which groups both crates into a single PR. Because a spec bump can change generated types, treat these as potentially breaking: mark the commit with a `!` (e.g. `feat(deps,substrait)!:`), which causes release-plz to do a minor version bump (major post-1.0).
 
-```shell
-git submodule update
-```
+If you believe a bump is non-breaking, you can omit the `!` marker. `cargo-semver-checks` runs as part of the release workflow and may catch breaking API changes, but it does not cover all possible semver violations. When in doubt, mark the change as breaking.
 
 Formatting, lints and tests are checked in the [Test](.github/workflows/test.yml) workflow.
 

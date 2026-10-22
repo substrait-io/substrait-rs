@@ -2,18 +2,31 @@
 
 //! Substrait core extensions
 //!
-//! The contents of this module are auto-generated using `build.rs`. It is
-//! included in the packaged crate, ignored by git, and automatically kept
-//! in-sync.
+//! The extension files are provided by the
+//! [`substrait-extensions`](https://docs.rs/substrait-extensions) crate. This
+//! module exposes them keyed by their [`Urn`].
 
-#[cfg(feature = "extensions")]
-include!(concat!(env!("OUT_DIR"), "/extensions.in"));
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::sync::LazyLock;
+
+use crate::text::simple_extensions::SimpleExtensions;
+use crate::urn::Urn;
+
+/// Map with Substrait core extensions. Maps [`Urn`]s to included extensions.
+pub static EXTENSIONS: LazyLock<HashMap<Urn, SimpleExtensions>> = LazyLock::new(|| {
+    substrait_extensions::extensions::EXTENSIONS
+        .iter()
+        .map(|(name, extension)| {
+            let urn = Urn::from_str(&format!("extension:io.substrait:{name}")).expect("valid urn");
+            (urn, extension.clone())
+        })
+        .collect()
+});
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use std::sync::LazyLock;
 
     #[test]
     fn core_extensions() {

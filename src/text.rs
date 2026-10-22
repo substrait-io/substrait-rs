@@ -1,15 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(
-    unused_variables,
-    clippy::clone_on_copy,
-    clippy::derivable_impls,
-    clippy::needless_borrow,
-    clippy::explicit_auto_deref,
-    clippy::to_string_trait_impl,
-    clippy::uninlined_format_args
-)]
-
 //! Generated types for text-based definitions.
+//!
+//! These types are generated from the Substrait text-based JSON schemas by the
+//! [`substrait-extensions`](https://docs.rs/substrait-extensions) crate and
+//! re-exported here (e.g. [`simple_extensions::SimpleExtensions`]).
 
-include!(concat!(env!("OUT_DIR"), "/substrait_text.rs"));
+pub use substrait_extensions::text::*;
