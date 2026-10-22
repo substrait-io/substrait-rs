@@ -757,40 +757,6 @@ pub enum ConcreteTypeKind {
     },
 }
 
-impl ConcreteTypeKind {
-    fn fmt_with_nullability(&self, f: &mut fmt::Formatter<'_>, nullable: bool) -> fmt::Result {
-        let nullability = if nullable { "?" } else { "" };
-        match self {
-            ConcreteTypeKind::Builtin(b) => b.fmt_with_nullability(f, nullable),
-            ConcreteTypeKind::Extension { name, parameters } => {
-                write!(f, "u!{name}{nullability}")?;
-                write_separated(f, parameters.iter(), "<", ">", ", ")
-            }
-            ConcreteTypeKind::List(elem) => write!(f, "list{nullability}<{elem}>"),
-            ConcreteTypeKind::Map { key, value } => {
-                write!(f, "map{nullability}<{key}, {value}>")
-            }
-            ConcreteTypeKind::Struct(types) => {
-                write!(f, "struct{nullability}<")?;
-                write_separated(f, types.iter(), "", "", ", ")?;
-                write!(f, ">")
-            }
-            ConcreteTypeKind::NamedStruct { fields } => {
-                let kvs = fields.iter().map(|(k, v)| KeyValueDisplay(k, v, ": "));
-
-                write_separated(f, kvs, "{", "}", ", ")?;
-                write!(f, "{nullability}")
-            }
-        }
-    }
-}
-
-impl fmt::Display for ConcreteTypeKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.fmt_with_nullability(f, false)
-    }
-}
-
 /// A concrete, fully-resolved type instance with nullability.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConcreteType {
@@ -883,7 +849,29 @@ impl ConcreteType {
 
 impl fmt::Display for ConcreteType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.kind.fmt_with_nullability(f, self.nullable)
+        let nullability = if self.nullable { "?" } else { "" };
+        match &self.kind {
+            ConcreteTypeKind::Builtin(b) => b.fmt_with_nullability(f, self.nullable),
+            ConcreteTypeKind::Extension { name, parameters } => {
+                write!(f, "u!{name}{nullability}")?;
+                write_separated(f, parameters.iter(), "<", ">", ", ")
+            }
+            ConcreteTypeKind::List(elem) => write!(f, "list{nullability}<{elem}>"),
+            ConcreteTypeKind::Map { key, value } => {
+                write!(f, "map{nullability}<{key}, {value}>")
+            }
+            ConcreteTypeKind::Struct(types) => {
+                write!(f, "struct{nullability}<")?;
+                write_separated(f, types.iter(), "", "", ", ")?;
+                write!(f, ">")
+            }
+            ConcreteTypeKind::NamedStruct { fields } => {
+                let kvs = fields.iter().map(|(k, v)| KeyValueDisplay(k, v, ": "));
+
+                write_separated(f, kvs, "{", "}", ", ")?;
+                write!(f, "{nullability}")
+            }
+        }
     }
 }
 
