@@ -161,45 +161,54 @@ impl BasicBuiltinType {
                     | "interval_compound"
             )
     }
+
+    fn fmt_with_nullability(&self, f: &mut fmt::Formatter<'_>, nullable: bool) -> fmt::Result {
+        let name = match self {
+            Self::Boolean => "bool",
+            Self::I8 => "i8",
+            Self::I16 => "i16",
+            Self::I32 => "i32",
+            Self::I64 => "i64",
+            Self::Fp32 => "fp32",
+            Self::Fp64 => "fp64",
+            Self::String => "string",
+            Self::Binary => "binary",
+            Self::Date => "date",
+            Self::IntervalYear => "interval_year",
+            Self::Uuid => "uuid",
+            Self::FixedChar { .. } => "fixedchar",
+            Self::VarChar { .. } => "varchar",
+            Self::FixedBinary { .. } => "fixedbinary",
+            Self::Decimal { .. } => "decimal",
+            Self::PrecisionTime { .. } => "precision_time",
+            Self::PrecisionTimestamp { .. } => "precision_timestamp",
+            Self::PrecisionTimestampTz { .. } => "precision_timestamp_tz",
+            Self::IntervalDay { .. } => "interval_day",
+            Self::IntervalCompound { .. } => "interval_compound",
+        };
+        write!(f, "{name}{}", if nullable { "?" } else { "" })?;
+        match self {
+            Self::FixedChar { length }
+            | Self::VarChar { length }
+            | Self::FixedBinary { length } => {
+                write!(f, "<{length}>")
+            }
+            Self::Decimal { precision, scale } => write!(f, "<{precision}, {scale}>"),
+            Self::PrecisionTime { precision }
+            | Self::PrecisionTimestamp { precision }
+            | Self::PrecisionTimestampTz { precision }
+            | Self::IntervalDay { precision }
+            | Self::IntervalCompound { precision } => write!(f, "<{precision}>"),
+            _ => Ok(()),
+        }
+    }
 }
 
 /// Formats the full type spelling used in extension YAML, not the short name
 /// used in function signatures (e.g., `precision_timestamp<3>`, not `pts`).
 impl fmt::Display for BasicBuiltinType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            BasicBuiltinType::Boolean => f.write_str("bool"),
-            BasicBuiltinType::I8 => f.write_str("i8"),
-            BasicBuiltinType::I16 => f.write_str("i16"),
-            BasicBuiltinType::I32 => f.write_str("i32"),
-            BasicBuiltinType::I64 => f.write_str("i64"),
-            BasicBuiltinType::Fp32 => f.write_str("fp32"),
-            BasicBuiltinType::Fp64 => f.write_str("fp64"),
-            BasicBuiltinType::String => f.write_str("string"),
-            BasicBuiltinType::Binary => f.write_str("binary"),
-            BasicBuiltinType::Date => f.write_str("date"),
-            BasicBuiltinType::IntervalYear => f.write_str("interval_year"),
-            BasicBuiltinType::Uuid => f.write_str("uuid"),
-            BasicBuiltinType::FixedChar { length } => write!(f, "fixedchar<{length}>"),
-            BasicBuiltinType::VarChar { length } => write!(f, "varchar<{length}>"),
-            BasicBuiltinType::FixedBinary { length } => write!(f, "fixedbinary<{length}>"),
-            BasicBuiltinType::Decimal { precision, scale } => {
-                write!(f, "decimal<{precision}, {scale}>")
-            }
-            BasicBuiltinType::PrecisionTime { precision } => {
-                write!(f, "precision_time<{precision}>")
-            }
-            BasicBuiltinType::PrecisionTimestamp { precision } => {
-                write!(f, "precision_timestamp<{precision}>")
-            }
-            BasicBuiltinType::PrecisionTimestampTz { precision } => {
-                write!(f, "precision_timestamp_tz<{precision}>")
-            }
-            BasicBuiltinType::IntervalDay { precision } => write!(f, "interval_day<{precision}>"),
-            BasicBuiltinType::IntervalCompound { precision } => {
-                write!(f, "interval_compound<{precision}>")
-            }
-        }
+        self.fmt_with_nullability(f, false)
     }
 }
 
@@ -748,28 +757,6 @@ pub enum ConcreteTypeKind {
     },
 }
 
-impl fmt::Display for ConcreteTypeKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ConcreteTypeKind::Builtin(b) => write!(f, "{b}"),
-            ConcreteTypeKind::Extension { name, parameters } => {
-                write!(f, "{name}")?;
-                write_separated(f, parameters.iter(), "<", ">", ", ")
-            }
-            ConcreteTypeKind::List(elem) => write!(f, "list<{elem}>"),
-            ConcreteTypeKind::Map { key, value } => write!(f, "map<{key}, {value}>"),
-            ConcreteTypeKind::Struct(types) => {
-                write_separated(f, types.iter(), "struct<", ">", ", ")
-            }
-            ConcreteTypeKind::NamedStruct { fields } => {
-                let kvs = fields.iter().map(|(k, v)| KeyValueDisplay(k, v, ": "));
-
-                write_separated(f, kvs, "{", "}", ", ")
-            }
-        }
-    }
-}
-
 /// A concrete, fully-resolved type instance with nullability.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConcreteType {
@@ -862,11 +849,29 @@ impl ConcreteType {
 
 impl fmt::Display for ConcreteType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.kind)?;
-        if self.nullable {
-            write!(f, "?")?;
+        let nullability = if self.nullable { "?" } else { "" };
+        match &self.kind {
+            ConcreteTypeKind::Builtin(b) => b.fmt_with_nullability(f, self.nullable),
+            ConcreteTypeKind::Extension { name, parameters } => {
+                write!(f, "u!{name}{nullability}")?;
+                write_separated(f, parameters.iter(), "<", ">", ", ")
+            }
+            ConcreteTypeKind::List(elem) => write!(f, "list{nullability}<{elem}>"),
+            ConcreteTypeKind::Map { key, value } => {
+                write!(f, "map{nullability}<{key}, {value}>")
+            }
+            ConcreteTypeKind::Struct(types) => {
+                write!(f, "struct{nullability}<")?;
+                write_separated(f, types.iter(), "", "", ", ")?;
+                write!(f, ">")
+            }
+            ConcreteTypeKind::NamedStruct { fields } => {
+                let kvs = fields.iter().map(|(k, v)| KeyValueDisplay(k, v, ": "));
+
+                write_separated(f, kvs, "{", "}", ", ")?;
+                write!(f, "{nullability}")
+            }
         }
-        Ok(())
     }
 }
 
@@ -1496,7 +1501,24 @@ mod tests {
                 "Map<List<I32?>, Struct<string, list<i64?>>>",
                 "map<list<i32?>, struct<string, list<i64?>>>",
             ),
-            ("u!custom<i32>", "custom<i32>"),
+            ("List?<i32>", "list?<i32>"),
+            ("Map?<string, List?<i32?>>", "map?<string, list?<i32?>>"),
+            ("Struct?<i32, string?>", "struct?<i32, string?>"),
+            ("struct<>", "struct<>"),
+            ("FIXEDCHAR?<5>", "fixedchar?<5>"),
+            ("VARCHAR?<10>", "varchar?<10>"),
+            ("FIXEDBINARY?<8>", "fixedbinary?<8>"),
+            ("DeCiMaL?<10,2>", "decimal?<10, 2>"),
+            ("precision_time?<3>", "precision_time?<3>"),
+            ("precision_timestamp?<3>", "precision_timestamp?<3>"),
+            ("precision_timestamp_tz?<3>", "precision_timestamp_tz?<3>"),
+            ("InTeRvAl_DaY?<3>", "interval_day?<3>"),
+            ("INTERVAL_COMPOUND?<3>", "interval_compound?<3>"),
+            ("u!geometry?", "u!geometry?"),
+            ("u!CustomType?<i32>", "u!CustomType?<i32>"),
+            ("u!custom<i32>", "u!custom<i32>"),
+            ("u!custom?<i32, 5>", "u!custom?<i32, 5>"),
+            ("list?<u!geometry?>", "list?<u!geometry?>"),
         ];
 
         for (input, expected) in cases {
@@ -1505,6 +1527,19 @@ mod tests {
             let actual = concrete.to_string();
 
             assert_eq!(actual, expected, "unexpected display for {input}");
+            assert_eq!(
+                parse_type(&actual),
+                concrete,
+                "round trip failed for {input}"
+            );
+
+            let raw: RawType = concrete.clone().into();
+            let mut ctx = TypeContext::default();
+            assert_eq!(
+                raw.parse(&mut ctx).unwrap(),
+                concrete,
+                "raw type round trip failed for {input}"
+            );
         }
     }
 
