@@ -94,49 +94,49 @@ pub enum BasicBuiltinType {
     IntervalYear,
     /// 128-bit UUID - `uuid`
     Uuid,
-    /// Fixed-length character string: `FIXEDCHAR<L>`
+    /// Fixed-length character string: `fixedchar<L>`
     FixedChar {
         /// Length (number of characters), must be >= 1
         length: i32,
     },
-    /// Variable-length character string: `VARCHAR<L>`
+    /// Variable-length character string: `varchar<L>`
     VarChar {
         /// Maximum length (number of characters), must be >= 1
         length: i32,
     },
-    /// Fixed-length binary data: `FIXEDBINARY<L>`
+    /// Fixed-length binary data: `fixedbinary<L>`
     FixedBinary {
         /// Length (number of bytes), must be >= 1
         length: i32,
     },
-    /// Fixed-point decimal: `DECIMAL<P, S>`
+    /// Fixed-point decimal: `decimal<P, S>`
     Decimal {
         /// Precision (total digits), <= 38
         precision: i32,
         /// Scale (digits after decimal point), 0 <= S <= P
         scale: i32,
     },
-    /// Time with sub-second precision: `PRECISIONTIME<P>`
+    /// Time with sub-second precision: `precision_time<P>`
     PrecisionTime {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
         precision: i32,
     },
-    /// Timestamp with sub-second precision: `PRECISIONTIMESTAMP<P>`
+    /// Timestamp with sub-second precision: `precision_timestamp<P>`
     PrecisionTimestamp {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
         precision: i32,
     },
-    /// Timezone-aware timestamp with precision: `PRECISIONTIMESTAMPTZ<P>`
+    /// Timezone-aware timestamp with precision: `precision_timestamp_tz<P>`
     PrecisionTimestampTz {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
         precision: i32,
     },
-    /// Day-time interval: `INTERVAL_DAY<P>`
+    /// Day-time interval: `interval_day<P>`
     IntervalDay {
         /// Sub-second precision digits (0-9: seconds to nanoseconds)
         precision: i32,
     },
-    /// Compound interval: `INTERVAL_COMPOUND<P>`
+    /// Compound interval: `interval_compound<P>`
     IntervalCompound {
         /// Sub-second precision digits
         precision: i32,
@@ -154,7 +154,6 @@ impl BasicBuiltinType {
                     | "varchar"
                     | "fixedbinary"
                     | "decimal"
-                    | "precisiontime"
                     | "precision_time"
                     | "precision_timestamp"
                     | "precision_timestamp_tz"
@@ -164,6 +163,8 @@ impl BasicBuiltinType {
     }
 }
 
+/// Formats the full type spelling used in extension YAML, not the short name
+/// used in function signatures (e.g., `precision_timestamp<3>`, not `pts`).
 impl fmt::Display for BasicBuiltinType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -179,24 +180,24 @@ impl fmt::Display for BasicBuiltinType {
             BasicBuiltinType::Date => f.write_str("date"),
             BasicBuiltinType::IntervalYear => f.write_str("interval_year"),
             BasicBuiltinType::Uuid => f.write_str("uuid"),
-            BasicBuiltinType::FixedChar { length } => write!(f, "FIXEDCHAR<{length}>"),
-            BasicBuiltinType::VarChar { length } => write!(f, "VARCHAR<{length}>"),
-            BasicBuiltinType::FixedBinary { length } => write!(f, "FIXEDBINARY<{length}>"),
+            BasicBuiltinType::FixedChar { length } => write!(f, "fixedchar<{length}>"),
+            BasicBuiltinType::VarChar { length } => write!(f, "varchar<{length}>"),
+            BasicBuiltinType::FixedBinary { length } => write!(f, "fixedbinary<{length}>"),
             BasicBuiltinType::Decimal { precision, scale } => {
-                write!(f, "DECIMAL<{precision}, {scale}>")
+                write!(f, "decimal<{precision}, {scale}>")
             }
             BasicBuiltinType::PrecisionTime { precision } => {
-                write!(f, "PRECISIONTIME<{precision}>")
+                write!(f, "precision_time<{precision}>")
             }
             BasicBuiltinType::PrecisionTimestamp { precision } => {
-                write!(f, "PRECISIONTIMESTAMP<{precision}>")
+                write!(f, "precision_timestamp<{precision}>")
             }
             BasicBuiltinType::PrecisionTimestampTz { precision } => {
-                write!(f, "PRECISIONTIMESTAMPTZ<{precision}>")
+                write!(f, "precision_timestamp_tz<{precision}>")
             }
-            BasicBuiltinType::IntervalDay { precision } => write!(f, "INTERVAL_DAY<{precision}>"),
+            BasicBuiltinType::IntervalDay { precision } => write!(f, "interval_day<{precision}>"),
             BasicBuiltinType::IntervalCompound { precision } => {
-                write!(f, "INTERVAL_COMPOUND<{precision}>")
+                write!(f, "interval_compound<{precision}>")
             }
         }
     }
@@ -1012,7 +1013,7 @@ fn parse_builtin<'a>(
             let scale = expect_integer_param(display_name, 1, &params[1], Some(0..=precision))?;
             Ok(Some(BasicBuiltinType::Decimal { precision, scale }))
         }
-        "precisiontime" | "precision_time" => {
+        "precision_time" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(BasicBuiltinType::PrecisionTime { precision }))
@@ -1208,7 +1209,7 @@ mod tests {
     fn test_parameterized_builtin_types() {
         let cases = vec![
             (
-                "precisiontime<2>",
+                "precision_time<2>",
                 concretize(BasicBuiltinType::PrecisionTime { precision: 2 }),
             ),
             (
@@ -1259,8 +1260,8 @@ mod tests {
         use ExtensionTypeError::InvalidParameterRange;
 
         let cases = vec![
-            ("precisiontime<13>", "precisiontime", 0, 13, 0..=12),
-            ("precisiontime<-1>", "precisiontime", 0, -1, 0..=12),
+            ("precision_time<13>", "precision_time", 0, 13, 0..=12),
+            ("precision_time<-1>", "precision_time", 0, -1, 0..=12),
             (
                 "precision_timestamp<13>",
                 "precision_timestamp",
@@ -1417,6 +1418,63 @@ mod tests {
                 expected,
                 "unexpected validation result for {value:?}"
             );
+        }
+    }
+
+    #[test]
+    fn test_builtin_type_display_lowercase() {
+        for input in [
+            "I32",
+            "FIXEDCHAR<5>",
+            "VARCHAR<10>",
+            "FIXEDBINARY<8>",
+            "DeCiMaL<10, 2>",
+            "PRECISION_TIME<3>",
+            "PRECISION_TIMESTAMP<3>",
+            "PRECISION_TIMESTAMP_TZ<3>",
+            "INTERVAL_DAY<3>",
+            "INTERVAL_COMPOUND<3>",
+        ] {
+            let concrete = parse_type(input);
+            assert_eq!(parse_type(&input.to_ascii_lowercase()), concrete);
+
+            let output = concrete.to_string();
+            assert_eq!(output, output.to_ascii_lowercase(), "display for {input}");
+        }
+    }
+
+    #[test]
+    fn test_precision_types_require_underscores() {
+        for name in [
+            "precisiontime",
+            "precisiontimestamp",
+            "precisiontimestamptz",
+        ] {
+            for spelling in [name.to_string(), name.to_ascii_uppercase()] {
+                assert!(!BasicBuiltinType::is_name(&spelling));
+                assert_eq!(
+                    parse_type_result(&format!("{spelling}<3>")),
+                    Err(ExtensionTypeError::UnknownTypeName { name: spelling })
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_precision_type_round_trip_display() {
+        for (input, expected) in [
+            ("PRECISION_TIME<3>", "precision_time<3>"),
+            ("PRECISION_TIMESTAMP<3>", "precision_timestamp<3>"),
+            ("PRECISION_TIMESTAMP_TZ<3>", "precision_timestamp_tz<3>"),
+        ] {
+            let concrete = parse_type(input);
+            let output = concrete.to_string();
+            assert_eq!(output, expected);
+            assert_eq!(parse_type(&output), concrete);
+
+            let raw: RawType = concrete.clone().into();
+            let mut ctx = TypeContext::default();
+            assert_eq!(raw.parse(&mut ctx).unwrap(), concrete);
         }
     }
 
