@@ -889,10 +889,10 @@ impl From<ConcreteType> for RawType {
     }
 }
 
-/// A function-signature type, which may refer to a numbered type variable.
+/// A function-signature type, retaining unresolved variables and parameters.
 ///
-/// Variables are retained as written, not bound to argument types or resolved
-/// during parsing. Nested symbolic types are not yet supported.
+/// Variables are not bound to argument types or resolved during parsing. Fully
+/// concrete expressions retain the existing [`ConcreteType`] representation.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeExpression {
     /// A fully resolved type.
@@ -902,6 +902,43 @@ pub enum TypeExpression {
         /// The variable identifier shared by references such as `any1`.
         id: u32,
         /// Whether the reference has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// An unnumbered wildcard, such as `any` or `any?`.
+    Any {
+        /// Whether the wildcard has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// A list containing a symbolic element type.
+    List {
+        /// The element type expression.
+        element: Box<TypeExpression>,
+        /// Whether the list has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// A map containing symbolic key or value types.
+    Map {
+        /// The key type expression.
+        key: Box<TypeExpression>,
+        /// The value type expression.
+        value: Box<TypeExpression>,
+        /// Whether the map has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// An ordered struct containing symbolic field types.
+    Struct {
+        /// Field type expressions in declaration order.
+        fields: Vec<TypeExpression>,
+        /// Whether the struct has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// A user-defined type containing unresolved parameters.
+    UserDefined {
+        /// The original type name, without its `u!` prefix.
+        name: String,
+        /// Type or literal parameters in declaration order.
+        parameters: Vec<TypeExpressionParameter>,
+        /// Whether the type has an explicit `?` annotation.
         nullable: bool,
     },
     /// A built-in with unresolved numeric parameters, such as `decimal<P, S>`.
@@ -922,6 +959,17 @@ pub enum IntegerParameter {
     Literal(i32),
     /// An identifier whose value is not resolved during parsing.
     Variable(String),
+}
+
+/// A parameter to a user-defined type in a function signature.
+#[derive(Clone, Debug, PartialEq)]
+pub enum TypeExpressionParameter {
+    /// An integer literal.
+    Integer(i64),
+    /// A type expression, possibly containing variables.
+    Type(TypeExpression),
+    /// An unresolved identifier whose kind depends on the type declaration.
+    Name(String),
 }
 
 fn integer_parameter_name<'a>(parameter: &TypeExprParam<'a>) -> Option<&'a str> {
@@ -991,21 +1039,102 @@ impl<'a> TryFrom<TypeExpr<'a>> for TypeExpression {
     type Error = ExtensionTypeError;
 
     fn try_from(expression: TypeExpr<'a>) -> Result<Self, Self::Error> {
+        let concrete_error = match ConcreteType::try_from(expression.clone()) {
+            Ok(concrete) => return Ok(Self::Concrete(concrete)),
+            Err(error) => error,
+        };
         match expression {
             TypeExpr::TypeVariable(id, nullable) => Ok(Self::Variable { id, nullable }),
-            TypeExpr::Simple(name, parameters, nullable)
-                if parameters
-                    .iter()
-                    .any(|parameter| integer_parameter_name(parameter).is_some()) =>
-            {
-                match parse_parameterized_builtin(name, &parameters, nullable)? {
-                    Some(expression) => Ok(expression),
-                    None => ConcreteType::try_from(TypeExpr::Simple(name, parameters, nullable))
-                        .map(Self::Concrete),
+            TypeExpr::Simple(name, parameters, nullable) => {
+                match name.to_ascii_lowercase().as_str() {
+                    "any" => {
+                        expect_param_len(name, &parameters, 0)?;
+                        Ok(Self::Any { nullable })
+                    }
+                    "list" => {
+                        expect_param_len(name, &parameters, 1)?;
+                        let element = expect_signature_type_argument(
+                            name,
+                            0,
+                            parameters.into_iter().next().unwrap(),
+                        )?;
+                        Ok(Self::List {
+                            element: Box::new(element),
+                            nullable,
+                        })
+                    }
+                    "map" => {
+                        expect_param_len(name, &parameters, 2)?;
+                        let mut parameters = parameters.into_iter();
+                        let key =
+                            expect_signature_type_argument(name, 0, parameters.next().unwrap())?;
+                        let value =
+                            expect_signature_type_argument(name, 1, parameters.next().unwrap())?;
+                        Ok(Self::Map {
+                            key: Box::new(key),
+                            value: Box::new(value),
+                            nullable,
+                        })
+                    }
+                    "struct" => {
+                        let fields = parameters
+                            .into_iter()
+                            .enumerate()
+                            .map(|(index, parameter)| {
+                                expect_signature_type_argument(name, index, parameter)
+                            })
+                            .collect::<Result<Vec<_>, _>>()?;
+                        Ok(Self::Struct { fields, nullable })
+                    }
+                    _ if parameters
+                        .iter()
+                        .any(|parameter| integer_parameter_name(parameter).is_some()) =>
+                    {
+                        parse_parameterized_builtin(name, &parameters, nullable)?
+                            .ok_or(concrete_error)
+                    }
+                    _ => Err(concrete_error),
                 }
             }
-            other => ConcreteType::try_from(other).map(Self::Concrete),
+            TypeExpr::UserDefined(name, parameters, nullable) => {
+                let parameters = parameters
+                    .into_iter()
+                    .map(|parameter| {
+                        if let Some(name) = integer_parameter_name(&parameter) {
+                            return Ok(TypeExpressionParameter::Name(name.to_string()));
+                        }
+                        match parameter {
+                            TypeExprParam::Integer(value) => {
+                                Ok(TypeExpressionParameter::Integer(value))
+                            }
+                            TypeExprParam::Type(expression) => {
+                                Self::try_from(expression).map(TypeExpressionParameter::Type)
+                            }
+                        }
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Self::UserDefined {
+                    name: name.to_string(),
+                    parameters,
+                    nullable,
+                })
+            }
         }
+    }
+}
+
+fn expect_signature_type_argument(
+    type_name: &str,
+    index: usize,
+    parameter: TypeExprParam<'_>,
+) -> Result<TypeExpression, ExtensionTypeError> {
+    match parameter {
+        TypeExprParam::Type(expression) => TypeExpression::try_from(expression),
+        TypeExprParam::Integer(_) => Err(ExtensionTypeError::InvalidParameterKind {
+            type_name: type_name.to_string(),
+            index,
+            expected: "a type",
+        }),
     }
 }
 
@@ -1327,6 +1456,91 @@ mod tests {
                     assert!(result.is_none(), "expected parsing {input} to fail");
                 }
             }
+        }
+    }
+
+    fn parse_signature_type(input: &str) -> TypeExpression {
+        TypeExpression::try_from(TypeExpr::parse(input).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn test_nested_symbolic_types() {
+        assert_eq!(
+            parse_signature_type("List<any>"),
+            TypeExpression::List {
+                element: Box::new(TypeExpression::Any { nullable: false }),
+                nullable: false,
+            }
+        );
+        assert_eq!(
+            parse_signature_type("Map<string, any?>"),
+            TypeExpression::Map {
+                key: Box::new(TypeExpression::Concrete(parse_type("string"))),
+                value: Box::new(TypeExpression::Any { nullable: true }),
+                nullable: false,
+            }
+        );
+        assert_eq!(
+            parse_signature_type("List?<DECIMAL<P, S>>"),
+            TypeExpression::List {
+                element: Box::new(parse_signature_type("decimal<P, S>")),
+                nullable: true,
+            }
+        );
+        assert_eq!(
+            parse_signature_type("Map<string, precision_timestamp<P>>"),
+            TypeExpression::Map {
+                key: Box::new(TypeExpression::Concrete(parse_type("string"))),
+                value: Box::new(parse_signature_type("precision_timestamp<P>")),
+                nullable: false,
+            }
+        );
+        assert_eq!(
+            parse_signature_type("Struct?<any1, List<Map<string, VARCHAR<L>>>>"),
+            TypeExpression::Struct {
+                fields: vec![
+                    parse_signature_type("any1"),
+                    parse_signature_type("List<Map<string, VARCHAR<L>>>"),
+                ],
+                nullable: true,
+            }
+        );
+        assert_eq!(
+            parse_signature_type("list<decimal<10, 2>>"),
+            TypeExpression::Concrete(parse_type("list<decimal<10, 2>>"))
+        );
+    }
+
+    #[test]
+    fn test_symbolic_user_defined_type_parameters() {
+        assert_eq!(
+            parse_signature_type("u!Box?<List<decimal<P, S>>, 5, N>"),
+            TypeExpression::UserDefined {
+                name: "Box".to_string(),
+                parameters: vec![
+                    TypeExpressionParameter::Type(parse_signature_type("List<decimal<P, S>>")),
+                    TypeExpressionParameter::Integer(5),
+                    TypeExpressionParameter::Name("N".to_string()),
+                ],
+                nullable: true,
+            }
+        );
+    }
+
+    #[test]
+    fn test_invalid_nested_signature_types() {
+        for input in [
+            "List<any1, any2>",
+            "Map<any1>",
+            "Struct<1, any1>",
+            "List<missing_type?>",
+            "List<decimal<any1>>",
+            "List<i32<P>>",
+        ] {
+            assert!(
+                TypeExpression::try_from(TypeExpr::parse(input).unwrap()).is_err(),
+                "{input} should not be accepted as a signature type"
+            );
         }
     }
 
