@@ -892,7 +892,7 @@ impl From<ConcreteType> for RawType {
 /// A function-signature type, retaining unresolved variables and parameters.
 ///
 /// Variables are not bound to argument types or resolved during parsing. Fully
-/// concrete expressions retain the existing [`ConcreteType`] representation.
+/// concrete type strings retain the existing [`ConcreteType`] representation.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeExpression {
     /// A fully resolved type.
@@ -932,6 +932,11 @@ pub enum TypeExpression {
         /// Whether the struct has an explicit `?` annotation.
         nullable: bool,
     },
+    /// A non-nullable named struct written in YAML object form.
+    NamedStruct {
+        /// Field names and type expressions in declaration order.
+        fields: IndexMap<String, TypeExpression>,
+    },
     /// A user-defined type containing unresolved parameters.
     UserDefined {
         /// The original type name, without its `u!` prefix.
@@ -950,6 +955,30 @@ pub enum TypeExpression {
         /// Whether the type has an explicit `?` annotation.
         nullable: bool,
     },
+}
+
+/// Parses extension YAML type syntax without resolving user-defined references.
+/// Object-form named structs preserve field order and require string-valued field types.
+impl TryFrom<&RawType> for TypeExpression {
+    type Error = ExtensionTypeError;
+
+    fn try_from(raw: &RawType) -> Result<Self, Self::Error> {
+        match raw {
+            RawType::String(expression) => Self::try_from(TypeExpr::parse(expression)?),
+            RawType::Object(raw_fields) => {
+                let mut fields = IndexMap::new();
+                for (name, value) in raw_fields {
+                    let expression = value.as_str().ok_or_else(|| {
+                        ExtensionTypeError::InvalidFieldType(format!(
+                            "Struct field '{name}' type must be a string"
+                        ))
+                    })?;
+                    fields.insert(name.clone(), Self::try_from(TypeExpr::parse(expression)?)?);
+                }
+                Ok(Self::NamedStruct { fields })
+            }
+        }
+    }
 }
 
 /// An integer parameter retained from a function signature.
