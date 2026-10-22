@@ -33,7 +33,9 @@ pub use scalar_functions::{
     Impl as ScalarFunctionImpl, NullabilityHandling, Options, ScalarFunction, VariadicBehavior,
 };
 pub use type_ast::TypeExpr;
-pub use types::{ConcreteType, CustomType, ExtensionTypeError};
+pub use types::{
+    ConcreteType, CustomType, ExtensionTypeError, ParameterizedType, TypeExpression, TypeVariable,
+};
 
 use crate::urn::Urn;
 
