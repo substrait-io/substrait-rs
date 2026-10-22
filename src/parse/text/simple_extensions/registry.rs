@@ -386,9 +386,48 @@ scalar_functions:
         }
     }
 
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_core_functions_with_numeric_parameter_returns() {
+        let registry = Registry::from_core_extensions();
+        let urn = Urn::from_str("extension:io.substrait:functions_string").unwrap();
+        for name in ["lower", "upper"] {
+            assert!(
+                registry.get_scalar_function(&urn, name).is_some(),
+                "{name} should not be skipped because of its named numeric parameters"
+            );
+        }
+    }
+
+    #[test]
+    fn test_numeric_parameter_returns() {
+        use super::super::{IntegerParameter, TypeExpression};
+
+        let yaml = r#"urn: extension:example.com:numeric_parameters
+scalar_functions:
+  - name: resize
+    impls:
+      - args:
+          - value: varchar<L>
+        return: varchar<L>
+"#;
+        let file = ExtensionFile::read_from_str(yaml).unwrap();
+        let urn = file.urn().clone();
+        let registry = Registry::new(vec![file]).unwrap();
+        let function = registry.get_scalar_function(&urn, "resize").unwrap();
+        assert_eq!(
+            function.impls[0].return_type,
+            TypeExpression::ParameterizedBuiltin {
+                name: "varchar".to_string(),
+                parameters: vec![IntegerParameter::Variable("L".to_string())],
+                nullable: false,
+            }
+        );
+    }
+
     #[test]
     fn test_unsupported_symbolic_returns_are_still_skipped() {
-        for return_type in ["list<any1>", "decimal<P, S>"] {
+        for return_type in ["list<any1>", "map<string, any1>"] {
             let raw = extension_with_custom_type_reference(
                 "extension:example.com:unsupported",
                 "unsupported",
