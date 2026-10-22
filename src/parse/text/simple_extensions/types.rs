@@ -892,8 +892,7 @@ impl From<ConcreteType> for RawType {
 /// A function-signature type, which may refer to a numbered type variable.
 ///
 /// Variables are retained as written, not bound to argument types or resolved
-/// during parsing. Nested variables and named numeric parameters are not yet
-/// supported.
+/// during parsing. Nested symbolic types are not yet supported.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeExpression {
     /// A fully resolved type.
@@ -905,6 +904,87 @@ pub enum TypeExpression {
         /// Whether the reference has an explicit `?` annotation.
         nullable: bool,
     },
+    /// A built-in with unresolved numeric parameters, such as `decimal<P, S>`.
+    ParameterizedBuiltin {
+        /// The lowercase built-in name.
+        name: String,
+        /// Literal or named integer parameters in declaration order.
+        parameters: Vec<IntegerParameter>,
+        /// Whether the type has an explicit `?` annotation.
+        nullable: bool,
+    },
+}
+
+/// An integer parameter retained from a function signature.
+#[derive(Clone, Debug, PartialEq)]
+pub enum IntegerParameter {
+    /// A known integer value.
+    Literal(i32),
+    /// An identifier whose value is not resolved during parsing.
+    Variable(String),
+}
+
+fn integer_parameter_name<'a>(parameter: &TypeExprParam<'a>) -> Option<&'a str> {
+    let TypeExprParam::Type(TypeExpr::Simple(name, parameters, false)) = parameter else {
+        return None;
+    };
+    let lower = name.to_ascii_lowercase();
+    let is_type_variable = lower
+        .strip_prefix("any")
+        .is_some_and(|suffix| suffix.is_empty() || suffix.parse::<u32>().is_ok());
+    if !parameters.is_empty()
+        || CustomType::validate_name(name).is_err()
+        || BasicBuiltinType::is_name(name)
+        || is_type_variable
+        || matches!(
+            lower.as_str(),
+            "list" | "map" | "struct" | "nstruct" | "func"
+        )
+    {
+        return None;
+    }
+    Some(name)
+}
+
+fn parse_integer_parameter(
+    type_name: &str,
+    index: usize,
+    parameter: &TypeExprParam<'_>,
+    range: Option<RangeInclusive<i32>>,
+) -> Result<IntegerParameter, ExtensionTypeError> {
+    match integer_parameter_name(parameter) {
+        Some(name) => Ok(IntegerParameter::Variable(name.to_string())),
+        None => {
+            expect_integer_param(type_name, index, parameter, range).map(IntegerParameter::Literal)
+        }
+    }
+}
+
+fn parse_parameterized_builtin(
+    name: &str,
+    parameters: &[TypeExprParam<'_>],
+    nullable: bool,
+) -> Result<Option<TypeExpression>, ExtensionTypeError> {
+    let lower = name.to_ascii_lowercase();
+    let ranges = match lower.as_str() {
+        "fixedchar" | "varchar" | "fixedbinary" | "interval_compound" => vec![None],
+        "precision_time" | "precision_timestamp" | "precision_timestamp_tz" => vec![Some(0..=12)],
+        "interval_day" => vec![Some(0..=9)],
+        "decimal" => vec![Some(1..=38), Some(0..=38)],
+        _ => return Ok(None),
+    };
+    expect_param_len(name, parameters, ranges.len())?;
+    let parsed = parameters
+        .iter()
+        .zip(ranges)
+        .enumerate()
+        .map(|(index, (parameter, range))| parse_integer_parameter(name, index, parameter, range))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Some(TypeExpression::ParameterizedBuiltin {
+        name: lower,
+        parameters: parsed,
+        nullable,
+    }))
 }
 
 impl<'a> TryFrom<TypeExpr<'a>> for TypeExpression {
@@ -913,6 +993,17 @@ impl<'a> TryFrom<TypeExpr<'a>> for TypeExpression {
     fn try_from(expression: TypeExpr<'a>) -> Result<Self, Self::Error> {
         match expression {
             TypeExpr::TypeVariable(id, nullable) => Ok(Self::Variable { id, nullable }),
+            TypeExpr::Simple(name, parameters, nullable)
+                if parameters
+                    .iter()
+                    .any(|parameter| integer_parameter_name(parameter).is_some()) =>
+            {
+                match parse_parameterized_builtin(name, &parameters, nullable)? {
+                    Some(expression) => Ok(expression),
+                    None => ConcreteType::try_from(TypeExpr::Simple(name, parameters, nullable))
+                        .map(Self::Concrete),
+                }
+            }
             other => ConcreteType::try_from(other).map(Self::Concrete),
         }
     }
@@ -1236,6 +1327,83 @@ mod tests {
                     assert!(result.is_none(), "expected parsing {input} to fail");
                 }
             }
+        }
+    }
+
+    #[test]
+    fn test_named_integer_parameters() {
+        for name in [
+            "fixedchar",
+            "varchar",
+            "fixedbinary",
+            "precision_time",
+            "precision_timestamp",
+            "precision_timestamp_tz",
+            "interval_day",
+            "interval_compound",
+        ] {
+            let input = format!("{}?<N>", name.to_ascii_uppercase());
+            let expression = TypeExpression::try_from(TypeExpr::parse(&input).unwrap()).unwrap();
+            assert_eq!(
+                expression,
+                TypeExpression::ParameterizedBuiltin {
+                    name: name.to_string(),
+                    parameters: vec![IntegerParameter::Variable("N".to_string())],
+                    nullable: true,
+                }
+            );
+        }
+
+        for (input, parameters) in [
+            (
+                "decimal<P, S>",
+                vec![
+                    IntegerParameter::Variable("P".into()),
+                    IntegerParameter::Variable("S".into()),
+                ],
+            ),
+            (
+                "decimal<10, S>",
+                vec![
+                    IntegerParameter::Literal(10),
+                    IntegerParameter::Variable("S".into()),
+                ],
+            ),
+            (
+                "decimal<P, 2>",
+                vec![
+                    IntegerParameter::Variable("P".into()),
+                    IntegerParameter::Literal(2),
+                ],
+            ),
+        ] {
+            assert_eq!(
+                TypeExpression::try_from(TypeExpr::parse(input).unwrap()).unwrap(),
+                TypeExpression::ParameterizedBuiltin {
+                    name: "decimal".to_string(),
+                    parameters,
+                    nullable: false,
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn test_symbolic_builtins_validate_parameters() {
+        for input in [
+            "i32<P>",
+            "varchar<L, 2>",
+            "decimal<any1, S>",
+            "decimal<string, S>",
+            "decimal<39, S>",
+            "decimal<P, 39>",
+            "precisiontime<P>",
+            "missing<P>",
+        ] {
+            assert!(
+                TypeExpression::try_from(TypeExpr::parse(input).unwrap()).is_err(),
+                "{input} should not be accepted as a signature type"
+            );
         }
     }
 
