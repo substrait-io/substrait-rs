@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.65.1](https://github.com/substrait-io/substrait-rs/compare/v0.65.0...v0.65.1) - 2026-10-22
+
+### Fixed
+
+- keep nullable and user-defined type strings parseable ([#557](https://github.com/substrait-io/substrait-rs/pull/557))
+- normalize built-in type names ([#558](https://github.com/substrait-io/substrait-rs/pull/558))
+
 ## [0.65.0](https://github.com/substrait-io/substrait-rs/compare/v0.64.1...v0.65.0) - 2026-08-27
 
 ### Added
