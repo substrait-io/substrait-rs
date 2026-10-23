@@ -340,6 +340,72 @@ mod tests {
 
     #[cfg(feature = "extensions")]
     #[test]
+    fn test_core_functions_with_variable_returns() {
+        let registry = Registry::from_core_extensions();
+        let urn = Urn::from_str("extension:io.substrait:functions_comparison").unwrap();
+        for name in ["coalesce", "nullif"] {
+            assert!(
+                registry.get_scalar_function(&urn, name).is_some(),
+                "{name} should not be skipped because of its variable return type"
+            );
+        }
+    }
+
+    #[test]
+    fn test_numbered_variable_returns() {
+        use super::super::{UnresolvedTypeExpression, argument::ArgumentsItem};
+
+        for (return_type, id, nullable) in [("any1", 1, false), ("any2?", 2, true)] {
+            let yaml = format!(
+                r#"urn: extension:example.com:variables
+scalar_functions:
+  - name: identity
+    impls:
+      - args:
+          - value: {return_type}
+        return: {return_type}
+"#
+            );
+            let file = ExtensionFile::read_from_str(yaml).unwrap();
+            let urn = file.urn().clone();
+            let registry = Registry::new(vec![file]).unwrap();
+            let function = registry.get_scalar_function(&urn, "identity").unwrap();
+            assert_eq!(
+                function.impls[0].return_type,
+                UnresolvedTypeExpression::Variable { id, nullable }
+            );
+
+            let ArgumentsItem::ValueArgument(argument) = function.impls[0].args[0].clone() else {
+                panic!("expected value argument");
+            };
+            let raw: crate::text::simple_extensions::ValueArg = argument.into();
+            assert_eq!(
+                raw.value,
+                crate::text::simple_extensions::Type::String(return_type.to_string())
+            );
+        }
+    }
+
+    #[test]
+    fn test_unsupported_symbolic_returns_are_still_skipped() {
+        for return_type in ["list<any1>", "decimal<P, S>"] {
+            let raw = extension_with_custom_type_reference(
+                "extension:example.com:unsupported",
+                "unsupported",
+                return_type,
+                vec![],
+            );
+            let file = ExtensionFile::create(raw).unwrap();
+            assert!(
+                file.extension()
+                    .get_scalar_function("unsupported")
+                    .is_none()
+            );
+        }
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
     fn test_scalar_function_parses_completely() {
         use super::super::{
             argument::ArgumentsItem,
@@ -407,10 +473,10 @@ mod tests {
             session_dependent: false,
             deterministic: true,
             nullability: NullabilityHandling::Mirror,
-            return_type: ConcreteType {
+            return_type: UnresolvedTypeExpression::Concrete(ConcreteType {
                 kind: ConcreteTypeKind::Builtin(BasicBuiltinType::I8),
                 nullable: false,
-            },
+            }),
             implementation: HashMap::new(),
         };
 
