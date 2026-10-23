@@ -889,14 +889,10 @@ impl From<ConcreteType> for RawType {
     }
 }
 
-/// A function-signature type, which may refer to a numbered type variable.
-///
-/// Variables are retained as written, not bound to argument types or resolved
-/// during parsing. Nested variables and named numeric parameters are not yet
-/// supported.
+/// A type expression awaiting resolution.
 #[derive(Clone, Debug, PartialEq)]
-pub enum TypeExpression {
-    /// A fully resolved type.
+pub(super) enum UnresolvedTypeExpression {
+    /// A concrete type.
     Concrete(ConcreteType),
     /// A numbered type variable, such as `any1` or `any2?`.
     Variable {
@@ -907,7 +903,7 @@ pub enum TypeExpression {
     },
 }
 
-impl<'a> TryFrom<TypeExpr<'a>> for TypeExpression {
+impl<'a> TryFrom<TypeExpr<'a>> for UnresolvedTypeExpression {
     type Error = ExtensionTypeError;
 
     fn try_from(expression: TypeExpr<'a>) -> Result<Self, Self::Error> {
