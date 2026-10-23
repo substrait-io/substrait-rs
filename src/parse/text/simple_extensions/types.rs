@@ -889,7 +889,7 @@ impl From<ConcreteType> for RawType {
     }
 }
 
-/// A type expression awaiting resolution.
+/// A type expression that may require resolution against function arguments.
 #[derive(Clone, Debug, PartialEq)]
 pub enum UnresolvedTypeExpression {
     /// A concrete type.
