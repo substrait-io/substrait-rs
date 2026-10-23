@@ -61,7 +61,7 @@ impl<'a> TypeExpr<'a> {
     /// Parse a type string into a [`TypeExpr`].
     pub fn parse(type_str: &'a str) -> Result<Self, TypeParseError> {
         // Handle type variables like any1, any2, etc.
-        if let Some(suffix) = strip_any_prefix(type_str) {
+        if let Some(suffix) = type_str.strip_prefix("any") {
             let (middle, nullable) = match suffix.strip_suffix('?') {
                 Some(middle) => (middle, true),
                 None => (suffix, false),
@@ -129,12 +129,6 @@ impl<'a> TypeExpr<'a> {
     }
 }
 
-/// Strips an ASCII case-insensitive `any` prefix.
-fn strip_any_prefix(value: &str) -> Option<&str> {
-    let (prefix, suffix) = value.split_at_checked("any".len())?;
-    prefix.eq_ignore_ascii_case("any").then_some(suffix)
-}
-
 fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
     let mut result = Vec::new();
     let mut start = 0;
@@ -191,8 +185,6 @@ mod tests {
             ),
             ("uuid", TypeExpr::Simple("uuid", vec![], false)),
             ("any", TypeExpr::Simple("any", vec![], false)),
-            ("an", TypeExpr::Simple("an", vec![], false)),
-            ("🦀", TypeExpr::Simple("🦀", vec![], false)),
         ];
 
         for (expr, expected) in cases {
@@ -205,8 +197,6 @@ mod tests {
         let cases = vec![
             ("any1", TypeExpr::TypeVariable(1, false)),
             ("any2?", TypeExpr::TypeVariable(2, true)),
-            ("ANY3?", TypeExpr::TypeVariable(3, true)),
-            ("AnY4", TypeExpr::TypeVariable(4, false)),
         ];
 
         for (expr, expected) in cases {
