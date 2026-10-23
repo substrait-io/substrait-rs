@@ -891,7 +891,7 @@ impl From<ConcreteType> for RawType {
 
 /// A type expression awaiting resolution.
 #[derive(Clone, Debug, PartialEq)]
-pub(super) enum UnresolvedTypeExpression {
+pub enum UnresolvedTypeExpression {
     /// A concrete type.
     Concrete(ConcreteType),
     /// A numbered type variable, such as `any1` or `any2?`.

@@ -115,7 +115,7 @@ pub struct Impl {
     /// Defaults to [`NullabilityHandling::Mirror`] per the Substrait spec.
     pub nullability: NullabilityHandling,
     /// The declared return type.
-    pub(super) return_type: UnresolvedTypeExpression,
+    pub return_type: UnresolvedTypeExpression,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
     /// Maps language identifiers to implementation source code snippets.

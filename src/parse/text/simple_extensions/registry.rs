@@ -353,7 +353,7 @@ mod tests {
 
     #[test]
     fn test_numbered_variable_returns() {
-        use super::super::{argument::ArgumentsItem, types::UnresolvedTypeExpression};
+        use super::super::{UnresolvedTypeExpression, argument::ArgumentsItem};
 
         for (return_type, id, nullable) in
             [("any1", 1, false), ("any2?", 2, true), ("ANY3?", 3, true)]
