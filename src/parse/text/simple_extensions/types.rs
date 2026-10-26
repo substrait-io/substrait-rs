@@ -901,12 +901,68 @@ pub enum UnresolvedTypeExpression {
         /// Whether the reference has an explicit `?` annotation.
         nullable: bool,
     },
-    /// A built-in with unresolved numeric parameters, such as `decimal<P, S>`.
-    ParameterizedBuiltin {
-        /// The lowercase built-in name.
-        name: String,
-        /// Literal or named integer parameters in declaration order.
-        parameters: Vec<IntegerParameter>,
+    /// A fixed-length character string with a symbolic length.
+    FixedChar {
+        /// Length in characters.
+        length: IntegerParameter,
+        /// Whether the type has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// A variable-length character string with a symbolic length.
+    VarChar {
+        /// Maximum length in characters.
+        length: IntegerParameter,
+        /// Whether the type has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// A fixed-length binary value with a symbolic length.
+    FixedBinary {
+        /// Length in bytes.
+        length: IntegerParameter,
+        /// Whether the type has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// A decimal with symbolic precision or scale.
+    Decimal {
+        /// Total number of digits.
+        precision: IntegerParameter,
+        /// Number of digits after the decimal point.
+        scale: IntegerParameter,
+        /// Whether the type has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// A time with symbolic precision.
+    PrecisionTime {
+        /// Sub-second precision digits.
+        precision: IntegerParameter,
+        /// Whether the type has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// A timestamp with symbolic precision.
+    PrecisionTimestamp {
+        /// Sub-second precision digits.
+        precision: IntegerParameter,
+        /// Whether the type has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// A timezone-aware timestamp with symbolic precision.
+    PrecisionTimestampTz {
+        /// Sub-second precision digits.
+        precision: IntegerParameter,
+        /// Whether the type has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// A day-time interval with symbolic precision.
+    IntervalDay {
+        /// Sub-second precision digits.
+        precision: IntegerParameter,
+        /// Whether the type has an explicit `?` annotation.
+        nullable: bool,
+    },
+    /// A compound interval with symbolic precision.
+    IntervalCompound {
+        /// Sub-second precision digits.
+        precision: IntegerParameter,
         /// Whether the type has an explicit `?` annotation.
         nullable: bool,
     },
@@ -958,14 +1014,6 @@ fn parse_parameterized_builtin(
     parameters: &[TypeExprParam<'_>],
     nullable: bool,
 ) -> Result<Option<UnresolvedTypeExpression>, ExtensionTypeError> {
-    let lower = name.to_ascii_lowercase();
-    let ranges = match lower.as_str() {
-        "fixedchar" | "varchar" | "fixedbinary" | "interval_compound" => vec![None],
-        "precision_time" | "precision_timestamp" | "precision_timestamp_tz" => vec![Some(0..=12)],
-        "interval_day" => vec![Some(0..=9)],
-        "decimal" => vec![Some(1..=38), Some(0..=38)],
-        _ => return Ok(None),
-    };
     // Let ConcreteType handle fully literal types and their cross-parameter checks.
     if parameters
         .iter()
@@ -973,18 +1021,54 @@ fn parse_parameterized_builtin(
     {
         return Ok(None);
     }
-    expect_param_len(name, parameters, ranges.len())?;
-    let parsed = parameters
-        .iter()
-        .zip(ranges)
-        .enumerate()
-        .map(|(index, (parameter, range))| parse_integer_parameter(name, index, parameter, range))
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(Some(UnresolvedTypeExpression::ParameterizedBuiltin {
-        name: lower,
-        parameters: parsed,
-        nullable,
-    }))
+    let parse_single_parameter = |range| {
+        expect_param_len(name, parameters, 1)?;
+        parse_integer_parameter(name, 0, &parameters[0], range)
+    };
+    let expression = match name.to_ascii_lowercase().as_str() {
+        "fixedchar" => UnresolvedTypeExpression::FixedChar {
+            length: parse_single_parameter(None)?,
+            nullable,
+        },
+        "varchar" => UnresolvedTypeExpression::VarChar {
+            length: parse_single_parameter(None)?,
+            nullable,
+        },
+        "fixedbinary" => UnresolvedTypeExpression::FixedBinary {
+            length: parse_single_parameter(None)?,
+            nullable,
+        },
+        "decimal" => {
+            expect_param_len(name, parameters, 2)?;
+            UnresolvedTypeExpression::Decimal {
+                precision: parse_integer_parameter(name, 0, &parameters[0], Some(1..=38))?,
+                scale: parse_integer_parameter(name, 1, &parameters[1], Some(0..=38))?,
+                nullable,
+            }
+        }
+        "precision_time" => UnresolvedTypeExpression::PrecisionTime {
+            precision: parse_single_parameter(Some(0..=12))?,
+            nullable,
+        },
+        "precision_timestamp" => UnresolvedTypeExpression::PrecisionTimestamp {
+            precision: parse_single_parameter(Some(0..=12))?,
+            nullable,
+        },
+        "precision_timestamp_tz" => UnresolvedTypeExpression::PrecisionTimestampTz {
+            precision: parse_single_parameter(Some(0..=12))?,
+            nullable,
+        },
+        "interval_day" => UnresolvedTypeExpression::IntervalDay {
+            precision: parse_single_parameter(Some(0..=9))?,
+            nullable,
+        },
+        "interval_compound" => UnresolvedTypeExpression::IntervalCompound {
+            precision: parse_single_parameter(None)?,
+            nullable,
+        },
+        _ => return Ok(None),
+    };
+    Ok(Some(expression))
 }
 
 impl<'a> TryFrom<TypeExpr<'a>> for UnresolvedTypeExpression {
@@ -1328,57 +1412,93 @@ mod tests {
 
     #[test]
     fn test_named_integer_parameters() {
-        for name in [
-            "fixedchar",
-            "varchar",
-            "fixedbinary",
-            "precision_time",
-            "precision_timestamp",
-            "precision_timestamp_tz",
-            "interval_day",
-            "interval_compound",
+        let parameter = IntegerParameter::Variable("N".to_string());
+        for (name, expected) in [
+            (
+                "fixedchar",
+                UnresolvedTypeExpression::FixedChar {
+                    length: parameter.clone(),
+                    nullable: true,
+                },
+            ),
+            (
+                "varchar",
+                UnresolvedTypeExpression::VarChar {
+                    length: parameter.clone(),
+                    nullable: true,
+                },
+            ),
+            (
+                "fixedbinary",
+                UnresolvedTypeExpression::FixedBinary {
+                    length: parameter.clone(),
+                    nullable: true,
+                },
+            ),
+            (
+                "precision_time",
+                UnresolvedTypeExpression::PrecisionTime {
+                    precision: parameter.clone(),
+                    nullable: true,
+                },
+            ),
+            (
+                "precision_timestamp",
+                UnresolvedTypeExpression::PrecisionTimestamp {
+                    precision: parameter.clone(),
+                    nullable: true,
+                },
+            ),
+            (
+                "precision_timestamp_tz",
+                UnresolvedTypeExpression::PrecisionTimestampTz {
+                    precision: parameter.clone(),
+                    nullable: true,
+                },
+            ),
+            (
+                "interval_day",
+                UnresolvedTypeExpression::IntervalDay {
+                    precision: parameter.clone(),
+                    nullable: true,
+                },
+            ),
+            (
+                "interval_compound",
+                UnresolvedTypeExpression::IntervalCompound {
+                    precision: parameter,
+                    nullable: true,
+                },
+            ),
         ] {
             let input = format!("{}?<N>", name.to_ascii_uppercase());
             let expression =
                 UnresolvedTypeExpression::try_from(TypeExpr::parse(&input).unwrap()).unwrap();
-            assert_eq!(
-                expression,
-                UnresolvedTypeExpression::ParameterizedBuiltin {
-                    name: name.to_string(),
-                    parameters: vec![IntegerParameter::Variable("N".to_string())],
-                    nullable: true,
-                }
-            );
+            assert_eq!(expression, expected, "unexpected type for {input}");
         }
 
-        for (input, parameters) in [
+        for (input, precision, scale) in [
             (
                 "decimal<P, S>",
-                vec![
-                    IntegerParameter::Variable("P".into()),
-                    IntegerParameter::Variable("S".into()),
-                ],
+                IntegerParameter::Variable("P".into()),
+                IntegerParameter::Variable("S".into()),
             ),
             (
                 "decimal<10, S>",
-                vec![
-                    IntegerParameter::Literal(10),
-                    IntegerParameter::Variable("S".into()),
-                ],
+                IntegerParameter::Literal(10),
+                IntegerParameter::Variable("S".into()),
             ),
             (
                 "decimal<P, 2>",
-                vec![
-                    IntegerParameter::Variable("P".into()),
-                    IntegerParameter::Literal(2),
-                ],
+                IntegerParameter::Variable("P".into()),
+                IntegerParameter::Literal(2),
             ),
         ] {
             assert_eq!(
                 UnresolvedTypeExpression::try_from(TypeExpr::parse(input).unwrap()).unwrap(),
-                UnresolvedTypeExpression::ParameterizedBuiltin {
-                    name: "decimal".to_string(),
-                    parameters,
+                UnresolvedTypeExpression::Decimal {
+                    precision,
+                    scale,
                     nullable: false,
                 }
             );

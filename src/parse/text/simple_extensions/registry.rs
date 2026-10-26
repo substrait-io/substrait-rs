@@ -417,9 +417,8 @@ scalar_functions:
         let function = registry.get_scalar_function(&urn, "upper").unwrap();
         assert_eq!(
             function.impls[0].return_type,
-            UnresolvedTypeExpression::ParameterizedBuiltin {
-                name: "varchar".to_string(),
-                parameters: vec![IntegerParameter::Variable("L".to_string())],
+            UnresolvedTypeExpression::VarChar {
+                length: IntegerParameter::Variable("L".to_string()),
                 nullable: false,
             }
         );
