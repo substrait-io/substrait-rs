@@ -889,13 +889,10 @@ impl From<ConcreteType> for RawType {
     }
 }
 
-/// A function-signature type, which may refer to a numbered type variable.
-///
-/// Variables are retained as written, not bound to argument types or resolved
-/// during parsing. Nested symbolic types are not yet supported.
+/// A type expression that may require resolution against function arguments.
 #[derive(Clone, Debug, PartialEq)]
-pub enum TypeExpression {
-    /// A fully resolved type.
+pub enum UnresolvedTypeExpression {
+    /// A concrete type.
     Concrete(ConcreteType),
     /// A numbered type variable, such as `any1` or `any2?`.
     Variable {
@@ -964,7 +961,7 @@ fn parse_parameterized_builtin(
     name: &str,
     parameters: &[TypeExprParam<'_>],
     nullable: bool,
-) -> Result<Option<TypeExpression>, ExtensionTypeError> {
+) -> Result<Option<UnresolvedTypeExpression>, ExtensionTypeError> {
     let lower = name.to_ascii_lowercase();
     let ranges = match lower.as_str() {
         "fixedchar" | "varchar" | "fixedbinary" | "interval_compound" => vec![None],
@@ -980,14 +977,14 @@ fn parse_parameterized_builtin(
         .enumerate()
         .map(|(index, (parameter, range))| parse_integer_parameter(name, index, parameter, range))
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(Some(TypeExpression::ParameterizedBuiltin {
+    Ok(Some(UnresolvedTypeExpression::ParameterizedBuiltin {
         name: lower,
         parameters: parsed,
         nullable,
     }))
 }
 
-impl<'a> TryFrom<TypeExpr<'a>> for TypeExpression {
+impl<'a> TryFrom<TypeExpr<'a>> for UnresolvedTypeExpression {
     type Error = ExtensionTypeError;
 
     fn try_from(expression: TypeExpr<'a>) -> Result<Self, Self::Error> {
@@ -1343,10 +1340,11 @@ mod tests {
             "interval_compound",
         ] {
             let input = format!("{}?<N>", name.to_ascii_uppercase());
-            let expression = TypeExpression::try_from(TypeExpr::parse(&input).unwrap()).unwrap();
+            let expression =
+                UnresolvedTypeExpression::try_from(TypeExpr::parse(&input).unwrap()).unwrap();
             assert_eq!(
                 expression,
-                TypeExpression::ParameterizedBuiltin {
+                UnresolvedTypeExpression::ParameterizedBuiltin {
                     name: name.to_string(),
                     parameters: vec![IntegerParameter::Variable("N".to_string())],
                     nullable: true,
@@ -1378,8 +1376,8 @@ mod tests {
             ),
         ] {
             assert_eq!(
-                TypeExpression::try_from(TypeExpr::parse(input).unwrap()).unwrap(),
-                TypeExpression::ParameterizedBuiltin {
+                UnresolvedTypeExpression::try_from(TypeExpr::parse(input).unwrap()).unwrap(),
+                UnresolvedTypeExpression::ParameterizedBuiltin {
                     name: "decimal".to_string(),
                     parameters,
                     nullable: false,
@@ -1401,7 +1399,7 @@ mod tests {
             "missing<P>",
         ] {
             assert!(
-                TypeExpression::try_from(TypeExpr::parse(input).unwrap()).is_err(),
+                UnresolvedTypeExpression::try_from(TypeExpr::parse(input).unwrap()).is_err(),
                 "{input} should not be accepted as a signature type"
             );
         }

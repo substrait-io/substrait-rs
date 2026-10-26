@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Scalar function definitions parsed from extension YAML.
-//!
-//! Return types retain numbered variables instead of requiring every type to be
-//! concrete. Variable binding and function resolution are not performed here.
 
 use std::collections::HashMap;
 
@@ -16,7 +13,7 @@ use crate::text::simple_extensions::{
 use super::argument::{ArgumentsItem, ArgumentsItemError};
 use super::extensions::TypeContext;
 use super::type_ast::{TypeExpr, TypeParseError};
-use super::types::{ExtensionTypeError, TypeExpression};
+use super::types::{ExtensionTypeError, UnresolvedTypeExpression};
 use crate::parse::Parse;
 use thiserror::Error;
 
@@ -117,11 +114,8 @@ pub struct Impl {
     ///
     /// Defaults to [`NullabilityHandling::Mirror`] per the Substrait spec.
     pub nullability: NullabilityHandling,
-    /// The return type, retaining numbered variables and named numeric parameters.
-    ///
-    /// Variables are not bound or resolved during parsing. Functions with nested
-    /// symbolic types are still skipped.
-    pub return_type: TypeExpression,
+    /// The declared return type.
+    pub return_type: UnresolvedTypeExpression,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
     /// Maps language identifiers to implementation source code snippets.
@@ -146,7 +140,7 @@ impl Impl {
                 }
                 let type_expr = TypeExpr::parse(&s)?;
                 type_expr.visit_references(&mut |name| ctx.linked(name));
-                match TypeExpression::try_from(type_expr) {
+                match UnresolvedTypeExpression::try_from(type_expr) {
                     Ok(expression) => expression,
                     Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
                     | Err(ExtensionTypeError::InvalidParameter(_))
@@ -432,7 +426,7 @@ mod tests {
         use super::super::types::{BasicBuiltinType, ConcreteType};
         assert_eq!(
             result.impls[0].return_type,
-            TypeExpression::Concrete(ConcreteType::builtin(BasicBuiltinType::I32, false))
+            UnresolvedTypeExpression::Concrete(ConcreteType::builtin(BasicBuiltinType::I32, false))
         );
     }
 

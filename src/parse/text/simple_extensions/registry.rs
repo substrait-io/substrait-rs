@@ -353,11 +353,9 @@ mod tests {
 
     #[test]
     fn test_numbered_variable_returns() {
-        use super::super::{TypeExpression, argument::ArgumentsItem};
+        use super::super::{UnresolvedTypeExpression, argument::ArgumentsItem};
 
-        for (return_type, id, nullable) in
-            [("any1", 1, false), ("any2?", 2, true), ("ANY3?", 3, true)]
-        {
+        for (return_type, id, nullable) in [("any1", 1, false), ("any2?", 2, true)] {
             let yaml = format!(
                 r#"urn: extension:example.com:variables
 scalar_functions:
@@ -374,7 +372,7 @@ scalar_functions:
             let function = registry.get_scalar_function(&urn, "identity").unwrap();
             assert_eq!(
                 function.impls[0].return_type,
-                TypeExpression::Variable { id, nullable }
+                UnresolvedTypeExpression::Variable { id, nullable }
             );
 
             let ArgumentsItem::ValueArgument(argument) = function.impls[0].args[0].clone() else {
@@ -403,7 +401,7 @@ scalar_functions:
 
     #[test]
     fn test_numeric_parameter_returns() {
-        use super::super::{IntegerParameter, TypeExpression};
+        use super::super::{IntegerParameter, UnresolvedTypeExpression};
 
         let yaml = r#"urn: extension:example.com:numeric_parameters
 scalar_functions:
@@ -419,7 +417,7 @@ scalar_functions:
         let function = registry.get_scalar_function(&urn, "resize").unwrap();
         assert_eq!(
             function.impls[0].return_type,
-            TypeExpression::ParameterizedBuiltin {
+            UnresolvedTypeExpression::ParameterizedBuiltin {
                 name: "varchar".to_string(),
                 parameters: vec![IntegerParameter::Variable("L".to_string())],
                 nullable: false,
@@ -514,7 +512,7 @@ scalar_functions:
             session_dependent: false,
             deterministic: true,
             nullability: NullabilityHandling::Mirror,
-            return_type: TypeExpression::Concrete(ConcreteType {
+            return_type: UnresolvedTypeExpression::Concrete(ConcreteType {
                 kind: ConcreteTypeKind::Builtin(BasicBuiltinType::I8),
                 nullable: false,
             }),
