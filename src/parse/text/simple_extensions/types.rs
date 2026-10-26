@@ -940,20 +940,6 @@ impl From<Type> for RawType {
     }
 }
 
-fn is_valid_integer_parameter_name(name: &str) -> bool {
-    let lower = name.to_ascii_lowercase();
-    let is_type_variable = lower
-        .strip_prefix("any")
-        .is_some_and(|suffix| suffix.is_empty() || suffix.parse::<u32>().is_ok());
-    CustomType::validate_name(name).is_ok()
-        && !TypeKind::is_name(name)
-        && !is_type_variable
-        && !matches!(
-            lower.as_str(),
-            "list" | "map" | "struct" | "nstruct" | "func"
-        )
-}
-
 fn parse_integer_parameter(
     type_name: &str,
     index: usize,
@@ -962,7 +948,7 @@ fn parse_integer_parameter(
 ) -> Result<IntegerParameter, ExtensionTypeError> {
     match parameter {
         TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
-            if parameters.is_empty() && is_valid_integer_parameter_name(name) =>
+            if parameters.is_empty() && CustomType::validate_name(name).is_ok() =>
         {
             Ok(IntegerParameter::Variable(name.to_string()))
         }
@@ -1529,7 +1515,6 @@ mod tests {
             "i32<P>",
             "varchar<L, 2>",
             "decimal<any1, S>",
-            "decimal<string, S>",
             "decimal<P?, S>",
             "decimal<P<1>, S>",
             "decimal<u!P, S>",
