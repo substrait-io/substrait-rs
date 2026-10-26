@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Concrete type system for function validation in the registry.
-//!
-//! This module provides a clean, type-safe wrapper around Substrait extension types,
-//! separating function signature patterns from concrete argument types.
+//! Owned type expressions used by the extension registry.
 
 use super::TypeExpr;
 use super::argument::{
@@ -66,10 +63,9 @@ where
     }
 }
 
-/// Non-recursive, built-in Substrait types: types with no parameters (primitive
-/// types), or simple with only primitive / literal parameters.
+/// The structure of a type expression, without its nullability.
 #[derive(Clone, Debug, PartialEq)]
-pub enum BasicBuiltinType {
+pub enum TypeKind {
     /// Boolean type - `bool`
     Boolean,
     /// 8-bit signed integer - `i8`
@@ -97,53 +93,82 @@ pub enum BasicBuiltinType {
     /// Fixed-length character string: `fixedchar<L>`
     FixedChar {
         /// Length (number of characters), must be >= 1
-        length: i32,
+        length: IntegerParameter,
     },
     /// Variable-length character string: `varchar<L>`
     VarChar {
         /// Maximum length (number of characters), must be >= 1
-        length: i32,
+        length: IntegerParameter,
     },
     /// Fixed-length binary data: `fixedbinary<L>`
     FixedBinary {
         /// Length (number of bytes), must be >= 1
-        length: i32,
+        length: IntegerParameter,
     },
     /// Fixed-point decimal: `decimal<P, S>`
     Decimal {
         /// Precision (total digits), <= 38
-        precision: i32,
+        precision: IntegerParameter,
         /// Scale (digits after decimal point), 0 <= S <= P
-        scale: i32,
+        scale: IntegerParameter,
     },
     /// Time with sub-second precision: `precision_time<P>`
     PrecisionTime {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
-        precision: i32,
+        precision: IntegerParameter,
     },
     /// Timestamp with sub-second precision: `precision_timestamp<P>`
     PrecisionTimestamp {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
-        precision: i32,
+        precision: IntegerParameter,
     },
     /// Timezone-aware timestamp with precision: `precision_timestamp_tz<P>`
     PrecisionTimestampTz {
         /// Sub-second precision digits (0-12: seconds to picoseconds)
-        precision: i32,
+        precision: IntegerParameter,
     },
     /// Day-time interval: `interval_day<P>`
     IntervalDay {
         /// Sub-second precision digits (0-9: seconds to nanoseconds)
-        precision: i32,
+        precision: IntegerParameter,
     },
     /// Compound interval: `interval_compound<P>`
     IntervalCompound {
         /// Sub-second precision digits
-        precision: i32,
+        precision: IntegerParameter,
+    },
+    /// Extension type with optional parameters
+    Extension {
+        /// Extension type name
+        name: String,
+        /// Type parameters
+        parameters: Vec<TypeParameter>,
+    },
+    /// List type with element type
+    List(Box<Type>),
+    /// Map type with key and value types
+    Map {
+        /// Key type
+        key: Box<Type>,
+        /// Value type
+        value: Box<Type>,
+    },
+    /// Struct type (ordered fields without names)
+    Struct(Vec<Type>),
+    /// Named struct type (nstruct - ordered fields with names)
+    NamedStruct {
+        /// Ordered field names and types. They are in the order they should
+        /// appear in the struct - hence the use of [`IndexMap`].
+        fields: IndexMap<String, Type>,
+    },
+    /// A numbered type variable, such as `any1`.
+    Variable {
+        /// The variable identifier shared within a function signature.
+        id: u32,
     },
 }
 
-impl BasicBuiltinType {
+impl TypeKind {
     /// Check if a string is a valid name for a builtin scalar type
     pub fn is_name(name: &str) -> bool {
         let lower = name.to_ascii_lowercase();
@@ -163,6 +188,7 @@ impl BasicBuiltinType {
     }
 
     fn fmt_with_nullability(&self, f: &mut fmt::Formatter<'_>, nullable: bool) -> fmt::Result {
+        let nullability = if nullable { "?" } else { "" };
         let name = match self {
             Self::Boolean => "bool",
             Self::I8 => "i8",
@@ -185,8 +211,23 @@ impl BasicBuiltinType {
             Self::PrecisionTimestampTz { .. } => "precision_timestamp_tz",
             Self::IntervalDay { .. } => "interval_day",
             Self::IntervalCompound { .. } => "interval_compound",
+            Self::List(_) => "list",
+            Self::Map { .. } => "map",
+            Self::Struct(_) => "struct",
+            Self::Extension { name, parameters } => {
+                write!(f, "u!{name}{nullability}")?;
+                return write_separated(f, parameters.iter(), "<", ">", ", ");
+            }
+            Self::NamedStruct { fields } => {
+                let fields = fields
+                    .iter()
+                    .map(|(name, field)| KeyValueDisplay(name, field, ": "));
+                write_separated(f, fields, "{", "}", ", ")?;
+                return f.write_str(nullability);
+            }
+            Self::Variable { id } => return write!(f, "any{id}{nullability}"),
         };
-        write!(f, "{name}{}", if nullable { "?" } else { "" })?;
+        write!(f, "{name}{nullability}")?;
         match self {
             Self::FixedChar { length }
             | Self::VarChar { length }
@@ -199,6 +240,13 @@ impl BasicBuiltinType {
             | Self::PrecisionTimestampTz { precision }
             | Self::IntervalDay { precision }
             | Self::IntervalCompound { precision } => write!(f, "<{precision}>"),
+            Self::List(element) => write!(f, "<{element}>"),
+            Self::Map { key, value } => write!(f, "<{key}, {value}>"),
+            Self::Struct(fields) => {
+                f.write_str("<")?;
+                write_separated(f, fields.iter(), "", "", ", ")?;
+                f.write_str(">")
+            }
             _ => Ok(()),
         }
     }
@@ -206,9 +254,34 @@ impl BasicBuiltinType {
 
 /// Formats the full type spelling used in extension YAML, not the short name
 /// used in function signatures (e.g., `precision_timestamp<3>`, not `pts`).
-impl fmt::Display for BasicBuiltinType {
+impl fmt::Display for TypeKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.fmt_with_nullability(f, false)
+    }
+}
+
+/// An integer literal or a named parameter in a type expression.
+#[derive(Clone, Debug, PartialEq)]
+pub enum IntegerParameter {
+    /// A known integer value.
+    Literal(i64),
+    /// A name whose value depends on a function call.
+    Variable(String),
+}
+
+impl IntegerParameter {
+    /// Returns whether this parameter is a literal rather than a variable.
+    pub fn is_concrete(&self) -> bool {
+        matches!(self, Self::Literal(_))
+    }
+}
+
+impl fmt::Display for IntegerParameter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Literal(value) => write!(f, "{value}"),
+            Self::Variable(name) => f.write_str(name),
+        }
     }
 }
 
@@ -216,11 +289,21 @@ impl fmt::Display for BasicBuiltinType {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeParameter {
     /// Integer parameter (e.g., precision, scale)
-    Integer(i64),
+    Integer(IntegerParameter),
     /// Type parameter (nested type)
-    Type(ConcreteType),
+    Type(Type),
     // TODO: Add support for other type parameters, as described in
     // https://github.com/substrait-io/substrait/blob/35101020d961eda48f8dd1aafbc794c9e5cac077/proto/substrait/type.proto#L250-L265
+}
+
+impl TypeParameter {
+    /// Returns whether this parameter contains no unresolved variables.
+    pub fn is_concrete(&self) -> bool {
+        match self {
+            Self::Integer(parameter) => parameter.is_concrete(),
+            Self::Type(type_) => type_.is_concrete(),
+        }
+    }
 }
 
 impl fmt::Display for TypeParameter {
@@ -233,20 +316,20 @@ impl fmt::Display for TypeParameter {
 }
 
 /// Parse a primitive (no type parameters) builtin type name
-fn primitive_builtin(lower_name: &str) -> Option<BasicBuiltinType> {
+fn primitive_builtin(lower_name: &str) -> Option<TypeKind> {
     match lower_name {
-        "bool" | "boolean" => Some(BasicBuiltinType::Boolean),
-        "i8" => Some(BasicBuiltinType::I8),
-        "i16" => Some(BasicBuiltinType::I16),
-        "i32" => Some(BasicBuiltinType::I32),
-        "i64" => Some(BasicBuiltinType::I64),
-        "fp32" => Some(BasicBuiltinType::Fp32),
-        "fp64" => Some(BasicBuiltinType::Fp64),
-        "string" => Some(BasicBuiltinType::String),
-        "binary" => Some(BasicBuiltinType::Binary),
-        "date" => Some(BasicBuiltinType::Date),
-        "interval_year" => Some(BasicBuiltinType::IntervalYear),
-        "uuid" => Some(BasicBuiltinType::Uuid),
+        "bool" | "boolean" => Some(TypeKind::Boolean),
+        "i8" => Some(TypeKind::I8),
+        "i16" => Some(TypeKind::I16),
+        "i32" => Some(TypeKind::I32),
+        "i64" => Some(TypeKind::I64),
+        "fp32" => Some(TypeKind::Fp32),
+        "fp64" => Some(TypeKind::Fp64),
+        "string" => Some(TypeKind::String),
+        "binary" => Some(TypeKind::Binary),
+        "date" => Some(TypeKind::Date),
+        "interval_year" => Some(TypeKind::IntervalYear),
+        "uuid" => Some(TypeKind::Uuid),
         _ => None,
     }
 }
@@ -522,8 +605,8 @@ pub struct CustomType {
     pub name: String,
     /// Type parameters (e.g., for generic types)
     pub parameters: Vec<TypeParam>,
-    /// Concrete structure definition, if any
-    pub structure: Option<ConcreteType>,
+    /// Structure definition, if any
+    pub structure: Option<Type>,
     /// Whether this type can have variadic parameters
     pub variadic: Option<bool>,
     /// Human-readable description
@@ -558,7 +641,7 @@ impl CustomType {
     pub fn new(
         name: String,
         parameters: Vec<TypeParam>,
-        structure: Option<ConcreteType>,
+        structure: Option<Type>,
         variadic: Option<bool>,
         description: Option<String>,
     ) -> Result<Self, ExtensionTypeError> {
@@ -664,7 +747,7 @@ impl Parse<TypeContext> for SimpleExtensionsTypesItem {
 }
 
 impl Parse<TypeContext> for RawType {
-    type Parsed = ConcreteType;
+    type Parsed = Type;
     type Error = ExtensionTypeError;
 
     fn parse(self, ctx: &mut TypeContext) -> Result<Self::Parsed, Self::Error> {
@@ -673,8 +756,7 @@ impl Parse<TypeContext> for RawType {
                 let parsed_type = TypeExpr::parse(&type_string)?;
                 let mut link = |name: &str| ctx.linked(name);
                 parsed_type.visit_references(&mut link);
-                let concrete = ConcreteType::try_from(parsed_type)?;
-                Ok(concrete)
+                expect_concrete_type(parsed_type)
             }
             RawType::Object(field_map) => {
                 // Type structure in Substrait must preserve field order (see
@@ -696,18 +778,15 @@ impl Parse<TypeContext> for RawType {
                     let parsed_field_type = TypeExpr::parse(&type_string)?;
                     let mut link = |name: &str| ctx.linked(name);
                     parsed_field_type.visit_references(&mut link);
-                    let field_concrete_type = ConcreteType::try_from(parsed_field_type)?;
+                    let field_type = expect_concrete_type(parsed_field_type)?;
 
-                    if fields
-                        .insert(field_name.clone(), field_concrete_type)
-                        .is_some()
-                    {
+                    if fields.insert(field_name.clone(), field_type).is_some() {
                         return Err(ExtensionTypeError::DuplicateFieldName { field_name });
                     }
                 }
 
-                Ok(ConcreteType {
-                    kind: ConcreteTypeKind::NamedStruct { fields },
+                Ok(Type {
+                    kind: TypeKind::NamedStruct { fields },
                     nullable: false,
                 })
             }
@@ -720,65 +799,25 @@ impl Parse<TypeContext> for RawType {
 #[error("invalid type name `{0}`")]
 pub struct InvalidTypeName(String);
 
-/// The structural kind of a Substrait type (builtin, list, map, etc).
-///
-/// This is almost a complete type, but is missing nullability information. It must be
-/// wrapped in a [`ConcreteType`] to form a complete type with nullable/non-nullable annotation.
-///
-/// Note that this is a recursive type - other than the [BuiltinType]s, the other variants can
-/// have type parameters that are themselves [ConcreteType]s.
+/// A type expression with nullability.
 #[derive(Clone, Debug, PartialEq)]
-pub enum ConcreteTypeKind {
-    /// Built-in Substrait type (primitive or parameterized)
-    Builtin(BasicBuiltinType),
-    /// Extension type with optional parameters
-    Extension {
-        /// Extension type name
-        name: String,
-        /// Type parameters
-        parameters: Vec<TypeParameter>,
-    },
-    /// List type with element type
-    List(Box<ConcreteType>),
-    /// Map type with key and value types
-    Map {
-        /// Key type
-        key: Box<ConcreteType>,
-        /// Value type
-        value: Box<ConcreteType>,
-    },
-    /// Struct type (ordered fields without names)
-    Struct(Vec<ConcreteType>),
-    /// Named struct type (nstruct - ordered fields with names)
-    NamedStruct {
-        /// Ordered field names and types. They are in the order they should
-        /// appear in the struct - hence the use of [`IndexMap`].
-        fields: IndexMap<String, ConcreteType>,
-    },
-}
-
-/// A concrete, fully-resolved type instance with nullability.
-#[derive(Clone, Debug, PartialEq)]
-pub struct ConcreteType {
-    /// The resolved type shape
-    pub kind: ConcreteTypeKind,
+pub struct Type {
+    /// The type expression
+    pub kind: TypeKind,
     /// Whether this type is nullable
     pub nullable: bool,
 }
 
-impl ConcreteType {
-    /// Create a new builtin scalar type
-    pub fn builtin(builtin_type: BasicBuiltinType, nullable: bool) -> ConcreteType {
-        ConcreteType {
-            kind: ConcreteTypeKind::Builtin(builtin_type),
-            nullable,
-        }
+impl Type {
+    /// Create a type expression with the given nullability.
+    pub fn new(kind: TypeKind, nullable: bool) -> Type {
+        Type { kind, nullable }
     }
 
     /// Create a new extension type reference (without parameters)
-    pub fn extension(name: String, nullable: bool) -> ConcreteType {
-        ConcreteType {
-            kind: ConcreteTypeKind::Extension {
+    pub fn extension(name: String, nullable: bool) -> Type {
+        Type {
+            kind: TypeKind::Extension {
                 name,
                 parameters: Vec::new(),
             },
@@ -791,33 +830,33 @@ impl ConcreteType {
         name: String,
         parameters: Vec<TypeParameter>,
         nullable: bool,
-    ) -> ConcreteType {
-        ConcreteType {
-            kind: ConcreteTypeKind::Extension { name, parameters },
+    ) -> Type {
+        Type {
+            kind: TypeKind::Extension { name, parameters },
             nullable,
         }
     }
 
     /// Create a new list type
-    pub fn list(element_type: ConcreteType, nullable: bool) -> ConcreteType {
-        ConcreteType {
-            kind: ConcreteTypeKind::List(Box::new(element_type)),
+    pub fn list(element_type: Type, nullable: bool) -> Type {
+        Type {
+            kind: TypeKind::List(Box::new(element_type)),
             nullable,
         }
     }
 
     /// Create a new struct type (ordered fields without names)
-    pub fn r#struct(field_types: Vec<ConcreteType>, nullable: bool) -> ConcreteType {
-        ConcreteType {
-            kind: ConcreteTypeKind::Struct(field_types),
+    pub fn r#struct(field_types: Vec<Type>, nullable: bool) -> Type {
+        Type {
+            kind: TypeKind::Struct(field_types),
             nullable,
         }
     }
 
     /// Create a new map type
-    pub fn map(key_type: ConcreteType, value_type: ConcreteType, nullable: bool) -> ConcreteType {
-        ConcreteType {
-            kind: ConcreteTypeKind::Map {
+    pub fn map(key_type: Type, value_type: Type, nullable: bool) -> Type {
+        Type {
+            kind: TypeKind::Map {
                 key: Box::new(key_type),
                 value: Box::new(value_type),
             },
@@ -826,90 +865,71 @@ impl ConcreteType {
     }
 
     /// Create a new named struct type (nstruct - ordered fields with names)
-    pub fn named_struct(fields: IndexMap<String, ConcreteType>, nullable: bool) -> ConcreteType {
-        ConcreteType {
-            kind: ConcreteTypeKind::NamedStruct { fields },
+    pub fn named_struct(fields: IndexMap<String, Type>, nullable: bool) -> Type {
+        Type {
+            kind: TypeKind::NamedStruct { fields },
             nullable,
+        }
+    }
+
+    /// Returns whether this type contains no unresolved variables.
+    pub fn is_concrete(&self) -> bool {
+        match &self.kind {
+            TypeKind::Variable { .. } => false,
+            TypeKind::FixedChar { length }
+            | TypeKind::VarChar { length }
+            | TypeKind::FixedBinary { length } => length.is_concrete(),
+            TypeKind::Decimal { precision, scale } => {
+                precision.is_concrete() && scale.is_concrete()
+            }
+            TypeKind::PrecisionTime { precision }
+            | TypeKind::PrecisionTimestamp { precision }
+            | TypeKind::PrecisionTimestampTz { precision }
+            | TypeKind::IntervalDay { precision }
+            | TypeKind::IntervalCompound { precision } => precision.is_concrete(),
+            TypeKind::List(element) => element.is_concrete(),
+            TypeKind::Map { key, value } => key.is_concrete() && value.is_concrete(),
+            TypeKind::Struct(fields) => fields.iter().all(Type::is_concrete),
+            TypeKind::NamedStruct { fields } => fields.values().all(Type::is_concrete),
+            TypeKind::Extension { parameters, .. } => {
+                parameters.iter().all(TypeParameter::is_concrete)
+            }
+            _ => true,
         }
     }
 
     /// Check if this type (as a function argument) is compatible with another
     /// type (as an input).
     ///
+    /// Does not bind type variables or symbolic parameters.
     /// Mainly checks nullability:
     ///   - `i64?` is compatible with `i64` and `i64?` - both can be passed as
     ///     arguments
     ///   - `i64` is compatible with `i64` but NOT `i64?` - you can't pass a
     ///     nullable type to a function that only accepts non-nullable arguments
-    pub fn is_compatible_with(&self, other: &ConcreteType) -> bool {
+    pub fn is_compatible_with(&self, other: &Type) -> bool {
         // Types must match exactly, but nullable types can accept non-nullable values
         self.kind == other.kind && (self.nullable || !other.nullable)
     }
 }
 
-impl fmt::Display for ConcreteType {
+/// Formats full extension-YAML spellings, not function-signature short names.
+impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let nullability = if self.nullable { "?" } else { "" };
-        match &self.kind {
-            ConcreteTypeKind::Builtin(b) => b.fmt_with_nullability(f, self.nullable),
-            ConcreteTypeKind::Extension { name, parameters } => {
-                write!(f, "u!{name}{nullability}")?;
-                write_separated(f, parameters.iter(), "<", ">", ", ")
-            }
-            ConcreteTypeKind::List(elem) => write!(f, "list{nullability}<{elem}>"),
-            ConcreteTypeKind::Map { key, value } => {
-                write!(f, "map{nullability}<{key}, {value}>")
-            }
-            ConcreteTypeKind::Struct(types) => {
-                write!(f, "struct{nullability}<")?;
-                write_separated(f, types.iter(), "", "", ", ")?;
-                write!(f, ">")
-            }
-            ConcreteTypeKind::NamedStruct { fields } => {
-                let kvs = fields.iter().map(|(k, v)| KeyValueDisplay(k, v, ": "));
-
-                write_separated(f, kvs, "{", "}", ", ")?;
-                write!(f, "{nullability}")
-            }
-        }
+        self.kind.fmt_with_nullability(f, self.nullable)
     }
 }
 
-impl From<ConcreteType> for RawType {
-    fn from(val: ConcreteType) -> Self {
+impl From<Type> for RawType {
+    fn from(val: Type) -> Self {
         match val.kind {
-            ConcreteTypeKind::NamedStruct { fields } => RawType::Object(
+            TypeKind::NamedStruct { fields } => RawType::Object(
                 fields
                     .into_iter()
                     .map(|(name, ty)| (name, serde_json::Value::String(ty.to_string())))
                     .collect(),
             ),
             _ => RawType::String(val.to_string()),
-        }
-    }
-}
-
-/// A type expression that may require resolution against function arguments.
-#[derive(Clone, Debug, PartialEq)]
-pub enum UnresolvedTypeExpression {
-    /// A concrete type.
-    Concrete(ConcreteType),
-    /// A numbered type variable, such as `any1` or `any2?`.
-    Variable {
-        /// The variable identifier shared by references such as `any1`.
-        id: u32,
-        /// Whether the reference has an explicit `?` annotation.
-        nullable: bool,
-    },
-}
-
-impl<'a> TryFrom<TypeExpr<'a>> for UnresolvedTypeExpression {
-    type Error = ExtensionTypeError;
-
-    fn try_from(expression: TypeExpr<'a>) -> Result<Self, Self::Error> {
-        match expression {
-            TypeExpr::TypeVariable(id, nullable) => Ok(Self::Variable { id, nullable }),
-            other => ConcreteType::try_from(other).map(Self::Concrete),
         }
     }
 }
@@ -979,15 +999,25 @@ fn expect_param_len(
     Ok(())
 }
 
-/// Helper function - expect a type parameter, and return the [ConcreteType] if it is a [TypeExpr]
+// Keep declaration-loading support unchanged while sharing the type model.
+fn expect_concrete_type(expression: TypeExpr<'_>) -> Result<Type, ExtensionTypeError> {
+    match expression {
+        TypeExpr::TypeVariable(id, nullability) => {
+            Err(ExtensionTypeError::InvalidAnyTypeVariable { id, nullability })
+        }
+        expression => Type::try_from(expression),
+    }
+}
+
+/// Helper function - expect a type parameter, and return the [Type] if it is a [TypeExpr]
 /// or an error if not.
 fn expect_type_argument<'a>(
     type_name: &str,
     index: usize,
     param: TypeExprParam<'a>,
-) -> Result<ConcreteType, ExtensionTypeError> {
+) -> Result<Type, ExtensionTypeError> {
     match param {
-        TypeExprParam::Type(t) => ConcreteType::try_from(t),
+        TypeExprParam::Type(t) => expect_concrete_type(t),
         TypeExprParam::Integer(_) => Err(ExtensionTypeError::InvalidParameterKind {
             type_name: type_name.to_string(),
             index,
@@ -1001,8 +1031,8 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
 
     fn try_from(param: TypeExprParam<'a>) -> Result<Self, Self::Error> {
         Ok(match param {
-            TypeExprParam::Integer(v) => TypeParameter::Integer(v),
-            TypeExprParam::Type(t) => TypeParameter::Type(ConcreteType::try_from(t)?),
+            TypeExprParam::Integer(v) => TypeParameter::Integer(IntegerParameter::Literal(v)),
+            TypeExprParam::Type(t) => TypeParameter::Type(expect_concrete_type(t)?),
         })
     }
 }
@@ -1014,7 +1044,7 @@ fn parse_builtin<'a>(
     display_name: &str,
     lower_name: &str,
     params: &[TypeExprParam<'a>],
-) -> Result<Option<BasicBuiltinType>, ExtensionTypeError> {
+) -> Result<Option<TypeKind>, ExtensionTypeError> {
     if let Some(builtin) = primitive_builtin(lower_name) {
         expect_param_len(display_name, params, 0)?;
         return Ok(Some(builtin));
@@ -1025,54 +1055,73 @@ fn parse_builtin<'a>(
         "fixedchar" => {
             expect_param_len(display_name, params, 1)?;
             let length = expect_integer_param(display_name, 0, &params[0], None)?;
-            Ok(Some(BasicBuiltinType::FixedChar { length }))
+            Ok(Some(TypeKind::FixedChar {
+                length: IntegerParameter::Literal(i64::from(length)),
+            }))
         }
         "varchar" => {
             expect_param_len(display_name, params, 1)?;
             let length = expect_integer_param(display_name, 0, &params[0], None)?;
-            Ok(Some(BasicBuiltinType::VarChar { length }))
+            Ok(Some(TypeKind::VarChar {
+                length: IntegerParameter::Literal(i64::from(length)),
+            }))
         }
         "fixedbinary" => {
             expect_param_len(display_name, params, 1)?;
             let length = expect_integer_param(display_name, 0, &params[0], None)?;
-            Ok(Some(BasicBuiltinType::FixedBinary { length }))
+            Ok(Some(TypeKind::FixedBinary {
+                length: IntegerParameter::Literal(i64::from(length)),
+            }))
         }
         "decimal" => {
             expect_param_len(display_name, params, 2)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(1..=38))?;
             let scale = expect_integer_param(display_name, 1, &params[1], Some(0..=precision))?;
-            Ok(Some(BasicBuiltinType::Decimal { precision, scale }))
+            Ok(Some(TypeKind::Decimal {
+                precision: IntegerParameter::Literal(i64::from(precision)),
+                scale: IntegerParameter::Literal(i64::from(scale)),
+            }))
         }
         "precision_time" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
-            Ok(Some(BasicBuiltinType::PrecisionTime { precision }))
+            Ok(Some(TypeKind::PrecisionTime {
+                precision: IntegerParameter::Literal(i64::from(precision)),
+            }))
         }
         "precision_timestamp" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
-            Ok(Some(BasicBuiltinType::PrecisionTimestamp { precision }))
+            Ok(Some(TypeKind::PrecisionTimestamp {
+                precision: IntegerParameter::Literal(i64::from(precision)),
+            }))
         }
         "precision_timestamp_tz" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
-            Ok(Some(BasicBuiltinType::PrecisionTimestampTz { precision }))
+            Ok(Some(TypeKind::PrecisionTimestampTz {
+                precision: IntegerParameter::Literal(i64::from(precision)),
+            }))
         }
         "interval_day" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=9))?;
-            Ok(Some(BasicBuiltinType::IntervalDay { precision }))
+            Ok(Some(TypeKind::IntervalDay {
+                precision: IntegerParameter::Literal(i64::from(precision)),
+            }))
         }
         "interval_compound" => {
             expect_param_len(display_name, params, 1)?;
             let precision = expect_integer_param(display_name, 0, &params[0], None)?;
-            Ok(Some(BasicBuiltinType::IntervalCompound { precision }))
+            Ok(Some(TypeKind::IntervalCompound {
+                precision: IntegerParameter::Literal(i64::from(precision)),
+            }))
         }
         _ => Ok(None),
     }
 }
 
-impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
+impl<'a> TryFrom<TypeExpr<'a>> for Type {
     type Error = ExtensionTypeError;
 
     fn try_from(parsed_type: TypeExpr<'a>) -> Result<Self, Self::Error> {
@@ -1085,14 +1134,14 @@ impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
                         expect_param_len(name, &params, 1)?;
                         let element =
                             expect_type_argument(name, 0, params.into_iter().next().unwrap())?;
-                        return Ok(ConcreteType::list(element, nullable));
+                        return Ok(Type::list(element, nullable));
                     }
                     "map" => {
                         expect_param_len(name, &params, 2)?;
                         let mut iter = params.into_iter();
                         let key = expect_type_argument(name, 0, iter.next().unwrap())?;
                         let value = expect_type_argument(name, 1, iter.next().unwrap())?;
-                        return Ok(ConcreteType::map(key, value, nullable));
+                        return Ok(Type::map(key, value, nullable));
                     }
                     "struct" => {
                         let field_types = params
@@ -1100,13 +1149,13 @@ impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
                             .enumerate()
                             .map(|(idx, param)| expect_type_argument(name, idx, param))
                             .collect::<Result<Vec<_>, _>>()?;
-                        return Ok(ConcreteType::r#struct(field_types, nullable));
+                        return Ok(Type::r#struct(field_types, nullable));
                     }
                     _ => {}
                 }
 
                 if let Some(builtin) = parse_builtin(name, lower.as_str(), &params)? {
-                    return Ok(ConcreteType::builtin(builtin, nullable));
+                    return Ok(Type::new(builtin, nullable));
                 }
 
                 // Simple types that aren't builtins are unknown
@@ -1120,14 +1169,14 @@ impl<'a> TryFrom<TypeExpr<'a>> for ConcreteType {
                     .into_iter()
                     .map(TypeParameter::try_from)
                     .collect::<Result<Vec<_>, _>>()?;
-                Ok(ConcreteType::extension_with_params(
+                Ok(Type::extension_with_params(
                     name.to_string(),
                     parameters,
                     nullable,
                 ))
             }
-            TypeExpr::TypeVariable(id, nullability) => {
-                Err(ExtensionTypeError::InvalidAnyTypeVariable { id, nullability })
+            TypeExpr::TypeVariable(id, nullable) => {
+                Ok(Type::new(TypeKind::Variable { id }, nullable))
             }
         }
     }
@@ -1142,33 +1191,139 @@ mod tests {
     use crate::text::simple_extensions;
     use std::iter::FromIterator;
 
-    /// Create a [ConcreteType] from a [BuiltinType]
-    fn concretize(builtin: BasicBuiltinType) -> ConcreteType {
-        ConcreteType::builtin(builtin, false)
+    /// Wrap a type kind without a nullable annotation.
+    fn required_type(kind: TypeKind) -> Type {
+        Type::new(kind, false)
     }
 
-    /// Parse a string into a [ConcreteType]
-    fn parse_type(expr: &str) -> ConcreteType {
+    /// Parse a string into a [Type]
+    fn parse_type(expr: &str) -> Type {
         let parsed = TypeExpr::parse(expr).unwrap();
-        ConcreteType::try_from(parsed).unwrap()
+        Type::try_from(parsed).unwrap()
     }
 
-    /// Parse a string into a [ConcreteType], returning the result
-    fn parse_type_result(expr: &str) -> Result<ConcreteType, ExtensionTypeError> {
+    /// Parse a string into a [Type], returning the result
+    fn parse_type_result(expr: &str) -> Result<Type, ExtensionTypeError> {
         let parsed = TypeExpr::parse(expr).unwrap();
-        ConcreteType::try_from(parsed)
+        Type::try_from(parsed)
     }
 
-    /// Parse a string into a builtin [ConcreteType], with no unresolved
+    /// Parse a string into a builtin [Type], with no unresolved
     /// extension references
-    fn parse_simple(s: &str) -> ConcreteType {
+    fn parse_simple(s: &str) -> Type {
         let parsed = TypeExpr::parse(s).unwrap();
 
         let mut refs = Vec::new();
         parsed.visit_references(&mut |name| refs.push(name.to_string()));
         assert!(refs.is_empty(), "{s} should not add an extension reference");
 
-        ConcreteType::try_from(parsed).unwrap()
+        Type::try_from(parsed).unwrap()
+    }
+
+    #[test]
+    fn test_literal_and_symbolic_lengths_share_a_type_kind() {
+        for (length, expected, is_concrete) in [
+            (IntegerParameter::Literal(20), "varchar<20>", true),
+            (IntegerParameter::Variable("L".into()), "varchar<L>", false),
+        ] {
+            let type_ = Type::new(
+                TypeKind::VarChar {
+                    length: length.clone(),
+                },
+                false,
+            );
+            assert_eq!(type_.to_string(), expected);
+            assert_eq!(type_.is_concrete(), is_concrete);
+
+            let extension = Type::extension_with_params(
+                "sized".into(),
+                vec![TypeParameter::Integer(length)],
+                false,
+            );
+            assert_eq!(extension.is_concrete(), is_concrete);
+        }
+    }
+
+    #[test]
+    fn test_concreteness_is_recursive() {
+        let variable = parse_type("any1?");
+        assert_eq!(variable.to_string(), "any1?");
+        for field in [
+            parse_type("i32"),
+            variable,
+            Type::new(
+                TypeKind::VarChar {
+                    length: IntegerParameter::Variable("L".into()),
+                },
+                false,
+            ),
+        ] {
+            let expected = field.is_concrete();
+            for nested in [
+                Type::list(field.clone(), false),
+                Type::map(parse_type("string"), field.clone(), false),
+                Type::r#struct(vec![field.clone()], false),
+                Type::named_struct(IndexMap::from([("field".into(), field.clone())]), false),
+                Type::extension_with_params(
+                    "wrapper".into(),
+                    vec![TypeParameter::Type(field)],
+                    false,
+                ),
+            ] {
+                assert_eq!(
+                    nested.is_concrete(),
+                    expected,
+                    "unexpected concreteness for {nested}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_concreteness_does_not_replace_value_validation() {
+        let type_ = Type::new(
+            TypeKind::Decimal {
+                precision: IntegerParameter::Literal(10),
+                scale: IntegerParameter::Literal(20),
+            },
+            false,
+        );
+        assert!(type_.is_concrete());
+        assert!(matches!(
+            parse_type_result(&type_.to_string()),
+            Err(ExtensionTypeError::InvalidParameterRange { .. })
+        ));
+    }
+
+    #[test]
+    fn test_structure_parsing_still_requires_concrete_types() {
+        for raw in [
+            RawType::String("any1?".into()),
+            RawType::Object(IndexMap::from([(
+                "field".into(),
+                Value::String("any1?".into()),
+            )])),
+        ] {
+            assert!(matches!(
+                raw.parse(&mut TypeContext::default()),
+                Err(ExtensionTypeError::InvalidAnyTypeVariable {
+                    id: 1,
+                    nullability: true
+                })
+            ));
+        }
+    }
+
+    #[test]
+    fn test_extension_integer_parameters_preserve_i64_range() {
+        let input = format!("u!wide<{}>", i64::MAX);
+        let parsed = parse_type(&input);
+        assert!(parsed.is_concrete());
+        assert_eq!(parsed.to_string(), input);
+        assert!(matches!(
+            parse_type_result(&format!("varchar<{}>", i64::MAX)),
+            Err(ExtensionTypeError::InvalidParameterValue { .. })
+        ));
     }
 
     /// Create a type parameter from a type expression string
@@ -1177,8 +1332,8 @@ mod tests {
     }
 
     /// Create an extension type
-    fn extension(name: &str, parameters: Vec<TypeParameter>, nullable: bool) -> ConcreteType {
-        ConcreteType::extension_with_params(name.to_string(), parameters, nullable)
+    fn extension(name: &str, parameters: Vec<TypeParameter>, nullable: bool) -> Type {
+        Type::extension_with_params(name.to_string(), parameters, nullable)
     }
 
     /// Convert a custom type to raw and back, ensuring round-trip consistency
@@ -1203,18 +1358,18 @@ mod tests {
     #[test]
     fn test_builtin_scalar_parsing() {
         let cases = vec![
-            ("bool", Some(BasicBuiltinType::Boolean)),
-            ("i8", Some(BasicBuiltinType::I8)),
-            ("i16", Some(BasicBuiltinType::I16)),
-            ("i32", Some(BasicBuiltinType::I32)),
-            ("i64", Some(BasicBuiltinType::I64)),
-            ("fp32", Some(BasicBuiltinType::Fp32)),
-            ("fp64", Some(BasicBuiltinType::Fp64)),
-            ("STRING", Some(BasicBuiltinType::String)),
-            ("binary", Some(BasicBuiltinType::Binary)),
-            ("uuid", Some(BasicBuiltinType::Uuid)),
-            ("date", Some(BasicBuiltinType::Date)),
-            ("interval_year", Some(BasicBuiltinType::IntervalYear)),
+            ("bool", Some(TypeKind::Boolean)),
+            ("i8", Some(TypeKind::I8)),
+            ("i16", Some(TypeKind::I16)),
+            ("i32", Some(TypeKind::I32)),
+            ("i64", Some(TypeKind::I64)),
+            ("fp32", Some(TypeKind::Fp32)),
+            ("fp64", Some(TypeKind::Fp64)),
+            ("STRING", Some(TypeKind::String)),
+            ("binary", Some(TypeKind::Binary)),
+            ("uuid", Some(TypeKind::Uuid)),
+            ("date", Some(TypeKind::Date)),
+            ("interval_year", Some(TypeKind::IntervalYear)),
             ("invalid", None),
         ];
 
@@ -1240,42 +1395,58 @@ mod tests {
         let cases = vec![
             (
                 "precision_time<2>",
-                concretize(BasicBuiltinType::PrecisionTime { precision: 2 }),
+                required_type(TypeKind::PrecisionTime {
+                    precision: IntegerParameter::Literal(2),
+                }),
             ),
             (
                 "precision_timestamp<1>",
-                concretize(BasicBuiltinType::PrecisionTimestamp { precision: 1 }),
+                required_type(TypeKind::PrecisionTimestamp {
+                    precision: IntegerParameter::Literal(1),
+                }),
             ),
             (
                 "precision_timestamp_tz<5>",
-                concretize(BasicBuiltinType::PrecisionTimestampTz { precision: 5 }),
+                required_type(TypeKind::PrecisionTimestampTz {
+                    precision: IntegerParameter::Literal(5),
+                }),
             ),
             (
                 "DECIMAL<10,2>",
-                concretize(BasicBuiltinType::Decimal {
-                    precision: 10,
-                    scale: 2,
+                required_type(TypeKind::Decimal {
+                    precision: IntegerParameter::Literal(10),
+                    scale: IntegerParameter::Literal(2),
                 }),
             ),
             (
                 "fixedchar<12>",
-                concretize(BasicBuiltinType::FixedChar { length: 12 }),
+                required_type(TypeKind::FixedChar {
+                    length: IntegerParameter::Literal(12),
+                }),
             ),
             (
                 "VarChar<42>",
-                concretize(BasicBuiltinType::VarChar { length: 42 }),
+                required_type(TypeKind::VarChar {
+                    length: IntegerParameter::Literal(42),
+                }),
             ),
             (
                 "fixedbinary<8>",
-                concretize(BasicBuiltinType::FixedBinary { length: 8 }),
+                required_type(TypeKind::FixedBinary {
+                    length: IntegerParameter::Literal(8),
+                }),
             ),
             (
                 "interval_day<7>",
-                concretize(BasicBuiltinType::IntervalDay { precision: 7 }),
+                required_type(TypeKind::IntervalDay {
+                    precision: IntegerParameter::Literal(7),
+                }),
             ),
             (
                 "interval_compound<6>",
-                concretize(BasicBuiltinType::IntervalCompound { precision: 6 }),
+                required_type(TypeKind::IntervalCompound {
+                    precision: IntegerParameter::Literal(6),
+                }),
             ),
         ];
 
@@ -1348,26 +1519,26 @@ mod tests {
         let cases = vec![
             (
                 "List<i32>",
-                ConcreteType::list(ConcreteType::builtin(BasicBuiltinType::I32, false), false),
+                Type::list(Type::new(TypeKind::I32, false), false),
             ),
             (
                 "List<fp64?>",
-                ConcreteType::list(ConcreteType::builtin(BasicBuiltinType::Fp64, true), false),
+                Type::list(Type::new(TypeKind::Fp64, true), false),
             ),
             (
                 "Map?<i64, string?>",
-                ConcreteType::map(
-                    ConcreteType::builtin(BasicBuiltinType::I64, false),
-                    ConcreteType::builtin(BasicBuiltinType::String, true),
+                Type::map(
+                    Type::new(TypeKind::I64, false),
+                    Type::new(TypeKind::String, true),
                     true,
                 ),
             ),
             (
                 "Struct?<i8, string?>",
-                ConcreteType::r#struct(
+                Type::r#struct(
                     vec![
-                        ConcreteType::builtin(BasicBuiltinType::I8, false),
-                        ConcreteType::builtin(BasicBuiltinType::String, true),
+                        Type::new(TypeKind::I8, false),
+                        Type::new(TypeKind::String, true),
                     ],
                     true,
                 ),
@@ -1386,7 +1557,10 @@ mod tests {
                 "u!geo<List<i32>, 10>",
                 extension(
                     "geo",
-                    vec![type_param("List<i32>"), TypeParameter::Integer(10)],
+                    vec![
+                        type_param("List<i32>"),
+                        TypeParameter::Integer(IntegerParameter::Literal(10)),
+                    ],
                     false,
                 ),
             ),
@@ -1400,10 +1574,7 @@ mod tests {
                     "Custom",
                     vec![
                         type_param("string?"),
-                        TypeParameter::Type(ConcreteType::builtin(
-                            BasicBuiltinType::Boolean,
-                            false,
-                        )),
+                        TypeParameter::Type(Type::new(TypeKind::Boolean, false)),
                     ],
                     false,
                 ),
@@ -1481,7 +1652,7 @@ mod tests {
             "precisiontimestamptz",
         ] {
             for spelling in [name.to_string(), name.to_ascii_uppercase()] {
-                assert!(!BasicBuiltinType::is_name(&spelling));
+                assert!(!TypeKind::is_name(&spelling));
                 assert_eq!(
                     parse_type_result(&format!("{spelling}<3>")),
                     Err(ExtensionTypeError::UnknownTypeName { name: spelling })
@@ -1548,7 +1719,7 @@ mod tests {
 
         for (input, expected) in cases {
             let parsed = TypeExpr::parse(input).unwrap();
-            let concrete = ConcreteType::try_from(parsed).unwrap();
+            let concrete = Type::try_from(parsed).unwrap();
             let actual = concrete.to_string();
 
             assert_eq!(actual, expected, "unexpected display for {input}");
@@ -1669,21 +1840,15 @@ mod tests {
     #[test]
     fn test_custom_type_round_trip() -> Result<(), ExtensionTypeError> {
         let fields = IndexMap::from_iter([
-            (
-                "x".to_string(),
-                ConcreteType::builtin(BasicBuiltinType::Fp64, false),
-            ),
-            (
-                "y".to_string(),
-                ConcreteType::builtin(BasicBuiltinType::Fp64, false),
-            ),
+            ("x".to_string(), Type::new(TypeKind::Fp64, false)),
+            ("y".to_string(), Type::new(TypeKind::Fp64, false)),
         ]);
 
         let cases = vec![
             CustomType::new(
                 "AliasType".to_string(),
                 vec![],
-                Some(ConcreteType::builtin(BasicBuiltinType::I32, false)),
+                Some(Type::new(TypeKind::I32, false)),
                 None,
                 Some("a test alias type".to_string()),
             )?,
@@ -1694,7 +1859,7 @@ mod tests {
                     ParameterConstraint::DataType,
                     Some("a numeric value".to_string()),
                 )],
-                Some(ConcreteType::named_struct(fields, false)),
+                Some(Type::named_struct(fields, false)),
                 None,
                 None,
             )?,
@@ -1738,21 +1903,15 @@ mod tests {
             (
                 "alias",
                 RawType::String("i32".to_string()),
-                ConcreteType::builtin(BasicBuiltinType::I32, false),
+                Type::new(TypeKind::I32, false),
             ),
             (
                 "named_struct",
                 raw_named_struct(&[("field1", "fp64"), ("field2", "i32?")]),
-                ConcreteType::named_struct(
+                Type::named_struct(
                     IndexMap::from_iter([
-                        (
-                            "field1".to_string(),
-                            ConcreteType::builtin(BasicBuiltinType::Fp64, false),
-                        ),
-                        (
-                            "field2".to_string(),
-                            ConcreteType::builtin(BasicBuiltinType::I32, true),
-                        ),
+                        ("field1".to_string(), Type::new(TypeKind::Fp64, false)),
+                        ("field2".to_string(), Type::new(TypeKind::I32, true)),
                     ]),
                     false,
                 ),
@@ -1784,7 +1943,7 @@ mod tests {
                 },
                 "Alias",
                 Some("Alias type"),
-                Some(ConcreteType::builtin(BasicBuiltinType::Binary, false)),
+                Some(Type::new(TypeKind::Binary, false)),
             ),
             (
                 "named_struct",
@@ -1799,16 +1958,10 @@ mod tests {
                 },
                 "Point",
                 Some("A 2D point"),
-                Some(ConcreteType::named_struct(
+                Some(Type::named_struct(
                     IndexMap::from_iter([
-                        (
-                            "x".to_string(),
-                            ConcreteType::builtin(BasicBuiltinType::Fp64, false),
-                        ),
-                        (
-                            "y".to_string(),
-                            ConcreteType::builtin(BasicBuiltinType::Fp64, true),
-                        ),
+                        ("x".to_string(), Type::new(TypeKind::Fp64, false)),
+                        ("y".to_string(), Type::new(TypeKind::Fp64, true)),
                     ]),
                     false,
                 )),

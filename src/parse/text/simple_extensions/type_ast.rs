@@ -4,7 +4,7 @@
 //!
 //! This module provides syntactic parsing of Substrait type strings into an AST.
 //! It does NOT validate that type names are valid builtins or that extension types exist -
-//! semantic validation occurs later when converting to [`ConcreteType`](super::types::ConcreteType).
+//! semantic validation occurs later when converting to [`Type`](super::types::Type).
 //!
 //! This module is based on the official substrait type grammar defined
 //! [here](https://github.com/substrait-io/substrait/blob/5f031b69ed211e1ec307be3db7989d64c65d33a2/grammar/SubstraitType.g4).
@@ -23,7 +23,7 @@
 /// A parsed type expression from a type string, with lifetime tied to the original string.
 ///
 /// This represents the syntactic structure only - type names are not validated.
-/// Convert to [`ConcreteType`](super::types::ConcreteType) for semantic validation.
+/// Convert to [`Type`](super::types::Type) for semantic validation.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeExpr<'a> {
     /// A type without the `u!` prefix (expected to be a builtin like `i32`, `List`, etc.)

@@ -353,7 +353,7 @@ mod tests {
 
     #[test]
     fn test_numbered_variable_returns() {
-        use super::super::{UnresolvedTypeExpression, argument::ArgumentsItem};
+        use super::super::{Type, TypeKind, argument::ArgumentsItem};
 
         for (return_type, id, nullable) in [("any1", 1, false), ("any2?", 2, true)] {
             let yaml = format!(
@@ -372,7 +372,10 @@ scalar_functions:
             let function = registry.get_scalar_function(&urn, "identity").unwrap();
             assert_eq!(
                 function.impls[0].return_type,
-                UnresolvedTypeExpression::Variable { id, nullable }
+                Type {
+                    kind: TypeKind::Variable { id },
+                    nullable
+                }
             );
 
             let ArgumentsItem::ValueArgument(argument) = function.impls[0].args[0].clone() else {
@@ -473,10 +476,7 @@ scalar_functions:
             session_dependent: false,
             deterministic: true,
             nullability: NullabilityHandling::Mirror,
-            return_type: UnresolvedTypeExpression::Concrete(ConcreteType {
-                kind: ConcreteTypeKind::Builtin(BasicBuiltinType::I8),
-                nullable: false,
-            }),
+            return_type: Type::new(TypeKind::I8, false),
             implementation: HashMap::new(),
         };
 
