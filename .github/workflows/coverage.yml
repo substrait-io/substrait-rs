@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Coverage
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - name: Collect coverage
+        run: cargo llvm-cov --locked --all-features --all-targets --lcov --output-path lcov.info
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          files: lcov.info
+          disable_search: true
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
