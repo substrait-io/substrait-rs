@@ -353,7 +353,7 @@ mod tests {
 
     #[test]
     fn test_numbered_variable_returns() {
-        use super::super::{UnresolvedTypeExpression, argument::ArgumentsItem};
+        use super::super::{Type, TypeKind, argument::ArgumentsItem};
 
         for (return_type, id, nullable) in [("any1", 1, false), ("any2?", 2, true)] {
             let yaml = format!(
@@ -372,7 +372,10 @@ scalar_functions:
             let function = registry.get_scalar_function(&urn, "identity").unwrap();
             assert_eq!(
                 function.impls[0].return_type,
-                UnresolvedTypeExpression::Variable { id, nullable }
+                Type {
+                    kind: TypeKind::Variable { id },
+                    nullable
+                }
             );
 
             let ArgumentsItem::ValueArgument(argument) = function.impls[0].args[0].clone() else {
@@ -401,7 +404,7 @@ scalar_functions:
 
     #[test]
     fn test_numeric_parameter_returns() {
-        use super::super::{IntegerParameter, UnresolvedTypeExpression};
+        use super::super::{IntegerParameter, Type, TypeKind};
 
         let yaml = r#"urn: extension:example.com:numeric_parameters
 scalar_functions:
@@ -417,16 +420,23 @@ scalar_functions:
         let function = registry.get_scalar_function(&urn, "upper").unwrap();
         assert_eq!(
             function.impls[0].return_type,
-            UnresolvedTypeExpression::VarChar {
-                length: IntegerParameter::Variable("L".to_string()),
-                nullable: false,
-            }
+            Type::new(
+                TypeKind::VarChar {
+                    length: IntegerParameter::Variable("L".to_string()),
+                },
+                false
+            )
         );
     }
 
     #[test]
     fn test_unsupported_symbolic_returns_are_still_skipped() {
-        for return_type in ["list<any1>", "map<string, any1>"] {
+        for return_type in [
+            "list<any1>",
+            "map<string, any1>",
+            "list<varchar<L>>",
+            "map<string, decimal<P, S>>",
+        ] {
             let raw = extension_with_custom_type_reference(
                 "extension:example.com:unsupported",
                 "unsupported",
@@ -511,10 +521,7 @@ scalar_functions:
             session_dependent: false,
             deterministic: true,
             nullability: NullabilityHandling::Mirror,
-            return_type: UnresolvedTypeExpression::Concrete(ConcreteType {
-                kind: ConcreteTypeKind::Builtin(BasicBuiltinType::I8),
-                nullable: false,
-            }),
+            return_type: Type::new(TypeKind::I8, false),
             implementation: HashMap::new(),
         };
 

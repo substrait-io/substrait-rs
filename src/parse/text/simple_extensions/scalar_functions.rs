@@ -13,7 +13,7 @@ use crate::text::simple_extensions::{
 use super::argument::{ArgumentsItem, ArgumentsItemError};
 use super::extensions::TypeContext;
 use super::type_ast::{TypeExpr, TypeParseError};
-use super::types::{ExtensionTypeError, UnresolvedTypeExpression};
+use super::types::{ExtensionTypeError, Type};
 use crate::parse::Parse;
 use thiserror::Error;
 
@@ -115,7 +115,7 @@ pub struct Impl {
     /// Defaults to [`NullabilityHandling::Mirror`] per the Substrait spec.
     pub nullability: NullabilityHandling,
     /// The declared return type.
-    pub return_type: UnresolvedTypeExpression,
+    pub return_type: Type,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
     /// Maps language identifiers to implementation source code snippets.
@@ -140,9 +140,10 @@ impl Impl {
                 }
                 let type_expr = TypeExpr::parse(&s)?;
                 type_expr.visit_references(&mut |name| ctx.linked(name));
-                match UnresolvedTypeExpression::try_from(type_expr) {
+                match Type::try_from(type_expr) {
                     Ok(expression) => expression,
                     Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
+                    | Err(ExtensionTypeError::ExpectedConcreteType { .. })
                     | Err(ExtensionTypeError::InvalidParameter(_))
                     | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
                         // Nested symbolic types and numeric expressions are not yet supported.
@@ -394,7 +395,8 @@ mod tests {
     #[test]
     fn test_scalar_function_with_single_impl() {
         use crate::text::simple_extensions::{
-            ReturnValue, ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem, Type,
+            ReturnValue, ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem,
+            Type as RawType,
         };
 
         let raw = RawScalarFunction {
@@ -411,7 +413,7 @@ mod tests {
                 session_dependent: None,
                 deterministic: None,
                 nullability: None,
-                return_: ReturnValue(Type::String("i32".to_string())),
+                return_: ReturnValue(RawType::String("i32".to_string())),
                 implementation: None,
             }],
         };
@@ -423,11 +425,8 @@ mod tests {
         assert_eq!(result.description, Some("Addition function".to_string()));
         assert_eq!(result.impls.len(), 1);
 
-        use super::super::types::{BasicBuiltinType, ConcreteType};
-        assert_eq!(
-            result.impls[0].return_type,
-            UnresolvedTypeExpression::Concrete(ConcreteType::builtin(BasicBuiltinType::I32, false))
-        );
+        use super::super::types::{Type, TypeKind};
+        assert_eq!(result.impls[0].return_type, Type::new(TypeKind::I32, false));
     }
 
     #[test]
