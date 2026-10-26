@@ -405,7 +405,7 @@ scalar_functions:
 
         let yaml = r#"urn: extension:example.com:numeric_parameters
 scalar_functions:
-  - name: resize
+  - name: upper
     impls:
       - args:
           - value: varchar<L>
@@ -414,7 +414,7 @@ scalar_functions:
         let file = ExtensionFile::read_from_str(yaml).unwrap();
         let urn = file.urn().clone();
         let registry = Registry::new(vec![file]).unwrap();
-        let function = registry.get_scalar_function(&urn, "resize").unwrap();
+        let function = registry.get_scalar_function(&urn, "upper").unwrap();
         assert_eq!(
             function.impls[0].return_type,
             UnresolvedTypeExpression::ParameterizedBuiltin {

@@ -921,26 +921,18 @@ pub enum IntegerParameter {
     Variable(String),
 }
 
-fn integer_parameter_name<'a>(parameter: &TypeExprParam<'a>) -> Option<&'a str> {
-    let TypeExprParam::Type(TypeExpr::Simple(name, parameters, false)) = parameter else {
-        return None;
-    };
+fn is_valid_integer_parameter_name(name: &str) -> bool {
     let lower = name.to_ascii_lowercase();
     let is_type_variable = lower
         .strip_prefix("any")
         .is_some_and(|suffix| suffix.is_empty() || suffix.parse::<u32>().is_ok());
-    if !parameters.is_empty()
-        || CustomType::validate_name(name).is_err()
-        || BasicBuiltinType::is_name(name)
-        || is_type_variable
-        || matches!(
+    CustomType::validate_name(name).is_ok()
+        && !BasicBuiltinType::is_name(name)
+        && !is_type_variable
+        && !matches!(
             lower.as_str(),
             "list" | "map" | "struct" | "nstruct" | "func"
         )
-    {
-        return None;
-    }
-    Some(name)
 }
 
 fn parse_integer_parameter(
@@ -949,9 +941,13 @@ fn parse_integer_parameter(
     parameter: &TypeExprParam<'_>,
     range: Option<RangeInclusive<i32>>,
 ) -> Result<IntegerParameter, ExtensionTypeError> {
-    match integer_parameter_name(parameter) {
-        Some(name) => Ok(IntegerParameter::Variable(name.to_string())),
-        None => {
+    match parameter {
+        TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
+            if parameters.is_empty() && is_valid_integer_parameter_name(name) =>
+        {
+            Ok(IntegerParameter::Variable(name.to_string()))
+        }
+        _ => {
             expect_integer_param(type_name, index, parameter, range).map(IntegerParameter::Literal)
         }
     }
@@ -970,6 +966,13 @@ fn parse_parameterized_builtin(
         "decimal" => vec![Some(1..=38), Some(0..=38)],
         _ => return Ok(None),
     };
+    // Let ConcreteType handle fully literal types and their cross-parameter checks.
+    if parameters
+        .iter()
+        .all(|parameter| matches!(parameter, TypeExprParam::Integer(_)))
+    {
+        return Ok(None);
+    }
     expect_param_len(name, parameters, ranges.len())?;
     let parsed = parameters
         .iter()
@@ -990,11 +993,7 @@ impl<'a> TryFrom<TypeExpr<'a>> for UnresolvedTypeExpression {
     fn try_from(expression: TypeExpr<'a>) -> Result<Self, Self::Error> {
         match expression {
             TypeExpr::TypeVariable(id, nullable) => Ok(Self::Variable { id, nullable }),
-            TypeExpr::Simple(name, parameters, nullable)
-                if parameters
-                    .iter()
-                    .any(|parameter| integer_parameter_name(parameter).is_some()) =>
-            {
+            TypeExpr::Simple(name, parameters, nullable) => {
                 match parse_parameterized_builtin(name, &parameters, nullable)? {
                     Some(expression) => Ok(expression),
                     None => ConcreteType::try_from(TypeExpr::Simple(name, parameters, nullable))
@@ -1387,12 +1386,46 @@ mod tests {
     }
 
     #[test]
+    fn test_concrete_signature_types_preserve_concrete_validation() {
+        for input in [
+            "i32",
+            "list<i32>",
+            "varchar<20>",
+            "decimal<10, 2>",
+            "precision_timestamp<3>",
+        ] {
+            let expression = TypeExpr::parse(input).unwrap();
+            let concrete = ConcreteType::try_from(expression.clone()).unwrap();
+            assert_eq!(
+                UnresolvedTypeExpression::try_from(expression).unwrap(),
+                UnresolvedTypeExpression::Concrete(concrete),
+            );
+        }
+        for input in [
+            "decimal<10, 11>",
+            "decimal<10, 39>",
+            "decimal<10, -1>",
+            "precision_timestamp<13>",
+        ] {
+            let expression = TypeExpr::parse(input).unwrap();
+            let error = ConcreteType::try_from(expression.clone()).unwrap_err();
+            assert_eq!(
+                UnresolvedTypeExpression::try_from(expression).unwrap_err(),
+                error
+            );
+        }
+    }
+
+    #[test]
     fn test_symbolic_builtins_validate_parameters() {
         for input in [
             "i32<P>",
             "varchar<L, 2>",
             "decimal<any1, S>",
             "decimal<string, S>",
+            "decimal<P?, S>",
+            "decimal<P<1>, S>",
+            "decimal<u!P, S>",
             "decimal<39, S>",
             "decimal<P, 39>",
             "precisiontime<P>",
