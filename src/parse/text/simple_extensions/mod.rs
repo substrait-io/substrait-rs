@@ -9,10 +9,8 @@
 //!   definitions).
 //! * [`SimpleExtensions`] – the validated objects declared by a single
 //!   extension file.
-//! * [`CustomType`] / [`ConcreteType`] – type definitions and resolved type
-//!   structures used when checking function signatures.
-//! * [`ScalarFunction`] – validated scalar function definitions with resolved
-//!   signatures.
+//! * [`CustomType`] / [`Type`] – type definitions and type expressions.
+//! * [`ScalarFunction`] – parsed scalar function declarations.
 //! * [`Registry`] – a reusable lookup structure that stores validated extension
 //!   files and exposes typed access to their contents.
 
@@ -33,7 +31,7 @@ pub use scalar_functions::{
     Impl as ScalarFunctionImpl, NullabilityHandling, Options, ScalarFunction, VariadicBehavior,
 };
 pub use type_ast::TypeExpr;
-pub use types::{ConcreteType, CustomType, ExtensionTypeError, UnresolvedTypeExpression};
+pub use types::{CustomType, ExtensionTypeError, IntegerParameter, Type, TypeKind, TypeParameter};
 
 use crate::urn::Urn;
 
