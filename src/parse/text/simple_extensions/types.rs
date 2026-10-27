@@ -941,7 +941,7 @@ impl From<Type> for RawType {
 }
 
 /// Extract an integer literal or named parameter for a built-in type.
-/// Named parameters are retained without checking bounds until they are bound.
+/// Named parameters are retained without resolving their values.
 ///
 /// For `DECIMAL<10,2>`, this validates that `10` (index 0) and `2` (index 1)
 /// are integers within their required ranges (precision 1-38, scale
