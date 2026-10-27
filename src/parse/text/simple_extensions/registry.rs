@@ -430,7 +430,7 @@ scalar_functions:
     }
 
     #[test]
-    fn test_unsupported_symbolic_returns_are_still_skipped() {
+    fn test_nested_type_variables_and_numeric_parameters_are_still_skipped() {
         for return_type in [
             "list<any1>",
             "map<string, any1>",

@@ -499,7 +499,7 @@ pub enum ExtensionTypeError {
         /// Whether the type variable is nullable
         nullability: bool,
     },
-    /// Symbolic parameters are not supported in this context.
+    /// Type variables or named numeric parameters are not supported in this context.
     #[error("Type '{type_string}' must be concrete in this context")]
     ExpectedConcreteType {
         /// The type expression containing unresolved parameters.
@@ -907,7 +907,7 @@ impl Type {
     /// Check if this type (as a function argument) is compatible with another
     /// type (as an input).
     ///
-    /// Does not bind type variables or symbolic parameters.
+    /// Does not bind type variables or named numeric parameters.
     /// Mainly checks nullability:
     ///   - `i64?` is compatible with `i64` and `i64?` - both can be passed as
     ///     arguments
@@ -1239,7 +1239,7 @@ mod tests {
     }
 
     #[test]
-    fn test_literal_and_symbolic_lengths_share_a_type_kind() {
+    fn test_literal_and_named_lengths_share_a_type_kind() {
         for (length, expected, is_concrete) in [
             (IntegerParameter::Literal(20), "varchar<20>", true),
             (IntegerParameter::Variable("L".into()), "varchar<L>", false),
@@ -1333,7 +1333,7 @@ mod tests {
     }
 
     #[test]
-    fn test_symbolic_numeric_parameters_remain_unsupported_in_type_structures() {
+    fn test_named_numeric_parameters_remain_unsupported_in_type_structures() {
         for raw in [
             RawType::String("varchar<L>".into()),
             RawType::Object(IndexMap::from([(
@@ -1511,7 +1511,7 @@ mod tests {
     }
 
     #[test]
-    fn test_symbolic_builtins_validate_parameters() {
+    fn test_named_numeric_parameters_preserve_builtin_validation() {
         for input in [
             "i32<P>",
             "varchar<L, 2>",
