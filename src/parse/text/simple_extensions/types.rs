@@ -1103,6 +1103,8 @@ fn parse_builtin<'a>(
             let precision = parse_integer_parameter(display_name, 0, &params[0], Some(1..=38))?;
             let max_scale = match &precision {
                 IntegerParameter::Literal(precision) => *precision as i32,
+                // Unknown precision still limits a literal scale to 38,
+                // the maximum possible decimal precision.
                 IntegerParameter::Variable(_) => 38,
             };
             let scale = parse_integer_parameter(display_name, 1, &params[1], Some(0..=max_scale))?;
