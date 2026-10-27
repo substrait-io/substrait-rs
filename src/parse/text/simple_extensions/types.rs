@@ -1022,7 +1022,8 @@ fn expect_param_len(
     Ok(())
 }
 
-// Nested symbolic types and symbolic type structures are not supported yet.
+// Type variables and named numeric parameters are not yet supported
+// inside containers or custom type structures.
 fn expect_concrete_type(expression: TypeExpr<'_>) -> Result<Type, ExtensionTypeError> {
     match expression {
         TypeExpr::TypeVariable(id, nullability) => {
