@@ -940,30 +940,39 @@ impl From<Type> for RawType {
     }
 }
 
-/// Extract an integer literal or named parameter for a built-in type.
-/// Named parameters are retained without resolving their values.
-///
-/// For `DECIMAL<10,2>`, this validates that `10` (index 0) and `2` (index 1)
-/// are integers within their required ranges (precision 1-38, scale
-/// 0-precision).
+/// Parse an integer literal or parameter name for a built-in type.
+/// Validate literals against the supplied range.
 ///
 /// - `type_name`: Type being validated (for error messages, e.g., "DECIMAL")
 /// - `index`: Parameter position (0-based, e.g., 0 for precision, 1 for scale);
 ///   needed for error messages
 /// - `param`: The parameter to validate
 /// - `range`: Optional bounds to enforce (e.g., `Some(1..=38)` for precision)
-fn expect_integer_param(
+fn parse_integer_parameter(
     type_name: &str,
     index: usize,
     param: &TypeExprParam<'_>,
     range: Option<RangeInclusive<i32>>,
 ) -> Result<IntegerParameter, ExtensionTypeError> {
-    let value = match param {
+    match param {
         TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
             if parameters.is_empty() && CustomType::validate_name(name).is_ok() =>
         {
-            return Ok(IntegerParameter::Variable(name.to_string()));
+            Ok(IntegerParameter::Variable(name.to_string()))
         }
+        _ => parse_integer_literal(type_name, index, param, range)
+            .map(|value| IntegerParameter::Literal(i64::from(value))),
+    }
+}
+
+/// Parse an integer literal and validate it against the supplied range.
+fn parse_integer_literal(
+    type_name: &str,
+    index: usize,
+    param: &TypeExprParam<'_>,
+    range: Option<RangeInclusive<i32>>,
+) -> Result<i32, ExtensionTypeError> {
+    let value = match param {
         TypeExprParam::Integer(value) => {
             i32::try_from(*value).map_err(|_| ExtensionTypeError::InvalidParameterValue {
                 type_name: type_name.to_string(),
@@ -981,7 +990,7 @@ fn expect_integer_param(
 
     if let Some(range) = range {
         if range.contains(&value) {
-            return Ok(IntegerParameter::Literal(i64::from(value)));
+            return Ok(value);
         }
         return Err(ExtensionTypeError::InvalidParameterRange {
             type_name: type_name.to_string(),
@@ -991,7 +1000,7 @@ fn expect_integer_param(
         });
     }
 
-    Ok(IntegerParameter::Literal(i64::from(value)))
+    Ok(value)
 }
 
 /// Helper function - checks that param length matches expectations, returns
@@ -1076,52 +1085,52 @@ fn parse_builtin<'a>(
         // Parameterized builtins
         "fixedchar" => {
             expect_param_len(display_name, params, 1)?;
-            let length = expect_integer_param(display_name, 0, &params[0], None)?;
+            let length = parse_integer_parameter(display_name, 0, &params[0], None)?;
             Ok(Some(TypeKind::FixedChar { length }))
         }
         "varchar" => {
             expect_param_len(display_name, params, 1)?;
-            let length = expect_integer_param(display_name, 0, &params[0], None)?;
+            let length = parse_integer_parameter(display_name, 0, &params[0], None)?;
             Ok(Some(TypeKind::VarChar { length }))
         }
         "fixedbinary" => {
             expect_param_len(display_name, params, 1)?;
-            let length = expect_integer_param(display_name, 0, &params[0], None)?;
+            let length = parse_integer_parameter(display_name, 0, &params[0], None)?;
             Ok(Some(TypeKind::FixedBinary { length }))
         }
         "decimal" => {
             expect_param_len(display_name, params, 2)?;
-            let precision = expect_integer_param(display_name, 0, &params[0], Some(1..=38))?;
+            let precision = parse_integer_parameter(display_name, 0, &params[0], Some(1..=38))?;
             let max_scale = match &precision {
                 IntegerParameter::Literal(precision) => *precision as i32,
                 IntegerParameter::Variable(_) => 38,
             };
-            let scale = expect_integer_param(display_name, 1, &params[1], Some(0..=max_scale))?;
+            let scale = parse_integer_parameter(display_name, 1, &params[1], Some(0..=max_scale))?;
             Ok(Some(TypeKind::Decimal { precision, scale }))
         }
         "precision_time" => {
             expect_param_len(display_name, params, 1)?;
-            let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
+            let precision = parse_integer_parameter(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(TypeKind::PrecisionTime { precision }))
         }
         "precision_timestamp" => {
             expect_param_len(display_name, params, 1)?;
-            let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
+            let precision = parse_integer_parameter(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(TypeKind::PrecisionTimestamp { precision }))
         }
         "precision_timestamp_tz" => {
             expect_param_len(display_name, params, 1)?;
-            let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=12))?;
+            let precision = parse_integer_parameter(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(TypeKind::PrecisionTimestampTz { precision }))
         }
         "interval_day" => {
             expect_param_len(display_name, params, 1)?;
-            let precision = expect_integer_param(display_name, 0, &params[0], Some(0..=9))?;
+            let precision = parse_integer_parameter(display_name, 0, &params[0], Some(0..=9))?;
             Ok(Some(TypeKind::IntervalDay { precision }))
         }
         "interval_compound" => {
             expect_param_len(display_name, params, 1)?;
-            let precision = expect_integer_param(display_name, 0, &params[0], None)?;
+            let precision = parse_integer_parameter(display_name, 0, &params[0], None)?;
             Ok(Some(TypeKind::IntervalCompound { precision }))
         }
         _ => Ok(None),
