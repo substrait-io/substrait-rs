@@ -907,7 +907,7 @@ impl Type {
     /// Check if this type (as a function argument) is compatible with another
     /// type (as an input).
     ///
-    /// Does not bind type variables or named numeric parameters.
+    /// Does not bind type variables or symbolic parameters.
     /// Mainly checks nullability:
     ///   - `i64?` is compatible with `i64` and `i64?` - both can be passed as
     ///     arguments
