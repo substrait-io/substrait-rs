@@ -146,7 +146,8 @@ impl Impl {
                     | Err(ExtensionTypeError::ExpectedConcreteType { .. })
                     | Err(ExtensionTypeError::InvalidParameter(_))
                     | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
-                        // Nested symbolic types and numeric expressions are not yet supported.
+                        // Type variables and named numeric parameters inside containers are not yet supported.
+                        // Arithmetic expressions in numeric parameters are also not yet supported.
                         // See: https://github.com/substrait-io/substrait-rs/issues/452
                         return Err(ScalarFunctionError::NotYetImplemented(
                             "Type variables in function signatures - issue #452".to_string(),
