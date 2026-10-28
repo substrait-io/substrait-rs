@@ -1477,12 +1477,15 @@ mod tests {
         );
         assert!(parse_type("list<decimal<10, 2>>").is_concrete());
         assert!(!parse_type("list<any>").is_concrete());
+        assert_eq!(parse_type("any").to_string(), "any");
+        assert_eq!(parse_type("Any?").to_string(), "any?");
     }
 
     #[test]
     fn test_symbolic_user_defined_type_parameters() {
+        let ty = parse_type("u!Box?<List<decimal<P, S>>, 5, N>");
         assert_eq!(
-            parse_type("u!Box?<List<decimal<P, S>>, 5, N>"),
+            ty,
             Type::extension_with_params(
                 "Box".to_string(),
                 vec![
@@ -1493,6 +1496,9 @@ mod tests {
                 true,
             )
         );
+        assert!(!ty.is_concrete());
+        assert!(!parse_type("u!Box<5, N>").is_concrete());
+        assert_eq!(ty.to_string(), "u!Box?<list<decimal<P, S>>, 5, N>");
     }
 
     #[test]
