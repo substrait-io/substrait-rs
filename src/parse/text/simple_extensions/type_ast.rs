@@ -158,6 +158,10 @@ impl<'a> TypeExpr<'a> {
 }
 
 /// Parse the body of a function type: parameters, an arrow, and a return type.
+///
+/// For example, `"any1 -> any2"` parses the parameter `any1`, skips the arrow,
+/// and recursively parses the return type `any2`; `"(i32, i64) -> boolean?"`
+/// strips the grouping parentheses before parsing the two parameters.
 fn parse_func_type<'a>(s: &'a str, nullable: bool) -> Result<TypeExpr<'a>, TypeParseError> {
     let Some((params, return_type)) = split_arrow(s) else {
         return Err(TypeParseError::MissingArrow(s.to_string()));
@@ -179,6 +183,9 @@ fn parse_func_type<'a>(s: &'a str, nullable: bool) -> Result<TypeExpr<'a>, TypeP
 
 /// Split function type parameters from the return type at the top-level arrow,
 /// ignoring arrows nested inside angle brackets or parentheses.
+///
+/// For example, `"i32 -> func<i64 -> i64>"` splits into `"i32"` and
+/// `"func<i64 -> i64>"`, stopping at the first arrow that is not nested.
 fn split_arrow(s: &str) -> Option<(&str, &str)> {
     let mut depth = 0;
     for (i, c) in s.char_indices() {
