@@ -62,32 +62,6 @@ pub(super) enum TokenKind {
     NStruct,
     /// `map`, a map type with key and value parameters.
     Map,
-    /// `bool`, the short name for Boolean.
-    Bool,
-    /// `str`, the short name for string.
-    Str,
-    /// `vbin`, the short name for binary.
-    VBin,
-    /// `iyear`, the short name for a year-to-month interval.
-    IYear,
-    /// `iday`, the short name for a day-to-second interval.
-    IDay,
-    /// `icompound`, the short name for a compound interval.
-    ICompound,
-    /// `dec`, the short name for decimal.
-    Dec,
-    /// `pt`, the short name for precision_time.
-    Pt,
-    /// `pts`, the short name for precision_timestamp.
-    Pts,
-    /// `ptstz`, the short name for precision_timestamp_tz.
-    PtsTz,
-    /// `fchar`, the short name for fixedchar.
-    FChar,
-    /// `vchar`, the short name for varchar.
-    VChar,
-    /// `fbin`, the short name for fixedbinary.
-    FBin,
     /// Bare `any`, matching an unspecified type rather than a numbered variable.
     Any,
     /// A numbered variable such as `any1` or `any12`; the parser checks its ID.
@@ -147,19 +121,6 @@ impl TokenKind {
             Self::Struct => "'struct'",
             Self::NStruct => "'nstruct'",
             Self::Map => "'map'",
-            Self::Bool => "'bool'",
-            Self::Str => "'str'",
-            Self::VBin => "'vbin'",
-            Self::IYear => "'iyear'",
-            Self::IDay => "'iday'",
-            Self::ICompound => "'icompound'",
-            Self::Dec => "'dec'",
-            Self::Pt => "'pt'",
-            Self::Pts => "'pts'",
-            Self::PtsTz => "'ptstz'",
-            Self::FChar => "'fchar'",
-            Self::VChar => "'vchar'",
-            Self::FBin => "'fbin'",
             Self::Any => "'any'",
             Self::AnyVar => "a numbered type variable",
             Self::Integer => "an integer literal",
@@ -210,19 +171,6 @@ impl TokenKind {
                 | Self::Struct
                 | Self::NStruct
                 | Self::Map
-                | Self::Bool
-                | Self::Str
-                | Self::VBin
-                | Self::IYear
-                | Self::IDay
-                | Self::ICompound
-                | Self::Dec
-                | Self::Pt
-                | Self::Pts
-                | Self::PtsTz
-                | Self::FChar
-                | Self::VChar
-                | Self::FBin
         )
     }
 }
@@ -238,9 +186,9 @@ pub(super) struct Token<'a> {
 /// Split source into tokens, skipping whitespace and borrowing token text.
 ///
 /// Recognize `->` and `u!` before single-character punctuation. Whole words
-/// matching upstream type keywords, short names, or numbered `anyN` variables
-/// receive dedicated tokens, case-insensitively. Other names remain identifiers. Original
-/// spelling is retained, including for names following `u!`.
+/// matching upstream type-expression keywords or numbered `anyN` variables receive
+/// dedicated tokens, case-insensitively. Other names, including signature-only short
+/// names, remain identifiers. Original spelling is retained, including after `u!`.
 /// Digits and signs are separate tokens, and unknown characters produce an error
 /// at their original byte position.
 pub(super) fn tokenize(source: &str) -> Result<Vec<Token<'_>>, TypeParseError> {
@@ -322,19 +270,6 @@ fn classify_word(word: &str) -> TokenKind {
         "struct" => TokenKind::Struct,
         "nstruct" => TokenKind::NStruct,
         "map" => TokenKind::Map,
-        "bool" => TokenKind::Bool,
-        "str" => TokenKind::Str,
-        "vbin" => TokenKind::VBin,
-        "iyear" => TokenKind::IYear,
-        "iday" => TokenKind::IDay,
-        "icompound" => TokenKind::ICompound,
-        "dec" => TokenKind::Dec,
-        "pt" => TokenKind::Pt,
-        "pts" => TokenKind::Pts,
-        "ptstz" => TokenKind::PtsTz,
-        "fchar" => TokenKind::FChar,
-        "vchar" => TokenKind::VChar,
-        "fbin" => TokenKind::FBin,
         "any" => TokenKind::Any,
         name if name.strip_prefix("any").is_some_and(|suffix| {
             !suffix.is_empty() && suffix.bytes().all(|byte| byte.is_ascii_digit())
@@ -352,7 +287,7 @@ mod tests {
 
     #[test]
     fn arrows_are_distinct_from_closing_brackets() {
-        let tokens = tokenize("func<func<i32 -> i64> -> bool>").unwrap();
+        let tokens = tokenize("func<func<i32 -> i64> -> boolean>").unwrap();
         let kinds: Vec<_> = tokens.iter().map(|token| token.kind).collect();
         assert_eq!(
             kinds,
@@ -366,7 +301,7 @@ mod tests {
                 TokenKind::I64,
                 TokenKind::CloseAngle,
                 TokenKind::Arrow,
-                TokenKind::Bool,
+                TokenKind::Boolean,
                 TokenKind::CloseAngle,
             ]
         );
@@ -390,7 +325,7 @@ mod tests {
     }
 
     #[test]
-    fn remaining_upstream_type_keywords_and_short_names_are_recognized() {
+    fn remaining_upstream_type_expression_keywords_are_recognized() {
         for (source, kind) in [
             ("boolean", TokenKind::Boolean),
             ("i8", TokenKind::I8),
@@ -415,19 +350,6 @@ mod tests {
             ("struct", TokenKind::Struct),
             ("nstruct", TokenKind::NStruct),
             ("map", TokenKind::Map),
-            ("bool", TokenKind::Bool),
-            ("str", TokenKind::Str),
-            ("vbin", TokenKind::VBin),
-            ("iyear", TokenKind::IYear),
-            ("iday", TokenKind::IDay),
-            ("icompound", TokenKind::ICompound),
-            ("dec", TokenKind::Dec),
-            ("pt", TokenKind::Pt),
-            ("pts", TokenKind::Pts),
-            ("ptstz", TokenKind::PtsTz),
-            ("fchar", TokenKind::FChar),
-            ("vchar", TokenKind::VChar),
-            ("fbin", TokenKind::FBin),
         ] {
             for spelling in [source.to_string(), source.to_ascii_uppercase()] {
                 let tokens = tokenize(&spelling).unwrap();
@@ -435,6 +357,32 @@ mod tests {
                 assert_eq!(tokens[0].kind, kind, "{spelling}");
                 assert_eq!(tokens[0].text, spelling);
                 assert!(kind.is_name());
+            }
+        }
+    }
+
+    #[test]
+    fn signature_only_short_names_remain_identifiers() {
+        for source in [
+            "bool",
+            "str",
+            "vbin",
+            "iyear",
+            "iday",
+            "icompound",
+            "dec",
+            "pt",
+            "pts",
+            "ptstz",
+            "fchar",
+            "vchar",
+            "fbin",
+        ] {
+            for spelling in [source.to_string(), source.to_ascii_uppercase()] {
+                let tokens = tokenize(&spelling).unwrap();
+                assert_eq!(tokens.len(), 1);
+                assert_eq!(tokens[0].kind, TokenKind::Identifier, "{spelling}");
+                assert_eq!(tokens[0].text, spelling);
             }
         }
     }
