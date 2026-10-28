@@ -1235,7 +1235,7 @@ mod tests {
     }
 
     #[test]
-    fn test_literal_and_named_lengths_share_a_type_kind() {
+    fn test_literal_and_symbolic_lengths_share_a_type_kind() {
         for (length, expected, is_concrete) in [
             (IntegerParameter::Literal(20), "varchar<20>", true),
             (IntegerParameter::Variable("L".into()), "varchar<L>", false),
