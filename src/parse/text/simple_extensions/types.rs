@@ -306,7 +306,13 @@ impl fmt::Display for IntegerParameter {
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
-            Self::Add(left, right) => write!(f, "{left} + {right}"),
+            Self::Add(left, right) => {
+                if matches!(**right, Self::Add(..)) {
+                    write!(f, "{left} + ({right})")
+                } else {
+                    write!(f, "{left} + {right}")
+                }
+            }
         }
     }
 }
@@ -1321,17 +1327,24 @@ mod tests {
 
     #[test]
     fn test_expression_literals_still_validate_ranges() {
-        let parameter = TypeExprParam::Expression(IntegerParameter::Literal(0));
-        assert!(matches!(
-            parse_integer_parameter("varchar", 0, &parameter, Some(1..=i32::MAX)),
-            Err(ExtensionTypeError::InvalidParameterRange { .. })
-        ));
+        for source in ["decimal<(0), 0>", "decimal<(39), 0>", "decimal<10, (11)>"] {
+            assert!(
+                matches!(
+                    parse_type_result(source),
+                    Err(ExtensionTypeError::InvalidParameterRange { .. })
+                ),
+                "{source}"
+            );
+        }
     }
 
     #[test]
     fn test_numeric_expression_display_and_concreteness() {
         for source in [
             "varchar<L + 1>",
+            "varchar<L + (M + 1)>",
+            "varchar<(L)>",
+            "decimal<(P1 + P2), (S + 1)>",
             "decimal<P1 + P2, S>",
             "list<decimal<P + 1, S>>",
             "func<varchar<L + 1> -> decimal<P, S + 1>>",

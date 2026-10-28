@@ -255,7 +255,7 @@ fn parse_param<'a>(s: &'a str) -> Result<TypeExprParam<'a>, TypeParseError> {
     if let Ok(i) = s.parse::<i64>() {
         return Ok(TypeExprParam::Integer(i));
     }
-    if !s.contains('<') && s.contains('+') {
+    if !s.contains('<') && s.contains(['+', '(', ')']) {
         return Ok(TypeExprParam::Expression(IntegerParameter::parse(s)?));
     }
     Ok(TypeExprParam::Type(TypeExpr::parse(s)?))
@@ -378,7 +378,13 @@ mod tests {
 
     #[test]
     fn test_invalid_numeric_parameter_expressions() {
-        for source in ["varchar<L +>", "varchar<L + * 2>", "varchar<(L + 1)>"] {
+        for source in [
+            "varchar<L +>",
+            "varchar<L + * 2>",
+            "varchar<(L + 1>",
+            "varchar<L + 1)>",
+            "varchar<()>",
+        ] {
             assert!(TypeExpr::parse(source).is_err(), "{source}");
         }
     }

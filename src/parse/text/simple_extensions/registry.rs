@@ -536,6 +536,7 @@ scalar_functions:
     fn test_numeric_expression_returns_are_retained() {
         for (return_type, expected) in [
             ("varchar<L + 1>", "varchar<L + 1>"),
+            ("varchar<L+(M+1)>", "varchar<L + (M + 1)>"),
             ("decimal<P1+P2, S>", "decimal<P1 + P2, S>"),
             ("list<decimal<P + 1, S>>", "list<decimal<P + 1, S>>"),
         ] {
