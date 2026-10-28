@@ -1475,10 +1475,14 @@ mod tests {
                 true
             )
         );
-        assert!(parse_type("list<decimal<10, 2>>").is_concrete());
-        assert!(!parse_type("list<any>").is_concrete());
         assert_eq!(parse_type("any").to_string(), "any");
         assert_eq!(parse_type("Any?").to_string(), "any?");
+    }
+
+    #[test]
+    fn test_nested_type_concreteness_follows_elements() {
+        assert!(parse_type("list<decimal<10, 2>>").is_concrete());
+        assert!(!parse_type("list<any>").is_concrete());
     }
 
     #[test]
