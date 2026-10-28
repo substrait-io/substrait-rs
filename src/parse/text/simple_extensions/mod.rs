@@ -27,7 +27,7 @@ mod types;
 
 pub use extensions::SimpleExtensions;
 pub use file::ExtensionFile;
-pub use numeric_expression::{ArithmeticOperator, NumericExpression, NumericExpressionParseError};
+pub use numeric_expression::{NumericExpression, NumericExpressionParseError};
 pub use registry::Registry;
 pub use scalar_functions::{
     Impl as ScalarFunctionImpl, NullabilityHandling, Options, ScalarFunction, VariadicBehavior,

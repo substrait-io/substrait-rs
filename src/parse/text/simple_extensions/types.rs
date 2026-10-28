@@ -1310,7 +1310,7 @@ mod tests {
 
     #[test]
     fn test_numeric_parameter_expressions() {
-        let parsed = parse_type("decimal<P1 + P2, max(S1, S2)>");
+        let parsed = parse_type("decimal<P1 + P2, S>");
         let TypeKind::Decimal { precision, scale } = &parsed.kind else {
             panic!("expected decimal");
         };
@@ -1318,21 +1318,18 @@ mod tests {
             precision,
             &IntegerParameter::Expression(NumericExpression::parse("P1 + P2").unwrap())
         );
-        assert_eq!(
-            scale,
-            &IntegerParameter::Expression(NumericExpression::parse("max(S1, S2)").unwrap())
-        );
+        assert_eq!(scale, &IntegerParameter::Variable("S".into()));
     }
 
     #[test]
     fn test_numeric_expression_display_and_concreteness() {
         for source in [
             "varchar<L + 1>",
-            "decimal<P1 + P2, max(S1, S2)>",
-            "list<decimal<min(P + 1, 38), S>>",
-            "func<varchar<L + 1> -> decimal<P, max(S, 2)>>",
-            "u!custom<max(P, 1)>",
-            "varchar<1 / 0>",
+            "decimal<P1 + P2, S>",
+            "list<decimal<P + 1, S>>",
+            "func<varchar<L + 1> -> decimal<P, S + 1>>",
+            "u!custom<P + 1>",
+            "varchar<1 + 2>",
         ] {
             let parsed = parse_type(source);
             assert!(!parsed.is_concrete(), "{source}");
@@ -1342,11 +1339,7 @@ mod tests {
 
     #[test]
     fn test_numeric_expressions_are_not_type_arguments() {
-        for source in [
-            "list<P + 1>",
-            "map<i32, max(P, S)>",
-            "func<max(P, S) -> i32>",
-        ] {
+        for source in ["list<P + 1>", "map<i32, P + 1>", "func<P + 1 -> i32>"] {
             assert!(
                 matches!(
                     parse_type_result(source),

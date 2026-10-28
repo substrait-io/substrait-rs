@@ -229,8 +229,8 @@ fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError
 
     for (i, c) in s.char_indices() {
         match c {
-            '<' | '(' => depth += 1,
-            '>' | ')' => depth -= 1,
+            '<' => depth += 1,
+            '>' => depth -= 1,
             ',' if depth == 0 => {
                 result.push(parse_param(s[start..i].trim())?);
                 start = i + 1;
@@ -254,7 +254,7 @@ fn parse_param<'a>(s: &'a str) -> Result<TypeExprParam<'a>, TypeParseError> {
     if let Ok(i) = s.parse::<i64>() {
         return Ok(TypeExprParam::Integer(i));
     }
-    if !s.contains('<') && s.contains(['+', '-', '*', '/', '(']) {
+    if !s.contains('<') && s.contains('+') {
         return Ok(TypeExprParam::Expression(NumericExpression::parse(s)?));
     }
     Ok(TypeExprParam::Type(TypeExpr::parse(s)?))
@@ -360,7 +360,7 @@ mod tests {
 
     #[test]
     fn test_numeric_parameter_expressions() {
-        let expression = parse("decimal<P1 + P2, max(S1, S2)>");
+        let expression = parse("decimal<P1 + P2, S>");
         let TypeExpr::Simple("decimal", parameters, false) = expression else {
             panic!("expected decimal");
         };
@@ -371,31 +371,21 @@ mod tests {
         );
         assert_eq!(
             parameters[1],
-            TypeExprParam::Expression(NumericExpression::parse("max(S1, S2)").unwrap())
+            TypeExprParam::Type(TypeExpr::Simple("S", vec![], false))
         );
     }
 
     #[test]
     fn test_invalid_numeric_parameter_expressions() {
-        for source in [
-            "varchar<L +>",
-            "decimal<P, max(S,)>",
-            "varchar<max(L, 1>",
-            "varchar<(L + 1))>",
-            "varchar<custom(L, 1)>",
-            "decimal<P, min()>",
-            "decimal<P, max(S)>",
-            "decimal<P, max(S, 1, 2)>",
-        ] {
+        for source in ["varchar<L +>", "varchar<L + * 2>", "varchar<(L + 1)>"] {
             assert!(TypeExpr::parse(source).is_err(), "{source}");
         }
     }
 
     #[test]
-    fn test_numeric_calls_are_not_extension_type_references() {
+    fn test_numeric_parameters_are_not_extension_type_references() {
         let mut references = Vec::new();
-        parse("u!custom<max(P, 1)>")
-            .visit_references(&mut |name| references.push(name.to_string()));
+        parse("u!custom<P + 1>").visit_references(&mut |name| references.push(name.to_string()));
         assert_eq!(references, vec!["custom"]);
     }
 

@@ -535,15 +535,9 @@ scalar_functions:
     #[test]
     fn test_numeric_expression_returns_are_retained() {
         for (return_type, expected) in [
-            ("varchar<L + 1>", "varchar<(L + 1)>"),
-            (
-                "decimal<P1 + P2, max(S1, S2)>",
-                "decimal<(P1 + P2), max(S1, S2)>",
-            ),
-            (
-                "list<decimal<min(P + 1, 38), S>>",
-                "list<decimal<min((P + 1), 38), S>>",
-            ),
+            ("varchar<L + 1>", "varchar<L + 1>"),
+            ("decimal<P1+P2, S>", "decimal<P1 + P2, S>"),
+            ("list<decimal<P + 1, S>>", "list<decimal<P + 1, S>>"),
         ] {
             let raw = extension_with_custom_type_reference(
                 "extension:example.com:numeric_expressions",
