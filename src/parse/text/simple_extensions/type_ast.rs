@@ -434,6 +434,53 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_type_variable() {
+        let cases = [
+            ("any1", Some(TypeExpr::TypeVariable(1, false))),
+            ("any2?", Some(TypeExpr::TypeVariable(2, true))),
+            ("any", None),
+            ("anyfoo", None),
+            ("i32", None),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(
+                parse_type_variable(input),
+                expected,
+                "unexpected result for {input}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_split_name_and_params() {
+        let cases = [
+            ("i32", ("i32", false, None)),
+            ("i32?", ("i32", true, None)),
+            ("List?<i32, i64>", ("List", true, Some("i32, i64"))),
+            (
+                "Map<string, List<i32>>",
+                ("Map", false, Some("string, List<i32>")),
+            ),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(
+                split_name_and_params(input),
+                Ok(expected),
+                "unexpected split for {input}"
+            );
+        }
+
+        assert_eq!(
+            split_name_and_params("List<i32"),
+            Err(TypeParseError::ExpectedClosingAngleBracket(
+                "i32".to_string()
+            ))
+        );
+    }
+
+    #[test]
     fn test_variation_not_supported() {
         let cases = vec!["i32[1]", "Foo?[1]", "u!bar[2]"];
 
