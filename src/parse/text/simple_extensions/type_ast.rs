@@ -382,6 +382,10 @@ mod tests {
             "decimal<P, max(S,)>",
             "varchar<max(L, 1>",
             "varchar<(L + 1))>",
+            "varchar<custom(L, 1)>",
+            "decimal<P, min()>",
+            "decimal<P, max(S)>",
+            "decimal<P, max(S, 1, 2)>",
         ] {
             assert!(TypeExpr::parse(source).is_err(), "{source}");
         }

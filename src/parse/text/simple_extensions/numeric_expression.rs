@@ -20,13 +20,10 @@ pub enum NumericExpression {
         /// The right operand.
         right: Box<Self>,
     },
-    /// A function call, such as `max(S1, S2)`.
-    Call {
-        /// The function name. Its meaning is not validated during parsing.
-        name: String,
-        /// The argument expressions, in declaration order.
-        arguments: Vec<Self>,
-    },
+    /// The minimum of two expressions, such as `min(S1, S2)`.
+    Min(Box<Self>, Box<Self>),
+    /// The maximum of two expressions, such as `max(S1, S2)`.
+    Max(Box<Self>, Box<Self>),
 }
 
 /// An operator in a numeric parameter expression.
@@ -53,7 +50,8 @@ pub struct NumericExpressionParseError {
 }
 
 impl NumericExpression {
-    /// Parse arithmetic, parentheses, names, integer literals, and function calls.
+    /// Parse arithmetic, parentheses, names, integer literals, and two-argument
+    /// `min` and `max` calls. Function names are case-insensitive.
     ///
     /// For example, `P + max(S1, S2) * 2` retains the multiplication inside
     /// the right operand of the addition. No operation is evaluated.
@@ -89,16 +87,8 @@ impl fmt::Display for NumericExpression {
                 };
                 write!(f, "({left} {operator} {right})")
             }
-            Self::Call { name, arguments } => {
-                write!(f, "{name}(")?;
-                for (index, argument) in arguments.iter().enumerate() {
-                    if index != 0 {
-                        f.write_str(", ")?;
-                    }
-                    write!(f, "{argument}")?;
-                }
-                f.write_str(")")
-            }
+            Self::Min(left, right) => write!(f, "min({left}, {right})"),
+            Self::Max(left, right) => write!(f, "max({left}, {right})"),
         }
     }
 }
@@ -218,19 +208,26 @@ impl Parser<'_> {
             return Ok(NumericExpression::Parameter(name));
         }
 
-        let mut arguments = Vec::new();
-        if !self.consume(')') {
-            loop {
-                arguments.push(self.parse_sum()?);
-                if self.consume(')') {
-                    break;
-                }
-                if !self.consume(',') {
-                    return Err(self.error("',' or ')'"));
-                }
-            }
+        let is_min = name.eq_ignore_ascii_case("min");
+        if !is_min && !name.eq_ignore_ascii_case("max") {
+            return Err(NumericExpressionParseError {
+                position: start,
+                expected: "'min' or 'max'",
+            });
         }
-        Ok(NumericExpression::Call { name, arguments })
+        let left = Box::new(self.parse_sum()?);
+        if !self.consume(',') {
+            return Err(self.error("',' followed by a second argument"));
+        }
+        let right = Box::new(self.parse_sum()?);
+        if !self.consume(')') {
+            return Err(self.error("')' after the second argument"));
+        }
+        Ok(if is_min {
+            NumericExpression::Min(left, right)
+        } else {
+            NumericExpression::Max(left, right)
+        })
     }
 }
 
@@ -260,24 +257,50 @@ mod tests {
     #[test]
     fn calls_and_literals_are_retained_without_evaluation() {
         let expression = parse("max(S1, min(S2 + 1, 38))");
-        let NumericExpression::Call { name, arguments } = &expression else {
-            panic!("expected a call");
+        let NumericExpression::Max(left, right) = &expression else {
+            panic!("expected max");
         };
-        assert_eq!(name, "max");
-        assert_eq!(arguments[0], NumericExpression::Parameter("S1".into()));
-        assert_eq!(arguments[1], parse("min(S2 + 1, 38)"));
-        assert_eq!(
-            parse("custom()"),
-            NumericExpression::Call {
-                name: "custom".into(),
-                arguments: vec![]
-            }
-        );
+        assert_eq!(**left, NumericExpression::Parameter("S1".into()));
+        let NumericExpression::Min(left, right) = &**right else {
+            panic!("expected nested min");
+        };
+        assert_eq!(**left, parse("S2 + 1"));
+        assert_eq!(**right, NumericExpression::Literal(38));
         assert_eq!(
             parse("-9223372036854775808"),
             NumericExpression::Literal(i64::MIN)
         );
         assert_eq!(parse("1 / 0").to_string(), "(1 / 0)");
+    }
+
+    #[test]
+    fn function_names_are_case_insensitive() {
+        for source in ["MIN(P, S)", "Min(P, S)", "mIn(P, S)"] {
+            assert_eq!(parse(source), parse("min(P, S)"));
+        }
+        for source in ["MAX(P, S)", "Max(P, S)", "mAx(P, S)"] {
+            assert_eq!(parse(source), parse("max(P, S)"));
+        }
+    }
+
+    #[test]
+    fn calls_require_known_names_and_two_arguments() {
+        for source in [
+            "custom()",
+            "custom(P, S)",
+            "minimum(P, S)",
+            "min()",
+            "min(P)",
+            "min(P, S, 1)",
+            "max()",
+            "max(P)",
+            "max(P, S, 1)",
+        ] {
+            assert!(NumericExpression::parse(source).is_err(), "{source}");
+        }
+        let error = NumericExpression::parse("custom(P, S)").unwrap_err();
+        assert_eq!(error.position, 0);
+        assert_eq!(error.expected, "'min' or 'max'");
     }
 
     #[test]
