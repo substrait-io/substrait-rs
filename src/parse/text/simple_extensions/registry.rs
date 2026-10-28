@@ -432,13 +432,24 @@ scalar_functions:
     #[cfg(feature = "extensions")]
     #[test]
     fn test_core_function_with_nested_symbolic_return() {
+        use super::super::{IntegerParameter, Type, TypeKind};
+
         let registry = Registry::from_core_extensions();
         let urn = Urn::from_str("extension:io.substrait:functions_string").unwrap();
-        assert!(
-            registry
-                .get_scalar_function(&urn, "regexp_match_substring_all")
-                .is_some(),
-            "regexp_match_substring_all should not be skipped because it returns List<varchar<L1>>"
+        let function = registry
+            .get_scalar_function(&urn, "regexp_match_substring_all")
+            .expect("regexp_match_substring_all should not be skipped because it returns List<varchar<L1>>");
+        assert_eq!(
+            function.impls[0].return_type,
+            Type::list(
+                Type::new(
+                    TypeKind::VarChar {
+                        length: IntegerParameter::Variable("L1".to_string()),
+                    },
+                    false,
+                ),
+                false,
+            )
         );
     }
 
