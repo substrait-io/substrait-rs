@@ -17,11 +17,25 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        id: rust-toolchain
         with:
           components: llvm-tools-preview
       - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2
         with:
           tool: cargo-llvm-cov
+      - id: cargo-llvm-cov-version
+        run: echo "version=$(cargo llvm-cov --version | awk '{ print $NF }')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        id: coverage-cache-restore
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/llvm-cov-target/
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-coverage-${{ steps.cargo-llvm-cov-version.outputs.version }}-${{ hashFiles('**/Cargo.toml', 'Cargo.lock', '.github/workflows/coverage.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-coverage-${{ steps.cargo-llvm-cov-version.outputs.version }}-
       - name: Collect coverage
         run: cargo llvm-cov --locked --all-features --all-targets --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
@@ -31,3 +45,14 @@ jobs:
           disable_search: true
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Clean coverage outputs from cache
+        run: cargo llvm-cov clean --workspace
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.coverage-cache-restore.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/llvm-cov-target/
+          key: ${{ steps.coverage-cache-restore.outputs.cache-primary-key }}
