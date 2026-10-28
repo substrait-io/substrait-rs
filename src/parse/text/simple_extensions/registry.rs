@@ -389,9 +389,54 @@ scalar_functions:
         }
     }
 
+    #[cfg(feature = "extensions")]
     #[test]
-    fn test_unsupported_symbolic_returns_are_still_skipped() {
-        for return_type in ["list<any1>", "decimal<P, S>"] {
+    fn test_core_functions_with_numeric_parameter_returns() {
+        let registry = Registry::from_core_extensions();
+        let urn = Urn::from_str("extension:io.substrait:functions_string").unwrap();
+        for name in ["lower", "upper"] {
+            assert!(
+                registry.get_scalar_function(&urn, name).is_some(),
+                "{name} should not be skipped because of its named numeric parameters"
+            );
+        }
+    }
+
+    #[test]
+    fn test_numeric_parameter_returns() {
+        use super::super::{IntegerParameter, Type, TypeKind};
+
+        let yaml = r#"urn: extension:example.com:numeric_parameters
+scalar_functions:
+  - name: upper
+    impls:
+      - args:
+          - value: varchar<L>
+        return: varchar<L>
+"#;
+        let file = ExtensionFile::read_from_str(yaml).unwrap();
+        let urn = file.urn().clone();
+        let registry = Registry::new(vec![file]).unwrap();
+        let function = registry.get_scalar_function(&urn, "upper").unwrap();
+        assert_eq!(
+            function.impls[0].return_type,
+            Type::new(
+                TypeKind::VarChar {
+                    length: IntegerParameter::Variable("L".to_string()),
+                },
+                false
+            )
+        );
+    }
+
+    #[test]
+    fn test_nested_type_variables_and_numeric_parameters_are_still_skipped() {
+        for return_type in [
+            "list<any1>",
+            "map<string, any1>",
+            "list<varchar<L>>",
+            "map<string, decimal<P, S>>",
+        ] {
             let raw = extension_with_custom_type_reference(
                 "extension:example.com:unsupported",
                 "unsupported",

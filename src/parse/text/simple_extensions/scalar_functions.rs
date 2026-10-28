@@ -143,9 +143,11 @@ impl Impl {
                 match Type::try_from(type_expr) {
                     Ok(expression) => expression,
                     Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
+                    | Err(ExtensionTypeError::ExpectedConcreteType { .. })
                     | Err(ExtensionTypeError::InvalidParameter(_))
                     | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
-                        // Nested type variables and named numeric parameters are not yet supported.
+                        // Type variables and named numeric parameters inside containers are not yet supported.
+                        // Arithmetic expressions in numeric parameters are also not yet supported.
                         // See: https://github.com/substrait-io/substrait-rs/issues/452
                         return Err(ScalarFunctionError::NotYetImplemented(
                             "Type variables in function signatures - issue #452".to_string(),
