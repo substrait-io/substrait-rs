@@ -184,21 +184,20 @@ fn parse_func_type<'a>(s: &'a str, nullable: bool) -> Result<TypeExpr<'a>, TypeP
     };
 
     let params = params
-        .trim()
         .strip_prefix('(')
         .and_then(|p| p.strip_suffix(')'))
-        .unwrap_or(params.trim());
-    if params.trim().is_empty() {
+        .unwrap_or(params);
+    if params.is_empty() {
         return Err(TypeParseError::EmptyFunctionParameters(s.to_string()));
     }
 
-    let parameters = parse_params(params.trim())?;
-    let return_type = TypeExpr::parse(return_type.trim())?;
+    let parameters = parse_params(params)?;
+    let return_type = TypeExpr::parse(return_type)?;
     Ok(TypeExpr::Func(parameters, Box::new(return_type), nullable))
 }
 
 /// Split function type parameters from the return type at the top-level arrow,
-/// ignoring arrows nested inside angle brackets or parentheses.
+/// ignoring arrows nested inside angle brackets or parentheses, and trim both halves.
 ///
 /// For example, `"i32 -> func<i64 -> i64>"` splits into `"i32"` and
 /// `"func<i64 -> i64>"`, stopping at the first arrow that is not nested.
@@ -209,7 +208,7 @@ fn split_arrow(s: &str) -> Option<(&str, &str)> {
             '<' | '(' => depth += 1,
             '>' | ')' => depth -= 1,
             '-' if depth == 0 && s[i..].starts_with("->") => {
-                return Some((&s[..i], &s[i + 2..]));
+                return Some((s[..i].trim(), s[i + 2..].trim()));
             }
             _ => {}
         }
@@ -478,6 +477,20 @@ mod tests {
                 "i32".to_string()
             ))
         );
+    }
+
+    #[test]
+    fn test_split_arrow() {
+        let cases = [
+            ("i32 -> i64", Some(("i32", "i64"))),
+            ("(i32, i64) -> boolean?", Some(("(i32, i64)", "boolean?"))),
+            ("i32 -> func<i64 -> i64>", Some(("i32", "func<i64 -> i64>"))),
+            ("i32, i64", None),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(split_arrow(input), expected, "unexpected split for {input}");
+        }
     }
 
     #[test]
