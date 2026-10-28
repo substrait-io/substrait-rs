@@ -7,7 +7,6 @@ use super::argument::{
     EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
 };
 use super::extensions::TypeContext;
-use super::numeric_expression::NumericExpression;
 use super::type_ast::TypeExprParam;
 use crate::parse::Parse;
 use crate::parse::text::simple_extensions::type_ast::TypeParseError;
@@ -291,12 +290,12 @@ pub enum IntegerParameter {
     Literal(i64),
     /// A name whose value depends on a function call.
     Variable(String),
-    /// An arithmetic expression retained without evaluation.
-    Expression(NumericExpression),
+    /// Addition of two integer expressions, retained without evaluation.
+    Add(Box<Self>, Box<Self>),
 }
 
 impl IntegerParameter {
-    /// Returns whether this parameter is a literal rather than a variable.
+    /// Returns whether this parameter is a literal rather than an unresolved expression.
     pub fn is_concrete(&self) -> bool {
         matches!(self, Self::Literal(_))
     }
@@ -307,7 +306,7 @@ impl fmt::Display for IntegerParameter {
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
-            Self::Expression(expression) => write!(f, "{expression}"),
+            Self::Add(left, right) => write!(f, "{left} + {right}"),
         }
     }
 }
@@ -990,22 +989,20 @@ fn parse_integer_parameter(
     range: Option<RangeInclusive<i32>>,
 ) -> Result<IntegerParameter, ExtensionTypeError> {
     let value = match param {
-        TypeExprParam::Expression(expression) => {
-            return Ok(IntegerParameter::Expression(expression.clone()));
-        }
         TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
             if parameters.is_empty() && CustomType::validate_name(name).is_ok() =>
         {
             return Ok(IntegerParameter::Variable(name.to_string()));
         }
-        TypeExprParam::Integer(value) => {
-            i32::try_from(*value).map_err(|_| ExtensionTypeError::InvalidParameterValue {
+        TypeExprParam::Integer(value)
+        | TypeExprParam::Expression(IntegerParameter::Literal(value)) => i32::try_from(*value)
+            .map_err(|_| ExtensionTypeError::InvalidParameterValue {
                 type_name: type_name.to_string(),
                 index,
                 value: *value,
                 expected: "an i32",
-            })
-        }
+            }),
+        TypeExprParam::Expression(expression) => return Ok(expression.clone()),
         _ => Err(ExtensionTypeError::InvalidParameterKind {
             type_name: type_name.to_string(),
             index,
@@ -1090,9 +1087,7 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
     fn try_from(param: TypeExprParam<'a>) -> Result<Self, Self::Error> {
         Ok(match param {
             TypeExprParam::Integer(v) => TypeParameter::Integer(IntegerParameter::Literal(v)),
-            TypeExprParam::Expression(expression) => {
-                TypeParameter::Integer(IntegerParameter::Expression(expression))
-            }
+            TypeExprParam::Expression(expression) => TypeParameter::Integer(expression),
             TypeExprParam::Type(expression) => {
                 let is_bare_name = matches!(
                     &expression,
@@ -1116,7 +1111,7 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
     match precision {
         IntegerParameter::Literal(precision) => *precision as i32,
         // An unresolved precision must eventually satisfy the decimal precision limit.
-        IntegerParameter::Variable(_) | IntegerParameter::Expression(_) => 38,
+        IntegerParameter::Variable(_) | IntegerParameter::Add(..) => 38,
     }
 }
 
@@ -1316,9 +1311,21 @@ mod tests {
         };
         assert_eq!(
             precision,
-            &IntegerParameter::Expression(NumericExpression::parse("P1 + P2").unwrap())
+            &IntegerParameter::Add(
+                Box::new(IntegerParameter::Variable("P1".into())),
+                Box::new(IntegerParameter::Variable("P2".into())),
+            )
         );
         assert_eq!(scale, &IntegerParameter::Variable("S".into()));
+    }
+
+    #[test]
+    fn test_expression_literals_still_validate_ranges() {
+        let parameter = TypeExprParam::Expression(IntegerParameter::Literal(0));
+        assert!(matches!(
+            parse_integer_parameter("varchar", 0, &parameter, Some(1..=i32::MAX)),
+            Err(ExtensionTypeError::InvalidParameterRange { .. })
+        ));
     }
 
     #[test]

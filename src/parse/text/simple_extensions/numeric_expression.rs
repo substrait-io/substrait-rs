@@ -1,19 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Unevaluated addition expressions used in numeric type parameters.
+//! Parsing for unevaluated addition in numeric type parameters.
 
-use std::fmt;
-
-/// An integer expression retained without binding names or evaluating operations.
-#[derive(Clone, Debug, PartialEq)]
-pub enum NumericExpression {
-    /// An integer literal.
-    Literal(i64),
-    /// A named numeric parameter.
-    Parameter(String),
-    /// Addition of two integer expressions.
-    Add(Box<Self>, Box<Self>),
-}
+use super::types::IntegerParameter;
 
 /// A syntax error at a byte offset in a numeric expression.
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
@@ -23,7 +12,7 @@ pub struct NumericExpressionParseError {
     pub position: usize,
 }
 
-impl NumericExpression {
+impl IntegerParameter {
     /// Parse addition of integer literals and parameter names, such as `L + 1`.
     ///
     /// Addition associates to the left. Other operators, calls, and grouping
@@ -47,10 +36,10 @@ impl NumericExpression {
 fn parse_operand(
     source: &str,
     position: usize,
-) -> Result<NumericExpression, NumericExpressionParseError> {
+) -> Result<IntegerParameter, NumericExpressionParseError> {
     let operand = source.trim();
     if let Ok(value) = operand.parse::<i64>() {
-        return Ok(NumericExpression::Literal(value));
+        return Ok(IntegerParameter::Literal(value));
     }
     let mut characters = operand.chars();
     if characters
@@ -58,39 +47,29 @@ fn parse_operand(
         .is_some_and(|c| c.is_ascii_alphabetic() || c == '_' || c == '$')
         && characters.all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')
     {
-        return Ok(NumericExpression::Parameter(operand.to_string()));
+        return Ok(IntegerParameter::Variable(operand.to_string()));
     }
     Err(NumericExpressionParseError {
         position: position + source.len() - source.trim_start().len(),
     })
 }
 
-impl fmt::Display for NumericExpression {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Literal(value) => write!(f, "{value}"),
-            Self::Parameter(name) => f.write_str(name),
-            Self::Add(left, right) => write!(f, "{left} + {right}"),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn parse(source: &str) -> NumericExpression {
-        NumericExpression::parse(source).unwrap()
+    fn parse(source: &str) -> IntegerParameter {
+        IntegerParameter::parse(source).unwrap()
     }
 
     #[test]
     fn addition_retains_operands_and_associates_to_the_left() {
-        let NumericExpression::Add(left, right) = parse("P + S + 1") else {
+        let IntegerParameter::Add(left, right) = parse("P + S + 1") else {
             panic!("expected addition");
         };
         assert_eq!(*left, parse("P + S"));
-        assert_eq!(*right, NumericExpression::Literal(1));
-        assert_eq!(parse("P"), NumericExpression::Parameter("P".into()));
+        assert_eq!(*right, IntegerParameter::Literal(1));
+        assert_eq!(parse("P"), IntegerParameter::Variable("P".into()));
     }
 
     #[test]
@@ -127,8 +106,8 @@ mod tests {
             "9223372036854775808",
             "é + 1",
         ] {
-            assert!(NumericExpression::parse(source).is_err(), "{source}");
+            assert!(IntegerParameter::parse(source).is_err(), "{source}");
         }
-        assert_eq!(NumericExpression::parse("P +").unwrap_err().position, 3);
+        assert_eq!(IntegerParameter::parse("P +").unwrap_err().position, 3);
     }
 }

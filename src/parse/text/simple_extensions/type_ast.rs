@@ -20,7 +20,8 @@
 //
 // Therefore, the grammar is manually implemented.
 
-use super::numeric_expression::{NumericExpression, NumericExpressionParseError};
+use super::numeric_expression::NumericExpressionParseError;
+use super::types::IntegerParameter;
 
 /// A parsed type expression from a type string, with lifetime tied to the original string.
 ///
@@ -54,7 +55,7 @@ pub enum TypeExprParam<'a> {
     /// An integer literal parameter
     Integer(i64),
     /// An unevaluated arithmetic expression in a numeric parameter.
-    Expression(NumericExpression),
+    Expression(IntegerParameter),
 }
 
 #[derive(Debug, PartialEq, thiserror::Error)]
@@ -255,7 +256,7 @@ fn parse_param<'a>(s: &'a str) -> Result<TypeExprParam<'a>, TypeParseError> {
         return Ok(TypeExprParam::Integer(i));
     }
     if !s.contains('<') && s.contains('+') {
-        return Ok(TypeExprParam::Expression(NumericExpression::parse(s)?));
+        return Ok(TypeExprParam::Expression(IntegerParameter::parse(s)?));
     }
     Ok(TypeExprParam::Type(TypeExpr::parse(s)?))
 }
@@ -367,7 +368,7 @@ mod tests {
         assert_eq!(parameters.len(), 2);
         assert_eq!(
             parameters[0],
-            TypeExprParam::Expression(NumericExpression::parse("P1 + P2").unwrap())
+            TypeExprParam::Expression(IntegerParameter::parse("P1 + P2").unwrap())
         );
         assert_eq!(
             parameters[1],
