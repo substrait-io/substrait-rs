@@ -68,16 +68,8 @@ pub enum TypeParseError {
 impl<'a> TypeExpr<'a> {
     /// Parse a type string into a [`TypeExpr`].
     pub fn parse(type_str: &'a str) -> Result<Self, TypeParseError> {
-        // Handle type variables like any1, any2, etc.
-        if let Some(suffix) = type_str.strip_prefix("any") {
-            let (middle, nullable) = match suffix.strip_suffix('?') {
-                Some(middle) => (middle, true),
-                None => (suffix, false),
-            };
-
-            if let Ok(id) = middle.parse::<u32>() {
-                return Ok(TypeExpr::TypeVariable(id, nullable));
-            }
+        if let Some(variable) = parse_type_variable(type_str) {
+            return Ok(variable);
         }
 
         let (user_defined, rest) = match type_str.strip_prefix("u!") {
@@ -85,34 +77,23 @@ impl<'a> TypeExpr<'a> {
             None => (false, type_str),
         };
 
-        let (name_and_nullable, params_str): (&'a str, Option<&'a str>) = match rest.split_once('<')
-        {
-            Some((n, p)) => match p.strip_suffix('>') {
-                Some(p) => (n, Some(p)),
-                None => return Err(TypeParseError::ExpectedClosingAngleBracket(p.to_string())),
-            },
-            None => (rest, None),
-        };
-
-        if name_and_nullable.contains('[') || name_and_nullable.contains(']') {
+        let (name, nullable, params) = split_name_and_params(rest)?;
+        if name.contains('[') || name.contains(']') {
             return Err(TypeParseError::UnsupportedVariation(type_str.to_string()));
         }
 
-        let (name, nullable) = match name_and_nullable.strip_suffix('?') {
-            Some(name) => (name, true),
-            None => (name_and_nullable, false),
-        };
-
+        // The arrow in `func<P -> R>` is not a parameter separator, so function
+        // types must be parsed before the generic parameter parser runs.
         if !user_defined
             && name.eq_ignore_ascii_case("func")
-            && let Some(p) = params_str
+            && let Some(p) = params
         {
             return parse_func_type(p, nullable);
         }
 
-        let params = match params_str {
+        let params = match params {
             Some(p) => parse_params(p)?,
-            None => vec![],
+            None => Vec::new(),
         };
 
         if user_defined {
@@ -155,6 +136,41 @@ impl<'a> TypeExpr<'a> {
             }
         }
     }
+}
+
+/// Parse a numbered type variable such as `any1` or `any2?`.
+/// Returns `None` for anything else, including a bare `any`.
+fn parse_type_variable(s: &str) -> Option<TypeExpr<'_>> {
+    let suffix = s.strip_prefix("any")?;
+    let (middle, nullable) = match suffix.strip_suffix('?') {
+        Some(middle) => (middle, true),
+        None => (suffix, false),
+    };
+    let id = middle.parse::<u32>().ok()?;
+    Some(TypeExpr::TypeVariable(id, nullable))
+}
+
+/// Split a type string into its name, trailing nullability, and raw parameters.
+/// For example, `List?<i32, i64>` yields `("List", true, Some("i32, i64"))`.
+fn split_name_and_params(s: &str) -> Result<(&str, bool, Option<&str>), TypeParseError> {
+    let (name_and_nullable, params) = match s.split_once('<') {
+        Some((name, params)) => match params.strip_suffix('>') {
+            Some(params) => (name, Some(params)),
+            None => {
+                return Err(TypeParseError::ExpectedClosingAngleBracket(
+                    params.to_string(),
+                ));
+            }
+        },
+        None => (s, None),
+    };
+
+    let (name, nullable) = match name_and_nullable.strip_suffix('?') {
+        Some(name) => (name, true),
+        None => (name_and_nullable, false),
+    };
+
+    Ok((name, nullable, params))
 }
 
 /// Parse the body of a function type: parameters, an arrow, and a return type.
