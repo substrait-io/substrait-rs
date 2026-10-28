@@ -954,25 +954,12 @@ fn parse_integer_parameter(
     param: &TypeExprParam<'_>,
     range: Option<RangeInclusive<i32>>,
 ) -> Result<IntegerParameter, ExtensionTypeError> {
-    match param {
+    let value = match param {
         TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
             if parameters.is_empty() && CustomType::validate_name(name).is_ok() =>
         {
-            Ok(IntegerParameter::Variable(name.to_string()))
+            return Ok(IntegerParameter::Variable(name.to_string()));
         }
-        _ => parse_integer_literal(type_name, index, param, range)
-            .map(|value| IntegerParameter::Literal(i64::from(value))),
-    }
-}
-
-/// Parse an integer literal and validate it against the supplied range.
-fn parse_integer_literal(
-    type_name: &str,
-    index: usize,
-    param: &TypeExprParam<'_>,
-    range: Option<RangeInclusive<i32>>,
-) -> Result<i32, ExtensionTypeError> {
-    let value = match param {
         TypeExprParam::Integer(value) => {
             i32::try_from(*value).map_err(|_| ExtensionTypeError::InvalidParameterValue {
                 type_name: type_name.to_string(),
@@ -990,7 +977,7 @@ fn parse_integer_literal(
 
     if let Some(range) = range {
         if range.contains(&value) {
-            return Ok(value);
+            return Ok(IntegerParameter::Literal(i64::from(value)));
         }
         return Err(ExtensionTypeError::InvalidParameterRange {
             type_name: type_name.to_string(),
@@ -1000,7 +987,7 @@ fn parse_integer_literal(
         });
     }
 
-    Ok(value)
+    Ok(IntegerParameter::Literal(i64::from(value)))
 }
 
 /// Helper function - checks that param length matches expectations, returns
