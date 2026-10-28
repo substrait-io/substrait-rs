@@ -65,6 +65,11 @@ pub enum TypeParseError {
     EmptyFunctionParameters(String),
     #[error("type parameter must not be empty")]
     EmptyParameter,
+    #[error("expected {expected} at byte {position}")]
+    UnexpectedToken {
+        position: usize,
+        expected: &'static str,
+    },
 }
 
 impl<'a> TypeExpr<'a> {
