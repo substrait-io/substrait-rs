@@ -1007,8 +1007,8 @@ fn expect_param_len(
     Ok(())
 }
 
-// Type variables and named numeric parameters are not yet supported
-// inside containers or custom type structures.
+/// Parse a concrete type with all parameters fully defined, without type variables
+/// or named numeric parameters.
 fn expect_concrete_type(expression: TypeExpr<'_>) -> Result<Type, ExtensionTypeError> {
     match expression {
         TypeExpr::TypeVariable(id, nullability) => {
