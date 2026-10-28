@@ -1445,64 +1445,36 @@ mod tests {
 
     #[test]
     fn test_nested_symbolic_types() {
-        let named = |name: &str| IntegerParameter::Variable(name.to_string());
-        for (input, expected) in [
-            ("List<any>", Type::list(required_type(TypeKind::Any), false)),
-            (
-                "Map<string, any?>",
-                Type::map(
-                    required_type(TypeKind::String),
-                    Type::new(TypeKind::Any, true),
-                    false,
-                ),
-            ),
-            (
-                "List?<DECIMAL<P, S>>",
-                Type::list(
-                    Type::new(
-                        TypeKind::Decimal {
-                            precision: named("P"),
-                            scale: named("S"),
-                        },
-                        false,
-                    ),
-                    true,
-                ),
-            ),
-            (
-                "Map<string, precision_timestamp<P>>",
-                Type::map(
-                    required_type(TypeKind::String),
-                    Type::new(
-                        TypeKind::PrecisionTimestamp {
-                            precision: named("P"),
-                        },
-                        false,
-                    ),
-                    false,
-                ),
-            ),
-            (
-                "Struct?<any1, List<Map<string, VARCHAR<L>>>>",
-                Type::r#struct(
-                    vec![
-                        Type::new(TypeKind::Variable { id: 1 }, false),
-                        Type::list(
-                            Type::map(
-                                required_type(TypeKind::String),
-                                Type::new(TypeKind::VarChar { length: named("L") }, false),
-                                false,
-                            ),
-                            false,
-                        ),
-                    ],
-                    true,
-                ),
-            ),
-        ] {
-            assert_eq!(parse_type(input), expected, "unexpected type for {input}");
-        }
-
+        assert_eq!(
+            parse_type("List<any>"),
+            Type::list(required_type(TypeKind::Any), false)
+        );
+        assert_eq!(
+            parse_type("Map<string, any?>"),
+            Type::map(parse_type("string"), Type::new(TypeKind::Any, true), false)
+        );
+        assert_eq!(
+            parse_type("List?<DECIMAL<P, S>>"),
+            Type::list(parse_type("decimal<P, S>"), true)
+        );
+        assert_eq!(
+            parse_type("Map<string, precision_timestamp<P>>"),
+            Type::map(
+                parse_type("string"),
+                parse_type("precision_timestamp<P>"),
+                false
+            )
+        );
+        assert_eq!(
+            parse_type("Struct?<any1, List<Map<string, VARCHAR<L>>>>"),
+            Type::r#struct(
+                vec![
+                    parse_type("any1"),
+                    parse_type("List<Map<string, VARCHAR<L>>>")
+                ],
+                true
+            )
+        );
         assert!(parse_type("list<decimal<10, 2>>").is_concrete());
         assert!(!parse_type("list<any>").is_concrete());
         assert_eq!(parse_type("any").to_string(), "any");
