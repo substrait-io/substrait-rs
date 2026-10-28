@@ -161,6 +161,8 @@ pub enum TypeKind {
         /// appear in the struct - hence the use of [`IndexMap`].
         fields: IndexMap<String, Type>,
     },
+    /// An unnumbered wildcard, such as `any`.
+    Any,
     /// A numbered type variable, such as `any1`.
     Variable {
         /// The variable identifier shared within a function signature.
@@ -225,6 +227,7 @@ impl TypeKind {
                 write_separated(f, fields, "{", "}", ", ")?;
                 return f.write_str(nullability);
             }
+            Self::Any => return write!(f, "any{nullability}"),
             Self::Variable { id } => return write!(f, "any{id}{nullability}"),
         };
         write!(f, "{name}{nullability}")?;
@@ -292,6 +295,8 @@ pub enum TypeParameter {
     Integer(IntegerParameter),
     /// Type parameter (nested type)
     Type(Type),
+    /// A name whose parameter kind depends on the user-defined type declaration.
+    Name(String),
     // TODO: Add support for other type parameters, as described in
     // https://github.com/substrait-io/substrait/blob/35101020d961eda48f8dd1aafbc794c9e5cac077/proto/substrait/type.proto#L250-L265
 }
@@ -302,6 +307,7 @@ impl TypeParameter {
         match self {
             Self::Integer(parameter) => parameter.is_concrete(),
             Self::Type(type_) => type_.is_concrete(),
+            Self::Name(_) => false,
         }
     }
 }
@@ -311,6 +317,7 @@ impl fmt::Display for TypeParameter {
         match self {
             TypeParameter::Integer(i) => write!(f, "{i}"),
             TypeParameter::Type(t) => write!(f, "{t}"),
+            TypeParameter::Name(name) => f.write_str(name),
         }
     }
 }
@@ -881,7 +888,7 @@ impl Type {
     /// Returns whether this type contains no unresolved variables.
     pub fn is_concrete(&self) -> bool {
         match &self.kind {
-            TypeKind::Variable { .. } => false,
+            TypeKind::Any | TypeKind::Variable { .. } => false,
             TypeKind::FixedChar { length }
             | TypeKind::VarChar { length }
             | TypeKind::FixedBinary { length } => length.is_concrete(),
@@ -1035,7 +1042,7 @@ fn expect_type_argument<'a>(
     param: TypeExprParam<'a>,
 ) -> Result<Type, ExtensionTypeError> {
     match param {
-        TypeExprParam::Type(t) => expect_concrete_type(t),
+        TypeExprParam::Type(t) => Type::try_from(t),
         TypeExprParam::Integer(_) => Err(ExtensionTypeError::InvalidParameterKind {
             type_name: type_name.to_string(),
             index,
@@ -1050,7 +1057,19 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
     fn try_from(param: TypeExprParam<'a>) -> Result<Self, Self::Error> {
         Ok(match param {
             TypeExprParam::Integer(v) => TypeParameter::Integer(IntegerParameter::Literal(v)),
-            TypeExprParam::Type(t) => TypeParameter::Type(expect_concrete_type(t)?),
+            TypeExprParam::Type(expression) => {
+                let is_bare_name = matches!(
+                    &expression,
+                    TypeExpr::Simple(_, parameters, false) if parameters.is_empty()
+                );
+                match Type::try_from(expression) {
+                    Err(ExtensionTypeError::UnknownTypeName { name }) if is_bare_name => {
+                        CustomType::validate_name(&name)?;
+                        TypeParameter::Name(name)
+                    }
+                    result => TypeParameter::Type(result?),
+                }
+            }
         })
     }
 }
@@ -1144,6 +1163,10 @@ impl<'a> TryFrom<TypeExpr<'a>> for Type {
                 let lower = name.to_ascii_lowercase();
 
                 match lower.as_str() {
+                    "any" => {
+                        expect_param_len(name, &params, 0)?;
+                        return Ok(Type::new(TypeKind::Any, nullable));
+                    }
                     "list" => {
                         expect_param_len(name, &params, 1)?;
                         let element =
@@ -1417,6 +1440,75 @@ mod tests {
                     assert!(result.is_none(), "expected parsing {input} to fail");
                 }
             }
+        }
+    }
+
+    #[test]
+    fn test_nested_symbolic_types() {
+        assert_eq!(
+            parse_type("List<any>"),
+            Type::list(required_type(TypeKind::Any), false)
+        );
+        assert_eq!(
+            parse_type("Map<string, any?>"),
+            Type::map(parse_type("string"), Type::new(TypeKind::Any, true), false)
+        );
+        assert_eq!(
+            parse_type("List?<DECIMAL<P, S>>"),
+            Type::list(parse_type("decimal<P, S>"), true)
+        );
+        assert_eq!(
+            parse_type("Map<string, precision_timestamp<P>>"),
+            Type::map(
+                parse_type("string"),
+                parse_type("precision_timestamp<P>"),
+                false
+            )
+        );
+        assert_eq!(
+            parse_type("Struct?<any1, List<Map<string, VARCHAR<L>>>>"),
+            Type::r#struct(
+                vec![
+                    parse_type("any1"),
+                    parse_type("List<Map<string, VARCHAR<L>>>")
+                ],
+                true
+            )
+        );
+        assert!(parse_type("list<decimal<10, 2>>").is_concrete());
+        assert!(!parse_type("list<any>").is_concrete());
+    }
+
+    #[test]
+    fn test_symbolic_user_defined_type_parameters() {
+        assert_eq!(
+            parse_type("u!Box?<List<decimal<P, S>>, 5, N>"),
+            Type::extension_with_params(
+                "Box".to_string(),
+                vec![
+                    TypeParameter::Type(parse_type("List<decimal<P, S>>")),
+                    TypeParameter::Integer(IntegerParameter::Literal(5)),
+                    TypeParameter::Name("N".to_string()),
+                ],
+                true,
+            )
+        );
+    }
+
+    #[test]
+    fn test_invalid_nested_signature_types() {
+        for input in [
+            "List<any1, any2>",
+            "Map<any1>",
+            "Struct<1, any1>",
+            "List<missing_type?>",
+            "List<decimal<any1>>",
+            "List<i32<P>>",
+        ] {
+            assert!(
+                Type::try_from(TypeExpr::parse(input).unwrap()).is_err(),
+                "{input} should not be accepted as a signature type"
+            );
         }
     }
 
