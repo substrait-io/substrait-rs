@@ -63,6 +63,8 @@ pub enum TypeParseError {
     MissingArrow(String),
     #[error("function type must declare at least one parameter: {0}")]
     EmptyFunctionParameters(String),
+    #[error("type parameter must not be empty")]
+    EmptyParameter,
 }
 
 impl<'a> TypeExpr<'a> {
@@ -206,7 +208,8 @@ fn split_arrow(s: &str) -> Option<(&str, &str)> {
     for (i, c) in s.char_indices() {
         match c {
             '<' | '(' => depth += 1,
-            '>' | ')' => depth -= 1,
+            '>' if !s[..i].ends_with('-') => depth -= 1,
+            ')' => depth -= 1,
             '-' if depth == 0 && s[i..].starts_with("->") => {
                 return Some((s[..i].trim(), s[i + 2..].trim()));
             }
@@ -224,7 +227,7 @@ fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError
     for (i, c) in s.char_indices() {
         match c {
             '<' => depth += 1,
-            '>' => depth -= 1,
+            '>' if !s[..i].ends_with('-') => depth -= 1,
             ',' if depth == 0 => {
                 result.push(parse_param(s[start..i].trim())?);
                 start = i + 1;
@@ -237,7 +240,7 @@ fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError
         return Err(TypeParseError::ExpectedClosingAngleBracket(s.to_string()));
     }
 
-    if start < s.len() {
+    if start < s.len() || start != 0 {
         result.push(parse_param(s[start..].trim())?);
     }
 
@@ -245,6 +248,9 @@ fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError
 }
 
 fn parse_param<'a>(s: &'a str) -> Result<TypeExprParam<'a>, TypeParseError> {
+    if s.is_empty() {
+        return Err(TypeParseError::EmptyParameter);
+    }
     if let Ok(i) = s.parse::<i64>() {
         return Ok(TypeExprParam::Integer(i));
     }
@@ -403,6 +409,40 @@ mod tests {
     }
 
     #[test]
+    fn test_nested_function_parameters_and_containers() {
+        let inner = parse("func<i32 -> i64>");
+        assert_eq!(
+            parse("func<func<i32 -> i64> -> bool>"),
+            TypeExpr::Func(
+                vec![TypeExprParam::Type(inner.clone())],
+                Box::new(parse("bool")),
+                false,
+            )
+        );
+        assert_eq!(
+            parse("list<func<i32 -> i64>>"),
+            TypeExpr::Simple("list", vec![TypeExprParam::Type(inner)], false)
+        );
+    }
+
+    #[test]
+    fn test_function_parameters_cannot_be_empty() {
+        for input in [
+            "func<(i32,) -> i64>",
+            "func<(i32, ) -> i64>",
+            "func<(,i32) -> i64>",
+            "func<(i32,,i64) -> bool>",
+            "func<(func<i32 -> i64>,) -> bool>",
+        ] {
+            assert_eq!(
+                TypeExpr::parse(input),
+                Err(TypeParseError::EmptyParameter),
+                "{input}"
+            );
+        }
+    }
+
+    #[test]
     fn test_function_type_errors() {
         let cases = [
             (
@@ -485,6 +525,15 @@ mod tests {
             ("i32 -> i64", Some(("i32", "i64"))),
             ("(i32, i64) -> boolean?", Some(("(i32, i64)", "boolean?"))),
             ("i32 -> func<i64 -> i64>", Some(("i32", "func<i64 -> i64>"))),
+            (
+                "func<i32 -> i64> -> bool",
+                Some(("func<i32 -> i64>", "bool")),
+            ),
+            (
+                "(func<i32 -> i64>, i32) -> bool",
+                Some(("(func<i32 -> i64>, i32)", "bool")),
+            ),
+            ("func<i32 -> i64>", None),
             ("i32, i64", None),
         ];
 

@@ -1553,6 +1553,25 @@ mod tests {
     }
 
     #[test]
+    fn test_function_parameter_can_be_a_function() {
+        assert_eq!(
+            parse_type("func<func<i32 -> i64> -> bool>"),
+            required_type(TypeKind::Func {
+                parameters: vec![parse_type("func<i32 -> i64>")],
+                return_type: Box::new(parse_type("bool")),
+            }),
+        );
+    }
+
+    #[test]
+    fn test_list_elements_can_be_functions() {
+        assert_eq!(
+            parse_type("list<func<i32 -> i64>>"),
+            Type::list(parse_type("func<i32 -> i64>"), false),
+        );
+    }
+
+    #[test]
     fn test_function_type_validation() {
         for input in ["func<5 -> i64>", "func<i32 -> missing>"] {
             assert!(
