@@ -1055,6 +1055,16 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
     }
 }
 
+/// The tightest provable upper bound for a decimal scale, per the
+/// [decimal type constraints](https://substrait.io/types/type_classes/#compound-types).
+fn max_literal_scale(precision: &IntegerParameter) -> i32 {
+    match precision {
+        IntegerParameter::Literal(precision) => *precision as i32,
+        // A named precision is at most the maximum decimal precision.
+        IntegerParameter::Variable(_) => 38,
+    }
+}
+
 /// Parse a builtin type. Returns an `ExtensionTypeError` if the type name is
 /// matched, but parameters are incorrect; returns `Some(None)` if the type is
 /// not known.
@@ -1088,13 +1098,12 @@ fn parse_builtin<'a>(
         "decimal" => {
             expect_param_len(display_name, params, 2)?;
             let precision = parse_integer_parameter(display_name, 0, &params[0], Some(1..=38))?;
-            let max_scale = match &precision {
-                IntegerParameter::Literal(precision) => *precision as i32,
-                // Unknown precision still limits a literal scale to 38,
-                // the maximum possible decimal precision.
-                IntegerParameter::Variable(_) => 38,
-            };
-            let scale = parse_integer_parameter(display_name, 1, &params[1], Some(0..=max_scale))?;
+            let scale = parse_integer_parameter(
+                display_name,
+                1,
+                &params[1],
+                Some(0..=max_literal_scale(&precision)),
+            )?;
             Ok(Some(TypeKind::Decimal { precision, scale }))
         }
         "precision_time" => {
