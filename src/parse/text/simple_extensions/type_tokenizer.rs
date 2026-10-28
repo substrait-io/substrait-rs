@@ -16,6 +16,78 @@ pub(super) enum TokenKind {
     List,
     /// `decimal`, introducing precision and scale parameters such as `decimal<10, 2>`.
     Decimal,
+    /// `boolean`, the Boolean type.
+    Boolean,
+    /// `i8`, the 8-bit integer type.
+    I8,
+    /// `i16`, the 16-bit integer type.
+    I16,
+    /// `i32`, the 32-bit integer type.
+    I32,
+    /// `i64`, the 64-bit integer type.
+    I64,
+    /// `fp32`, the 32-bit floating-point type.
+    Fp32,
+    /// `fp64`, the 64-bit floating-point type.
+    Fp64,
+    /// `string`, the string type.
+    String,
+    /// `binary`, the binary type.
+    Binary,
+    /// `date`, the date type.
+    Date,
+    /// `interval_year`, a year-to-month interval.
+    IntervalYear,
+    /// `interval_day`, a day-to-second interval.
+    IntervalDay,
+    /// `interval_compound`, a compound interval.
+    IntervalCompound,
+    /// `uuid`, the UUID type.
+    Uuid,
+    /// `precision_time`, a time type with a precision parameter.
+    PrecisionTime,
+    /// `precision_timestamp`, a timestamp type with a precision parameter.
+    PrecisionTimestamp,
+    /// `precision_timestamp_tz`, a timestamp-with-timezone type with a precision parameter.
+    PrecisionTimestampTz,
+    /// `fixedchar`, a fixed-length character type.
+    FixedChar,
+    /// `varchar`, a variable-length character type.
+    VarChar,
+    /// `fixedbinary`, a fixed-length binary type.
+    FixedBinary,
+    /// `struct`, an unnamed-field struct type.
+    Struct,
+    /// `nstruct`, the upstream named-field struct keyword.
+    NStruct,
+    /// `map`, a map type with key and value parameters.
+    Map,
+    /// `bool`, the short name for Boolean.
+    Bool,
+    /// `str`, the short name for string.
+    Str,
+    /// `vbin`, the short name for binary.
+    VBin,
+    /// `iyear`, the short name for a year-to-month interval.
+    IYear,
+    /// `iday`, the short name for a day-to-second interval.
+    IDay,
+    /// `icompound`, the short name for a compound interval.
+    ICompound,
+    /// `dec`, the short name for decimal.
+    Dec,
+    /// `pt`, the short name for precision_time.
+    Pt,
+    /// `pts`, the short name for precision_timestamp.
+    Pts,
+    /// `ptstz`, the short name for precision_timestamp_tz.
+    PtsTz,
+    /// `fchar`, the short name for fixedchar.
+    FChar,
+    /// `vchar`, the short name for varchar.
+    VChar,
+    /// `fbin`, the short name for fixedbinary.
+    FBin,
     /// Bare `any`, matching an unspecified type rather than a numbered variable.
     Any,
     /// A numbered variable such as `any1` or `any12`; the parser checks its ID.
@@ -52,6 +124,42 @@ impl TokenKind {
             Self::Func => "'func'",
             Self::List => "'list'",
             Self::Decimal => "'decimal'",
+            Self::Boolean => "'boolean'",
+            Self::I8 => "'i8'",
+            Self::I16 => "'i16'",
+            Self::I32 => "'i32'",
+            Self::I64 => "'i64'",
+            Self::Fp32 => "'fp32'",
+            Self::Fp64 => "'fp64'",
+            Self::String => "'string'",
+            Self::Binary => "'binary'",
+            Self::Date => "'date'",
+            Self::IntervalYear => "'interval_year'",
+            Self::IntervalDay => "'interval_day'",
+            Self::IntervalCompound => "'interval_compound'",
+            Self::Uuid => "'uuid'",
+            Self::PrecisionTime => "'precision_time'",
+            Self::PrecisionTimestamp => "'precision_timestamp'",
+            Self::PrecisionTimestampTz => "'precision_timestamp_tz'",
+            Self::FixedChar => "'fixedchar'",
+            Self::VarChar => "'varchar'",
+            Self::FixedBinary => "'fixedbinary'",
+            Self::Struct => "'struct'",
+            Self::NStruct => "'nstruct'",
+            Self::Map => "'map'",
+            Self::Bool => "'bool'",
+            Self::Str => "'str'",
+            Self::VBin => "'vbin'",
+            Self::IYear => "'iyear'",
+            Self::IDay => "'iday'",
+            Self::ICompound => "'icompound'",
+            Self::Dec => "'dec'",
+            Self::Pt => "'pt'",
+            Self::Pts => "'pts'",
+            Self::PtsTz => "'ptstz'",
+            Self::FChar => "'fchar'",
+            Self::VChar => "'vchar'",
+            Self::FBin => "'fbin'",
             Self::Any => "'any'",
             Self::AnyVar => "a numbered type variable",
             Self::Integer => "an integer literal",
@@ -73,7 +181,48 @@ impl TokenKind {
     pub(super) fn is_name(self) -> bool {
         matches!(
             self,
-            Self::Identifier | Self::Func | Self::List | Self::Decimal | Self::Any | Self::AnyVar
+            Self::Identifier
+                | Self::Func
+                | Self::List
+                | Self::Decimal
+                | Self::Any
+                | Self::AnyVar
+                | Self::Boolean
+                | Self::I8
+                | Self::I16
+                | Self::I32
+                | Self::I64
+                | Self::Fp32
+                | Self::Fp64
+                | Self::String
+                | Self::Binary
+                | Self::Date
+                | Self::IntervalYear
+                | Self::IntervalDay
+                | Self::IntervalCompound
+                | Self::Uuid
+                | Self::PrecisionTime
+                | Self::PrecisionTimestamp
+                | Self::PrecisionTimestampTz
+                | Self::FixedChar
+                | Self::VarChar
+                | Self::FixedBinary
+                | Self::Struct
+                | Self::NStruct
+                | Self::Map
+                | Self::Bool
+                | Self::Str
+                | Self::VBin
+                | Self::IYear
+                | Self::IDay
+                | Self::ICompound
+                | Self::Dec
+                | Self::Pt
+                | Self::Pts
+                | Self::PtsTz
+                | Self::FChar
+                | Self::VChar
+                | Self::FBin
         )
     }
 }
@@ -89,8 +238,8 @@ pub(super) struct Token<'a> {
 /// Split source into tokens, skipping whitespace and borrowing token text.
 ///
 /// Recognize `->` and `u!` before single-character punctuation. Whole words
-/// matching `func`, `list`, `decimal`, `any`, or numbered `anyN` variables receive
-/// dedicated tokens, case-insensitively. Other names remain identifiers. Original
+/// matching upstream type keywords, short names, or numbered `anyN` variables
+/// receive dedicated tokens, case-insensitively. Other names remain identifiers. Original
 /// spelling is retained, including for names following `u!`.
 /// Digits and signs are separate tokens, and unknown characters produce an error
 /// at their original byte position.
@@ -150,6 +299,42 @@ fn classify_word(word: &str) -> TokenKind {
         "func" => TokenKind::Func,
         "list" => TokenKind::List,
         "decimal" => TokenKind::Decimal,
+        "boolean" => TokenKind::Boolean,
+        "i8" => TokenKind::I8,
+        "i16" => TokenKind::I16,
+        "i32" => TokenKind::I32,
+        "i64" => TokenKind::I64,
+        "fp32" => TokenKind::Fp32,
+        "fp64" => TokenKind::Fp64,
+        "string" => TokenKind::String,
+        "binary" => TokenKind::Binary,
+        "date" => TokenKind::Date,
+        "interval_year" => TokenKind::IntervalYear,
+        "interval_day" => TokenKind::IntervalDay,
+        "interval_compound" => TokenKind::IntervalCompound,
+        "uuid" => TokenKind::Uuid,
+        "precision_time" => TokenKind::PrecisionTime,
+        "precision_timestamp" => TokenKind::PrecisionTimestamp,
+        "precision_timestamp_tz" => TokenKind::PrecisionTimestampTz,
+        "fixedchar" => TokenKind::FixedChar,
+        "varchar" => TokenKind::VarChar,
+        "fixedbinary" => TokenKind::FixedBinary,
+        "struct" => TokenKind::Struct,
+        "nstruct" => TokenKind::NStruct,
+        "map" => TokenKind::Map,
+        "bool" => TokenKind::Bool,
+        "str" => TokenKind::Str,
+        "vbin" => TokenKind::VBin,
+        "iyear" => TokenKind::IYear,
+        "iday" => TokenKind::IDay,
+        "icompound" => TokenKind::ICompound,
+        "dec" => TokenKind::Dec,
+        "pt" => TokenKind::Pt,
+        "pts" => TokenKind::Pts,
+        "ptstz" => TokenKind::PtsTz,
+        "fchar" => TokenKind::FChar,
+        "vchar" => TokenKind::VChar,
+        "fbin" => TokenKind::FBin,
         "any" => TokenKind::Any,
         name if name.strip_prefix("any").is_some_and(|suffix| {
             !suffix.is_empty() && suffix.bytes().all(|byte| byte.is_ascii_digit())
@@ -176,12 +361,12 @@ mod tests {
                 TokenKind::OpenAngle,
                 TokenKind::Func,
                 TokenKind::OpenAngle,
-                TokenKind::Identifier,
+                TokenKind::I32,
                 TokenKind::Arrow,
-                TokenKind::Identifier,
+                TokenKind::I64,
                 TokenKind::CloseAngle,
                 TokenKind::Arrow,
-                TokenKind::Identifier,
+                TokenKind::Bool,
                 TokenKind::CloseAngle,
             ]
         );
@@ -201,6 +386,56 @@ mod tests {
             assert_eq!(tokens.len(), 1);
             assert_eq!(tokens[0].kind, kind);
             assert_eq!(tokens[0].text, source);
+        }
+    }
+
+    #[test]
+    fn remaining_upstream_type_keywords_and_short_names_are_recognized() {
+        for (source, kind) in [
+            ("boolean", TokenKind::Boolean),
+            ("i8", TokenKind::I8),
+            ("i16", TokenKind::I16),
+            ("i32", TokenKind::I32),
+            ("i64", TokenKind::I64),
+            ("fp32", TokenKind::Fp32),
+            ("fp64", TokenKind::Fp64),
+            ("string", TokenKind::String),
+            ("binary", TokenKind::Binary),
+            ("date", TokenKind::Date),
+            ("interval_year", TokenKind::IntervalYear),
+            ("interval_day", TokenKind::IntervalDay),
+            ("interval_compound", TokenKind::IntervalCompound),
+            ("uuid", TokenKind::Uuid),
+            ("precision_time", TokenKind::PrecisionTime),
+            ("precision_timestamp", TokenKind::PrecisionTimestamp),
+            ("precision_timestamp_tz", TokenKind::PrecisionTimestampTz),
+            ("fixedchar", TokenKind::FixedChar),
+            ("varchar", TokenKind::VarChar),
+            ("fixedbinary", TokenKind::FixedBinary),
+            ("struct", TokenKind::Struct),
+            ("nstruct", TokenKind::NStruct),
+            ("map", TokenKind::Map),
+            ("bool", TokenKind::Bool),
+            ("str", TokenKind::Str),
+            ("vbin", TokenKind::VBin),
+            ("iyear", TokenKind::IYear),
+            ("iday", TokenKind::IDay),
+            ("icompound", TokenKind::ICompound),
+            ("dec", TokenKind::Dec),
+            ("pt", TokenKind::Pt),
+            ("pts", TokenKind::Pts),
+            ("ptstz", TokenKind::PtsTz),
+            ("fchar", TokenKind::FChar),
+            ("vchar", TokenKind::VChar),
+            ("fbin", TokenKind::FBin),
+        ] {
+            for spelling in [source.to_string(), source.to_ascii_uppercase()] {
+                let tokens = tokenize(&spelling).unwrap();
+                assert_eq!(tokens.len(), 1);
+                assert_eq!(tokens[0].kind, kind, "{spelling}");
+                assert_eq!(tokens[0].text, spelling);
+                assert!(kind.is_name());
+            }
         }
     }
 
