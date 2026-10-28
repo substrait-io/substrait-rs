@@ -161,6 +161,13 @@ pub enum TypeKind {
         /// appear in the struct - hence the use of [`IndexMap`].
         fields: IndexMap<String, Type>,
     },
+    /// A function type: `func<P1, P2 -> R>`
+    Func {
+        /// Parameter types in declaration order
+        parameters: Vec<Type>,
+        /// The return type
+        return_type: Box<Type>,
+    },
     /// An unnumbered wildcard, such as `any`.
     Any,
     /// A numbered type variable, such as `any1`.
@@ -216,6 +223,7 @@ impl TypeKind {
             Self::List(_) => "list",
             Self::Map { .. } => "map",
             Self::Struct(_) => "struct",
+            Self::Func { .. } => "func",
             Self::Extension { name, parameters } => {
                 write!(f, "u!{name}{nullability}")?;
                 return write_separated(f, parameters.iter(), "<", ">", ", ");
@@ -249,6 +257,18 @@ impl TypeKind {
                 f.write_str("<")?;
                 write_separated(f, fields.iter(), "", "", ", ")?;
                 f.write_str(">")
+            }
+            Self::Func {
+                parameters,
+                return_type,
+            } => {
+                if parameters.len() == 1 {
+                    write!(f, "<{} -> {return_type}>", parameters[0])
+                } else {
+                    f.write_str("<(")?;
+                    write_separated(f, parameters.iter(), "", "", ", ")?;
+                    write!(f, ") -> {return_type}>")
+                }
             }
             _ => Ok(()),
         }
@@ -904,6 +924,10 @@ impl Type {
             TypeKind::Map { key, value } => key.is_concrete() && value.is_concrete(),
             TypeKind::Struct(fields) => fields.iter().all(Type::is_concrete),
             TypeKind::NamedStruct { fields } => fields.values().all(Type::is_concrete),
+            TypeKind::Func {
+                parameters,
+                return_type,
+            } => parameters.iter().all(Type::is_concrete) && return_type.is_concrete(),
             TypeKind::Extension { parameters, .. } => {
                 parameters.iter().all(TypeParameter::is_concrete)
             }
@@ -1159,6 +1183,21 @@ impl<'a> TryFrom<TypeExpr<'a>> for Type {
 
     fn try_from(parsed_type: TypeExpr<'a>) -> Result<Self, Self::Error> {
         match parsed_type {
+            TypeExpr::Func(parameters, return_type, nullable) => {
+                let parameters = parameters
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, parameter)| expect_type_argument("func", index, parameter))
+                    .collect::<Result<Vec<_>, _>>()?;
+                let return_type = Box::new(Type::try_from(*return_type)?);
+                Ok(Type::new(
+                    TypeKind::Func {
+                        parameters,
+                        return_type,
+                    },
+                    nullable,
+                ))
+            }
             TypeExpr::Simple(name, params, nullable) => {
                 let lower = name.to_ascii_lowercase();
 
@@ -1483,6 +1522,44 @@ mod tests {
     fn test_nested_type_concreteness_follows_elements() {
         assert!(parse_type("list<decimal<10, 2>>").is_concrete());
         assert!(!parse_type("list<any>").is_concrete());
+    }
+
+    #[test]
+    fn test_function_types() {
+        for (input, expected) in [
+            ("func<i32 -> i64>", "func<i32 -> i64>"),
+            ("FUNC?<any1 -> any2>", "func?<any1 -> any2>"),
+            (
+                "func<(i32, list<any1>) -> i64?>",
+                "func<(i32, list<any1>) -> i64?>",
+            ),
+            (
+                "func<i32 -> func<i64 -> boolean?>>",
+                "func<i32 -> func<i64 -> bool?>>",
+            ),
+        ] {
+            let ty = parse_type(input);
+            assert_eq!(ty.to_string(), expected, "unexpected spelling for {input}");
+            assert_eq!(
+                parse_type(&ty.to_string()),
+                ty,
+                "round trip failed for {input}"
+            );
+        }
+
+        assert!(parse_type("func<i32 -> i64>").is_concrete());
+        assert!(!parse_type("func<any1 -> i64>").is_concrete());
+        assert!(!parse_type("func<i32 -> any1>").is_concrete());
+    }
+
+    #[test]
+    fn test_function_type_validation() {
+        for input in ["func<5 -> i64>", "func<i32 -> missing>"] {
+            assert!(
+                parse_type_result(input).is_err(),
+                "{input} should not be accepted as a signature type"
+            );
+        }
     }
 
     #[test]

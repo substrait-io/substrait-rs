@@ -454,6 +454,37 @@ scalar_functions:
     }
 
     #[test]
+    fn test_function_type_returns() {
+        use super::super::{Type, TypeKind};
+
+        let yaml = r#"urn: extension:example.com:function_types
+scalar_functions:
+  - name: transform_values
+    impls:
+      - args:
+          - value: func<any1 -> any2>
+            name: transformer
+        return: func<any1 -> any2>
+"#;
+        let file = ExtensionFile::read_from_str(yaml).unwrap();
+        let urn = file.urn().clone();
+        let registry = Registry::new(vec![file]).unwrap();
+        let function = registry
+            .get_scalar_function(&urn, "transform_values")
+            .unwrap();
+        assert_eq!(
+            function.impls[0].return_type,
+            Type::new(
+                TypeKind::Func {
+                    parameters: vec![Type::new(TypeKind::Variable { id: 1 }, false)],
+                    return_type: Box::new(Type::new(TypeKind::Variable { id: 2 }, false)),
+                },
+                false,
+            )
+        );
+    }
+
+    #[test]
     fn test_nested_return_preserves_object_arguments() {
         use super::super::{Type, TypeKind, argument::ArgumentsItem};
         use crate::text::simple_extensions as raw;

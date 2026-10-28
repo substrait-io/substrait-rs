@@ -38,6 +38,10 @@ pub enum TypeExpr<'a> {
     ///
     /// Contains: (variable id, nullable)
     TypeVariable(u32, bool),
+    /// A function type (e.g., `func<i32 -> i64>`)
+    ///
+    /// Contains: (parameters, return type, nullable)
+    Func(Vec<TypeExprParam<'a>>, Box<TypeExpr<'a>>, bool),
 }
 
 /// A parsed parameter to a parameterized type
@@ -55,6 +59,10 @@ pub enum TypeParseError {
     ExpectedClosingAngleBracket(String),
     #[error("Type variation syntax is not supported: {0}")]
     UnsupportedVariation(String),
+    #[error("missing return arrow in function type: {0}")]
+    MissingArrow(String),
+    #[error("function type must declare at least one parameter: {0}")]
+    EmptyFunctionParameters(String),
 }
 
 impl<'a> TypeExpr<'a> {
@@ -77,14 +85,14 @@ impl<'a> TypeExpr<'a> {
             None => (false, type_str),
         };
 
-        let (name_and_nullable, params): (&'a str, Vec<TypeExprParam<'a>>) =
-            match rest.split_once('<') {
-                Some((n, p)) => match p.strip_suffix('>') {
-                    Some(p) => (n, parse_params(p)?),
-                    None => return Err(TypeParseError::ExpectedClosingAngleBracket(p.to_string())),
-                },
-                None => (rest, vec![]),
-            };
+        let (name_and_nullable, params_str): (&'a str, Option<&'a str>) = match rest.split_once('<')
+        {
+            Some((n, p)) => match p.strip_suffix('>') {
+                Some(p) => (n, Some(p)),
+                None => return Err(TypeParseError::ExpectedClosingAngleBracket(p.to_string())),
+            },
+            None => (rest, None),
+        };
 
         if name_and_nullable.contains('[') || name_and_nullable.contains(']') {
             return Err(TypeParseError::UnsupportedVariation(type_str.to_string()));
@@ -93,6 +101,18 @@ impl<'a> TypeExpr<'a> {
         let (name, nullable) = match name_and_nullable.strip_suffix('?') {
             Some(name) => (name, true),
             None => (name_and_nullable, false),
+        };
+
+        if !user_defined
+            && name.eq_ignore_ascii_case("func")
+            && let Some(p) = params_str
+        {
+            return parse_func_type(p, nullable);
+        }
+
+        let params = match params_str {
+            Some(p) => parse_params(p)?,
+            None => vec![],
         };
 
         if user_defined {
@@ -125,8 +145,53 @@ impl<'a> TypeExpr<'a> {
                 }
             }
             TypeExpr::TypeVariable(..) => {}
+            TypeExpr::Func(parameters, return_type, _) => {
+                for parameter in parameters {
+                    if let TypeExprParam::Type(t) = parameter {
+                        t.visit_references(on_ext);
+                    }
+                }
+                return_type.visit_references(on_ext);
+            }
         }
     }
+}
+
+/// Parse the body of a function type: parameters, an arrow, and a return type.
+fn parse_func_type<'a>(s: &'a str, nullable: bool) -> Result<TypeExpr<'a>, TypeParseError> {
+    let Some((params, return_type)) = split_arrow(s) else {
+        return Err(TypeParseError::MissingArrow(s.to_string()));
+    };
+
+    let params = params
+        .trim()
+        .strip_prefix('(')
+        .and_then(|p| p.strip_suffix(')'))
+        .unwrap_or(params.trim());
+    if params.trim().is_empty() {
+        return Err(TypeParseError::EmptyFunctionParameters(s.to_string()));
+    }
+
+    let parameters = parse_params(params.trim())?;
+    let return_type = TypeExpr::parse(return_type.trim())?;
+    Ok(TypeExpr::Func(parameters, Box::new(return_type), nullable))
+}
+
+/// Split function type parameters from the return type at the top-level arrow,
+/// ignoring arrows nested inside angle brackets or parentheses.
+fn split_arrow(s: &str) -> Option<(&str, &str)> {
+    let mut depth = 0;
+    for (i, c) in s.char_indices() {
+        match c {
+            '<' | '(' => depth += 1,
+            '>' | ')' => depth -= 1,
+            '-' if depth == 0 && s[i..].starts_with("->") => {
+                return Some((&s[..i], &s[i + 2..]));
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
@@ -260,6 +325,89 @@ mod tests {
             parse(expr).visit_references(&mut |name| refs.push(name.to_string()));
             assert_eq!(refs, expected_refs, "unexpected references for {expr}");
         }
+    }
+
+    #[test]
+    fn test_function_types() {
+        let cases = vec![
+            (
+                "func<i32 -> i64>",
+                TypeExpr::Func(
+                    vec![TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false))],
+                    Box::new(TypeExpr::Simple("i64", vec![], false)),
+                    false,
+                ),
+            ),
+            (
+                "FUNC?<any1 -> any2>",
+                TypeExpr::Func(
+                    vec![TypeExprParam::Type(TypeExpr::TypeVariable(1, false))],
+                    Box::new(TypeExpr::TypeVariable(2, false)),
+                    true,
+                ),
+            ),
+            (
+                "func<(i32, list<any1>) -> i64?>",
+                TypeExpr::Func(
+                    vec![
+                        TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
+                        TypeExprParam::Type(TypeExpr::Simple(
+                            "list",
+                            vec![TypeExprParam::Type(TypeExpr::TypeVariable(1, false))],
+                            false,
+                        )),
+                    ],
+                    Box::new(TypeExpr::Simple("i64", vec![], true)),
+                    false,
+                ),
+            ),
+            (
+                "func<i32 -> func<i64 -> i64>>",
+                TypeExpr::Func(
+                    vec![TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false))],
+                    Box::new(TypeExpr::Func(
+                        vec![TypeExprParam::Type(TypeExpr::Simple("i64", vec![], false))],
+                        Box::new(TypeExpr::Simple("i64", vec![], false)),
+                        false,
+                    )),
+                    false,
+                ),
+            ),
+        ];
+
+        for (expr, expected) in cases {
+            assert_eq!(parse(expr), expected, "unexpected parse for {expr}");
+        }
+    }
+
+    #[test]
+    fn test_function_type_errors() {
+        let cases = [
+            (
+                "func<i32, i64>",
+                TypeParseError::MissingArrow("i32, i64".to_string()),
+            ),
+            (
+                "func<() -> i64>",
+                TypeParseError::EmptyFunctionParameters("() -> i64".to_string()),
+            ),
+        ];
+
+        for (expr, expected) in cases {
+            assert_eq!(
+                TypeExpr::parse(expr),
+                Err(expected),
+                "unexpected error for {expr}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_visit_references_function_types() {
+        let mut refs = Vec::new();
+        parse("func<u!point, any1 -> u!edge?>")
+            .visit_references(&mut |name| refs.push(name.to_string()));
+        assert_eq!(refs, vec!["point".to_string(), "edge".to_string()]);
     }
 
     #[test]
