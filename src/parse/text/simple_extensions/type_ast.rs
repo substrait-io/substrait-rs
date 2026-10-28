@@ -60,16 +60,8 @@ pub enum TypeParseError {
 impl<'a> TypeExpr<'a> {
     /// Parse a type string into a [`TypeExpr`].
     pub fn parse(type_str: &'a str) -> Result<Self, TypeParseError> {
-        // Handle type variables like any1, any2, etc.
-        if let Some(suffix) = type_str.strip_prefix("any") {
-            let (middle, nullable) = match suffix.strip_suffix('?') {
-                Some(middle) => (middle, true),
-                None => (suffix, false),
-            };
-
-            if let Ok(id) = middle.parse::<u32>() {
-                return Ok(TypeExpr::TypeVariable(id, nullable));
-            }
+        if let Some(variable) = parse_type_variable(type_str) {
+            return Ok(variable);
         }
 
         let (user_defined, rest) = match type_str.strip_prefix("u!") {
@@ -77,23 +69,15 @@ impl<'a> TypeExpr<'a> {
             None => (false, type_str),
         };
 
-        let (name_and_nullable, params): (&'a str, Vec<TypeExprParam<'a>>) =
-            match rest.split_once('<') {
-                Some((n, p)) => match p.strip_suffix('>') {
-                    Some(p) => (n, parse_params(p)?),
-                    None => return Err(TypeParseError::ExpectedClosingAngleBracket(p.to_string())),
-                },
-                None => (rest, vec![]),
-            };
+        let (name, nullable, params) = split_name_and_params(rest)?;
+        let params = match params {
+            Some(p) => parse_params(p)?,
+            None => Vec::new(),
+        };
 
-        if name_and_nullable.contains('[') || name_and_nullable.contains(']') {
+        if name.contains('[') || name.contains(']') {
             return Err(TypeParseError::UnsupportedVariation(type_str.to_string()));
         }
-
-        let (name, nullable) = match name_and_nullable.strip_suffix('?') {
-            Some(name) => (name, true),
-            None => (name_and_nullable, false),
-        };
 
         if user_defined {
             Ok(TypeExpr::UserDefined(name, params, nullable))
@@ -127,6 +111,41 @@ impl<'a> TypeExpr<'a> {
             TypeExpr::TypeVariable(..) => {}
         }
     }
+}
+
+/// Parse a numbered type variable such as `any1` or `any2?`.
+/// Returns `None` for anything else, including a bare `any`.
+fn parse_type_variable(s: &str) -> Option<TypeExpr<'_>> {
+    let suffix = s.strip_prefix("any")?;
+    let (middle, nullable) = match suffix.strip_suffix('?') {
+        Some(middle) => (middle, true),
+        None => (suffix, false),
+    };
+    let id = middle.parse::<u32>().ok()?;
+    Some(TypeExpr::TypeVariable(id, nullable))
+}
+
+/// Split a type string into its name, trailing nullability, and raw parameters.
+/// For example, `List?<i32, i64>` yields `("List", true, Some("i32, i64"))`.
+fn split_name_and_params(s: &str) -> Result<(&str, bool, Option<&str>), TypeParseError> {
+    let (name_and_nullable, params) = match s.split_once('<') {
+        Some((name, params)) => match params.strip_suffix('>') {
+            Some(params) => (name, Some(params)),
+            None => {
+                return Err(TypeParseError::ExpectedClosingAngleBracket(
+                    params.to_string(),
+                ));
+            }
+        },
+        None => (s, None),
+    };
+
+    let (name, nullable) = match name_and_nullable.strip_suffix('?') {
+        Some(name) => (name, true),
+        None => (name_and_nullable, false),
+    };
+
+    Ok((name, nullable, params))
 }
 
 fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
@@ -260,6 +279,53 @@ mod tests {
             parse(expr).visit_references(&mut |name| refs.push(name.to_string()));
             assert_eq!(refs, expected_refs, "unexpected references for {expr}");
         }
+    }
+
+    #[test]
+    fn test_parse_type_variable() {
+        let cases = [
+            ("any1", Some(TypeExpr::TypeVariable(1, false))),
+            ("any2?", Some(TypeExpr::TypeVariable(2, true))),
+            ("any", None),
+            ("anyfoo", None),
+            ("i32", None),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(
+                parse_type_variable(input),
+                expected,
+                "unexpected result for {input}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_split_name_and_params() {
+        let cases = [
+            ("i32", ("i32", false, None)),
+            ("i32?", ("i32", true, None)),
+            ("List?<i32, i64>", ("List", true, Some("i32, i64"))),
+            (
+                "Map<string, List<i32>>",
+                ("Map", false, Some("string, List<i32>")),
+            ),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(
+                split_name_and_params(input),
+                Ok(expected),
+                "unexpected split for {input}"
+            );
+        }
+
+        assert_eq!(
+            split_name_and_params("List<i32"),
+            Err(TypeParseError::ExpectedClosingAngleBracket(
+                "i32".to_string()
+            ))
+        );
     }
 
     #[test]
