@@ -141,7 +141,14 @@ impl Impl {
                         "Type derivation expressions - issue #449".to_string(),
                     ));
                 }
-                let type_expr = TypeExpr::parse(&s)?;
+                let type_expr = match TypeExpr::parse(&s) {
+                    Err(TypeParseError::UnsupportedNumericExpression(_)) => {
+                        return Err(ScalarFunctionError::NotYetImplemented(
+                            "Numeric expressions in type parameters - issue #449".to_string(),
+                        ));
+                    }
+                    result => result?,
+                };
                 type_expr.visit_references(&mut |name| ctx.linked(name));
                 match Type::try_from(type_expr) {
                     Ok(expression) => expression,
