@@ -149,7 +149,7 @@ impl Impl {
                     | Err(ExtensionTypeError::ExpectedConcreteType { .. })
                     | Err(ExtensionTypeError::InvalidParameter(_))
                     | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
-                        // General numeric expressions are not yet supported.
+                        // Comparisons and conditional numeric expressions are not yet supported.
                         // See: https://github.com/substrait-io/substrait-rs/issues/452
                         return Err(ScalarFunctionError::NotYetImplemented(
                             "Type variables in function signatures - issue #452".to_string(),

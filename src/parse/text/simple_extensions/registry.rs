@@ -533,20 +533,31 @@ scalar_functions:
     }
 
     #[test]
-    fn test_numeric_expression_returns_are_still_skipped() {
-        for return_type in ["varchar<L + 1>", "decimal<P + 1, S>"] {
+    fn test_numeric_expression_returns_are_retained() {
+        for (return_type, expected) in [
+            ("varchar<L + 1>", "varchar<(L + 1)>"),
+            (
+                "decimal<P1 + P2, max(S1, S2)>",
+                "decimal<(P1 + P2), max(S1, S2)>",
+            ),
+            (
+                "list<decimal<min(P + 1, 38), S>>",
+                "list<decimal<min((P + 1), 38), S>>",
+            ),
+        ] {
             let raw = extension_with_custom_type_reference(
-                "extension:example.com:unsupported",
-                "unsupported",
+                "extension:example.com:numeric_expressions",
+                "derive",
                 return_type,
                 vec![],
             );
             let file = ExtensionFile::create(raw).unwrap();
-            assert!(
-                file.extension()
-                    .get_scalar_function("unsupported")
-                    .is_none()
-            );
+            let function = file
+                .extension()
+                .get_scalar_function("derive")
+                .expect("numeric expression return should not cause a function to be skipped");
+            assert_eq!(function.impls.len(), 1);
+            assert_eq!(function.impls[0].return_type.to_string(), expected);
         }
     }
 

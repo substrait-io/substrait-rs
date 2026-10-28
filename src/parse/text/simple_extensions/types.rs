@@ -7,6 +7,7 @@ use super::argument::{
     EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
 };
 use super::extensions::TypeContext;
+use super::numeric_expression::NumericExpression;
 use super::type_ast::TypeExprParam;
 use crate::parse::Parse;
 use crate::parse::text::simple_extensions::type_ast::TypeParseError;
@@ -283,13 +284,15 @@ impl fmt::Display for TypeKind {
     }
 }
 
-/// An integer literal or a named parameter in a type expression.
+/// An integer literal, named parameter, or unevaluated numeric expression.
 #[derive(Clone, Debug, PartialEq)]
 pub enum IntegerParameter {
     /// A known integer value.
     Literal(i64),
     /// A name whose value depends on a function call.
     Variable(String),
+    /// An arithmetic expression retained without evaluation.
+    Expression(NumericExpression),
 }
 
 impl IntegerParameter {
@@ -304,6 +307,7 @@ impl fmt::Display for IntegerParameter {
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
+            Self::Expression(expression) => write!(f, "{expression}"),
         }
     }
 }
@@ -986,6 +990,9 @@ fn parse_integer_parameter(
     range: Option<RangeInclusive<i32>>,
 ) -> Result<IntegerParameter, ExtensionTypeError> {
     let value = match param {
+        TypeExprParam::Expression(expression) => {
+            return Ok(IntegerParameter::Expression(expression.clone()));
+        }
         TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
             if parameters.is_empty() && CustomType::validate_name(name).is_ok() =>
         {
@@ -1067,11 +1074,13 @@ fn expect_type_argument<'a>(
 ) -> Result<Type, ExtensionTypeError> {
     match param {
         TypeExprParam::Type(t) => Type::try_from(t),
-        TypeExprParam::Integer(_) => Err(ExtensionTypeError::InvalidParameterKind {
-            type_name: type_name.to_string(),
-            index,
-            expected: "a type",
-        }),
+        TypeExprParam::Integer(_) | TypeExprParam::Expression(_) => {
+            Err(ExtensionTypeError::InvalidParameterKind {
+                type_name: type_name.to_string(),
+                index,
+                expected: "a type",
+            })
+        }
     }
 }
 
@@ -1081,6 +1090,9 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
     fn try_from(param: TypeExprParam<'a>) -> Result<Self, Self::Error> {
         Ok(match param {
             TypeExprParam::Integer(v) => TypeParameter::Integer(IntegerParameter::Literal(v)),
+            TypeExprParam::Expression(expression) => {
+                TypeParameter::Integer(IntegerParameter::Expression(expression))
+            }
             TypeExprParam::Type(expression) => {
                 let is_bare_name = matches!(
                     &expression,
@@ -1103,8 +1115,8 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
 fn max_literal_scale(precision: &IntegerParameter) -> i32 {
     match precision {
         IntegerParameter::Literal(precision) => *precision as i32,
-        // A named precision is at most the maximum decimal precision.
-        IntegerParameter::Variable(_) => 38,
+        // An unresolved precision must eventually satisfy the decimal precision limit.
+        IntegerParameter::Variable(_) | IntegerParameter::Expression(_) => 38,
     }
 }
 
@@ -1294,6 +1306,64 @@ mod tests {
         assert!(refs.is_empty(), "{s} should not add an extension reference");
 
         Type::try_from(parsed).unwrap()
+    }
+
+    #[test]
+    fn test_numeric_parameter_expressions() {
+        let parsed = parse_type("decimal<P1 + P2, max(S1, S2)>");
+        let TypeKind::Decimal { precision, scale } = &parsed.kind else {
+            panic!("expected decimal");
+        };
+        assert_eq!(
+            precision,
+            &IntegerParameter::Expression(NumericExpression::parse("P1 + P2").unwrap())
+        );
+        assert_eq!(
+            scale,
+            &IntegerParameter::Expression(NumericExpression::parse("max(S1, S2)").unwrap())
+        );
+    }
+
+    #[test]
+    fn test_numeric_expression_display_and_concreteness() {
+        for source in [
+            "varchar<L + 1>",
+            "decimal<P1 + P2, max(S1, S2)>",
+            "list<decimal<min(P + 1, 38), S>>",
+            "func<varchar<L + 1> -> decimal<P, max(S, 2)>>",
+            "u!custom<max(P, 1)>",
+            "varchar<1 / 0>",
+        ] {
+            let parsed = parse_type(source);
+            assert!(!parsed.is_concrete(), "{source}");
+            assert_eq!(parse_type(&parsed.to_string()), parsed, "{source}");
+        }
+    }
+
+    #[test]
+    fn test_numeric_expressions_are_not_type_arguments() {
+        for source in [
+            "list<P + 1>",
+            "map<i32, max(P, S)>",
+            "func<max(P, S) -> i32>",
+        ] {
+            assert!(
+                matches!(
+                    parse_type_result(source),
+                    Err(ExtensionTypeError::InvalidParameterKind { .. })
+                ),
+                "{source}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_numeric_expressions_are_not_concrete_structure_fields() {
+        let expression = TypeExpr::parse("varchar<L + 1>").unwrap();
+        assert!(matches!(
+            expect_concrete_type(expression),
+            Err(ExtensionTypeError::ExpectedConcreteType { .. })
+        ));
     }
 
     #[test]

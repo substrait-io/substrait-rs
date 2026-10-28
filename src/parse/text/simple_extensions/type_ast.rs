@@ -20,6 +20,8 @@
 //
 // Therefore, the grammar is manually implemented.
 
+use super::numeric_expression::{NumericExpression, NumericExpressionParseError};
+
 /// A parsed type expression from a type string, with lifetime tied to the original string.
 ///
 /// This represents the syntactic structure only - type names are not validated.
@@ -51,6 +53,8 @@ pub enum TypeExprParam<'a> {
     Type(TypeExpr<'a>),
     /// An integer literal parameter
     Integer(i64),
+    /// An unevaluated arithmetic expression in a numeric parameter.
+    Expression(NumericExpression),
 }
 
 #[derive(Debug, PartialEq, thiserror::Error)]
@@ -63,6 +67,8 @@ pub enum TypeParseError {
     MissingArrow(String),
     #[error("function type must declare at least one parameter: {0}")]
     EmptyFunctionParameters(String),
+    #[error("invalid numeric expression: {0}")]
+    InvalidNumericExpression(#[from] NumericExpressionParseError),
 }
 
 impl<'a> TypeExpr<'a> {
@@ -223,8 +229,8 @@ fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError
 
     for (i, c) in s.char_indices() {
         match c {
-            '<' => depth += 1,
-            '>' => depth -= 1,
+            '<' | '(' => depth += 1,
+            '>' | ')' => depth -= 1,
             ',' if depth == 0 => {
                 result.push(parse_param(s[start..i].trim())?);
                 start = i + 1;
@@ -247,6 +253,9 @@ fn parse_params<'a>(s: &'a str) -> Result<Vec<TypeExprParam<'a>>, TypeParseError
 fn parse_param<'a>(s: &'a str) -> Result<TypeExprParam<'a>, TypeParseError> {
     if let Ok(i) = s.parse::<i64>() {
         return Ok(TypeExprParam::Integer(i));
+    }
+    if !s.contains('<') && s.contains(['+', '-', '*', '/', '(']) {
+        return Ok(TypeExprParam::Expression(NumericExpression::parse(s)?));
     }
     Ok(TypeExprParam::Type(TypeExpr::parse(s)?))
 }
@@ -347,6 +356,43 @@ mod tests {
             parse(expr).visit_references(&mut |name| refs.push(name.to_string()));
             assert_eq!(refs, expected_refs, "unexpected references for {expr}");
         }
+    }
+
+    #[test]
+    fn test_numeric_parameter_expressions() {
+        let expression = parse("decimal<P1 + P2, max(S1, S2)>");
+        let TypeExpr::Simple("decimal", parameters, false) = expression else {
+            panic!("expected decimal");
+        };
+        assert_eq!(parameters.len(), 2);
+        assert_eq!(
+            parameters[0],
+            TypeExprParam::Expression(NumericExpression::parse("P1 + P2").unwrap())
+        );
+        assert_eq!(
+            parameters[1],
+            TypeExprParam::Expression(NumericExpression::parse("max(S1, S2)").unwrap())
+        );
+    }
+
+    #[test]
+    fn test_invalid_numeric_parameter_expressions() {
+        for source in [
+            "varchar<L +>",
+            "decimal<P, max(S,)>",
+            "varchar<max(L, 1>",
+            "varchar<(L + 1))>",
+        ] {
+            assert!(TypeExpr::parse(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
+    fn test_numeric_calls_are_not_extension_type_references() {
+        let mut references = Vec::new();
+        parse("u!custom<max(P, 1)>")
+            .visit_references(&mut |name| references.push(name.to_string()));
+        assert_eq!(references, vec!["custom"]);
     }
 
     #[test]

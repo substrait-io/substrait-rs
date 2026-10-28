@@ -19,6 +19,7 @@ use thiserror::Error;
 pub mod argument;
 mod extensions;
 mod file;
+mod numeric_expression;
 mod registry;
 mod scalar_functions;
 mod type_ast;
@@ -26,6 +27,7 @@ mod types;
 
 pub use extensions::SimpleExtensions;
 pub use file::ExtensionFile;
+pub use numeric_expression::{ArithmeticOperator, NumericExpression, NumericExpressionParseError};
 pub use registry::Registry;
 pub use scalar_functions::{
     Impl as ScalarFunctionImpl, NullabilityHandling, Options, ScalarFunction, VariadicBehavior,
