@@ -433,6 +433,37 @@ mod tests {
     }
 
     #[test]
+    fn malformed_type_rules_propagate_parameter_and_delimiter_errors() {
+        for (source, expected) in [
+            (
+                "u!",
+                TypeParseError::UnexpectedToken {
+                    position: 2,
+                    expected: "a type name",
+                },
+            ),
+            ("u!point<i32,>", TypeParseError::EmptyParameter),
+            ("any1<i32,>", TypeParseError::EmptyParameter),
+            (
+                "func<i32 -> i64",
+                TypeParseError::UnexpectedToken {
+                    position: 15,
+                    expected: "'>'",
+                },
+            ),
+            (
+                "func<-> i64>",
+                TypeParseError::UnexpectedToken {
+                    position: 5,
+                    expected: "a type name",
+                },
+            ),
+        ] {
+            assert_eq!(parse(source), Err(expected), "{source}");
+        }
+    }
+
+    #[test]
     fn unexpected_input_has_a_byte_position() {
         assert_eq!(
             parse("list<i32)"),
