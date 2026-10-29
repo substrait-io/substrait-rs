@@ -63,6 +63,8 @@ pub enum TypeParseError {
     MissingArrow(String),
     #[error("function type must declare at least one parameter: {0}")]
     EmptyFunctionParameters(String),
+    #[error("multiple function parameters must be enclosed in parentheses: {0}")]
+    UnparenthesizedFunctionParameters(String),
     #[error("type parameter must not be empty")]
     EmptyParameter,
     #[error("numeric expressions are not supported yet: {0}")]
@@ -284,6 +286,31 @@ mod tests {
     }
 
     #[test]
+    fn test_multiple_function_parameters_require_parentheses() {
+        for input in [
+            "func<i32, i64 -> boolean>",
+            "func<list<i32>, map<string, i64> -> boolean>",
+            "func<func<i32 -> i64>, i32 -> boolean>",
+            "list<func<i32, i64 -> boolean>>",
+            "func<i32 -> func<i32, i64 -> boolean>>",
+        ] {
+            assert!(TypeExpr::parse(input).is_err(), "{input}");
+        }
+    }
+
+    #[test]
+    fn test_single_function_parameter_can_contain_commas() {
+        assert_eq!(
+            parse("func<map<string, i64> -> boolean>"),
+            TypeExpr::Func(
+                vec![TypeExprParam::Type(parse("map<string, i64>"))],
+                Box::new(parse("boolean")),
+                false,
+            )
+        );
+    }
+
+    #[test]
     fn test_function_parameters_cannot_be_empty() {
         for input in [
             "func<(i32,) -> i64>",
@@ -306,7 +333,7 @@ mod tests {
             (
                 "func<i32, i64>",
                 TypeParseError::UnexpectedToken {
-                    position: 13,
+                    position: 8,
                     expected: "'->'",
                 },
             ),
@@ -331,7 +358,7 @@ mod tests {
     #[test]
     fn test_visit_references_function_types() {
         let mut refs = Vec::new();
-        parse("func<u!point, any1 -> u!edge?>")
+        parse("func<(u!point, any1) -> u!edge?>")
             .visit_references(&mut |name| refs.push(name.to_string()));
         assert_eq!(refs, vec!["point".to_string(), "edge".to_string()]);
     }

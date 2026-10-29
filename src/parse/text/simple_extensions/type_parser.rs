@@ -142,10 +142,9 @@ impl<'a> Parser<'a> {
 
     /// Parse the body after `func<`, including the closing `>`.
     ///
-    /// Read parameters, an arrow, and a return type. Parameters may be grouped,
-    /// as in `func<(i32, i64) -> bool>`, and nested function types use the same
-    /// recursive rules. Ungrouped comma-separated parameters remain accepted
-    /// for compatibility with the previous parser.
+    /// Read parameters, an arrow, and a return type. Multiple parameters require
+    /// parentheses, as in `func<(i32, i64) -> boolean>`. A single parameter may omit
+    /// them, and nested function types use the same recursive rules.
     fn parse_function_type(&mut self, nullable: bool) -> Result<TypeExpr<'a>, TypeParseError> {
         let grouped = self.consume(TokenKind::OpenParen);
         if grouped && self.peek() == Some(TokenKind::CloseParen) {
@@ -153,7 +152,7 @@ impl<'a> Parser<'a> {
         }
 
         let mut parameters = vec![self.parse_parameter()?];
-        while self.consume(TokenKind::Comma) {
+        while grouped && self.consume(TokenKind::Comma) {
             parameters.push(self.parse_parameter()?);
         }
         if grouped {
