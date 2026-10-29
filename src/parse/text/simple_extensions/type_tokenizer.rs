@@ -339,6 +339,15 @@ mod tests {
     }
 
     #[test]
+    fn multibyte_whitespace_advances_by_byte_length() {
+        let tokens = tokenize("\u{2003}u!point?<i32>").unwrap();
+        assert_eq!(tokens[0].text, "u!");
+        assert_eq!(tokens[0].position, 3);
+        assert_eq!(tokens[1].text, "point");
+        assert_eq!(tokens[1].position, 5);
+    }
+
+    #[test]
     fn integer_signs_are_separate_from_digits() {
         let tokens = tokenize("decimal?<+10, -2>").unwrap();
         let kinds_and_text: Vec<_> = tokens
