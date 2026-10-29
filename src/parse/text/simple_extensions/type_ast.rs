@@ -63,6 +63,8 @@ pub enum TypeParseError {
     MissingArrow(String),
     #[error("function type must declare at least one parameter: {0}")]
     EmptyFunctionParameters(String),
+    #[error("multiple function parameters must be enclosed in parentheses: {0}")]
+    UnparenthesizedFunctionParameters(String),
     #[error("type parameter must not be empty")]
     EmptyParameter,
     #[error("expected {expected} at byte {position}")]
@@ -190,15 +192,18 @@ fn parse_func_type<'a>(s: &'a str, nullable: bool) -> Result<TypeExpr<'a>, TypeP
         return Err(TypeParseError::MissingArrow(s.to_string()));
     };
 
-    let params = params
-        .strip_prefix('(')
-        .and_then(|p| p.strip_suffix(')'))
-        .unwrap_or(params);
+    let grouped_params = params.strip_prefix('(').and_then(|p| p.strip_suffix(')'));
+    let params = grouped_params.unwrap_or(params);
     if params.is_empty() {
         return Err(TypeParseError::EmptyFunctionParameters(s.to_string()));
     }
 
     let parameters = parse_params(params)?;
+    if grouped_params.is_none() && parameters.len() != 1 {
+        return Err(TypeParseError::UnparenthesizedFunctionParameters(
+            s.to_string(),
+        ));
+    }
     let return_type = TypeExpr::parse(return_type)?;
     Ok(TypeExpr::Func(parameters, Box::new(return_type), nullable))
 }
@@ -431,6 +436,31 @@ mod tests {
     }
 
     #[test]
+    fn test_multiple_function_parameters_require_parentheses() {
+        for input in [
+            "func<i32, i64 -> boolean>",
+            "func<list<i32>, map<string, i64> -> boolean>",
+            "func<func<i32 -> i64>, i32 -> boolean>",
+            "list<func<i32, i64 -> boolean>>",
+            "func<i32 -> func<i32, i64 -> boolean>>",
+        ] {
+            assert!(TypeExpr::parse(input).is_err(), "{input}");
+        }
+    }
+
+    #[test]
+    fn test_single_function_parameter_can_contain_commas() {
+        assert_eq!(
+            parse("func<map<string, i64> -> boolean>"),
+            TypeExpr::Func(
+                vec![TypeExprParam::Type(parse("map<string, i64>"))],
+                Box::new(parse("boolean")),
+                false,
+            )
+        );
+    }
+
+    #[test]
     fn test_function_parameters_cannot_be_empty() {
         for input in [
             "func<(i32,) -> i64>",
@@ -472,7 +502,7 @@ mod tests {
     #[test]
     fn test_visit_references_function_types() {
         let mut refs = Vec::new();
-        parse("func<u!point, any1 -> u!edge?>")
+        parse("func<(u!point, any1) -> u!edge?>")
             .visit_references(&mut |name| refs.push(name.to_string()));
         assert_eq!(refs, vec!["point".to_string(), "edge".to_string()]);
     }
