@@ -72,48 +72,72 @@ impl<'a> Parser<'a> {
         Ok(token)
     }
 
-    /// Parse a name with optional `u!`, nullability, and parameters.
-    ///
-    /// For example, `u!point?<i32>` becomes a nullable user-defined type;
-    /// `any1?` becomes a nullable type variable. Unknown names remain in the AST
-    /// for semantic validation rather than being rejected here. Numbered variables
-    /// retain the existing case-sensitive `any` prefix behavior even though the
-    /// tokenizer recognizes keyword spellings case-insensitively.
-    fn parse_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        let user_defined = self.consume(TokenKind::UserDefined);
-        let name = self
+    /// Consume a type or parameter name, including names with keyword tokens.
+    fn expect_name(&mut self) -> Result<Token<'a>, TypeParseError> {
+        let token = self
             .tokens
             .get(self.index)
             .copied()
             .filter(|token| token.kind.is_name())
             .ok_or_else(|| self.error("a type name"))?;
         self.index += 1;
+        Ok(token)
+    }
+
+    /// Parse one type expression using the rule selected by its first token.
+    fn parse_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
+        match self.peek() {
+            Some(TokenKind::UserDefined) => self.parse_user_defined_type(),
+            Some(TokenKind::Func) => self.parse_function_type(),
+            Some(TokenKind::AnyVar) => self.parse_type_variable(),
+            _ => self.parse_named_type(),
+        }
+    }
+
+    /// Parse a user-defined type such as `u!point?<i32>`.
+    fn parse_user_defined_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
+        self.expect(TokenKind::UserDefined)?;
+        let name = self.expect_name()?;
         let nullable = self.consume(TokenKind::QuestionMark);
+        let parameters = self.parse_optional_type_parameters()?;
+        Ok(TypeExpr::UserDefined(name.text, parameters, nullable))
+    }
 
+    /// Parse a name with optional nullability and parameters, such as `list?<i32>`.
+    /// Unknown names are retained for semantic validation.
+    fn parse_named_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
+        let name = self.expect_name()?;
+        let nullable = self.consume(TokenKind::QuestionMark);
+        let parameters = self.parse_optional_type_parameters()?;
+        Ok(TypeExpr::Simple(name.text, parameters, nullable))
+    }
+
+    /// Parse a numbered variable such as `any1?`.
+    /// Uppercase prefixes, out-of-range IDs, and parameterized names remain named types.
+    fn parse_type_variable(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
+        let name = self.expect(TokenKind::AnyVar)?;
+        let nullable = self.consume(TokenKind::QuestionMark);
         if self.consume(TokenKind::OpenAngle) {
-            if !user_defined && name.kind == TokenKind::Func {
-                return self.parse_function_type(nullable);
-            }
             let parameters = self.parse_type_parameters()?;
-            return Ok(if user_defined {
-                TypeExpr::UserDefined(name.text, parameters, nullable)
-            } else {
-                TypeExpr::Simple(name.text, parameters, nullable)
-            });
+            return Ok(TypeExpr::Simple(name.text, parameters, nullable));
         }
-
-        if user_defined {
-            return Ok(TypeExpr::UserDefined(name.text, Vec::new(), nullable));
-        }
-        if name.kind == TokenKind::AnyVar
-            && let Some(id) = name
-                .text
-                .strip_prefix("any")
-                .and_then(|suffix| suffix.parse().ok())
+        match name
+            .text
+            .strip_prefix("any")
+            .and_then(|suffix| suffix.parse().ok())
         {
-            return Ok(TypeExpr::TypeVariable(id, nullable));
+            Some(id) => Ok(TypeExpr::TypeVariable(id, nullable)),
+            None => Ok(TypeExpr::Simple(name.text, Vec::new(), nullable)),
         }
-        Ok(TypeExpr::Simple(name.text, Vec::new(), nullable))
+    }
+
+    /// Parse an optional `<...>` parameter list, consuming both angle brackets.
+    fn parse_optional_type_parameters(&mut self) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
+        if self.consume(TokenKind::OpenAngle) {
+            self.parse_type_parameters()
+        } else {
+            Ok(Vec::new())
+        }
     }
 
     /// Parse comma-separated parameters after `<`, consuming the closing `>`.
@@ -140,12 +164,15 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parse the body after `func<`, including the closing `>`.
-    ///
-    /// Read parameters, an arrow, and a return type. Multiple parameters require
-    /// parentheses, as in `func<(i32, i64) -> boolean>`. A single parameter may omit
-    /// them, and nested function types use the same recursive rules.
-    fn parse_function_type(&mut self, nullable: bool) -> Result<TypeExpr<'a>, TypeParseError> {
+    /// Parse a function type such as `func<(i32, i64) -> boolean>`.
+    /// Multiple parameters require parentheses; a single parameter may omit them.
+    /// A bare `func` name is retained for semantic validation.
+    fn parse_function_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
+        let name = self.expect(TokenKind::Func)?;
+        let nullable = self.consume(TokenKind::QuestionMark);
+        if !self.consume(TokenKind::OpenAngle) {
+            return Ok(TypeExpr::Simple(name.text, Vec::new(), nullable));
+        }
         let grouped = self.consume(TokenKind::OpenParen);
         if grouped && self.peek() == Some(TokenKind::CloseParen) {
             return Err(self.error("a function parameter"));
@@ -242,6 +269,33 @@ mod tests {
         assert_eq!(
             parse("ANY").unwrap(),
             TypeExpr::Simple("ANY", vec![], false)
+        );
+    }
+
+    #[test]
+    fn bare_function_keyword_is_retained_as_a_name() {
+        assert_eq!(
+            parse("FuNc?").unwrap(),
+            TypeExpr::Simple("FuNc", vec![], true)
+        );
+    }
+
+    #[test]
+    fn numbered_variable_spellings_preserve_named_type_fallbacks() {
+        for name in ["ANY1", "any4294967296"] {
+            assert_eq!(parse(name).unwrap(), TypeExpr::Simple(name, vec![], false));
+        }
+        assert_eq!(
+            parse("any1<>").unwrap(),
+            TypeExpr::Simple("any1", vec![], false)
+        );
+        assert_eq!(
+            parse("any1?<i32>").unwrap(),
+            TypeExpr::Simple(
+                "any1",
+                vec![TypeExprParam::Type(parse("i32").unwrap())],
+                true,
+            )
         );
     }
 
