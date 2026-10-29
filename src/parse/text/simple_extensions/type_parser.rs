@@ -117,16 +117,14 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a numbered variable such as `any1?`.
-    /// Uppercase prefixes, out-of-range IDs, and parameterized names remain named types.
+    /// Variables do not take parameters. Uppercase prefixes and out-of-range IDs
+    /// remain named types.
     fn parse_type_variable(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
         let name = self.expect(TokenKind::AnyVar)?;
         let nullable = self.consume(TokenKind::QuestionMark);
-        if self.peek() == Some(TokenKind::OpenAngle) {
+        let Some(id) = parse_type_variable_id(name.text) else {
             let parameters = self.parse_optional_type_parameters()?;
             return Ok(TypeExpr::Simple(name.text, parameters, nullable));
-        }
-        let Some(id) = parse_type_variable_id(name.text) else {
-            return Ok(TypeExpr::Simple(name.text, Vec::new(), nullable));
         };
         Ok(TypeExpr::TypeVariable(id, nullable))
     }
@@ -417,19 +415,27 @@ mod tests {
     fn numbered_variable_spellings_preserve_named_type_fallbacks() {
         for name in ["ANY1", "any4294967296"] {
             assert_eq!(parse(name).unwrap(), TypeExpr::Simple(name, vec![], false));
+            let source = format!("{name}?<i32>");
+            assert_eq!(
+                parse(&source).unwrap(),
+                TypeExpr::Simple(name, vec![TypeExprParam::Type(parse("i32").unwrap())], true,)
+            );
         }
-        assert_eq!(
-            parse("any1<>").unwrap(),
-            TypeExpr::Simple("any1", vec![], false)
-        );
-        assert_eq!(
-            parse("any1?<i32>").unwrap(),
-            TypeExpr::Simple(
-                "any1",
-                vec![TypeExprParam::Type(parse("i32").unwrap())],
-                true,
-            )
-        );
+    }
+
+    #[test]
+    fn numbered_type_variables_cannot_have_parameters() {
+        for source in [
+            "any1<>",
+            "any1<i32>",
+            "any1?<i32>",
+            "any1<i32,>",
+            "list<any1<i32>>",
+            "func<any1<i32> -> i64>",
+            "func<i32 -> any1<>>",
+        ] {
+            assert!(parse(source).is_err(), "{source}");
+        }
     }
 
     #[test]
@@ -443,7 +449,7 @@ mod tests {
                 },
             ),
             ("u!point<i32,>", TypeParseError::EmptyParameter),
-            ("any1<i32,>", TypeParseError::EmptyParameter),
+            ("ANY1<i32,>", TypeParseError::EmptyParameter),
             (
                 "func<i32 -> i64",
                 TypeParseError::UnexpectedToken {
