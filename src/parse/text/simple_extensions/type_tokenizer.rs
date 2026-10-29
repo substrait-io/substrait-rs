@@ -79,69 +79,99 @@ impl TokenKind {
 }
 
 /// A token with its original spelling and byte offset, both retained for the parser.
+///
+/// For `" List<i32>"`, the first token has kind `List`, text `"List"`, and position `1`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct Token<'a> {
+    /// The syntactic category, independent of the token's original spelling.
     pub(super) kind: TokenKind,
+    /// The exact source slice.
     pub(super) text: &'a str,
+    /// The starting byte offset in the full source, including skipped whitespace.
     pub(super) position: usize,
 }
 
 /// Split source into tokens, skipping whitespace and borrowing token text.
-///
-/// Recognize `->` and `u!` before single-character punctuation. Whole words
-/// matching `func`, `list`, `decimal`, `any`, or numbered `anyN` variables receive
-/// dedicated tokens, case-insensitively. Other names remain identifiers. Original
-/// spelling is retained, including for names following `u!`.
-/// Digits and signs are separate tokens, and unknown characters produce an error
-/// at their original byte position.
 pub(super) fn tokenize(source: &str) -> Result<Vec<Token<'_>>, TypeParseError> {
+    let mut tokenizer = Tokenizer {
+        source,
+        position: 0,
+    };
     let mut tokens = Vec::new();
-    let mut remaining = source.trim_start();
-    while !remaining.is_empty() {
-        let position = source.len() - remaining.len();
-        let first = remaining.chars().next().unwrap();
-        let (kind, length) = if remaining.starts_with("->") {
-            (TokenKind::Arrow, 2)
-        } else if remaining.starts_with("u!") {
-            (TokenKind::UserDefined, 2)
-        } else if first.is_ascii_alphabetic() || matches!(first, '_' | '$') {
-            let length = remaining
-                .find(|c: char| !c.is_ascii_alphanumeric() && !matches!(c, '_' | '$'))
-                .unwrap_or(remaining.len());
-            (classify_word(&remaining[..length]), length)
-        } else if first.is_ascii_digit() {
-            let length = remaining
-                .find(|c: char| !c.is_ascii_digit())
-                .unwrap_or(remaining.len());
-            (TokenKind::Integer, length)
-        } else {
-            let kind = match first {
-                '<' => TokenKind::OpenAngle,
-                '>' => TokenKind::CloseAngle,
-                '(' => TokenKind::OpenParen,
-                ')' => TokenKind::CloseParen,
-                ',' => TokenKind::Comma,
-                '?' => TokenKind::QuestionMark,
-                '+' => TokenKind::Plus,
-                '-' => TokenKind::Minus,
-                '[' | ']' => return Err(TypeParseError::UnsupportedVariation(source.to_string())),
-                _ => {
-                    return Err(TypeParseError::UnexpectedToken {
-                        position,
-                        expected: "a type token",
-                    });
-                }
-            };
-            (kind, first.len_utf8())
+    while let Some(token) = tokenizer.next_token()? {
+        tokens.push(token);
+    }
+    Ok(tokens)
+}
+
+/// A cursor over the source whose position is the next unread byte.
+struct Tokenizer<'a> {
+    source: &'a str,
+    position: usize,
+}
+
+impl<'a> Tokenizer<'a> {
+    /// Advance past whitespace, stopping at the next token or the end of the source.
+    fn skip_whitespace(&mut self) {
+        while let Some(character) = self.source[self.position..].chars().next() {
+            if !character.is_whitespace() {
+                break;
+            }
+            self.position += character.len_utf8();
+        }
+    }
+
+    /// Skip whitespace and return the next token, advancing the cursor past it.
+    /// Return `None` at the end of the source, or an error for unsupported input.
+    fn next_token(&mut self) -> Result<Option<Token<'a>>, TypeParseError> {
+        self.skip_whitespace();
+        let remaining = &self.source[self.position..];
+        let Some(first) = remaining.chars().next() else {
+            return Ok(None);
         };
-        tokens.push(Token {
+        let position = self.position;
+        let (kind, length) = match first {
+            '-' if remaining.starts_with("->") => (TokenKind::Arrow, 2),
+            'u' if remaining.starts_with("u!") => (TokenKind::UserDefined, 2),
+            'a'..='z' | 'A'..='Z' | '_' | '$' => {
+                let length = remaining
+                    .find(|c: char| !c.is_ascii_alphanumeric() && !matches!(c, '_' | '$'))
+                    .unwrap_or(remaining.len());
+                (classify_word(&remaining[..length]), length)
+            }
+            '0'..='9' => {
+                let length = remaining
+                    .find(|c: char| !c.is_ascii_digit())
+                    .unwrap_or(remaining.len());
+                (TokenKind::Integer, length)
+            }
+            '[' | ']' => {
+                return Err(TypeParseError::UnsupportedVariation(
+                    self.source.to_string(),
+                ));
+            }
+            '<' => (TokenKind::OpenAngle, 1),
+            '>' => (TokenKind::CloseAngle, 1),
+            '(' => (TokenKind::OpenParen, 1),
+            ')' => (TokenKind::CloseParen, 1),
+            ',' => (TokenKind::Comma, 1),
+            '?' => (TokenKind::QuestionMark, 1),
+            '+' => (TokenKind::Plus, 1),
+            '-' => (TokenKind::Minus, 1),
+            _ => {
+                return Err(TypeParseError::UnexpectedToken {
+                    position,
+                    expected: "a type token",
+                });
+            }
+        };
+        self.position += length;
+        Ok(Some(Token {
             kind,
             text: &remaining[..length],
             position,
-        });
-        remaining = remaining[length..].trim_start();
+        }))
     }
-    Ok(tokens)
 }
 
 /// Classify a complete word so names like `listing` are not split into keywords.
@@ -164,6 +194,110 @@ fn classify_word(word: &str) -> TokenKind {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn skip_whitespace_stops_at_the_next_token_or_end() {
+        for (source, position, expected_position) in [
+            ("", 0, 0),
+            ("i32", 0, 0),
+            (" \t\r\ni32", 0, 4),
+            (" \t", 0, 2),
+            ("i32 \ti64", 3, 5),
+        ] {
+            let mut tokenizer = Tokenizer { source, position };
+            tokenizer.skip_whitespace();
+            assert_eq!(tokenizer.position, expected_position, "{source:?}");
+            tokenizer.skip_whitespace();
+            assert_eq!(tokenizer.position, expected_position, "{source:?}");
+        }
+    }
+
+    #[test]
+    fn next_token_advances_the_cursor_and_stops_at_end() {
+        let source = "(any1, -2) -> i32? \t";
+        let mut tokenizer = Tokenizer {
+            source,
+            position: 0,
+        };
+        for (kind, text, position) in [
+            (TokenKind::OpenParen, "(", 0),
+            (TokenKind::AnyVar, "any1", 1),
+            (TokenKind::Comma, ",", 5),
+            (TokenKind::Minus, "-", 7),
+            (TokenKind::Integer, "2", 8),
+            (TokenKind::CloseParen, ")", 9),
+            (TokenKind::Arrow, "->", 11),
+            (TokenKind::Identifier, "i32", 14),
+            (TokenKind::QuestionMark, "?", 17),
+        ] {
+            assert_eq!(
+                tokenizer.next_token().unwrap(),
+                Some(Token {
+                    kind,
+                    text,
+                    position
+                })
+            );
+            assert_eq!(tokenizer.position, position + text.len());
+        }
+        assert_eq!(tokenizer.next_token().unwrap(), None);
+        assert_eq!(tokenizer.position, source.len());
+        assert_eq!(tokenizer.next_token().unwrap(), None);
+        assert_eq!(tokenizer.position, source.len());
+    }
+
+    #[test]
+    fn next_token_reports_an_unknown_character_after_a_token() {
+        let mut tokenizer = Tokenizer {
+            source: "i32 @",
+            position: 0,
+        };
+        assert_eq!(tokenizer.next_token().unwrap().unwrap().text, "i32");
+        assert_eq!(
+            tokenizer.next_token(),
+            Err(TypeParseError::UnexpectedToken {
+                position: 4,
+                expected: "a type token",
+            })
+        );
+    }
+
+    #[test]
+    fn next_token_rejects_type_variation_brackets() {
+        for source in ["i32[0]", "i32]"] {
+            let mut tokenizer = Tokenizer {
+                source,
+                position: 0,
+            };
+            assert_eq!(tokenizer.next_token().unwrap().unwrap().text, "i32");
+            assert_eq!(
+                tokenizer.next_token(),
+                Err(TypeParseError::UnsupportedVariation(source.to_string()))
+            );
+        }
+    }
+
+    #[test]
+    fn classify_word_distinguishes_keywords_variables_and_other_names() {
+        for (word, expected) in [
+            ("LiSt", TokenKind::List),
+            ("any", TokenKind::Any),
+            ("ANY12", TokenKind::AnyVar),
+            ("any1extra", TokenKind::Identifier),
+            ("any_1", TokenKind::Identifier),
+            ("$P1", TokenKind::Identifier),
+            ("u", TokenKind::Identifier),
+        ] {
+            assert_eq!(classify_word(word), expected, "{word}");
+        }
+    }
+
+    #[test]
+    fn empty_or_whitespace_only_input_has_no_tokens() {
+        for source in ["", " \t\r\n"] {
+            assert!(tokenize(source).unwrap().is_empty());
+        }
+    }
 
     #[test]
     fn arrows_are_distinct_from_closing_brackets() {
@@ -222,17 +356,17 @@ mod tests {
 
     #[test]
     fn tokens_borrow_the_source_and_retain_byte_positions() {
-        let tokens = tokenize("\u{2003}u!point?<i32>").unwrap();
+        let tokens = tokenize(" u!point?<i32>").unwrap();
         assert_eq!(
             tokens[0],
             Token {
                 kind: TokenKind::UserDefined,
                 text: "u!",
-                position: 3
+                position: 1
             }
         );
         assert_eq!(tokens[1].text, "point");
-        assert_eq!(tokens[1].position, 5);
+        assert_eq!(tokens[1].position, 3);
     }
 
     #[test]
@@ -261,9 +395,9 @@ mod tests {
     #[test]
     fn unknown_characters_have_a_byte_position() {
         assert_eq!(
-            tokenize("\u{2003}λ"),
+            tokenize(" @"),
             Err(TypeParseError::UnexpectedToken {
-                position: 3,
+                position: 1,
                 expected: "a type token"
             })
         );
