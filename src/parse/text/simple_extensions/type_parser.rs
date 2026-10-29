@@ -57,6 +57,10 @@ impl<'a> Parser<'a> {
         self.tokens.get(self.index).map(|token| token.kind)
     }
 
+    fn peek_next(&self) -> Option<TokenKind> {
+        self.tokens.get(self.index + 1).map(|token| token.kind)
+    }
+
     fn error(&self, expected: &'static str) -> TypeParseError {
         TypeParseError::UnexpectedToken {
             position: self
@@ -213,13 +217,7 @@ impl<'a> Parser<'a> {
             Some(
                 TokenKind::Integer | TokenKind::Plus | TokenKind::Minus | TokenKind::OpenParen,
             ) => self.parse_numeric_parameter(),
-            Some(kind)
-                if kind.is_name()
-                    && self
-                        .tokens
-                        .get(self.index + 1)
-                        .is_some_and(|token| token.kind == TokenKind::Plus) =>
-            {
+            Some(kind) if kind.is_name() && self.peek_next() == Some(TokenKind::Plus) => {
                 self.parse_numeric_parameter()
             }
             Some(TokenKind::Comma | TokenKind::CloseAngle | TokenKind::CloseParen) | None => {
@@ -296,6 +294,66 @@ fn parse_type_variable_id(name: &str) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn parse_integer(source: &str) -> IntegerParameter {
+        parse_integer_parameter(source).unwrap()
+    }
+
+    #[test]
+    fn addition_retains_operands_and_associates_to_the_left() {
+        let IntegerParameter::Add(left, right) = parse_integer("P + S + 1") else {
+            panic!("expected addition");
+        };
+        assert_eq!(*left, parse_integer("P + S"));
+        assert_eq!(*right, IntegerParameter::Literal(1));
+        assert_eq!(parse_integer("P"), IntegerParameter::Variable("P".into()));
+    }
+
+    #[test]
+    fn parentheses_preserve_grouping() {
+        let IntegerParameter::Add(left, right) = parse_integer("P + (S + 1)") else {
+            panic!("expected addition");
+        };
+        assert_eq!(*left, IntegerParameter::Variable("P".into()));
+        assert_eq!(*right, parse_integer("S + 1"));
+        assert_ne!(parse_integer("P + (S + 1)"), parse_integer("P + S + 1"));
+        assert_eq!(parse_integer("((P))"), parse_integer("P"));
+    }
+
+    #[test]
+    fn invalid_or_unsupported_expressions() {
+        for source in [
+            "",
+            "P +",
+            "+ P",
+            "P ++ 1",
+            "P S",
+            "P - 1",
+            "P * 2",
+            "P / 2",
+            "min(P, S)",
+            "max(P, S)",
+            "()",
+            "(P + 1",
+            "P + 1)",
+            "P + ()",
+            "(P)(S)",
+            "(P +)",
+            "P > S",
+            "P ? S : 1",
+            "9223372036854775808",
+            "@ + 1",
+        ] {
+            assert!(parse_integer_parameter(source).is_err(), "{source}");
+        }
+        assert_eq!(
+            parse_integer_parameter("P +"),
+            Err(TypeParseError::UnexpectedToken {
+                position: 3,
+                expected: "an integer literal, parameter name, or '('",
+            })
+        );
+    }
 
     #[test]
     fn function_parameters_leave_the_arrow_for_the_caller() {

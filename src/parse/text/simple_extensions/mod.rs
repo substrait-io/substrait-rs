@@ -19,7 +19,6 @@ use thiserror::Error;
 pub mod argument;
 mod extensions;
 mod file;
-mod numeric_expression;
 mod registry;
 mod scalar_functions;
 mod type_ast;

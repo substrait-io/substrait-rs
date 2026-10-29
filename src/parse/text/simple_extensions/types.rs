@@ -295,6 +295,15 @@ pub enum IntegerParameter {
 }
 
 impl IntegerParameter {
+    /// Parse addition of integer literals and parameter names, such as `L + 1`.
+    ///
+    /// Addition associates to the left unless grouped with parentheses, as in
+    /// `P + (S + 1)`. Other operators and calls are not supported yet.
+    /// No operation is evaluated.
+    pub fn parse(source: &str) -> Result<Self, TypeParseError> {
+        super::type_parser::parse_integer_parameter(source)
+    }
+
     /// Returns whether this parameter is a literal rather than an unresolved expression.
     pub fn is_concrete(&self) -> bool {
         matches!(self, Self::Literal(_))
@@ -980,8 +989,8 @@ impl From<Type> for RawType {
     }
 }
 
-/// Parse an integer literal or parameter name for a built-in type.
-/// Validate literals against the supplied range.
+/// Convert an integer literal, parameter name, or addition expression for a built-in type.
+/// Validate literals against the supplied range without evaluating expressions.
 ///
 /// - `type_name`: Type being validated (for error messages, e.g., "DECIMAL")
 /// - `index`: Parameter position (0-based, e.g., 0 for precision, 1 for scale);
@@ -1307,6 +1316,27 @@ mod tests {
         assert!(refs.is_empty(), "{s} should not add an extension reference");
 
         Type::try_from(parsed).unwrap()
+    }
+
+    #[test]
+    fn display_preserves_parsed_expressions() {
+        for source in [
+            "P + S + 1",
+            "P + (S + 1)",
+            "(P + S) + (1 + (T + 2))",
+            "L+1",
+            " $P + _S ",
+            "P + -2",
+            "9223372036854775807 + 1",
+        ] {
+            let expression = IntegerParameter::parse(source).unwrap();
+            assert_eq!(
+                IntegerParameter::parse(&expression.to_string()).unwrap(),
+                expression,
+                "{source}"
+            );
+        }
+        assert_eq!(IntegerParameter::parse("L+1").unwrap().to_string(), "L + 1");
     }
 
     #[test]
