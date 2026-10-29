@@ -111,9 +111,14 @@ struct Tokenizer<'a> {
 }
 
 impl<'a> Tokenizer<'a> {
+    /// Return the next character without advancing the cursor.
+    fn peek(&self) -> Option<char> {
+        self.source[self.position..].chars().next()
+    }
+
     /// Advance past whitespace, stopping at the next token or the end of the source.
     fn skip_whitespace(&mut self) {
-        while let Some(character) = self.source[self.position..].chars().next() {
+        while let Some(character) = self.peek() {
             if !character.is_whitespace() {
                 break;
             }
@@ -125,10 +130,10 @@ impl<'a> Tokenizer<'a> {
     /// Return `None` at the end of the source, or an error for unsupported input.
     fn next_token(&mut self) -> Result<Option<Token<'a>>, TypeParseError> {
         self.skip_whitespace();
-        let remaining = &self.source[self.position..];
-        let Some(first) = remaining.chars().next() else {
+        let Some(first) = self.peek() else {
             return Ok(None);
         };
+        let remaining = &self.source[self.position..];
         let position = self.position;
         let (kind, length) = match first {
             '-' if remaining.starts_with("->") => (TokenKind::Arrow, 2),
@@ -206,8 +211,7 @@ mod tests {
         ] {
             let mut tokenizer = Tokenizer { source, position };
             tokenizer.skip_whitespace();
-            let next_character = tokenizer.source[tokenizer.position..].chars().next();
-            assert_eq!(next_character, expected_character, "{source:?}");
+            assert_eq!(tokenizer.peek(), expected_character, "{source:?}");
         }
     }
 
@@ -366,6 +370,27 @@ mod tests {
         );
         assert_eq!(tokens[1].text, "point");
         assert_eq!(tokens[1].position, 3);
+    }
+
+    #[test]
+    fn multibyte_whitespace_advances_by_byte_length() {
+        let tokens = tokenize("\u{2003}u!point?<i32>").unwrap();
+        assert_eq!(
+            tokens[0],
+            Token {
+                kind: TokenKind::UserDefined,
+                text: "u!",
+                position: 3
+            }
+        );
+        assert_eq!(
+            tokens[1],
+            Token {
+                kind: TokenKind::Identifier,
+                text: "point",
+                position: 5
+            }
+        );
     }
 
     #[test]
