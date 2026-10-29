@@ -161,7 +161,7 @@ pub enum TypeKind {
         /// appear in the struct - hence the use of [`IndexMap`].
         fields: IndexMap<String, Type>,
     },
-    /// A function type: `func<P1, P2 -> R>`
+    /// A function type: `func<(P1, P2) -> R>`
     Func {
         /// Parameter types in declaration order
         parameters: Vec<Type>,
