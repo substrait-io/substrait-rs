@@ -209,9 +209,12 @@ impl<'a> Parser<'a> {
                 }
                 let token = self.expect(TokenKind::Integer)?;
                 let end = token.position + token.text.len();
-                let value = self.source[start..end]
-                    .parse()
-                    .map_err(|_| self.error("an i64 integer literal"))?;
+                let value = self.source[start..end].parse().map_err(|_| {
+                    TypeParseError::UnexpectedToken {
+                        position: start,
+                        expected: "an i64 integer literal",
+                    }
+                })?;
                 Ok(TypeExprParam::Integer(value))
             }
             Some(TokenKind::Comma | TokenKind::CloseAngle | TokenKind::CloseParen) | None => {
@@ -325,6 +328,24 @@ mod tests {
         ] {
             let mut parser = Parser::new(source).unwrap();
             assert!(parser.parse_parameter().is_err(), "{source}");
+        }
+    }
+
+    #[test]
+    fn overflowing_integer_errors_point_to_the_literal_start() {
+        for source in [
+            "decimal<9223372036854775808, 2>",
+            "decimal<+9223372036854775808, 2>",
+            "decimal<-9223372036854775809, 2>",
+        ] {
+            assert_eq!(
+                parse(source),
+                Err(TypeParseError::UnexpectedToken {
+                    position: 8,
+                    expected: "an i64 integer literal",
+                }),
+                "{source}"
+            );
         }
     }
 
