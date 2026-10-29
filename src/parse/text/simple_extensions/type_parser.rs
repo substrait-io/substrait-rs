@@ -17,11 +17,7 @@ use super::type_tokenizer::{Token, TokenKind, tokenize};
 /// Parse one complete type, rejecting any tokens left after it.
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
 pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
-    let mut parser = Parser {
-        source,
-        tokens: tokenize(source)?,
-        index: 0,
-    };
+    let mut parser = Parser::new(source)?;
     let expression = parser.parse_type()?;
     if parser.peek().is_some() {
         return Err(parser.error("end of type"));
@@ -38,6 +34,14 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    fn new(source: &'a str) -> Result<Self, TypeParseError> {
+        Ok(Self {
+            source,
+            tokens: tokenize(source)?,
+            index: 0,
+        })
+    }
+
     fn peek(&self) -> Option<TokenKind> {
         self.tokens.get(self.index).map(|token| token.kind)
     }
@@ -228,6 +232,113 @@ fn parse_type_variable_id(name: &str) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn function_parameters_leave_the_arrow_for_the_caller() {
+        for (source, parameter_types) in [
+            ("i32 -> i64", vec!["i32"]),
+            ("map<string, i64> -> boolean", vec!["map<string, i64>"]),
+            (
+                "(func<i32 -> i64>, list<any1>) -> boolean",
+                vec!["func<i32 -> i64>", "list<any1>"],
+            ),
+        ] {
+            let mut parser = Parser::new(source).unwrap();
+            let expected: Vec<_> = parameter_types
+                .iter()
+                .map(|parameter| TypeExprParam::Type(parse(parameter).unwrap()))
+                .collect();
+
+            assert_eq!(
+                parser.parse_function_parameters().unwrap(),
+                expected,
+                "{source}"
+            );
+            assert_eq!(parser.peek(), Some(TokenKind::Arrow), "{source}");
+        }
+    }
+
+    #[test]
+    fn type_parameters_consume_only_their_own_closing_bracket() {
+        for (source, expected) in [
+            ("<>>", vec![]),
+            (
+                "<list<i32>, 2>>",
+                vec![
+                    TypeExprParam::Type(parse("list<i32>").unwrap()),
+                    TypeExprParam::Integer(2),
+                ],
+            ),
+        ] {
+            let mut parser = Parser::new(source).unwrap();
+            parser.expect(TokenKind::OpenAngle).unwrap();
+
+            assert_eq!(
+                parser.parse_type_parameters().unwrap(),
+                expected,
+                "{source}"
+            );
+            assert_eq!(parser.peek(), Some(TokenKind::CloseAngle), "{source}");
+            parser.expect(TokenKind::CloseAngle).unwrap();
+            assert_eq!(parser.peek(), None, "{source}");
+        }
+    }
+
+    #[test]
+    fn type_parameters_reject_empty_entries() {
+        for source in [",i32>", "i32,>", "i32,,i64>"] {
+            let mut parser = Parser::new(source).unwrap();
+            assert_eq!(
+                parser.parse_type_parameters(),
+                Err(TypeParseError::EmptyParameter),
+                "{source}"
+            );
+        }
+    }
+
+    #[test]
+    fn integer_parameters_support_signs_and_the_full_i64_range() {
+        for (source, expected) in [
+            ("0,", 0),
+            ("+10,", 10),
+            ("-2,", -2),
+            ("9223372036854775807,", i64::MAX),
+            ("+9223372036854775807,", i64::MAX),
+            ("-9223372036854775808,", i64::MIN),
+        ] {
+            let mut parser = Parser::new(source).unwrap();
+            assert_eq!(
+                parser.parse_parameter().unwrap(),
+                TypeExprParam::Integer(expected),
+                "{source}"
+            );
+            assert_eq!(parser.peek(), Some(TokenKind::Comma), "{source}");
+        }
+    }
+
+    #[test]
+    fn integer_parameters_reject_overflow_and_signs_without_digits() {
+        for source in [
+            "9223372036854775808",
+            "-9223372036854775809",
+            "+",
+            "-",
+            "+i32",
+        ] {
+            let mut parser = Parser::new(source).unwrap();
+            assert!(parser.parse_parameter().is_err(), "{source}");
+        }
+    }
+
+    #[test]
+    fn nested_type_parameters_leave_the_separator_for_the_caller() {
+        let mut parser = Parser::new("map<string, func<i32 -> i64>>, boolean").unwrap();
+        assert_eq!(
+            parser.parse_parameter().unwrap(),
+            TypeExprParam::Type(parse("map<string, func<i32 -> i64>>").unwrap())
+        );
+        assert_eq!(parser.peek(), Some(TokenKind::Comma));
+    }
 
     #[test]
     fn grouped_parameters_can_contain_multi_parameter_functions() {
