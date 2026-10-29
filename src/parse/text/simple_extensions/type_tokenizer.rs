@@ -341,10 +341,22 @@ mod tests {
     #[test]
     fn multibyte_whitespace_advances_by_byte_length() {
         let tokens = tokenize("\u{2003}u!point?<i32>").unwrap();
-        assert_eq!(tokens[0].text, "u!");
-        assert_eq!(tokens[0].position, 3);
-        assert_eq!(tokens[1].text, "point");
-        assert_eq!(tokens[1].position, 5);
+        assert_eq!(
+            tokens[0],
+            Token {
+                kind: TokenKind::UserDefined,
+                text: "u!",
+                position: 3
+            }
+        );
+        assert_eq!(
+            tokens[1],
+            Token {
+                kind: TokenKind::Identifier,
+                text: "point",
+                position: 5
+            }
+        );
     }
 
     #[test]
