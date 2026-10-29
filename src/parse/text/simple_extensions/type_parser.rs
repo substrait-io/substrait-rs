@@ -117,18 +117,14 @@ impl<'a> Parser<'a> {
     fn parse_type_variable(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
         let name = self.expect(TokenKind::AnyVar)?;
         let nullable = self.consume(TokenKind::QuestionMark);
-        if self.consume(TokenKind::OpenAngle) {
-            let parameters = self.parse_type_parameters()?;
+        if self.peek() == Some(TokenKind::OpenAngle) {
+            let parameters = self.parse_optional_type_parameters()?;
             return Ok(TypeExpr::Simple(name.text, parameters, nullable));
         }
-        match name
-            .text
-            .strip_prefix("any")
-            .and_then(|suffix| suffix.parse().ok())
-        {
-            Some(id) => Ok(TypeExpr::TypeVariable(id, nullable)),
-            None => Ok(TypeExpr::Simple(name.text, Vec::new(), nullable)),
-        }
+        let Some(id) = parse_type_variable_id(name.text) else {
+            return Ok(TypeExpr::Simple(name.text, Vec::new(), nullable));
+        };
+        Ok(TypeExpr::TypeVariable(id, nullable))
     }
 
     /// Parse an optional `<...>` parameter list, consuming both angle brackets.
@@ -224,6 +220,11 @@ impl<'a> Parser<'a> {
     }
 }
 
+/// Recognize a case-sensitive `any` prefix followed by a `u32` variable ID.
+fn parse_type_variable_id(name: &str) -> Option<u32> {
+    name.strip_prefix("any")?.parse().ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -284,6 +285,21 @@ mod tests {
             parse("FuNc?").unwrap(),
             TypeExpr::Simple("FuNc", vec![], true)
         );
+    }
+
+    #[test]
+    fn type_variable_ids_require_a_lowercase_prefix_and_fit_in_u32() {
+        for (name, expected) in [
+            ("any0", Some(0)),
+            ("any1", Some(1)),
+            ("any4294967295", Some(u32::MAX)),
+            ("any4294967296", None),
+            ("ANY1", None),
+            ("any", None),
+            ("anything", None),
+        ] {
+            assert_eq!(parse_type_variable_id(name), expected, "{name}");
+        }
     }
 
     #[test]
