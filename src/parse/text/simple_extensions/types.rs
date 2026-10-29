@@ -161,7 +161,7 @@ pub enum TypeKind {
         /// appear in the struct - hence the use of [`IndexMap`].
         fields: IndexMap<String, Type>,
     },
-    /// A function type: `func<P1, P2 -> R>`
+    /// A function type: `func<(P1, P2) -> R>`
     Func {
         /// Parameter types in declaration order
         parameters: Vec<Type>,
@@ -1633,6 +1633,25 @@ mod tests {
         assert!(parse_type("func<i32 -> i64>").is_concrete());
         assert!(!parse_type("func<any1 -> i64>").is_concrete());
         assert!(!parse_type("func<i32 -> any1>").is_concrete());
+    }
+
+    #[test]
+    fn test_function_parameter_can_be_a_function() {
+        assert_eq!(
+            parse_type("func<func<i32 -> i64> -> bool>"),
+            required_type(TypeKind::Func {
+                parameters: vec![parse_type("func<i32 -> i64>")],
+                return_type: Box::new(parse_type("bool")),
+            }),
+        );
+    }
+
+    #[test]
+    fn test_list_elements_can_be_functions() {
+        assert_eq!(
+            parse_type("list<func<i32 -> i64>>"),
+            Type::list(parse_type("func<i32 -> i64>"), false),
+        );
     }
 
     #[test]

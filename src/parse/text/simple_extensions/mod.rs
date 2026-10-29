@@ -23,11 +23,12 @@ mod numeric_expression;
 mod registry;
 mod scalar_functions;
 mod type_ast;
+mod type_parser;
+mod type_tokenizer;
 mod types;
 
 pub use extensions::SimpleExtensions;
 pub use file::ExtensionFile;
-pub use numeric_expression::NumericExpressionParseError;
 pub use registry::Registry;
 pub use scalar_functions::{
     Impl as ScalarFunctionImpl, NullabilityHandling, Options, ScalarFunction, VariadicBehavior,

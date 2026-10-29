@@ -116,8 +116,8 @@ pub struct Impl {
     pub nullability: NullabilityHandling,
     /// The return type, retaining variables and parameters within nested types.
     ///
-    /// Variables are not bound or resolved during parsing. Type derivation
-    /// expressions remain unsupported.
+    /// Variables are not bound or resolved during parsing. Addition in numeric
+    /// parameters is retained without evaluation; other derivations remain unsupported.
     pub return_type: Type,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
@@ -141,7 +141,14 @@ impl Impl {
                         "Type derivation expressions - issue #449".to_string(),
                     ));
                 }
-                let type_expr = TypeExpr::parse(&s)?;
+                let type_expr = match TypeExpr::parse(&s) {
+                    Err(TypeParseError::UnsupportedNumericExpression(_)) => {
+                        return Err(ScalarFunctionError::NotYetImplemented(
+                            "Numeric expressions in type parameters - issue #449".to_string(),
+                        ));
+                    }
+                    result => result?,
+                };
                 type_expr.visit_references(&mut |name| ctx.linked(name));
                 match Type::try_from(type_expr) {
                     Ok(expression) => expression,

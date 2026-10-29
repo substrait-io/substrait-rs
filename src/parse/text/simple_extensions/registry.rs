@@ -533,6 +533,24 @@ scalar_functions:
     }
 
     #[test]
+    fn test_numeric_subtraction_returns_are_still_skipped() {
+        for return_type in ["varchar<L - 1>", "decimal<P + 1 - 2, S>"] {
+            let raw = extension_with_custom_type_reference(
+                "extension:example.com:unsupported",
+                "unsupported",
+                return_type,
+                vec![],
+            );
+            let file = ExtensionFile::create(raw).unwrap();
+            assert!(
+                file.extension()
+                    .get_scalar_function("unsupported")
+                    .is_none()
+            );
+        }
+    }
+
+    #[test]
     fn test_numeric_expression_returns_are_retained() {
         for (return_type, expected) in [
             ("varchar<L + 1>", "varchar<L + 1>"),
