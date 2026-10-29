@@ -173,22 +173,28 @@ impl<'a> Parser<'a> {
         if !self.consume(TokenKind::OpenAngle) {
             return Ok(TypeExpr::Simple(name.text, Vec::new(), nullable));
         }
-        let grouped = self.consume(TokenKind::OpenParen);
-        if grouped && self.peek() == Some(TokenKind::CloseParen) {
-            return Err(self.error("a function parameter"));
-        }
-
-        let mut parameters = vec![self.parse_parameter()?];
-        while grouped && self.consume(TokenKind::Comma) {
-            parameters.push(self.parse_parameter()?);
-        }
-        if grouped {
-            self.expect(TokenKind::CloseParen)?;
-        }
+        let parameters = self.parse_function_parameters()?;
         self.expect(TokenKind::Arrow)?;
         let return_type = self.parse_type()?;
         self.expect(TokenKind::CloseAngle)?;
         Ok(TypeExpr::Func(parameters, Box::new(return_type), nullable))
+    }
+
+    /// Parse one function parameter or a nonempty parenthesized parameter list.
+    fn parse_function_parameters(&mut self) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
+        if !self.consume(TokenKind::OpenParen) {
+            return Ok(vec![self.parse_parameter()?]);
+        }
+        if self.peek() == Some(TokenKind::CloseParen) {
+            return Err(self.error("a function parameter"));
+        }
+
+        let mut parameters = vec![self.parse_parameter()?];
+        while self.consume(TokenKind::Comma) {
+            parameters.push(self.parse_parameter()?);
+        }
+        self.expect(TokenKind::CloseParen)?;
+        Ok(parameters)
     }
 
     /// Parse one integer literal or nested type, leaving its separator unconsumed.
