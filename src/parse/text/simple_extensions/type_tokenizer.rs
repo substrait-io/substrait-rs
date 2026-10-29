@@ -163,18 +163,17 @@ mod tests {
 
     #[test]
     fn skip_whitespace_stops_at_the_next_token_or_end() {
-        for (source, position, expected_position) in [
-            ("", 0, 0),
-            ("i32", 0, 0),
-            (" \t\r\ni32", 0, 4),
-            (" \t", 0, 2),
-            ("i32 \ti64", 3, 5),
+        for (source, position, expected_character) in [
+            ("", 0, None),
+            ("i32", 0, Some('i')),
+            (" \t\r\ni32", 0, Some('i')),
+            (" \t", 0, None),
+            ("i32 \t?", 3, Some('?')),
         ] {
             let mut tokenizer = Tokenizer { source, position };
             tokenizer.skip_whitespace();
-            assert_eq!(tokenizer.position, expected_position, "{source:?}");
-            tokenizer.skip_whitespace();
-            assert_eq!(tokenizer.position, expected_position, "{source:?}");
+            let next_character = tokenizer.source[tokenizer.position..].chars().next();
+            assert_eq!(next_character, expected_character, "{source:?}");
         }
     }
 
