@@ -1337,24 +1337,22 @@ mod tests {
         for source in [
             "P + S + 1",
             "P + (S + 1)",
-            "(P + S) + (1 + (T + 2))",
-            "L+1",
-            " $P + _S ",
+            "P + S + (1 + (T + 2))",
+            "$P + _S",
             "P + -2",
             "9223372036854775807 + 1",
         ] {
             let expression = parse_integer_expression(source).unwrap();
-            assert_eq!(
-                parse_integer_expression(&expression.to_string()).unwrap(),
-                expression,
-                "{source}"
-            );
+            assert_eq!(expression.to_string(), source);
         }
-        // Formatting adds spaces, so the output need not match the original input exactly.
-        assert_eq!(
-            parse_integer_expression("L+1").unwrap().to_string(),
-            "L + 1"
-        );
+    }
+
+    #[test]
+    fn integer_expression_display_normalizes_whitespace() {
+        for (source, expected) in [("L+1", "L + 1"), (" $P + _S ", "$P + _S")] {
+            let expression = parse_integer_expression(source).unwrap();
+            assert_eq!(expression.to_string(), expected, "{source}");
+        }
     }
 
     #[test]
