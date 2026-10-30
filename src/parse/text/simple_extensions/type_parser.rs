@@ -212,7 +212,9 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a type or numeric parameter, leaving its separator unconsumed.
-    /// Names followed by `+` begin numeric expressions; other names begin types.
+    ///
+    /// For `decimal<10, 2>`, the first call consumes only `10`, not the comma.
+    /// For `decimal<P + 1, S>`, it consumes the whole `P + 1` expression.
     fn parse_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
         match self.peek() {
             Some(
@@ -229,6 +231,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Preserve plain literals separately so built-in range validation still applies.
+    /// For example, `(10)` becomes an integer parameter, while `P + 1` stays an expression.
     fn parse_numeric_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
         match self.parse_integer_expression()? {
             IntegerParameter::Literal(value) => Ok(TypeExprParam::Integer(value)),
@@ -237,6 +240,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse left-associative addition, with parentheses handled by the operand rule.
+    /// For example, `P + S + 1` groups as `(P + S) + 1`, but `P + (S + 1)` does not.
     fn parse_integer_expression(&mut self) -> Result<IntegerParameter, TypeParseError> {
         let mut expression = if self.peek() == Some(TokenKind::Plus) {
             IntegerParameter::Literal(self.parse_integer_literal()?)
@@ -255,6 +259,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse one integer, parameter name, or parenthesized addition expression.
+    /// For `(P + 1) + S`, consume `(P + 1)` and leave the following `+` for the caller.
     fn parse_integer_operand(&mut self) -> Result<IntegerParameter, TypeParseError> {
         match self.peek() {
             Some(TokenKind::Integer | TokenKind::Minus) => {
@@ -275,6 +280,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Combine a sign with its digits, preserving the full `i64` range.
+    /// For example, `-9223372036854775808` is parsed as one value, including its sign.
     fn parse_integer_literal(&mut self) -> Result<i64, TypeParseError> {
         let start = self.tokens[self.index].position;
         if !self.consume(TokenKind::Plus) {
