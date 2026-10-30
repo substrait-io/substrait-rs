@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Tokenize type syntax into borrowed text and byte positions.
-//! Tokens retain their source text and positions for grammar rules to consume.
+//! Grammar rules live separately in `type_parser.rs`.
 
 use super::type_ast::TypeParseError;
 
@@ -42,6 +42,40 @@ pub(super) enum TokenKind {
     Plus,
     /// `-`, currently accepted as a negative literal's sign; distinct from `->`.
     Minus,
+}
+
+impl TokenKind {
+    /// Human-readable spelling or category for a required token.
+    pub(super) fn description(self) -> &'static str {
+        match self {
+            Self::Identifier => "an identifier",
+            Self::Func => "'func'",
+            Self::List => "'list'",
+            Self::Decimal => "'decimal'",
+            Self::Any => "'any'",
+            Self::AnyVar => "a numbered type variable",
+            Self::Integer => "an integer literal",
+            Self::UserDefined => "'u!'",
+            Self::Arrow => "'->'",
+            Self::OpenAngle => "'<'",
+            Self::CloseAngle => "'>'",
+            Self::OpenParen => "'('",
+            Self::CloseParen => "')'",
+            Self::Comma => "','",
+            Self::QuestionMark => "'?'",
+            Self::Plus => "'+'",
+            Self::Minus => "'-'",
+        }
+    }
+
+    /// Whether this token can supply a type or parameter name, including after `u!`.
+    /// Recognizing a keyword does not validate or normalize the resulting type.
+    pub(super) fn is_name(self) -> bool {
+        matches!(
+            self,
+            Self::Identifier | Self::Func | Self::List | Self::Decimal | Self::Any | Self::AnyVar
+        )
+    }
 }
 
 /// A token with its original spelling and byte offset, both retained for the parser.
