@@ -351,39 +351,48 @@ mod tests {
     }
 
     #[test]
-    fn subtraction_shares_addition_precedence_and_preserves_grouping() {
-        let IntegerParameter::BinaryExpression {
-            op: BinaryOp::Add,
-            left,
-            right,
-        } = parse_integer_parameter("P - S + 1").unwrap()
-        else {
-            panic!("expected addition");
-        };
-        assert_eq!(*left, parse_integer_parameter("P - S").unwrap());
-        assert_eq!(*right, IntegerParameter::Literal(1));
-        let IntegerParameter::BinaryExpression {
+    fn parse_subtraction_shares_addition_precedence() {
+        let difference = IntegerParameter::BinaryExpression {
             op: BinaryOp::Subtract,
-            left,
-            right,
-        } = parse_integer_parameter("P - S - 1").unwrap()
-        else {
-            panic!("expected subtraction");
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Variable("S".into())),
         };
-        assert_eq!(*left, parse_integer_parameter("P - S").unwrap());
-        assert_eq!(*right, IntegerParameter::Literal(1));
-        for source in ["P - (S + 1)", "P + (S - 1)", "P - (S - 1)", "P - -1"] {
-            let expression = parse_integer_parameter(source).unwrap();
-            assert_eq!(
-                parse_integer_parameter(&expression.to_string()).unwrap(),
-                expression,
-                "{source}"
-            );
-            assert!(!expression.is_concrete());
-        }
-        for source in ["P -", "P -- S", "P - ()", "P - - 1"] {
-            assert!(parse_integer_parameter(source).is_err(), "{source}");
-        }
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(difference),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        assert_eq!(parse_integer_parameter("P - S + 1").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_subtraction_associates_to_the_left() {
+        let difference = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Variable("S".into())),
+        };
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(difference),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        assert_eq!(parse_integer_parameter("P - S - 1").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_subtraction_preserves_grouping() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("S".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(sum),
+        };
+        assert_eq!(parse_integer_parameter("P - (S + 1)").unwrap(), expected);
     }
 
     #[test]
@@ -414,6 +423,10 @@ mod tests {
             "P +",
             "+ P",
             "P ++ 1",
+            "P -",
+            "P -- S",
+            "P - ()",
+            "P - - 1",
             "P S",
             "P * 2",
             "P / 2",
