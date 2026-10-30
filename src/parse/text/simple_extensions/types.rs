@@ -292,13 +292,15 @@ pub enum IntegerParameter {
     Variable(String),
     /// Addition of two integer expressions, retained without evaluation.
     Add(Box<Self>, Box<Self>),
+    /// Subtraction of two integer expressions, retained without evaluation.
+    Subtract(Box<Self>, Box<Self>),
 }
 
 impl IntegerParameter {
-    /// Parse addition of integer literals and parameter names, such as `L + 1`.
+    /// Parse addition and subtraction of integer literals and parameter names.
     ///
-    /// Addition associates to the left unless grouped with parentheses, as in
-    /// `P + (S + 1)`. Other operators and calls are not supported yet.
+    /// Both operators associate to the left unless grouped with parentheses, as in
+    /// `P - (S + 1)`. Other operators and calls are not supported yet.
     /// No operation is evaluated.
     pub fn parse(source: &str) -> Result<Self, TypeParseError> {
         super::type_parser::parse_integer_parameter(source)
@@ -315,11 +317,16 @@ impl fmt::Display for IntegerParameter {
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
-            Self::Add(left, right) => {
-                if matches!(**right, Self::Add(..)) {
-                    write!(f, "{left} + ({right})")
+            Self::Add(left, right) | Self::Subtract(left, right) => {
+                let operator = if matches!(self, Self::Add(..)) {
+                    "+"
                 } else {
-                    write!(f, "{left} + {right}")
+                    "-"
+                };
+                if matches!(**right, Self::Add(..) | Self::Subtract(..)) {
+                    write!(f, "{left} {operator} ({right})")
+                } else {
+                    write!(f, "{left} {operator} {right}")
                 }
             }
         }
@@ -1126,7 +1133,9 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
     match precision {
         IntegerParameter::Literal(precision) => *precision as i32,
         // An unresolved precision must eventually satisfy the decimal precision limit.
-        IntegerParameter::Variable(_) | IntegerParameter::Add(..) => 38,
+        IntegerParameter::Variable(_)
+        | IntegerParameter::Add(..)
+        | IntegerParameter::Subtract(..) => 38,
     }
 }
 

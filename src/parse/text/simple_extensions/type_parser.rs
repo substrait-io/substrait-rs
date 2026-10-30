@@ -26,7 +26,7 @@ pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
     Ok(expression)
 }
 
-/// Parse a complete numeric parameter without binding names or evaluating addition.
+/// Parse a complete numeric parameter without binding names or evaluating arithmetic.
 pub(super) fn parse_integer_parameter(source: &str) -> Result<IntegerParameter, TypeParseError> {
     let mut parser = Parser::new(source)?;
     let expression = parser.parse_integer_expression()?;
@@ -211,13 +211,16 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a type or numeric parameter, leaving its separator unconsumed.
-    /// Names followed by `+` begin numeric expressions; other names begin types.
+    /// Names followed by `+` or `-` begin numeric expressions; other names begin types.
     fn parse_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
         match self.peek() {
             Some(
                 TokenKind::Integer | TokenKind::Plus | TokenKind::Minus | TokenKind::OpenParen,
             ) => self.parse_numeric_parameter(),
-            Some(kind) if kind.is_name() && self.peek_next() == Some(TokenKind::Plus) => {
+            Some(kind)
+                if kind.is_name()
+                    && matches!(self.peek_next(), Some(TokenKind::Plus | TokenKind::Minus)) =>
+            {
                 self.parse_numeric_parameter()
             }
             Some(TokenKind::Comma | TokenKind::CloseAngle | TokenKind::CloseParen) | None => {
@@ -235,21 +238,25 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parse left-associative addition, with parentheses handled by the operand rule.
+    /// Parse left-associative addition and subtraction, with grouped operands.
     fn parse_integer_expression(&mut self) -> Result<IntegerParameter, TypeParseError> {
         let mut expression = if self.peek() == Some(TokenKind::Plus) {
             IntegerParameter::Literal(self.parse_integer_literal()?)
         } else {
             self.parse_integer_operand()?
         };
-        while self.consume(TokenKind::Plus) {
+        while let Some(operator @ (TokenKind::Plus | TokenKind::Minus)) = self.peek() {
+            self.index += 1;
             let right = self.parse_integer_operand()?;
-            expression = IntegerParameter::Add(Box::new(expression), Box::new(right));
+            expression = match operator {
+                TokenKind::Plus => IntegerParameter::Add(Box::new(expression), Box::new(right)),
+                _ => IntegerParameter::Subtract(Box::new(expression), Box::new(right)),
+            };
         }
         Ok(expression)
     }
 
-    /// Parse one integer, parameter name, or parenthesized addition expression.
+    /// Parse one integer, parameter name, or parenthesized arithmetic expression.
     fn parse_integer_operand(&mut self) -> Result<IntegerParameter, TypeParseError> {
         match self.peek() {
             Some(TokenKind::Integer | TokenKind::Minus) => {
@@ -310,6 +317,32 @@ mod tests {
     }
 
     #[test]
+    fn subtraction_shares_addition_precedence_and_preserves_grouping() {
+        let IntegerParameter::Add(left, right) = parse_integer("P - S + 1") else {
+            panic!("expected addition");
+        };
+        assert_eq!(*left, parse_integer("P - S"));
+        assert_eq!(*right, IntegerParameter::Literal(1));
+        let IntegerParameter::Subtract(left, right) = parse_integer("P - S - 1") else {
+            panic!("expected subtraction");
+        };
+        assert_eq!(*left, parse_integer("P - S"));
+        assert_eq!(*right, IntegerParameter::Literal(1));
+        for source in ["P - (S + 1)", "P + (S - 1)", "P - (S - 1)", "P - -1"] {
+            let expression = parse_integer(source);
+            assert_eq!(
+                parse_integer(&expression.to_string()),
+                expression,
+                "{source}"
+            );
+            assert!(!expression.is_concrete());
+        }
+        for source in ["P -", "P -- S", "P - ()", "P - - 1"] {
+            assert!(parse_integer_parameter(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
     fn parentheses_preserve_grouping() {
         let IntegerParameter::Add(left, right) = parse_integer("P + (S + 1)") else {
             panic!("expected addition");
@@ -328,7 +361,6 @@ mod tests {
             "+ P",
             "P ++ 1",
             "P S",
-            "P - 1",
             "P * 2",
             "P / 2",
             "min(P, S)",
