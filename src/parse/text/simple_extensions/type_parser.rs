@@ -372,39 +372,48 @@ mod tests {
     }
 
     #[test]
-    fn subtraction_shares_addition_precedence_and_preserves_grouping() {
-        let IntegerParameter::BinaryExpression {
-            op: BinaryOp::Add,
-            left,
-            right,
-        } = parse_integer_parameter("P - S + 1").unwrap()
-        else {
-            panic!("expected addition");
-        };
-        assert_eq!(*left, parse_integer_parameter("P - S").unwrap());
-        assert_eq!(*right, IntegerParameter::Literal(1));
-        let IntegerParameter::BinaryExpression {
+    fn parse_subtraction_shares_addition_precedence() {
+        let difference = IntegerParameter::BinaryExpression {
             op: BinaryOp::Subtract,
-            left,
-            right,
-        } = parse_integer_parameter("P - S - 1").unwrap()
-        else {
-            panic!("expected subtraction");
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Variable("S".into())),
         };
-        assert_eq!(*left, parse_integer_parameter("P - S").unwrap());
-        assert_eq!(*right, IntegerParameter::Literal(1));
-        for source in ["P - (S + 1)", "P + (S - 1)", "P - (S - 1)", "P - -1"] {
-            let expression = parse_integer_parameter(source).unwrap();
-            assert_eq!(
-                parse_integer_parameter(&expression.to_string()).unwrap(),
-                expression,
-                "{source}"
-            );
-            assert!(!expression.is_concrete());
-        }
-        for source in ["P -", "P -- S", "P - ()", "P - - 1"] {
-            assert!(parse_integer_parameter(source).is_err(), "{source}");
-        }
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(difference),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        assert_eq!(parse_integer_parameter("P - S + 1").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_subtraction_associates_to_the_left() {
+        let difference = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Variable("S".into())),
+        };
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(difference),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        assert_eq!(parse_integer_parameter("P - S - 1").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_subtraction_preserves_grouping() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("S".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(sum),
+        };
+        assert_eq!(parse_integer_parameter("P - (S + 1)").unwrap(), expected);
     }
 
     #[test]
@@ -429,38 +438,50 @@ mod tests {
     }
 
     #[test]
-    fn calls_retain_names_and_ordered_arguments_without_evaluation() {
-        let IntegerParameter::Call { name, arguments } =
-            parse_integer_parameter("max(S1, S2 + 1)").unwrap()
-        else {
-            panic!("expected call");
+    fn parse_calls_retain_names_and_ordered_arguments() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("S2".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
         };
-        assert_eq!(name, "max");
+        let expected = IntegerParameter::Call {
+            name: "max".into(),
+            arguments: vec![IntegerParameter::Variable("S1".into()), sum],
+        };
         assert_eq!(
-            arguments,
-            vec![
-                parse_integer_parameter("S1").unwrap(),
-                parse_integer_parameter("S2 + 1").unwrap()
-            ]
+            parse_integer_parameter("max(S1, S2 + 1)").unwrap(),
+            expected
         );
-        for source in [
-            "min(P, 38)",
-            "max(S1, S2)",
-            "integer_parameter(precision)",
-            "min(max(P1 - S1, P2 - S2) + 1, 38)",
-            "custom()",
-        ] {
-            let expression = parse_integer_parameter(source).unwrap();
-            assert_eq!(
-                parse_integer_parameter(&expression.to_string()).unwrap(),
-                expression,
-                "{source}"
-            );
-            assert!(!expression.is_concrete());
-        }
-        for source in ["min(", "min(P,)", "min(,P)", "min(P S)", "min(P,,S)"] {
-            assert!(parse_integer_parameter(source).is_err(), "{source}");
-        }
+    }
+
+    #[test]
+    fn parse_calls_retain_nested_calls() {
+        let maximum = IntegerParameter::Call {
+            name: "max".into(),
+            arguments: vec![
+                IntegerParameter::Variable("P".into()),
+                IntegerParameter::Literal(38),
+            ],
+        };
+        let expected = IntegerParameter::Call {
+            name: "min".into(),
+            arguments: vec![maximum, IntegerParameter::Literal(10)],
+        };
+        assert_eq!(
+            parse_integer_parameter("min(max(P, 38), 10)").unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn parse_calls_allow_empty_argument_lists() {
+        assert_eq!(
+            parse_integer_parameter("custom()").unwrap(),
+            IntegerParameter::Call {
+                name: "custom".into(),
+                arguments: vec![],
+            }
+        );
     }
 
     #[test]
@@ -470,7 +491,16 @@ mod tests {
             "P +",
             "+ P",
             "P ++ 1",
+            "P -",
+            "P -- S",
+            "P - ()",
+            "P - - 1",
             "P S",
+            "min(",
+            "min(P,)",
+            "min(,P)",
+            "min(P S)",
+            "min(P,,S)",
             "P * 2",
             "P / 2",
             "()",

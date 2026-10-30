@@ -1359,6 +1359,15 @@ mod tests {
         for source in [
             "P + S + 1",
             "P + (S + 1)",
+            "P - (S + 1)",
+            "P + (S - 1)",
+            "P - (S - 1)",
+            "P - -1",
+            "min(P, 38)",
+            "max(S1, S2)",
+            "integer_parameter(precision)",
+            "min(max(P1 - S1, P2 - S2) + 1, 38)",
+            "custom()",
             "P + S + (1 + (T + 2))",
             "$P + _S",
             "P + -2",
@@ -1430,6 +1439,7 @@ mod tests {
         for source in [
             "varchar<L + 1>",
             "varchar<1 + 2>",
+            "decimal<min(P, 38), 0>",
             "list<decimal<P + 1, S>>",
             "func<varchar<L + 1> -> decimal<P, S + 1>>",
             "u!custom<P + 1>",
