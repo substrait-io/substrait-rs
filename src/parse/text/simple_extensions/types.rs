@@ -288,12 +288,15 @@ impl fmt::Display for TypeKind {
 pub enum BinaryOp {
     /// Integer addition.
     Add,
+    /// Integer subtraction.
+    Subtract,
 }
 
 impl fmt::Display for BinaryOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Add => f.write_str("+"),
+            Self::Subtract => f.write_str("-"),
         }
     }
 }
@@ -1337,6 +1340,10 @@ mod tests {
         for source in [
             "P + S + 1",
             "P + (S + 1)",
+            "P - (S + 1)",
+            "P + (S - 1)",
+            "P - (S - 1)",
+            "P - -1",
             "P + S + (1 + (T + 2))",
             "$P + _S",
             "P + -2",
