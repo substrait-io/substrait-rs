@@ -1439,6 +1439,48 @@ mod tests {
     }
 
     #[test]
+    fn integer_expression_display() {
+        let expression = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        assert_eq!(expression.to_string(), "P + 1");
+    }
+
+    #[test]
+    fn integer_expression_display_preserves_grouping() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let left_grouped = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(sum.clone()),
+            right: Box::new(IntegerParameter::Variable("S".into())),
+        };
+        let right_grouped = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("S".into())),
+            right: Box::new(sum),
+        };
+        assert_eq!(left_grouped.to_string(), "P + 1 + S");
+        assert_eq!(right_grouped.to_string(), "S + (P + 1)");
+    }
+
+    #[test]
+    fn integer_expressions_are_not_concrete_even_with_literal_operands() {
+        let expression = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Literal(1)),
+            right: Box::new(IntegerParameter::Literal(2)),
+        };
+        assert!(!expression.is_concrete());
+        assert!(IntegerParameter::Literal(3).is_concrete());
+    }
+
+    #[test]
     fn test_literal_and_symbolic_lengths_share_a_type_kind() {
         for (length, expected, is_concrete) in [
             (IntegerParameter::Literal(20), "varchar<20>", true),
