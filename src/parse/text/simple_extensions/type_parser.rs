@@ -249,8 +249,7 @@ impl<'a> Parser<'a> {
 
     /// Parse a type or numeric parameter, leaving its separator unconsumed.
     ///
-    /// For `decimal<10, 2>`, the first call consumes only `10`, not the comma.
-    /// For `decimal<P + 1, S>`, it consumes the whole `P + 1` expression.
+    /// For `decimal<P + 1, S>`, the first call consumes only `P + 1`, not the comma.
     fn parse_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
         match self.peek() {
             Some(
@@ -752,6 +751,77 @@ mod tests {
     }
 
     #[test]
+    fn numeric_parameter_lookahead_recognizes_expressions() {
+        for (source, expected) in [
+            ("L + 1", true),
+            ("max(P, S)", true),
+            ("L > 10", true),
+            ("L>", false),
+        ] {
+            let parser = Parser::new(source).unwrap();
+            assert_eq!(
+                parser.name_begins_numeric_expression(),
+                expected,
+                "{source}"
+            );
+        }
+    }
+
+    #[test]
+    fn grouped_numeric_literals_remain_integers() {
+        let mut parser = Parser::new("(10), S").unwrap();
+        assert_eq!(
+            parser.parse_numeric_parameter().unwrap(),
+            TypeExprParam::Integer(10)
+        );
+        assert_eq!(parser.peek(), Some(TokenKind::Comma));
+    }
+
+    #[test]
+    fn numeric_parameters_retain_addition() {
+        let mut parser = Parser::new("P + 1, S").unwrap();
+        let TypeExprParam::Expression(expression) = parser.parse_numeric_parameter().unwrap()
+        else {
+            panic!("expected a numeric expression");
+        };
+        assert_eq!(expression.to_string(), "P + 1");
+        assert_eq!(parser.peek(), Some(TokenKind::Comma));
+    }
+
+    #[test]
+    fn integer_sums_stop_before_comparisons() {
+        let mut parser = Parser::new("P - S + 1 > 38").unwrap();
+        assert_eq!(parser.parse_integer_sum().unwrap().to_string(), "P - S + 1");
+        assert_eq!(parser.peek(), Some(TokenKind::CloseAngle));
+    }
+
+    #[test]
+    fn integer_comparisons_leave_the_closing_type_bracket() {
+        for (source, expected) in [("P + 1 > S>", "P + 1 > S"), ("P + 1>", "P + 1")] {
+            let mut parser = Parser::new(source).unwrap();
+            assert_eq!(
+                parser.parse_integer_comparison().unwrap().to_string(),
+                expected,
+                "{source}"
+            );
+            assert_eq!(parser.peek(), Some(TokenKind::CloseAngle), "{source}");
+        }
+    }
+
+    #[test]
+    fn integer_operands_leave_the_following_operator() {
+        for (source, expected) in [("(P + 1) + S", "P + 1"), ("max(P, S) + 1", "max(P, S)")] {
+            let mut parser = Parser::new(source).unwrap();
+            assert_eq!(
+                parser.parse_integer_operand().unwrap().to_string(),
+                expected,
+                "{source}"
+            );
+            assert_eq!(parser.peek(), Some(TokenKind::Plus), "{source}");
+        }
+    }
+
+    #[test]
     fn integer_expressions_leave_the_separator_for_the_caller() {
         for (source, separator) in [
             ("P + (S + 1), i32", TokenKind::Comma),
@@ -779,7 +849,7 @@ mod tests {
     }
 
     #[test]
-    fn integer_parameters_support_signs_and_the_full_i64_range() {
+    fn integer_literals_support_signs_and_the_full_i64_range() {
         for (source, expected) in [
             ("0,", 0),
             ("+10,", 10),
@@ -790,8 +860,8 @@ mod tests {
         ] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
-                parser.parse_parameter().unwrap(),
-                TypeExprParam::Integer(expected),
+                parser.parse_integer_literal().unwrap(),
+                expected,
                 "{source}"
             );
             assert_eq!(parser.peek(), Some(TokenKind::Comma), "{source}");
