@@ -17,6 +17,7 @@ use super::type_tokenizer::{Token, TokenKind, tokenize};
 use super::types::{BinaryOp, IntegerParameter};
 
 /// Parse one complete type, rejecting any tokens left after it.
+///
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
 pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
     let mut parser = Parser::new(source)?;
@@ -39,6 +40,7 @@ pub(super) fn parse_integer_parameter(source: &str) -> Result<IntegerParameter, 
 }
 
 /// Parse ordered numeric assignments and a final type, or just a type.
+///
 /// For `P = min(L, 38)\ndecimal<P, 0>`, retain the assignment followed by `decimal<P, 0>`.
 pub(super) fn parse_return_type(source: &str) -> Result<ReturnTypeExpr<'_>, TypeParseError> {
     let mut parser = Parser::new(source)?;
@@ -265,6 +267,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Distinguish a numeric expression starting with a name from a type name.
+    ///
     /// For `L > 10`, `>` starts a comparison; in `varchar<L>`, it closes the type.
     fn name_begins_numeric_expression(&self) -> bool {
         match self.peek_next() {
@@ -278,6 +281,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Preserve plain literals separately so built-in range validation still applies.
+    ///
     /// For example, `(10)` becomes an integer parameter, while `P + 1` stays an expression.
     fn parse_numeric_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
         match self.parse_integer_expression()? {
@@ -287,6 +291,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a right-associative ternary, with comparison and arithmetic binding tighter.
+    ///
     /// For `P > 38 ? 38 : P + 1`, the condition is `P > 38` and the else branch is `P + 1`.
     fn parse_integer_expression(&mut self) -> Result<IntegerParameter, TypeParseError> {
         let condition = self.parse_integer_comparison()?;
@@ -304,6 +309,7 @@ impl<'a> Parser<'a> {
     }
 
     /// A `>` followed by an operand is a comparison; otherwise it closes a type.
+    ///
     /// For `P + 1 > S`, compare `P + 1` with `S`; for `varchar<P + 1>`, leave `>` unconsumed.
     fn parse_integer_comparison(&mut self) -> Result<IntegerParameter, TypeParseError> {
         let mut expression = self.parse_integer_sum()?;
@@ -330,6 +336,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse left-associative addition and subtraction, with grouped operands.
+    ///
     /// For example, `P - S + 1` groups as `(P - S) + 1`, not `P - (S + 1)`.
     fn parse_integer_sum(&mut self) -> Result<IntegerParameter, TypeParseError> {
         let mut expression = if self.peek() == Some(TokenKind::Plus) {
@@ -360,6 +367,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse one integer, parameter name, call, or parenthesized arithmetic expression.
+    ///
     /// For `(P + 1) + S`, consume `(P + 1)` and leave the following `+` for the caller.
     /// For `max(P, S) + 1`, consume the whole call, including its arguments and parentheses.
     fn parse_integer_operand(&mut self) -> Result<IntegerParameter, TypeParseError> {
@@ -399,6 +407,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Combine a sign with its digits, preserving the full `i64` range.
+    ///
     /// For example, `-9223372036854775808` is parsed as one value, including its sign.
     fn parse_integer_literal(&mut self) -> Result<i64, TypeParseError> {
         let start = self.tokens[self.index].position;
