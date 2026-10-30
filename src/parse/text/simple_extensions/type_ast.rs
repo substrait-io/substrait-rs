@@ -228,7 +228,9 @@ mod tests {
         assert_eq!(parameters.len(), 2);
         assert_eq!(
             parameters[0],
-            TypeExprParam::Expression(IntegerParameter::parse("P1 + P2").unwrap())
+            TypeExprParam::Expression(
+                super::super::type_parser::parse_integer_parameter("P1 + P2").unwrap()
+            )
         );
         assert_eq!(
             parameters[1],

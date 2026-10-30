@@ -317,15 +317,6 @@ pub enum IntegerParameter {
 }
 
 impl IntegerParameter {
-    /// Parse addition of integer literals and parameter names, such as `L + 1`.
-    ///
-    /// Addition associates to the left unless grouped with parentheses, as in
-    /// `P + (S + 1)`. Other operators and calls are not supported yet.
-    /// No operation is evaluated.
-    pub fn parse(source: &str) -> Result<Self, TypeParseError> {
-        super::type_parser::parse_integer_parameter(source)
-    }
-
     /// Returns whether this parameter is a literal rather than an unresolved expression.
     pub fn is_concrete(&self) -> bool {
         matches!(self, Self::Literal(_))
@@ -1305,6 +1296,7 @@ impl<'a> TryFrom<TypeExpr<'a>> for Type {
 #[cfg(test)]
 mod tests {
     use super::super::extensions::TypeContext;
+    use super::super::type_parser::parse_integer_parameter as parse_integer_expression;
     use super::*;
     use crate::parse::text::simple_extensions::TypeExpr;
     use crate::parse::text::simple_extensions::argument::EnumOptions as ParsedEnumOptions;
@@ -1351,14 +1343,17 @@ mod tests {
             "P + -2",
             "9223372036854775807 + 1",
         ] {
-            let expression = IntegerParameter::parse(source).unwrap();
+            let expression = parse_integer_expression(source).unwrap();
             assert_eq!(
-                IntegerParameter::parse(&expression.to_string()).unwrap(),
+                parse_integer_expression(&expression.to_string()).unwrap(),
                 expression,
                 "{source}"
             );
         }
-        assert_eq!(IntegerParameter::parse("L+1").unwrap().to_string(), "L + 1");
+        assert_eq!(
+            parse_integer_expression("L+1").unwrap().to_string(),
+            "L + 1"
+        );
     }
 
     #[test]
