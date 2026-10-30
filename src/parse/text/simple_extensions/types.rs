@@ -1336,7 +1336,7 @@ mod tests {
     }
 
     #[test]
-    fn display_preserves_parsed_expressions() {
+    fn integer_expression_display_roundtrips() {
         for source in [
             "P + S + 1",
             "P + (S + 1)",
