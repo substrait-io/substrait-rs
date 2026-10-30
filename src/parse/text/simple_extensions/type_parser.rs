@@ -13,14 +13,27 @@
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
 use super::type_tokenizer::{Token, TokenKind, tokenize};
+use super::types::{BinaryOp, IntegerParameter};
 
 /// Parse one complete type, rejecting any tokens left after it.
+///
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
 pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
     let mut parser = Parser::new(source)?;
     let expression = parser.parse_type()?;
     if parser.peek().is_some() {
         return Err(parser.error("end of type"));
+    }
+    Ok(expression)
+}
+
+/// Parse a standalone numeric expression for tests, rejecting trailing tokens.
+#[cfg(test)]
+pub(super) fn parse_integer_parameter(source: &str) -> Result<IntegerParameter, TypeParseError> {
+    let mut parser = Parser::new(source)?;
+    let expression = parser.parse_integer_expression()?;
+    if parser.peek().is_some() {
+        return Err(parser.error("end of numeric expression"));
     }
     Ok(expression)
 }
@@ -44,6 +57,11 @@ impl<'a> Parser<'a> {
 
     fn peek(&self) -> Option<TokenKind> {
         self.tokens.get(self.index).map(|token| token.kind)
+    }
+
+    /// Look one token beyond `peek()` without consuming either token.
+    fn peek_next(&self) -> Option<TokenKind> {
+        self.tokens.get(self.index + 1).map(|token| token.kind)
     }
 
     fn error(&self, expected: &'static str) -> TypeParseError {
@@ -195,33 +213,97 @@ impl<'a> Parser<'a> {
         Ok(parameters)
     }
 
-    /// Parse one integer literal or nested type, leaving its separator unconsumed.
+    /// Parse a type or numeric parameter, leaving its separator unconsumed.
     ///
-    /// For `decimal<10, 2>`, the first call consumes only `10`, not the comma.
-    /// A sign is combined with its digits here, allowing the full `i64` range
-    /// without making `-` part of every integer token.
+    /// For `decimal<P + 1, S>`, the first call consumes only `P + 1`, not the comma.
     fn parse_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
         match self.peek() {
-            Some(TokenKind::Integer | TokenKind::Plus | TokenKind::Minus) => {
-                let start = self.tokens[self.index].position;
-                if !self.consume(TokenKind::Plus) {
-                    self.consume(TokenKind::Minus);
-                }
-                let token = self.expect(TokenKind::Integer)?;
-                let end = token.position + token.text.len();
-                let value = self.source[start..end].parse().map_err(|_| {
-                    TypeParseError::UnexpectedToken {
-                        position: start,
-                        expected: "an i64 integer literal",
-                    }
-                })?;
-                Ok(TypeExprParam::Integer(value))
+            Some(
+                TokenKind::Integer | TokenKind::Plus | TokenKind::Minus | TokenKind::OpenParen,
+            ) => self.parse_numeric_parameter(),
+            Some(kind) if kind.is_name() && self.peek_next() == Some(TokenKind::Plus) => {
+                self.parse_numeric_parameter()
             }
             Some(TokenKind::Comma | TokenKind::CloseAngle | TokenKind::CloseParen) | None => {
                 Err(TypeParseError::EmptyParameter)
             }
             _ => Ok(TypeExprParam::Type(self.parse_type()?)),
         }
+    }
+
+    /// Preserve plain literals separately so built-in range validation still applies.
+    ///
+    /// For example, `(10)` becomes an integer parameter, while `P + 1` stays an expression.
+    fn parse_numeric_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
+        match self.parse_integer_expression()? {
+            IntegerParameter::Literal(value) => Ok(TypeExprParam::Integer(value)),
+            expression => Ok(TypeExprParam::Expression(expression)),
+        }
+    }
+
+    /// Parse left-associative addition, with parentheses handled by the operand rule.
+    ///
+    /// For example, `P + S + 1` groups as `(P + S) + 1`, but `P + (S + 1)` does not.
+    fn parse_integer_expression(&mut self) -> Result<IntegerParameter, TypeParseError> {
+        let mut expression = if self.peek() == Some(TokenKind::Plus) {
+            IntegerParameter::Literal(self.parse_integer_literal()?)
+        } else {
+            self.parse_integer_operand()?
+        };
+        while self.consume(TokenKind::Plus) {
+            let right = self.parse_integer_operand()?;
+            expression = IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(expression),
+                right: Box::new(right),
+            };
+        }
+        Ok(expression)
+    }
+
+    /// Parse one integer, parameter name, or parenthesized addition expression.
+    ///
+    /// For `(P + 1) + S`, consume `(P + 1)` and leave the following `+` for the caller.
+    fn parse_integer_operand(&mut self) -> Result<IntegerParameter, TypeParseError> {
+        match self.peek() {
+            Some(TokenKind::Integer | TokenKind::Minus) => {
+                Ok(IntegerParameter::Literal(self.parse_integer_literal()?))
+            }
+            Some(TokenKind::OpenParen) => {
+                self.expect(TokenKind::OpenParen)?;
+                let expression = self.parse_integer_expression()?;
+                self.expect(TokenKind::CloseParen)?;
+                Ok(expression)
+            }
+            Some(TokenKind::AnyVar)
+                if parse_type_variable_id(self.tokens[self.index].text).is_some() =>
+            {
+                Err(self.error("a parameter name, not a numbered type variable"))
+            }
+            Some(kind) if kind.is_name() => {
+                let name = self.expect_name()?;
+                Ok(IntegerParameter::Variable(name.text.to_string()))
+            }
+            _ => Err(self.error("an integer literal, parameter name, or '('")),
+        }
+    }
+
+    /// Combine a sign with its digits, preserving the full `i64` range.
+    ///
+    /// For example, `-9223372036854775808` is parsed as one value, including its sign.
+    fn parse_integer_literal(&mut self) -> Result<i64, TypeParseError> {
+        let start = self.tokens[self.index].position;
+        if !self.consume(TokenKind::Plus) {
+            self.consume(TokenKind::Minus);
+        }
+        let token = self.expect(TokenKind::Integer)?;
+        let end = token.position + token.text.len();
+        self.source[start..end]
+            .parse()
+            .map_err(|_| TypeParseError::UnexpectedToken {
+                position: start,
+                expected: "an i64 integer literal",
+            })
     }
 }
 
@@ -233,6 +315,115 @@ fn parse_type_variable_id(name: &str) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn addition_retains_operands_and_associates_to_the_left() {
+        let IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = parse_integer_parameter("P + S + 1").unwrap()
+        else {
+            panic!("expected addition");
+        };
+        assert_eq!(
+            *left,
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::Variable("P".into())),
+                right: Box::new(IntegerParameter::Variable("S".into())),
+            }
+        );
+        assert_eq!(*right, IntegerParameter::Literal(1));
+        assert_eq!(
+            parse_integer_parameter("P").unwrap(),
+            IntegerParameter::Variable("P".into())
+        );
+    }
+
+    #[test]
+    fn parentheses_preserve_grouping() {
+        let IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = parse_integer_parameter("P + (S + 1)").unwrap()
+        else {
+            panic!("expected addition");
+        };
+        assert_eq!(*left, IntegerParameter::Variable("P".into()));
+        assert_eq!(
+            *right,
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::Variable("S".into())),
+                right: Box::new(IntegerParameter::Literal(1)),
+            }
+        );
+    }
+
+    #[test]
+    fn parse_numeric_parameters_reject_numbered_type_variables() {
+        for source in [
+            "decimal<any1 + 1, S>",
+            "decimal<P + any1, S>",
+            "decimal<(any1), S>",
+            "decimal<P + (any1 + 1), S>",
+            "decimal<any0 + 1, S>",
+            "decimal<any4294967295 + 1, S>",
+        ] {
+            assert!(parse(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
+    fn parse_integer_expressions_preserve_type_variable_name_fallbacks() {
+        for name in ["Any1", "any4294967296"] {
+            assert_eq!(
+                parse_integer_parameter(&format!("{name} + 1")).unwrap(),
+                IntegerParameter::BinaryExpression {
+                    op: BinaryOp::Add,
+                    left: Box::new(IntegerParameter::Variable(name.into())),
+                    right: Box::new(IntegerParameter::Literal(1)),
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_or_unsupported_expressions() {
+        for source in [
+            "",
+            "P +",
+            "+ P",
+            "P ++ 1",
+            "P S",
+            "P - 1",
+            "P * 2",
+            "P / 2",
+            "min(P, S)",
+            "max(P, S)",
+            "()",
+            "(P + 1",
+            "P + 1)",
+            "P + ()",
+            "(P)(S)",
+            "(P +)",
+            "P > S",
+            "P ? S : 1",
+            "9223372036854775808",
+            "@ + 1",
+        ] {
+            assert!(parse_integer_parameter(source).is_err(), "{source}");
+        }
+        assert_eq!(
+            parse_integer_parameter("P +"),
+            Err(TypeParseError::UnexpectedToken {
+                position: 3,
+                expected: "an integer literal, parameter name, or '('",
+            })
+        );
+    }
 
     #[test]
     fn function_parameters_leave_the_arrow_for_the_caller() {
@@ -298,7 +489,76 @@ mod tests {
     }
 
     #[test]
-    fn integer_parameters_support_signs_and_the_full_i64_range() {
+    fn parse_grouped_numeric_literals_remain_integers() {
+        let mut parser = Parser::new("(10), S").unwrap();
+        assert_eq!(
+            parser.parse_numeric_parameter().unwrap(),
+            TypeExprParam::Integer(10)
+        );
+        assert_eq!(parser.peek(), Some(TokenKind::Comma));
+    }
+
+    #[test]
+    fn parse_numeric_parameters_retain_addition() {
+        let mut parser = Parser::new("P + 1, S").unwrap();
+        assert_eq!(
+            parser.parse_numeric_parameter().unwrap(),
+            TypeExprParam::Expression(IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::Variable("P".into())),
+                right: Box::new(IntegerParameter::Literal(1)),
+            })
+        );
+        assert_eq!(parser.peek(), Some(TokenKind::Comma));
+    }
+
+    #[test]
+    fn parse_integer_operands_leave_the_following_operator() {
+        let mut parser = Parser::new("(P + 1) + S").unwrap();
+        assert_eq!(
+            parser.parse_integer_operand().unwrap(),
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::Variable("P".into())),
+                right: Box::new(IntegerParameter::Literal(1)),
+            }
+        );
+        assert_eq!(parser.peek(), Some(TokenKind::Plus));
+    }
+
+    #[test]
+    fn parse_integer_expressions_leave_the_separator_for_the_caller() {
+        for (source, separator) in [
+            ("P + 1, S", TokenKind::Comma),
+            ("P + 1>", TokenKind::CloseAngle),
+            ("P + 1)", TokenKind::CloseParen),
+        ] {
+            let mut parser = Parser::new(source).unwrap();
+            assert_eq!(
+                parser.parse_integer_expression().unwrap(),
+                IntegerParameter::BinaryExpression {
+                    op: BinaryOp::Add,
+                    left: Box::new(IntegerParameter::Variable("P".into())),
+                    right: Box::new(IntegerParameter::Literal(1)),
+                },
+                "{source}"
+            );
+            assert_eq!(parser.peek(), Some(separator), "{source}");
+        }
+    }
+
+    #[test]
+    fn parse_grouped_integer_literals_remain_literal_parameters() {
+        let mut parser = Parser::new("((10)), S").unwrap();
+        assert_eq!(
+            parser.parse_parameter().unwrap(),
+            TypeExprParam::Integer(10)
+        );
+        assert_eq!(parser.peek(), Some(TokenKind::Comma));
+    }
+
+    #[test]
+    fn parse_integer_literals_support_signs_and_the_full_i64_range() {
         for (source, expected) in [
             ("0,", 0),
             ("+10,", 10),
@@ -309,8 +569,8 @@ mod tests {
         ] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
-                parser.parse_parameter().unwrap(),
-                TypeExprParam::Integer(expected),
+                parser.parse_integer_literal().unwrap(),
+                expected,
                 "{source}"
             );
             assert_eq!(parser.peek(), Some(TokenKind::Comma), "{source}");

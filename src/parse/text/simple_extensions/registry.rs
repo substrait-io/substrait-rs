@@ -533,8 +533,8 @@ scalar_functions:
     }
 
     #[test]
-    fn test_numeric_expression_returns_are_still_skipped() {
-        for return_type in ["varchar<L + 1>", "decimal<P + 1, S>"] {
+    fn test_numeric_subtraction_returns_are_still_skipped() {
+        for return_type in ["varchar<L - 1>", "decimal<P + 1 - 2, S>"] {
             let raw = extension_with_custom_type_reference(
                 "extension:example.com:unsupported",
                 "unsupported",
@@ -548,6 +548,39 @@ scalar_functions:
                     .is_none()
             );
         }
+    }
+
+    #[test]
+    fn test_function_with_addition_in_return_type_is_retained() {
+        use super::super::{BinaryOp, IntegerParameter, Type, TypeKind};
+
+        let yaml = r#"urn: extension:example.com:numeric_expressions
+scalar_functions:
+  - name: append_space
+    impls:
+      - args:
+          - name: input
+            value: varchar<L>
+        return: varchar<L + 1>
+"#;
+        let file = ExtensionFile::read_from_str(yaml).unwrap();
+        let function = file
+            .extension()
+            .get_scalar_function("append_space")
+            .unwrap();
+        let expected = Type::new(
+            TypeKind::VarChar {
+                length: IntegerParameter::BinaryExpression {
+                    op: BinaryOp::Add,
+                    left: Box::new(IntegerParameter::Variable("L".into())),
+                    right: Box::new(IntegerParameter::Literal(1)),
+                },
+            },
+            false,
+        );
+
+        assert_eq!(function.impls.len(), 1);
+        assert_eq!(function.impls[0].return_type, expected);
     }
 
     #[cfg(feature = "extensions")]
