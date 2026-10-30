@@ -22,6 +22,8 @@ mod file;
 mod registry;
 mod scalar_functions;
 mod type_ast;
+#[cfg(test)]
+mod type_tokenizer;
 mod types;
 
 pub use extensions::SimpleExtensions;
