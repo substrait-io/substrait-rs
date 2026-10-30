@@ -11,6 +11,7 @@
 //! source. Built-in names, parameter counts, and literal ranges are validated
 //! later when converting the AST to [`Type`](super::types::Type).
 
+use super::return_type::{IntegerAssignment, ReturnTypeExpr};
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
 use super::type_tokenizer::{Token, TokenKind, tokenize};
 use super::types::{BinaryOp, IntegerParameter};
@@ -36,6 +37,39 @@ pub(super) fn parse_integer_parameter(source: &str) -> Result<IntegerParameter, 
         return Err(parser.error("end of numeric expression"));
     }
     Ok(expression)
+}
+
+/// Parse ordered numeric assignments and a final type, or just a type.
+///
+/// For `P = min(L, 38)\ndecimal<P, 0>`, retain the assignment followed by `decimal<P, 0>`.
+pub(super) fn parse_return_type(source: &str) -> Result<ReturnTypeExpr<'_>, TypeParseError> {
+    let mut parser = Parser::new(source)?;
+    let mut assignments = Vec::new();
+    while parser.peek().is_some_and(TokenKind::is_name)
+        && parser.peek_next() == Some(TokenKind::Equals)
+    {
+        let name = parser.expect_name()?.text.to_string();
+        parser.expect(TokenKind::Equals)?;
+        let value = parser.parse_integer_expression()?;
+        let previous = parser.tokens[parser.index - 1];
+        let end = previous.position + previous.text.len();
+        let next = parser
+            .tokens
+            .get(parser.index)
+            .map_or(source.len(), |token| token.position);
+        if !source[end..next].contains('\n') {
+            return Err(parser.error("a newline after an assignment"));
+        }
+        assignments.push(IntegerAssignment { name, value });
+    }
+    let return_type = parser.parse_type()?;
+    if parser.peek().is_some() {
+        return Err(parser.error("end of return declaration"));
+    }
+    Ok(ReturnTypeExpr {
+        assignments,
+        return_type,
+    })
 }
 
 /// Recursive-descent parser whose index points to the next unconsumed token.
@@ -440,6 +474,57 @@ mod tests {
                 right: Box::new(IntegerParameter::Literal(1)),
             }
         );
+    }
+
+    #[test]
+    fn parse_multiline_returns_preserve_assignment_order() {
+        let parsed = parse_return_type("P = 10\nS = 2\ndecimal<P, S>").unwrap();
+        assert_eq!(
+            parsed.assignments,
+            vec![
+                IntegerAssignment {
+                    name: "P".into(),
+                    value: IntegerParameter::Literal(10)
+                },
+                IntegerAssignment {
+                    name: "S".into(),
+                    value: IntegerParameter::Literal(2)
+                },
+            ]
+        );
+        assert_eq!(
+            parsed.return_type,
+            TypeExpr::Simple(
+                "decimal",
+                vec![
+                    TypeExprParam::Type(TypeExpr::Simple("P", vec![], false)),
+                    TypeExprParam::Type(TypeExpr::Simple("S", vec![], false)),
+                ],
+                false,
+            )
+        );
+    }
+
+    #[test]
+    fn parse_return_types_allow_no_assignments() {
+        let parsed = parse_return_type("i32\n").unwrap();
+        assert!(parsed.assignments.is_empty());
+        assert_eq!(parsed.return_type, TypeExpr::Simple("i32", vec![], false));
+    }
+
+    #[test]
+    fn malformed_multiline_returns_are_rejected() {
+        for source in [
+            "P = 1 i32",
+            "P = 1\n",
+            "P =\ni32",
+            "P = 1\nQ =\ni32",
+            "P = 1\ni32 garbage",
+            "P = 1;\ni32",
+            "P = 1\nQ\ni32",
+        ] {
+            assert!(parse_return_type(source).is_err(), "{source}");
+        }
     }
 
     #[test]
