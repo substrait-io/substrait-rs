@@ -810,7 +810,11 @@ mod tests {
 
     #[test]
     fn integer_operands_leave_the_following_operator() {
-        for (source, expected) in [("(P + 1) + S", "P + 1"), ("max(P, S) + 1", "max(P, S)")] {
+        for (source, expected) in [
+            ("(P + 1) + S", "P + 1"),
+            ("(P - 1) + S", "P - 1"),
+            ("max(P, S) + 1", "max(P, S)"),
+        ] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
                 parser.parse_integer_operand().unwrap().to_string(),
