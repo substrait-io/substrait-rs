@@ -1124,7 +1124,7 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
                 match Type::try_from(expression) {
                     Err(ExtensionTypeError::UnknownTypeName { name }) if is_bare_name => {
                         CustomType::validate_name(&name)?;
-                        TypeParameter::Name(name)
+                        TypeParameter::Integer(IntegerParameter::Variable(name))
                     }
                     result => TypeParameter::Type(result?),
                 }
@@ -1724,6 +1724,35 @@ mod tests {
     }
 
     #[test]
+    fn test_user_defined_type_parameters_retain_integer_variables() {
+        let expected = Type::extension_with_params(
+            "foo".into(),
+            vec![TypeParameter::Integer(IntegerParameter::Variable(
+                "P".into(),
+            ))],
+            false,
+        );
+        for source in ["u!foo<P>", "u!foo<(P)>"] {
+            assert_eq!(parse_type(source), expected, "{source}");
+        }
+    }
+
+    #[test]
+    fn test_user_defined_type_parameters_retain_types() {
+        assert_eq!(
+            parse_type("u!foo<i32, any1>"),
+            Type::extension_with_params(
+                "foo".into(),
+                vec![
+                    TypeParameter::Type(required_type(TypeKind::I32)),
+                    TypeParameter::Type(required_type(TypeKind::Variable { id: 1 })),
+                ],
+                false,
+            )
+        );
+    }
+
+    #[test]
     fn test_symbolic_user_defined_type_parameters() {
         let ty = parse_type("u!Box?<List<decimal<P, S>>, 5, N>");
         assert_eq!(
@@ -1733,7 +1762,7 @@ mod tests {
                 vec![
                     TypeParameter::Type(parse_type("List<decimal<P, S>>")),
                     TypeParameter::Integer(IntegerParameter::Literal(5)),
-                    TypeParameter::Name("N".to_string()),
+                    TypeParameter::Integer(IntegerParameter::Variable("N".to_string())),
                 ],
                 true,
             )
