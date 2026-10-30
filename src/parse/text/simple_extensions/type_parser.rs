@@ -211,7 +211,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a type or numeric parameter, leaving its separator unconsumed.
-    /// Names followed by `+` or `-` begin numeric expressions; other names begin types.
+    /// Names followed by `+`, `-`, or `(` begin numeric expressions; other names begin types.
     fn parse_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
         match self.peek() {
             Some(
@@ -219,7 +219,10 @@ impl<'a> Parser<'a> {
             ) => self.parse_numeric_parameter(),
             Some(kind)
                 if kind.is_name()
-                    && matches!(self.peek_next(), Some(TokenKind::Plus | TokenKind::Minus)) =>
+                    && matches!(
+                        self.peek_next(),
+                        Some(TokenKind::Plus | TokenKind::Minus | TokenKind::OpenParen)
+                    ) =>
             {
                 self.parse_numeric_parameter()
             }
@@ -270,7 +273,24 @@ impl<'a> Parser<'a> {
             }
             Some(kind) if kind.is_name() => {
                 let name = self.expect_name()?;
-                Ok(IntegerParameter::Variable(name.text.to_string()))
+                if self.consume(TokenKind::OpenParen) {
+                    let mut arguments = Vec::new();
+                    if !self.consume(TokenKind::CloseParen) {
+                        loop {
+                            arguments.push(self.parse_integer_expression()?);
+                            if self.consume(TokenKind::CloseParen) {
+                                break;
+                            }
+                            self.expect(TokenKind::Comma)?;
+                        }
+                    }
+                    Ok(IntegerParameter::Call {
+                        name: name.text.to_string(),
+                        arguments,
+                    })
+                } else {
+                    Ok(IntegerParameter::Variable(name.text.to_string()))
+                }
             }
             _ => Err(self.error("an integer literal, parameter name, or '('")),
         }
@@ -354,6 +374,36 @@ mod tests {
     }
 
     #[test]
+    fn calls_retain_names_and_ordered_arguments_without_evaluation() {
+        let IntegerParameter::Call { name, arguments } = parse_integer("max(S1, S2 + 1)") else {
+            panic!("expected call");
+        };
+        assert_eq!(name, "max");
+        assert_eq!(
+            arguments,
+            vec![parse_integer("S1"), parse_integer("S2 + 1")]
+        );
+        for source in [
+            "min(P, 38)",
+            "max(S1, S2)",
+            "integer_parameter(precision)",
+            "min(max(P1 - S1, P2 - S2) + 1, 38)",
+            "custom()",
+        ] {
+            let expression = parse_integer(source);
+            assert_eq!(
+                parse_integer(&expression.to_string()),
+                expression,
+                "{source}"
+            );
+            assert!(!expression.is_concrete());
+        }
+        for source in ["min(", "min(P,)", "min(,P)", "min(P S)", "min(P,,S)"] {
+            assert!(parse_integer_parameter(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
     fn invalid_or_unsupported_expressions() {
         for source in [
             "",
@@ -363,8 +413,6 @@ mod tests {
             "P S",
             "P * 2",
             "P / 2",
-            "min(P, S)",
-            "max(P, S)",
             "()",
             "(P + 1",
             "P + 1)",

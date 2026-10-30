@@ -294,13 +294,20 @@ pub enum IntegerParameter {
     Add(Box<Self>, Box<Self>),
     /// Subtraction of two integer expressions, retained without evaluation.
     Subtract(Box<Self>, Box<Self>),
+    /// A numeric function call, retained without resolving or executing the function.
+    Call {
+        /// The function name as written in the declaration.
+        name: String,
+        /// Ordered numeric arguments.
+        arguments: Vec<Self>,
+    },
 }
 
 impl IntegerParameter {
     /// Parse addition and subtraction of integer literals and parameter names.
     ///
     /// Both operators associate to the left unless grouped with parentheses, as in
-    /// `P - (S + 1)`. Other operators and calls are not supported yet.
+    /// `P - (S + 1)`. Calls such as `max(S1, S2)` retain their names and arguments.
     /// No operation is evaluated.
     pub fn parse(source: &str) -> Result<Self, TypeParseError> {
         super::type_parser::parse_integer_parameter(source)
@@ -317,6 +324,16 @@ impl fmt::Display for IntegerParameter {
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
+            Self::Call { name, arguments } => {
+                write!(f, "{name}(")?;
+                for (index, argument) in arguments.iter().enumerate() {
+                    if index > 0 {
+                        f.write_str(", ")?;
+                    }
+                    write!(f, "{argument}")?;
+                }
+                f.write_str(")")
+            }
             Self::Add(left, right) | Self::Subtract(left, right) => {
                 let operator = if matches!(self, Self::Add(..)) {
                     "+"
@@ -1135,7 +1152,8 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
         // An unresolved precision must eventually satisfy the decimal precision limit.
         IntegerParameter::Variable(_)
         | IntegerParameter::Add(..)
-        | IntegerParameter::Subtract(..) => 38,
+        | IntegerParameter::Subtract(..)
+        | IntegerParameter::Call { .. } => 38,
     }
 }
 

@@ -537,6 +537,15 @@ scalar_functions:
         for (return_type, expected) in [
             ("varchar<L + 1>", "varchar<L + 1>"),
             ("varchar<L - 1>", "varchar<L - 1>"),
+            (
+                "decimal<min(P,38), max(S1,S2)>",
+                "decimal<min(P, 38), max(S1, S2)>",
+            ),
+            (
+                "precision_timestamp<integer_parameter(precision)>",
+                "precision_timestamp<integer_parameter(precision)>",
+            ),
+            ("list<varchar<max(L1,L2)>>", "list<varchar<max(L1, L2)>>"),
             ("decimal<P - S + 1, S>", "decimal<P - S + 1, S>"),
             ("list<varchar<L - (M + 1)>>", "list<varchar<L - (M + 1)>>"),
             ("varchar<L+(M+1)>", "varchar<L + (M + 1)>"),
