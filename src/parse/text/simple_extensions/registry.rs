@@ -570,7 +570,7 @@ scalar_functions:
             .unwrap();
         let expected = Type::new(
             TypeKind::VarChar {
-                length: IntegerParameter::Binary {
+                length: IntegerParameter::BinaryExpression {
                     op: BinaryOp::Add,
                     left: Box::new(IntegerParameter::Variable("L".into())),
                     right: Box::new(IntegerParameter::Literal(1)),
