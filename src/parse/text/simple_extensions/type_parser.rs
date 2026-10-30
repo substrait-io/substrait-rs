@@ -13,7 +13,7 @@
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
 use super::type_tokenizer::{Token, TokenKind, tokenize};
-use super::types::IntegerParameter;
+use super::types::{BinaryOp, IntegerParameter};
 
 /// Parse one complete type, rejecting any tokens left after it.
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
@@ -244,7 +244,11 @@ impl<'a> Parser<'a> {
         };
         while self.consume(TokenKind::Plus) {
             let right = self.parse_integer_operand()?;
-            expression = IntegerParameter::Add(Box::new(expression), Box::new(right));
+            expression = IntegerParameter::Binary {
+                op: BinaryOp::Add,
+                left: Box::new(expression),
+                right: Box::new(right),
+            };
         }
         Ok(expression)
     }
@@ -301,7 +305,12 @@ mod tests {
 
     #[test]
     fn addition_retains_operands_and_associates_to_the_left() {
-        let IntegerParameter::Add(left, right) = parse_integer("P + S + 1") else {
+        let IntegerParameter::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = parse_integer("P + S + 1")
+        else {
             panic!("expected addition");
         };
         assert_eq!(*left, parse_integer("P + S"));
@@ -311,7 +320,12 @@ mod tests {
 
     #[test]
     fn parentheses_preserve_grouping() {
-        let IntegerParameter::Add(left, right) = parse_integer("P + (S + 1)") else {
+        let IntegerParameter::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = parse_integer("P + (S + 1)")
+        else {
             panic!("expected addition");
         };
         assert_eq!(*left, IntegerParameter::Variable("P".into()));

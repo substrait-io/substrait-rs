@@ -283,6 +283,21 @@ impl fmt::Display for TypeKind {
     }
 }
 
+/// A binary operator in an unevaluated numeric expression.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BinaryOp {
+    /// Integer addition.
+    Add,
+}
+
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Add => f.write_str("+"),
+        }
+    }
+}
+
 /// An integer literal, named parameter, or unevaluated numeric expression.
 #[derive(Clone, Debug, PartialEq)]
 pub enum IntegerParameter {
@@ -290,8 +305,15 @@ pub enum IntegerParameter {
     Literal(i64),
     /// A name whose value depends on a function call.
     Variable(String),
-    /// Addition of two integer expressions, retained without evaluation.
-    Add(Box<Self>, Box<Self>),
+    /// A binary expression, retained without evaluation.
+    Binary {
+        /// The operator applied to the operands.
+        op: BinaryOp,
+        /// The left operand.
+        left: Box<Self>,
+        /// The right operand.
+        right: Box<Self>,
+    },
 }
 
 impl IntegerParameter {
@@ -315,11 +337,11 @@ impl fmt::Display for IntegerParameter {
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
-            Self::Add(left, right) => {
-                if matches!(**right, Self::Add(..)) {
-                    write!(f, "{left} + ({right})")
+            Self::Binary { op, left, right } => {
+                if matches!(**right, Self::Binary { .. }) {
+                    write!(f, "{left} {op} ({right})")
                 } else {
-                    write!(f, "{left} + {right}")
+                    write!(f, "{left} {op} {right}")
                 }
             }
         }
@@ -1126,7 +1148,7 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
     match precision {
         IntegerParameter::Literal(precision) => *precision as i32,
         // An unresolved precision must eventually satisfy the decimal precision limit.
-        IntegerParameter::Variable(_) | IntegerParameter::Add(..) => 38,
+        IntegerParameter::Variable(_) | IntegerParameter::Binary { .. } => 38,
     }
 }
 
@@ -1347,10 +1369,11 @@ mod tests {
         };
         assert_eq!(
             precision,
-            &IntegerParameter::Add(
-                Box::new(IntegerParameter::Variable("P1".into())),
-                Box::new(IntegerParameter::Variable("P2".into())),
-            )
+            &IntegerParameter::Binary {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::Variable("P1".into())),
+                right: Box::new(IntegerParameter::Variable("P2".into())),
+            }
         );
         assert_eq!(scale, &IntegerParameter::Variable("S".into()));
     }
