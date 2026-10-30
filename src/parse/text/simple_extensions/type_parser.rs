@@ -275,6 +275,11 @@ impl<'a> Parser<'a> {
                 self.expect(TokenKind::CloseParen)?;
                 Ok(expression)
             }
+            Some(TokenKind::AnyVar)
+                if parse_type_variable_id(self.tokens[self.index].text).is_some() =>
+            {
+                Err(self.error("a parameter name, not a numbered type variable"))
+            }
             Some(kind) if kind.is_name() => {
                 let name = self.expect_name()?;
                 Ok(IntegerParameter::Variable(name.text.to_string()))
@@ -355,6 +360,34 @@ mod tests {
                 right: Box::new(IntegerParameter::Literal(1)),
             }
         );
+    }
+
+    #[test]
+    fn parse_numeric_parameters_reject_numbered_type_variables() {
+        for source in [
+            "decimal<any1 + 1, S>",
+            "decimal<P + any1, S>",
+            "decimal<(any1), S>",
+            "decimal<P + (any1 + 1), S>",
+            "decimal<any0 + 1, S>",
+            "decimal<any4294967295 + 1, S>",
+        ] {
+            assert!(parse(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
+    fn parse_integer_expressions_preserve_type_variable_name_fallbacks() {
+        for name in ["Any1", "any4294967296"] {
+            assert_eq!(
+                parse_integer_parameter(&format!("{name} + 1")).unwrap(),
+                IntegerParameter::BinaryExpression {
+                    op: BinaryOp::Add,
+                    left: Box::new(IntegerParameter::Variable(name.into())),
+                    right: Box::new(IntegerParameter::Literal(1)),
+                }
+            );
+        }
     }
 
     #[test]
