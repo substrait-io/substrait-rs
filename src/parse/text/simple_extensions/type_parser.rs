@@ -91,6 +91,8 @@ impl<'a> Parser<'a> {
         self.tokens.get(self.index).map(|token| token.kind)
     }
 
+    /// Look one token beyond `peek()` without consuming either token.
+    /// For `P + 1` with `P` at the cursor, return `Plus`.
     fn peek_next(&self) -> Option<TokenKind> {
         self.tokens.get(self.index + 1).map(|token| token.kind)
     }
