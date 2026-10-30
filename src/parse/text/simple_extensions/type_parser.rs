@@ -459,39 +459,48 @@ mod tests {
     }
 
     #[test]
-    fn subtraction_shares_addition_precedence_and_preserves_grouping() {
-        let IntegerParameter::BinaryExpression {
-            op: BinaryOp::Add,
-            left,
-            right,
-        } = parse_integer_parameter("P - S + 1").unwrap()
-        else {
-            panic!("expected addition");
-        };
-        assert_eq!(*left, parse_integer_parameter("P - S").unwrap());
-        assert_eq!(*right, IntegerParameter::Literal(1));
-        let IntegerParameter::BinaryExpression {
+    fn parse_subtraction_shares_addition_precedence() {
+        let difference = IntegerParameter::BinaryExpression {
             op: BinaryOp::Subtract,
-            left,
-            right,
-        } = parse_integer_parameter("P - S - 1").unwrap()
-        else {
-            panic!("expected subtraction");
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Variable("S".into())),
         };
-        assert_eq!(*left, parse_integer_parameter("P - S").unwrap());
-        assert_eq!(*right, IntegerParameter::Literal(1));
-        for source in ["P - (S + 1)", "P + (S - 1)", "P - (S - 1)", "P - -1"] {
-            let expression = parse_integer_parameter(source).unwrap();
-            assert_eq!(
-                parse_integer_parameter(&expression.to_string()).unwrap(),
-                expression,
-                "{source}"
-            );
-            assert!(!expression.is_concrete());
-        }
-        for source in ["P -", "P -- S", "P - ()", "P - - 1"] {
-            assert!(parse_integer_parameter(source).is_err(), "{source}");
-        }
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(difference),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        assert_eq!(parse_integer_parameter("P - S + 1").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_subtraction_associates_to_the_left() {
+        let difference = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Variable("S".into())),
+        };
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(difference),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        assert_eq!(parse_integer_parameter("P - S - 1").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_subtraction_preserves_grouping() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("S".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(sum),
+        };
+        assert_eq!(parse_integer_parameter("P - (S + 1)").unwrap(), expected);
     }
 
     #[test]
@@ -516,25 +525,39 @@ mod tests {
     }
 
     #[test]
-    fn multiline_returns_retain_ordered_assignments_and_the_final_type() {
-        let source = "digits = P - S + 1\nprecision = min(digits, 38)\ndecimal?<precision, 0>\n";
-        let parsed = parse_return_type(source).unwrap();
-        assert_eq!(parsed.assignments.len(), 2);
-        assert_eq!(parsed.assignments[0].name, "digits");
+    fn parse_multiline_returns_preserve_assignment_order() {
+        let parsed = parse_return_type("P = 10\nS = 2\ndecimal<P, S>").unwrap();
         assert_eq!(
-            parsed.assignments[0].value,
-            parse_integer_parameter("P - S + 1").unwrap()
+            parsed.assignments,
+            vec![
+                IntegerAssignment {
+                    name: "P".into(),
+                    value: IntegerParameter::Literal(10)
+                },
+                IntegerAssignment {
+                    name: "S".into(),
+                    value: IntegerParameter::Literal(2)
+                },
+            ]
         );
-        assert_eq!(parsed.assignments[1].name, "precision");
         assert_eq!(
-            parsed.assignments[1].value,
-            parse_integer_parameter("min(digits, 38)").unwrap()
+            parsed.return_type,
+            TypeExpr::Simple(
+                "decimal",
+                vec![
+                    TypeExprParam::Type(TypeExpr::Simple("P", vec![], false)),
+                    TypeExprParam::Type(TypeExpr::Simple("S", vec![], false)),
+                ],
+                false,
+            )
         );
-        assert_eq!(parsed.return_type, parse("decimal?<precision, 0>").unwrap());
-        let declaration = super::super::ReturnType::try_from(parsed).unwrap();
-        let reparsed = super::super::ReturnType::parse(&declaration.to_string()).unwrap();
-        assert_eq!(declaration, reparsed);
-        assert!(parse_return_type("i32\n").unwrap().assignments.is_empty());
+    }
+
+    #[test]
+    fn parse_return_types_allow_no_assignments() {
+        let parsed = parse_return_type("i32\n").unwrap();
+        assert!(parsed.assignments.is_empty());
+        assert_eq!(parsed.return_type, TypeExpr::Simple("i32", vec![], false));
     }
 
     #[test]
@@ -553,136 +576,183 @@ mod tests {
     }
 
     #[test]
-    fn calls_retain_names_and_ordered_arguments_without_evaluation() {
-        let IntegerParameter::Call { name, arguments } =
-            parse_integer_parameter("max(S1, S2 + 1)").unwrap()
-        else {
-            panic!("expected call");
+    fn parse_calls_retain_names_and_ordered_arguments() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("S2".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
         };
-        assert_eq!(name, "max");
+        let expected = IntegerParameter::Call {
+            name: "max".into(),
+            arguments: vec![IntegerParameter::Variable("S1".into()), sum],
+        };
         assert_eq!(
-            arguments,
-            vec![
-                parse_integer_parameter("S1").unwrap(),
-                parse_integer_parameter("S2 + 1").unwrap()
-            ]
+            parse_integer_parameter("max(S1, S2 + 1)").unwrap(),
+            expected
         );
-        for source in [
-            "min(P, 38)",
-            "max(S1, S2)",
-            "integer_parameter(precision)",
-            "min(max(P1 - S1, P2 - S2) + 1, 38)",
-            "custom()",
-        ] {
-            let expression = parse_integer_parameter(source).unwrap();
-            assert_eq!(
-                parse_integer_parameter(&expression.to_string()).unwrap(),
-                expression,
-                "{source}"
-            );
-            assert!(!expression.is_concrete());
-        }
-        for source in ["min(", "min(P,)", "min(,P)", "min(P S)", "min(P,,S)"] {
-            assert!(parse_integer_parameter(source).is_err(), "{source}");
-        }
     }
 
     #[test]
-    fn conditionals_retain_comparisons_and_both_branches() {
-        let IntegerParameter::Conditional {
-            condition,
-            then_value,
-            else_value,
-        } = parse_integer_parameter("init_prec > 38 ? scale_after_borrow : init_scale").unwrap()
-        else {
-            panic!("expected conditional");
+    fn parse_calls_retain_nested_calls() {
+        let maximum = IntegerParameter::Call {
+            name: "max".into(),
+            arguments: vec![
+                IntegerParameter::Variable("P".into()),
+                IntegerParameter::Literal(38),
+            ],
+        };
+        let expected = IntegerParameter::Call {
+            name: "min".into(),
+            arguments: vec![maximum, IntegerParameter::Literal(10)],
         };
         assert_eq!(
-            *condition,
-            IntegerParameter::BinaryExpression {
-                op: BinaryOp::GreaterThan,
-                left: Box::new(parse_integer_parameter("init_prec").unwrap()),
-                right: Box::new(IntegerParameter::Literal(38)),
+            parse_integer_parameter("min(max(P, 38), 10)").unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn parse_calls_allow_empty_argument_lists() {
+        assert_eq!(
+            parse_integer_parameter("custom()").unwrap(),
+            IntegerParameter::Call {
+                name: "custom".into(),
+                arguments: vec![],
             }
         );
-        assert_eq!(
-            *then_value,
-            parse_integer_parameter("scale_after_borrow").unwrap()
-        );
-        assert_eq!(*else_value, parse_integer_parameter("init_scale").unwrap());
-        let IntegerParameter::Conditional {
-            condition,
-            then_value,
-            else_value,
-        } = parse_integer_parameter("P + 1 > S - 1 ? 38 : P > 0 ? P : 1").unwrap()
-        else {
-            panic!("expected conditional");
+    }
+
+    #[test]
+    fn parse_conditionals_retain_the_condition_and_both_branches() {
+        let condition = IntegerParameter::BinaryExpression {
+            op: BinaryOp::GreaterThan,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Literal(38)),
+        };
+        let expected = IntegerParameter::Conditional {
+            condition: Box::new(condition),
+            then_value: Box::new(IntegerParameter::Literal(38)),
+            else_value: Box::new(IntegerParameter::Variable("P".into())),
         };
         assert_eq!(
-            *condition,
-            parse_integer_parameter("P + 1 > S - 1").unwrap()
+            parse_integer_parameter("P > 38 ? 38 : P").unwrap(),
+            expected
         );
-        assert_eq!(*then_value, IntegerParameter::Literal(38));
+    }
+
+    #[test]
+    fn parse_conditionals_bind_less_tightly_than_arithmetic() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("S".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let expected = IntegerParameter::Conditional {
+            condition: Box::new(IntegerParameter::Variable("P".into())),
+            then_value: Box::new(sum),
+            else_value: Box::new(IntegerParameter::Literal(0)),
+        };
+        assert_eq!(parse_integer_parameter("P ? S + 1 : 0").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_conditionals_associate_to_the_right() {
+        let nested = IntegerParameter::Conditional {
+            condition: Box::new(IntegerParameter::Variable("S".into())),
+            then_value: Box::new(IntegerParameter::Literal(2)),
+            else_value: Box::new(IntegerParameter::Literal(3)),
+        };
+        let expected = IntegerParameter::Conditional {
+            condition: Box::new(IntegerParameter::Variable("P".into())),
+            then_value: Box::new(IntegerParameter::Literal(1)),
+            else_value: Box::new(nested),
+        };
         assert_eq!(
-            *else_value,
-            parse_integer_parameter("P > 0 ? P : 1").unwrap()
+            parse_integer_parameter("P ? 1 : S ? 2 : 3").unwrap(),
+            expected
         );
     }
 
     #[test]
-    fn conditional_display_preserves_precedence_and_grouping() {
-        for source in [
-            "P > S",
-            "P > +1",
-            "P > -1",
-            "P > S > 1",
-            "P > (S > 1)",
-            "(P > 38 ? 38 : P) + 1",
-            "P - (S > 38 ? 38 : S)",
-            "(P > 1) + (S > 1)",
-            "(P > 1 ? 1 : 0) > S",
-            "(P ? S : 1) ? 2 : 3",
-            "P ? S ? 1 : 2 : 3",
-            "P ? 1 : S ? 2 : 3",
-            "min(P > 38 ? 38 : P, 10)",
+    fn parse_comparisons_bind_less_tightly_than_arithmetic() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let difference = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(IntegerParameter::Variable("S".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::GreaterThan,
+            left: Box::new(sum),
+            right: Box::new(difference),
+        };
+        assert_eq!(parse_integer_parameter("P + 1 > S - 1").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_conditionals_leave_parameter_separators() {
+        let expected = IntegerParameter::Conditional {
+            condition: Box::new(IntegerParameter::Variable("P".into())),
+            then_value: Box::new(IntegerParameter::Literal(1)),
+            else_value: Box::new(IntegerParameter::Literal(2)),
+        };
+        for (source, separator) in [
+            ("P ? 1 : 2, S", TokenKind::Comma),
+            ("P ? 1 : 2>", TokenKind::CloseAngle),
+            ("P ? 1 : 2)", TokenKind::CloseParen),
         ] {
-            let expression = parse_integer_parameter(source).unwrap();
+            let mut parser = Parser::new(source).unwrap();
             assert_eq!(
-                parse_integer_parameter(&expression.to_string()).unwrap(),
-                expression,
+                parser.parse_parameter().unwrap(),
+                TypeExprParam::Expression(expected.clone()),
                 "{source}"
             );
-            assert!(!expression.is_concrete());
+            assert_eq!(parser.peek(), Some(separator), "{source}");
         }
     }
 
     #[test]
-    fn conditionals_do_not_consume_type_delimiters_or_nullability() {
-        for source in [
-            "decimal<P > 38 ? 38 : P, S>",
-            "list<varchar<L > 10 ? 10 : L>>",
-            "func<varchar<L + 1> -> decimal<P + 1, S + 1>>",
-            "list<any1?>",
-            "map<string, any?>",
-        ] {
-            let type_ = super::super::Type::try_from(parse(source).unwrap()).unwrap();
-            assert_eq!(
-                super::super::Type::try_from(parse(&type_.to_string()).unwrap()).unwrap(),
-                type_,
-                "{source}"
-            );
-        }
-        for source in [
-            "P ?",
-            "P ? S",
-            "P ? : S",
-            "P ? S :",
-            "P >",
-            "P > ? S : 1",
-            "P : S",
-        ] {
-            assert!(parse_integer_parameter(source).is_err(), "{source}");
-        }
+    fn parse_nested_conditional_types_leave_both_closing_brackets() {
+        let condition = IntegerParameter::BinaryExpression {
+            op: BinaryOp::GreaterThan,
+            left: Box::new(IntegerParameter::Variable("L".into())),
+            right: Box::new(IntegerParameter::Literal(10)),
+        };
+        let length = IntegerParameter::Conditional {
+            condition: Box::new(condition),
+            then_value: Box::new(IntegerParameter::Literal(10)),
+            else_value: Box::new(IntegerParameter::Variable("L".into())),
+        };
+        let element = TypeExpr::Simple("varchar", vec![TypeExprParam::Expression(length)], false);
+        let expected = TypeExpr::Simple("list", vec![TypeExprParam::Type(element)], false);
+        assert_eq!(parse("list<varchar<L > 10 ? 10 : L>>").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_nullable_types_do_not_start_conditionals() {
+        assert_eq!(
+            parse("list<any1?>").unwrap(),
+            TypeExpr::Simple(
+                "list",
+                vec![TypeExprParam::Type(TypeExpr::TypeVariable(1, true))],
+                false,
+            )
+        );
+        assert_eq!(
+            parse("map<string, any?>").unwrap(),
+            TypeExpr::Simple(
+                "map",
+                vec![
+                    TypeExprParam::Type(TypeExpr::Simple("string", vec![], false)),
+                    TypeExprParam::Type(TypeExpr::Simple("any", vec![], true)),
+                ],
+                false,
+            )
+        );
     }
 
     #[test]
@@ -692,7 +762,23 @@ mod tests {
             "P +",
             "+ P",
             "P ++ 1",
+            "P -",
+            "P -- S",
+            "P - ()",
+            "P - - 1",
             "P S",
+            "P ?",
+            "P ? S",
+            "P ? : S",
+            "P ? S :",
+            "P >",
+            "P > ? S : 1",
+            "P : S",
+            "min(",
+            "min(P,)",
+            "min(,P)",
+            "min(P S)",
+            "min(P,,S)",
             "P * 2",
             "P / 2",
             "()",
@@ -821,17 +907,34 @@ mod tests {
 
     #[test]
     fn parse_integer_sums_stop_before_comparisons() {
-        let mut parser = Parser::new("P - S + 1 > 38").unwrap();
-        assert_eq!(parser.parse_integer_sum().unwrap().to_string(), "P - S + 1");
+        let mut parser = Parser::new("P + 1 > 38").unwrap();
+        assert_eq!(
+            parser.parse_integer_sum().unwrap(),
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::Variable("P".into())),
+                right: Box::new(IntegerParameter::Literal(1)),
+            }
+        );
         assert_eq!(parser.peek(), Some(TokenKind::CloseAngle));
     }
 
     #[test]
     fn parse_integer_comparisons_leave_the_closing_type_bracket() {
-        for (source, expected) in [("P + 1 > S>", "P + 1 > S"), ("P + 1>", "P + 1")] {
+        for (source, expected) in [
+            (
+                "P > S>",
+                IntegerParameter::BinaryExpression {
+                    op: BinaryOp::GreaterThan,
+                    left: Box::new(IntegerParameter::Variable("P".into())),
+                    right: Box::new(IntegerParameter::Variable("S".into())),
+                },
+            ),
+            ("P>", IntegerParameter::Variable("P".into())),
+        ] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
-                parser.parse_integer_comparison().unwrap().to_string(),
+                parser.parse_integer_comparison().unwrap(),
                 expected,
                 "{source}"
             );

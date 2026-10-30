@@ -82,3 +82,32 @@ impl fmt::Display for ReturnType {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::types::TypeKind;
+    use super::*;
+
+    #[test]
+    fn parse_plain_return_types() {
+        assert_eq!(
+            ReturnType::parse("i32\n").unwrap(),
+            ReturnType::Type(Type::new(TypeKind::I32, false))
+        );
+    }
+
+    #[test]
+    fn parse_derivations_validate_the_final_type() {
+        assert!(matches!(
+            ReturnType::parse("P = 1\ndecimal<39, 0>"),
+            Err(ExtensionTypeError::InvalidParameterRange { .. })
+        ));
+    }
+
+    #[test]
+    fn return_type_display_roundtrips() {
+        for source in ["i32", "P = 10\nS = 2\ndecimal<P, S>"] {
+            assert_eq!(ReturnType::parse(source).unwrap().to_string(), source);
+        }
+    }
+}

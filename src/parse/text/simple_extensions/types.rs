@@ -1410,6 +1410,15 @@ mod tests {
         for source in [
             "P + S + 1",
             "P + (S + 1)",
+            "P - (S + 1)",
+            "P + (S - 1)",
+            "P - (S - 1)",
+            "P - -1",
+            "min(P, 38)",
+            "max(S1, S2)",
+            "integer_parameter(precision)",
+            "min(max(P1 - S1, P2 - S2) + 1, 38)",
+            "custom()",
             "P + S + (1 + (T + 2))",
             "$P + _S",
             "P + -2",
@@ -1418,6 +1427,37 @@ mod tests {
             let expression = parse_integer_expression(source).unwrap();
             assert_eq!(expression.to_string(), source);
         }
+    }
+
+    #[test]
+    fn conditional_expression_display_roundtrips() {
+        for source in [
+            "P > S",
+            "P > -1",
+            "P > S > 1",
+            "P > (S > 1)",
+            "(P > 38 ? 38 : P) + 1",
+            "P - (S > 38 ? 38 : S)",
+            "(P > 1) + (S > 1)",
+            "(P > 1 ? 1 : 0) > S",
+            "(P ? S : 1) ? 2 : 3",
+            "P ? S ? 1 : 2 : 3",
+            "P ? 1 : S ? 2 : 3",
+            "min(P > 38 ? 38 : P, 10)",
+        ] {
+            assert_eq!(
+                parse_integer_expression(source).unwrap().to_string(),
+                source
+            );
+        }
+    }
+
+    #[test]
+    fn conditional_expression_display_normalizes_positive_literals() {
+        assert_eq!(
+            parse_integer_expression("P > +1").unwrap().to_string(),
+            "P > 1"
+        );
     }
 
     #[test]
@@ -1481,6 +1521,8 @@ mod tests {
         for source in [
             "varchar<L + 1>",
             "varchar<1 + 2>",
+            "decimal<min(P, 38), 0>",
+            "varchar<1 > 0 ? 10 : 20>",
             "list<decimal<P + 1, S>>",
             "func<varchar<L + 1> -> decimal<P, S + 1>>",
             "u!custom<P + 1>",
