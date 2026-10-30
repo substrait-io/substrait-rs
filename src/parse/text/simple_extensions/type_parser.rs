@@ -380,17 +380,13 @@ fn parse_type_variable_id(name: &str) -> Option<u32> {
 mod tests {
     use super::*;
 
-    fn parse_integer(source: &str) -> IntegerParameter {
-        parse_integer_parameter(source).unwrap()
-    }
-
     #[test]
     fn addition_retains_operands_and_associates_to_the_left() {
         let IntegerParameter::BinaryExpression {
             op: BinaryOp::Add,
             left,
             right,
-        } = parse_integer("P + S + 1")
+        } = parse_integer_parameter("P + S + 1").unwrap()
         else {
             panic!("expected addition");
         };
@@ -403,7 +399,10 @@ mod tests {
             }
         );
         assert_eq!(*right, IntegerParameter::Literal(1));
-        assert_eq!(parse_integer("P"), IntegerParameter::Variable("P".into()));
+        assert_eq!(
+            parse_integer_parameter("P").unwrap(),
+            IntegerParameter::Variable("P".into())
+        );
     }
 
     #[test]
@@ -412,26 +411,26 @@ mod tests {
             op: BinaryOp::Add,
             left,
             right,
-        } = parse_integer("P - S + 1")
+        } = parse_integer_parameter("P - S + 1").unwrap()
         else {
             panic!("expected addition");
         };
-        assert_eq!(*left, parse_integer("P - S"));
+        assert_eq!(*left, parse_integer_parameter("P - S").unwrap());
         assert_eq!(*right, IntegerParameter::Literal(1));
         let IntegerParameter::BinaryExpression {
             op: BinaryOp::Subtract,
             left,
             right,
-        } = parse_integer("P - S - 1")
+        } = parse_integer_parameter("P - S - 1").unwrap()
         else {
             panic!("expected subtraction");
         };
-        assert_eq!(*left, parse_integer("P - S"));
+        assert_eq!(*left, parse_integer_parameter("P - S").unwrap());
         assert_eq!(*right, IntegerParameter::Literal(1));
         for source in ["P - (S + 1)", "P + (S - 1)", "P - (S - 1)", "P - -1"] {
-            let expression = parse_integer(source);
+            let expression = parse_integer_parameter(source).unwrap();
             assert_eq!(
-                parse_integer(&expression.to_string()),
+                parse_integer_parameter(&expression.to_string()).unwrap(),
                 expression,
                 "{source}"
             );
@@ -448,7 +447,7 @@ mod tests {
             op: BinaryOp::Add,
             left,
             right,
-        } = parse_integer("P + (S + 1)")
+        } = parse_integer_parameter("P + (S + 1)").unwrap()
         else {
             panic!("expected addition");
         };
@@ -469,11 +468,14 @@ mod tests {
         let parsed = parse_return_type(source).unwrap();
         assert_eq!(parsed.assignments.len(), 2);
         assert_eq!(parsed.assignments[0].name, "digits");
-        assert_eq!(parsed.assignments[0].value, parse_integer("P - S + 1"));
+        assert_eq!(
+            parsed.assignments[0].value,
+            parse_integer_parameter("P - S + 1").unwrap()
+        );
         assert_eq!(parsed.assignments[1].name, "precision");
         assert_eq!(
             parsed.assignments[1].value,
-            parse_integer("min(digits, 38)")
+            parse_integer_parameter("min(digits, 38)").unwrap()
         );
         assert_eq!(parsed.return_type, parse("decimal?<precision, 0>").unwrap());
         let declaration = super::super::ReturnType::try_from(parsed).unwrap();
@@ -499,13 +501,18 @@ mod tests {
 
     #[test]
     fn calls_retain_names_and_ordered_arguments_without_evaluation() {
-        let IntegerParameter::Call { name, arguments } = parse_integer("max(S1, S2 + 1)") else {
+        let IntegerParameter::Call { name, arguments } =
+            parse_integer_parameter("max(S1, S2 + 1)").unwrap()
+        else {
             panic!("expected call");
         };
         assert_eq!(name, "max");
         assert_eq!(
             arguments,
-            vec![parse_integer("S1"), parse_integer("S2 + 1")]
+            vec![
+                parse_integer_parameter("S1").unwrap(),
+                parse_integer_parameter("S2 + 1").unwrap()
+            ]
         );
         for source in [
             "min(P, 38)",
@@ -514,9 +521,9 @@ mod tests {
             "min(max(P1 - S1, P2 - S2) + 1, 38)",
             "custom()",
         ] {
-            let expression = parse_integer(source);
+            let expression = parse_integer_parameter(source).unwrap();
             assert_eq!(
-                parse_integer(&expression.to_string()),
+                parse_integer_parameter(&expression.to_string()).unwrap(),
                 expression,
                 "{source}"
             );
