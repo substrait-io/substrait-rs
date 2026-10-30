@@ -290,6 +290,17 @@ pub enum BinaryOp {
     Add,
     /// Integer subtraction.
     Subtract,
+    /// Greater-than comparison.
+    GreaterThan,
+}
+
+impl BinaryOp {
+    fn precedence(self) -> u8 {
+        match self {
+            Self::GreaterThan => 2,
+            Self::Add | Self::Subtract => 3,
+        }
+    }
 }
 
 impl fmt::Display for BinaryOp {
@@ -297,6 +308,7 @@ impl fmt::Display for BinaryOp {
         match self {
             Self::Add => f.write_str("+"),
             Self::Subtract => f.write_str("-"),
+            Self::GreaterThan => f.write_str(">"),
         }
     }
 }
@@ -317,6 +329,15 @@ pub enum IntegerParameter {
         /// The right operand.
         right: Box<Self>,
     },
+    /// A ternary conditional, retained without selecting a branch.
+    Conditional {
+        /// The condition to test when evaluating the derivation.
+        condition: Box<Self>,
+        /// The value when the condition is true.
+        then_value: Box<Self>,
+        /// The value when the condition is false.
+        else_value: Box<Self>,
+    },
     /// A numeric function call, retained without resolving or executing the function.
     Call {
         /// The function name as written in the declaration.
@@ -333,8 +354,21 @@ impl IntegerParameter {
     }
 }
 
-impl fmt::Display for IntegerParameter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl IntegerParameter {
+    fn precedence(&self) -> u8 {
+        match self {
+            Self::Conditional { .. } => 1,
+            Self::BinaryExpression { op, .. } => op.precedence(),
+            _ => 4,
+        }
+    }
+
+    fn fmt_with_precedence(&self, f: &mut fmt::Formatter<'_>, minimum: u8) -> fmt::Result {
+        let precedence = self.precedence();
+        let needs_parentheses = precedence < minimum;
+        if needs_parentheses {
+            f.write_str("(")?;
+        }
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
@@ -349,13 +383,29 @@ impl fmt::Display for IntegerParameter {
                 f.write_str(")")
             }
             Self::BinaryExpression { op, left, right } => {
-                if matches!(**right, Self::BinaryExpression { .. }) {
-                    write!(f, "{left} {op} ({right})")
-                } else {
-                    write!(f, "{left} {op} {right}")
-                }
+                left.fmt_with_precedence(f, precedence)?;
+                write!(f, " {op} ")?;
+                right.fmt_with_precedence(f, precedence + 1)
             }
+            Self::Conditional {
+                condition,
+                then_value,
+                else_value,
+            } => {
+                condition.fmt_with_precedence(f, precedence + 1)?;
+                write!(f, " ? {then_value} : {else_value}")
+            }
+        }?;
+        if needs_parentheses {
+            f.write_str(")")?;
         }
+        Ok(())
+    }
+}
+
+impl fmt::Display for IntegerParameter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt_with_precedence(f, 0)
     }
 }
 
@@ -1161,7 +1211,8 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
         // An unresolved precision must eventually satisfy the decimal precision limit.
         IntegerParameter::Variable(_)
         | IntegerParameter::BinaryExpression { .. }
-        | IntegerParameter::Call { .. } => 38,
+        | IntegerParameter::Call { .. }
+        | IntegerParameter::Conditional { .. } => 38,
     }
 }
 
@@ -1379,6 +1430,37 @@ mod tests {
     }
 
     #[test]
+    fn conditional_expression_display_roundtrips() {
+        for source in [
+            "P > S",
+            "P > -1",
+            "P > S > 1",
+            "P > (S > 1)",
+            "(P > 38 ? 38 : P) + 1",
+            "P - (S > 38 ? 38 : S)",
+            "(P > 1) + (S > 1)",
+            "(P > 1 ? 1 : 0) > S",
+            "(P ? S : 1) ? 2 : 3",
+            "P ? S ? 1 : 2 : 3",
+            "P ? 1 : S ? 2 : 3",
+            "min(P > 38 ? 38 : P, 10)",
+        ] {
+            assert_eq!(
+                parse_integer_expression(source).unwrap().to_string(),
+                source
+            );
+        }
+    }
+
+    #[test]
+    fn conditional_expression_display_normalizes_positive_literals() {
+        assert_eq!(
+            parse_integer_expression("P > +1").unwrap().to_string(),
+            "P > 1"
+        );
+    }
+
+    #[test]
     fn integer_expression_display_normalizes_whitespace() {
         for (source, expected) in [("L+1", "L + 1"), (" $P + _S ", "$P + _S")] {
             let expression = parse_integer_expression(source).unwrap();
@@ -1440,6 +1522,7 @@ mod tests {
             "varchar<L + 1>",
             "varchar<1 + 2>",
             "decimal<min(P, 38), 0>",
+            "varchar<1 > 0 ? 10 : 20>",
             "list<decimal<P + 1, S>>",
             "func<varchar<L + 1> -> decimal<P, S + 1>>",
             "u!custom<P + 1>",

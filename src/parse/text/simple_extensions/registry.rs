@@ -630,6 +630,57 @@ scalar_functions:
 
     #[cfg(feature = "extensions")]
     #[test]
+    fn test_core_scalar_declarations_parse_without_skipping() {
+        use super::super::{ReturnType, Type, TypeExpr};
+        use crate::text::simple_extensions::{ArgumentsItem, Type as RawType};
+        use std::collections::HashMap;
+
+        for (urn, raw) in crate::extensions::EXTENSIONS.iter() {
+            let file = ExtensionFile::create(raw.clone()).unwrap();
+            let mut expected_counts = HashMap::new();
+            for function in &raw.scalar_functions {
+                *expected_counts.entry(&function.name).or_insert(0) += function.impls.len();
+                for implementation in &function.impls {
+                    let RawType::String(source) = &implementation.return_.0 else {
+                        panic!("unsupported object return in {urn}/{}", function.name);
+                    };
+                    ReturnType::parse(source)
+                        .unwrap_or_else(|error| panic!("{urn}/{} return: {error}", function.name));
+                    for argument in implementation.args.iter().flat_map(|args| &args.0) {
+                        let source = match argument {
+                            ArgumentsItem::ValueArg(argument) => {
+                                let RawType::String(source) = &argument.value else {
+                                    panic!(
+                                        "unsupported object argument in {urn}/{}",
+                                        function.name
+                                    );
+                                };
+                                source
+                            }
+                            ArgumentsItem::TypeArg(argument) => &argument.type_,
+                            ArgumentsItem::EnumerationArg(_) => continue,
+                        };
+                        let expression = TypeExpr::parse(source).unwrap();
+                        Type::try_from(expression).unwrap_or_else(|error| {
+                            panic!("{urn}/{} argument: {error}", function.name)
+                        });
+                    }
+                }
+            }
+            assert_eq!(
+                file.extension().scalar_functions().count(),
+                expected_counts.len(),
+                "{urn}"
+            );
+            for (name, expected) in expected_counts {
+                let function = file.extension().get_scalar_function(name).unwrap();
+                assert_eq!(function.impls.len(), expected, "{urn}/{name}");
+            }
+        }
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
     fn test_scalar_function_parses_completely() {
         use super::super::{
             argument::ArgumentsItem,
