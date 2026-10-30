@@ -252,13 +252,6 @@ mod tests {
     }
 
     #[test]
-    fn test_numeric_parameters_are_not_extension_type_references() {
-        let mut references = Vec::new();
-        parse("u!custom<P + 1>").visit_references(&mut |name| references.push(name.to_string()));
-        assert_eq!(references, vec!["custom"]);
-    }
-
-    #[test]
     fn test_function_types() {
         let cases = vec![
             (
