@@ -11,6 +11,7 @@
 //! source. Built-in names, parameter counts, and literal ranges are validated
 //! later when converting the AST to [`Type`](super::types::Type).
 
+use super::return_type::{IntegerAssignment, ReturnTypeExpr};
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
 use super::type_tokenizer::{Token, TokenKind, tokenize};
 use super::types::IntegerParameter;
@@ -34,6 +35,37 @@ pub(super) fn parse_integer_parameter(source: &str) -> Result<IntegerParameter, 
         return Err(parser.error("end of numeric expression"));
     }
     Ok(expression)
+}
+
+/// Parse ordered numeric assignments and a final type, or just a type.
+pub(super) fn parse_return_type(source: &str) -> Result<ReturnTypeExpr<'_>, TypeParseError> {
+    let mut parser = Parser::new(source)?;
+    let mut assignments = Vec::new();
+    while parser.peek().is_some_and(TokenKind::is_name)
+        && parser.peek_next() == Some(TokenKind::Equals)
+    {
+        let name = parser.expect_name()?.text.to_string();
+        parser.expect(TokenKind::Equals)?;
+        let value = parser.parse_integer_expression()?;
+        let previous = parser.tokens[parser.index - 1];
+        let end = previous.position + previous.text.len();
+        let next = parser
+            .tokens
+            .get(parser.index)
+            .map_or(source.len(), |token| token.position);
+        if !source[end..next].contains('\n') {
+            return Err(parser.error("a newline after an assignment"));
+        }
+        assignments.push(IntegerAssignment { name, value });
+    }
+    let return_type = parser.parse_type()?;
+    if parser.peek().is_some() {
+        return Err(parser.error("end of return declaration"));
+    }
+    Ok(ReturnTypeExpr {
+        assignments,
+        return_type,
+    })
 }
 
 /// Recursive-descent parser whose index points to the next unconsumed token.
@@ -371,6 +403,40 @@ mod tests {
         assert_eq!(*right, parse_integer("S + 1"));
         assert_ne!(parse_integer("P + (S + 1)"), parse_integer("P + S + 1"));
         assert_eq!(parse_integer("((P))"), parse_integer("P"));
+    }
+
+    #[test]
+    fn multiline_returns_retain_ordered_assignments_and_the_final_type() {
+        let source = "digits = P - S + 1\nprecision = min(digits, 38)\ndecimal?<precision, 0>\n";
+        let parsed = parse_return_type(source).unwrap();
+        assert_eq!(parsed.assignments.len(), 2);
+        assert_eq!(parsed.assignments[0].name, "digits");
+        assert_eq!(parsed.assignments[0].value, parse_integer("P - S + 1"));
+        assert_eq!(parsed.assignments[1].name, "precision");
+        assert_eq!(
+            parsed.assignments[1].value,
+            parse_integer("min(digits, 38)")
+        );
+        assert_eq!(parsed.return_type, parse("decimal?<precision, 0>").unwrap());
+        let declaration = super::super::ReturnType::try_from(parsed).unwrap();
+        let reparsed = super::super::ReturnType::parse(&declaration.to_string()).unwrap();
+        assert_eq!(declaration, reparsed);
+        assert!(parse_return_type("i32\n").unwrap().assignments.is_empty());
+    }
+
+    #[test]
+    fn malformed_multiline_returns_are_rejected() {
+        for source in [
+            "P = 1 i32",
+            "P = 1\n",
+            "P =\ni32",
+            "P = 1\nQ =\ni32",
+            "P = 1\ni32 garbage",
+            "P = 1;\ni32",
+            "P = 1\nQ\ni32",
+        ] {
+            assert!(parse_return_type(source).is_err(), "{source}");
+        }
     }
 
     #[test]

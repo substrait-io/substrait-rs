@@ -12,8 +12,10 @@ use crate::text::simple_extensions::{
 
 use super::argument::{ArgumentsItem, ArgumentsItemError};
 use super::extensions::TypeContext;
-use super::type_ast::{TypeExpr, TypeParseError};
-use super::types::{ExtensionTypeError, Type};
+use super::return_type::ReturnType;
+use super::type_ast::TypeParseError;
+use super::type_parser::parse_return_type;
+use super::types::ExtensionTypeError;
 use crate::parse::Parse;
 use thiserror::Error;
 
@@ -114,11 +116,10 @@ pub struct Impl {
     ///
     /// Defaults to [`NullabilityHandling::Mirror`] per the Substrait spec.
     pub nullability: NullabilityHandling,
-    /// The return type, retaining variables and parameters within nested types.
+    /// The return declaration, including any ordered numeric assignments.
     ///
-    /// Variables are not bound or resolved during parsing. Addition and subtraction
-    /// in numeric parameters are retained without evaluation; other derivations remain unsupported.
-    pub return_type: Type,
+    /// Variables are not bound and derivations are not evaluated during parsing.
+    pub return_type: ReturnType,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
     /// Maps language identifiers to implementation source code snippets.
@@ -134,14 +135,7 @@ impl Impl {
         // Parse and validate the return type
         let return_type = match raw.return_.0 {
             RawType::String(s) => {
-                // Multiline strings indicate type derivation expressions
-                // See: https://github.com/substrait-io/substrait-rs/issues/449
-                if s.contains('\n') {
-                    return Err(ScalarFunctionError::NotYetImplemented(
-                        "Type derivation expressions - issue #449".to_string(),
-                    ));
-                }
-                let type_expr = match TypeExpr::parse(&s) {
+                let type_expr = match parse_return_type(&s) {
                     Err(TypeParseError::UnsupportedNumericExpression(_)) => {
                         return Err(ScalarFunctionError::NotYetImplemented(
                             "Numeric expressions in type parameters - issue #449".to_string(),
@@ -149,8 +143,10 @@ impl Impl {
                     }
                     result => result?,
                 };
-                type_expr.visit_references(&mut |name| ctx.linked(name));
-                match Type::try_from(type_expr) {
+                type_expr
+                    .return_type
+                    .visit_references(&mut |name| ctx.linked(name));
+                match ReturnType::try_from(type_expr) {
                     Ok(expression) => expression,
                     Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
                     | Err(ExtensionTypeError::ExpectedConcreteType { .. })
@@ -436,7 +432,10 @@ mod tests {
         assert_eq!(result.impls.len(), 1);
 
         use super::super::types::{Type, TypeKind};
-        assert_eq!(result.impls[0].return_type, Type::new(TypeKind::I32, false));
+        assert_eq!(
+            result.impls[0].return_type,
+            Type::new(TypeKind::I32, false).into()
+        );
     }
 
     #[test]

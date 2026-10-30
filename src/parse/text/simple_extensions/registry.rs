@@ -376,6 +376,7 @@ scalar_functions:
                     kind: TypeKind::Variable { id },
                     nullable
                 }
+                .into()
             );
 
             let ArgumentsItem::ValueArgument(argument) = function.impls[0].args[0].clone() else {
@@ -426,6 +427,7 @@ scalar_functions:
                 },
                 false
             )
+            .into()
         );
     }
 
@@ -450,6 +452,7 @@ scalar_functions:
                 ),
                 false,
             )
+            .into()
         );
     }
 
@@ -481,6 +484,7 @@ scalar_functions:
                 },
                 false,
             )
+            .into()
         );
     }
 
@@ -503,7 +507,7 @@ scalar_functions:
         let function = registry.get_scalar_function(&urn, "wrap_field").unwrap();
         assert_eq!(
             function.impls[0].return_type,
-            Type::list(Type::new(TypeKind::Variable { id: 1 }, false), false)
+            Type::list(Type::new(TypeKind::Variable { id: 1 }, false), false).into()
         );
         let ArgumentsItem::ValueArgument(argument) = function.impls[0].args[0].clone() else {
             panic!("expected value argument");
@@ -566,6 +570,70 @@ scalar_functions:
             assert_eq!(function.impls.len(), 1);
             assert_eq!(function.impls[0].return_type.to_string(), expected);
         }
+    }
+
+    #[test]
+    fn test_multiline_return_preserves_assignments_and_validates_type_references() {
+        use super::super::{ReturnType, Type, TypeKind};
+
+        let source = "precision = min(P + 1, 38)\nlist<u!missing<precision>>";
+        let raw = extension_with_custom_type_reference(
+            "extension:example.com:derivations",
+            "derive",
+            source,
+            vec![],
+        );
+        assert!(matches!(ExtensionFile::create(raw),
+            Err(SimpleExtensionsError::UnresolvedTypeReference { type_name }) if type_name == "missing"
+        ));
+        let raw = extension_with_custom_type_reference(
+            "extension:example.com:derivations",
+            "derive",
+            "precision = min(P + 1, 38)\ndecimal<precision, 0>",
+            vec![],
+        );
+        let file = ExtensionFile::create(raw).unwrap();
+        let function = file.extension().get_scalar_function("derive").unwrap();
+        let ReturnType::Derivation {
+            assignments,
+            return_type,
+        } = &function.impls[0].return_type
+        else {
+            panic!("expected a return derivation");
+        };
+        assert_eq!(assignments.len(), 1);
+        assert_eq!(assignments[0].name, "precision");
+        assert_eq!(assignments[0].value.to_string(), "min(P + 1, 38)");
+        assert_eq!(return_type.to_string(), "decimal<precision, 0>");
+        assert_eq!(
+            ReturnType::parse("i32\n").unwrap(),
+            Type::new(TypeKind::I32, false).into()
+        );
+        assert!(ReturnType::parse("P = 1\ndecimal<39, 0>").is_err());
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_core_multiline_return_is_retained() {
+        use super::super::ReturnType;
+
+        let registry = Registry::from_core_extensions();
+        let urn = Urn::from_str("extension:io.substrait:functions_rounding_decimal").unwrap();
+        let function = registry.get_scalar_function(&urn, "ceil").unwrap();
+        let ReturnType::Derivation {
+            assignments,
+            return_type,
+        } = &function.impls[0].return_type
+        else {
+            panic!("expected a return derivation");
+        };
+        assert_eq!(assignments.len(), 2);
+        assert_eq!(assignments[0].value.to_string(), "P - S + 1");
+        assert_eq!(
+            assignments[1].value.to_string(),
+            "min(integral_least_num_digits, 38)"
+        );
+        assert_eq!(return_type.to_string(), "decimal<precision, 0>");
     }
 
     #[cfg(feature = "extensions")]
@@ -637,7 +705,7 @@ scalar_functions:
             session_dependent: false,
             deterministic: true,
             nullability: NullabilityHandling::Mirror,
-            return_type: Type::new(TypeKind::I8, false),
+            return_type: Type::new(TypeKind::I8, false).into(),
             implementation: HashMap::new(),
         };
 
