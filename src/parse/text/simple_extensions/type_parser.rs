@@ -16,6 +16,7 @@ use super::type_tokenizer::{Token, TokenKind, tokenize};
 use super::types::{BinaryOp, IntegerParameter};
 
 /// Parse one complete type, rejecting any tokens left after it.
+///
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
 pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
     let mut parser = Parser::new(source)?;
@@ -232,6 +233,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Preserve plain literals separately so built-in range validation still applies.
+    ///
     /// For example, `(10)` becomes an integer parameter, while `P + 1` stays an expression.
     fn parse_numeric_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
         match self.parse_integer_expression()? {
@@ -241,6 +243,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse left-associative addition, with parentheses handled by the operand rule.
+    ///
     /// For example, `P + S + 1` groups as `(P + S) + 1`, but `P + (S + 1)` does not.
     fn parse_integer_expression(&mut self) -> Result<IntegerParameter, TypeParseError> {
         let mut expression = if self.peek() == Some(TokenKind::Plus) {
@@ -260,6 +263,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse one integer, parameter name, or parenthesized addition expression.
+    ///
     /// For `(P + 1) + S`, consume `(P + 1)` and leave the following `+` for the caller.
     fn parse_integer_operand(&mut self) -> Result<IntegerParameter, TypeParseError> {
         match self.peek() {
@@ -281,6 +285,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Combine a sign with its digits, preserving the full `i64` range.
+    ///
     /// For example, `-9223372036854775808` is parsed as one value, including its sign.
     fn parse_integer_literal(&mut self) -> Result<i64, TypeParseError> {
         let start = self.tokens[self.index].position;
