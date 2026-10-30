@@ -630,7 +630,7 @@ mod tests {
     }
 
     #[test]
-    fn grouped_numeric_literals_remain_integers() {
+    fn parse_grouped_numeric_literals_remain_integers() {
         let mut parser = Parser::new("(10), S").unwrap();
         assert_eq!(
             parser.parse_numeric_parameter().unwrap(),
@@ -640,7 +640,7 @@ mod tests {
     }
 
     #[test]
-    fn numeric_parameters_retain_addition() {
+    fn parse_numeric_parameters_retain_addition() {
         let mut parser = Parser::new("P + 1, S").unwrap();
         assert_eq!(
             parser.parse_numeric_parameter().unwrap(),
@@ -654,7 +654,7 @@ mod tests {
     }
 
     #[test]
-    fn integer_operands_leave_the_following_operator() {
+    fn parse_integer_operands_leave_the_following_operator() {
         for (source, op) in [
             ("(P + 1) + S", BinaryOp::Add),
             ("(P - 1) + S", BinaryOp::Subtract),
@@ -674,7 +674,7 @@ mod tests {
     }
 
     #[test]
-    fn call_operands_leave_the_following_operator() {
+    fn parse_call_operands_leave_the_following_operator() {
         let mut parser = Parser::new("max(P, S) + 1").unwrap();
         assert_eq!(
             parser.parse_integer_operand().unwrap(),
@@ -690,7 +690,7 @@ mod tests {
     }
 
     #[test]
-    fn integer_expressions_leave_the_separator_for_the_caller() {
+    fn parse_integer_expressions_leave_the_separator_for_the_caller() {
         for (source, separator) in [
             ("P + 1, S", TokenKind::Comma),
             ("P + 1>", TokenKind::CloseAngle),
@@ -711,7 +711,7 @@ mod tests {
     }
 
     #[test]
-    fn grouped_integer_literals_remain_literal_parameters() {
+    fn parse_grouped_integer_literals_remain_literal_parameters() {
         let mut parser = Parser::new("((10)), S").unwrap();
         assert_eq!(
             parser.parse_parameter().unwrap(),
@@ -721,7 +721,7 @@ mod tests {
     }
 
     #[test]
-    fn integer_literals_support_signs_and_the_full_i64_range() {
+    fn parse_integer_literals_support_signs_and_the_full_i64_range() {
         for (source, expected) in [
             ("0,", 0),
             ("+10,", 10),
