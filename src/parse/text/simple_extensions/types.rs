@@ -1350,6 +1350,7 @@ mod tests {
                 "{source}"
             );
         }
+        // Round-tripping allows any spacing; this also checks canonical spacing.
         assert_eq!(
             parse_integer_expression("L+1").unwrap().to_string(),
             "L + 1"
