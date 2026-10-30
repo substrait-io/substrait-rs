@@ -248,12 +248,12 @@ impl<'a> Parser<'a> {
         loop {
             match self.peek() {
                 Some(TokenKind::Plus) => {
-                    self.index += 1;
+                    self.consume(TokenKind::Plus);
                     let right = self.parse_integer_operand()?;
                     expression = IntegerParameter::Add(Box::new(expression), Box::new(right));
                 }
                 Some(TokenKind::Minus) => {
-                    self.index += 1;
+                    self.consume(TokenKind::Minus);
                     let right = self.parse_integer_operand()?;
                     expression = IntegerParameter::Subtract(Box::new(expression), Box::new(right));
                 }
