@@ -317,6 +317,13 @@ pub enum IntegerParameter {
         /// The right operand.
         right: Box<Self>,
     },
+    /// A numeric function call, retained without resolving or executing the function.
+    Call {
+        /// The function name as written in the declaration.
+        name: String,
+        /// Ordered numeric arguments.
+        arguments: Vec<Self>,
+    },
 }
 
 impl IntegerParameter {
@@ -331,6 +338,16 @@ impl fmt::Display for IntegerParameter {
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
+            Self::Call { name, arguments } => {
+                write!(f, "{name}(")?;
+                for (index, argument) in arguments.iter().enumerate() {
+                    if index > 0 {
+                        f.write_str(", ")?;
+                    }
+                    write!(f, "{argument}")?;
+                }
+                f.write_str(")")
+            }
             Self::BinaryExpression { op, left, right } => {
                 if matches!(**right, Self::BinaryExpression { .. }) {
                     write!(f, "{left} {op} ({right})")
@@ -1142,7 +1159,9 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
     match precision {
         IntegerParameter::Literal(precision) => *precision as i32,
         // An unresolved precision must eventually satisfy the decimal precision limit.
-        IntegerParameter::Variable(_) | IntegerParameter::BinaryExpression { .. } => 38,
+        IntegerParameter::Variable(_)
+        | IntegerParameter::BinaryExpression { .. }
+        | IntegerParameter::Call { .. } => 38,
     }
 }
 
@@ -1344,6 +1363,11 @@ mod tests {
             "P + (S - 1)",
             "P - (S - 1)",
             "P - -1",
+            "min(P, 38)",
+            "max(S1, S2)",
+            "integer_parameter(precision)",
+            "min(max(P1 - S1, P2 - S2) + 1, 38)",
+            "custom()",
             "P + S + (1 + (T + 2))",
             "$P + _S",
             "P + -2",
@@ -1415,6 +1439,7 @@ mod tests {
         for source in [
             "varchar<L + 1>",
             "varchar<1 + 2>",
+            "decimal<min(P, 38), 0>",
             "list<decimal<P + 1, S>>",
             "func<varchar<L + 1> -> decimal<P, S + 1>>",
             "u!custom<P + 1>",

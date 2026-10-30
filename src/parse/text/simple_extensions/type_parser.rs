@@ -223,7 +223,10 @@ impl<'a> Parser<'a> {
             ) => self.parse_numeric_parameter(),
             Some(kind)
                 if kind.is_name()
-                    && matches!(self.peek_next(), Some(TokenKind::Plus | TokenKind::Minus)) =>
+                    && matches!(
+                        self.peek_next(),
+                        Some(TokenKind::Plus | TokenKind::Minus | TokenKind::OpenParen)
+                    ) =>
             {
                 self.parse_numeric_parameter()
             }
@@ -275,9 +278,10 @@ impl<'a> Parser<'a> {
         Ok(expression)
     }
 
-    /// Parse one integer, parameter name, or parenthesized arithmetic expression.
+    /// Parse one integer, parameter name, call, or parenthesized arithmetic expression.
     ///
     /// For `(P + 1) + S`, consume `(P + 1)` and leave the following `+` for the caller.
+    /// For `max(P, S) + 1`, consume the whole call, including its arguments and parentheses.
     fn parse_integer_operand(&mut self) -> Result<IntegerParameter, TypeParseError> {
         match self.peek() {
             Some(TokenKind::Integer | TokenKind::Minus) => {
@@ -296,7 +300,24 @@ impl<'a> Parser<'a> {
             }
             Some(kind) if kind.is_name() => {
                 let name = self.expect_name()?;
-                Ok(IntegerParameter::Variable(name.text.to_string()))
+                if self.consume(TokenKind::OpenParen) {
+                    let mut arguments = Vec::new();
+                    if !self.consume(TokenKind::CloseParen) {
+                        loop {
+                            arguments.push(self.parse_integer_expression()?);
+                            if self.consume(TokenKind::CloseParen) {
+                                break;
+                            }
+                            self.expect(TokenKind::Comma)?;
+                        }
+                    }
+                    Ok(IntegerParameter::Call {
+                        name: name.text.to_string(),
+                        arguments,
+                    })
+                } else {
+                    Ok(IntegerParameter::Variable(name.text.to_string()))
+                }
             }
             _ => Err(self.error("an integer literal, parameter name, or '('")),
         }
@@ -422,6 +443,53 @@ mod tests {
     }
 
     #[test]
+    fn parse_calls_retain_names_and_ordered_arguments() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("S2".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let expected = IntegerParameter::Call {
+            name: "max".into(),
+            arguments: vec![IntegerParameter::Variable("S1".into()), sum],
+        };
+        assert_eq!(
+            parse_integer_parameter("max(S1, S2 + 1)").unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn parse_calls_retain_nested_calls() {
+        let maximum = IntegerParameter::Call {
+            name: "max".into(),
+            arguments: vec![
+                IntegerParameter::Variable("P".into()),
+                IntegerParameter::Literal(38),
+            ],
+        };
+        let expected = IntegerParameter::Call {
+            name: "min".into(),
+            arguments: vec![maximum, IntegerParameter::Literal(10)],
+        };
+        assert_eq!(
+            parse_integer_parameter("min(max(P, 38), 10)").unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn parse_calls_allow_empty_argument_lists() {
+        assert_eq!(
+            parse_integer_parameter("custom()").unwrap(),
+            IntegerParameter::Call {
+                name: "custom".into(),
+                arguments: vec![],
+            }
+        );
+    }
+
+    #[test]
     fn parse_numeric_parameters_reject_numbered_type_variables() {
         for source in [
             "decimal<any1 + 1, S>",
@@ -461,10 +529,13 @@ mod tests {
             "P - ()",
             "P - - 1",
             "P S",
+            "min(",
+            "min(P,)",
+            "min(,P)",
+            "min(P S)",
+            "min(P,,S)",
             "P * 2",
             "P / 2",
-            "min(P, S)",
-            "max(P, S)",
             "()",
             "(P + 1",
             "P + 1)",
@@ -592,6 +663,22 @@ mod tests {
             );
             assert_eq!(parser.peek(), Some(TokenKind::Plus), "{source}");
         }
+    }
+
+    #[test]
+    fn parse_call_operands_leave_the_following_operator() {
+        let mut parser = Parser::new("max(P, S) + 1").unwrap();
+        assert_eq!(
+            parser.parse_integer_operand().unwrap(),
+            IntegerParameter::Call {
+                name: "max".into(),
+                arguments: vec![
+                    IntegerParameter::Variable("P".into()),
+                    IntegerParameter::Variable("S".into()),
+                ],
+            }
+        );
+        assert_eq!(parser.peek(), Some(TokenKind::Plus));
     }
 
     #[test]
