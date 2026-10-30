@@ -311,17 +311,13 @@ fn parse_type_variable_id(name: &str) -> Option<u32> {
 mod tests {
     use super::*;
 
-    fn parse_integer(source: &str) -> IntegerParameter {
-        parse_integer_parameter(source).unwrap()
-    }
-
     #[test]
     fn addition_retains_operands_and_associates_to_the_left() {
         let IntegerParameter::BinaryExpression {
             op: BinaryOp::Add,
             left,
             right,
-        } = parse_integer("P + S + 1")
+        } = parse_integer_parameter("P + S + 1").unwrap()
         else {
             panic!("expected addition");
         };
@@ -334,7 +330,10 @@ mod tests {
             }
         );
         assert_eq!(*right, IntegerParameter::Literal(1));
-        assert_eq!(parse_integer("P"), IntegerParameter::Variable("P".into()));
+        assert_eq!(
+            parse_integer_parameter("P").unwrap(),
+            IntegerParameter::Variable("P".into())
+        );
     }
 
     #[test]
@@ -343,7 +342,7 @@ mod tests {
             op: BinaryOp::Add,
             left,
             right,
-        } = parse_integer("P + (S + 1)")
+        } = parse_integer_parameter("P + (S + 1)").unwrap()
         else {
             panic!("expected addition");
         };
