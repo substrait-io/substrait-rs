@@ -283,6 +283,36 @@ impl fmt::Display for TypeKind {
     }
 }
 
+/// A binary operator in an unevaluated numeric expression.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BinaryOp {
+    /// Integer addition.
+    Add,
+    /// Integer subtraction.
+    Subtract,
+    /// Greater-than comparison.
+    GreaterThan,
+}
+
+impl BinaryOp {
+    fn precedence(self) -> u8 {
+        match self {
+            Self::GreaterThan => 2,
+            Self::Add | Self::Subtract => 3,
+        }
+    }
+}
+
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Add => f.write_str("+"),
+            Self::Subtract => f.write_str("-"),
+            Self::GreaterThan => f.write_str(">"),
+        }
+    }
+}
+
 /// An integer literal, named parameter, or unevaluated numeric expression.
 #[derive(Clone, Debug, PartialEq)]
 pub enum IntegerParameter {
@@ -290,12 +320,15 @@ pub enum IntegerParameter {
     Literal(i64),
     /// A name whose value depends on a function call.
     Variable(String),
-    /// Addition of two integer expressions, retained without evaluation.
-    Add(Box<Self>, Box<Self>),
-    /// Subtraction of two integer expressions, retained without evaluation.
-    Subtract(Box<Self>, Box<Self>),
-    /// A greater-than comparison used by a numeric derivation.
-    GreaterThan(Box<Self>, Box<Self>),
+    /// A binary expression, retained without evaluation.
+    Binary {
+        /// The operator applied to the operands.
+        op: BinaryOp,
+        /// The left operand.
+        left: Box<Self>,
+        /// The right operand.
+        right: Box<Self>,
+    },
     /// A ternary conditional, retained without selecting a branch.
     Conditional {
         /// The condition to test when evaluating the derivation.
@@ -335,8 +368,7 @@ impl IntegerParameter {
     fn precedence(&self) -> u8 {
         match self {
             Self::Conditional { .. } => 1,
-            Self::GreaterThan(..) => 2,
-            Self::Add(..) | Self::Subtract(..) => 3,
+            Self::Binary { op, .. } => op.precedence(),
             _ => 4,
         }
     }
@@ -360,16 +392,9 @@ impl IntegerParameter {
                 }
                 f.write_str(")")
             }
-            Self::Add(left, right)
-            | Self::Subtract(left, right)
-            | Self::GreaterThan(left, right) => {
-                let operator = match self {
-                    Self::Add(..) => "+",
-                    Self::Subtract(..) => "-",
-                    _ => ">",
-                };
+            Self::Binary { op, left, right } => {
                 left.fmt_with_precedence(f, precedence)?;
-                write!(f, " {operator} ")?;
+                write!(f, " {op} ")?;
                 right.fmt_with_precedence(f, precedence + 1)
             }
             Self::Conditional {
@@ -1195,10 +1220,8 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
         IntegerParameter::Literal(precision) => *precision as i32,
         // An unresolved precision must eventually satisfy the decimal precision limit.
         IntegerParameter::Variable(_)
-        | IntegerParameter::Add(..)
-        | IntegerParameter::Subtract(..)
+        | IntegerParameter::Binary { .. }
         | IntegerParameter::Call { .. }
-        | IntegerParameter::GreaterThan(..)
         | IntegerParameter::Conditional { .. } => 38,
     }
 }
@@ -1420,10 +1443,11 @@ mod tests {
         };
         assert_eq!(
             precision,
-            &IntegerParameter::Add(
-                Box::new(IntegerParameter::Variable("P1".into())),
-                Box::new(IntegerParameter::Variable("P2".into())),
-            )
+            &IntegerParameter::Binary {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::Variable("P1".into())),
+                right: Box::new(IntegerParameter::Variable("P2".into())),
+            }
         );
         assert_eq!(scale, &IntegerParameter::Variable("S".into()));
     }

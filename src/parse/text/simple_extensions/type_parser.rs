@@ -14,7 +14,7 @@
 use super::return_type::{IntegerAssignment, ReturnTypeExpr};
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
 use super::type_tokenizer::{Token, TokenKind, tokenize};
-use super::types::IntegerParameter;
+use super::types::{BinaryOp, IntegerParameter};
 
 /// Parse one complete type, rejecting any tokens left after it.
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
@@ -302,7 +302,11 @@ impl<'a> Parser<'a> {
         {
             self.consume(TokenKind::CloseAngle);
             let right = self.parse_integer_sum()?;
-            expression = IntegerParameter::GreaterThan(Box::new(expression), Box::new(right));
+            expression = IntegerParameter::Binary {
+                op: BinaryOp::GreaterThan,
+                left: Box::new(expression),
+                right: Box::new(right),
+            };
         }
         Ok(expression)
     }
@@ -323,19 +327,23 @@ impl<'a> Parser<'a> {
             self.parse_integer_operand()?
         };
         loop {
-            match self.peek() {
+            let op = match self.peek() {
                 Some(TokenKind::Plus) => {
                     self.consume(TokenKind::Plus);
-                    let right = self.parse_integer_operand()?;
-                    expression = IntegerParameter::Add(Box::new(expression), Box::new(right));
+                    BinaryOp::Add
                 }
                 Some(TokenKind::Minus) => {
                     self.consume(TokenKind::Minus);
-                    let right = self.parse_integer_operand()?;
-                    expression = IntegerParameter::Subtract(Box::new(expression), Box::new(right));
+                    BinaryOp::Subtract
                 }
                 _ => break,
-            }
+            };
+            let right = self.parse_integer_operand()?;
+            expression = IntegerParameter::Binary {
+                op,
+                left: Box::new(expression),
+                right: Box::new(right),
+            };
         }
         Ok(expression)
     }
@@ -409,7 +417,12 @@ mod tests {
 
     #[test]
     fn addition_retains_operands_and_associates_to_the_left() {
-        let IntegerParameter::Add(left, right) = parse_integer("P + S + 1") else {
+        let IntegerParameter::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = parse_integer("P + S + 1")
+        else {
             panic!("expected addition");
         };
         assert_eq!(*left, parse_integer("P + S"));
@@ -419,12 +432,22 @@ mod tests {
 
     #[test]
     fn subtraction_shares_addition_precedence_and_preserves_grouping() {
-        let IntegerParameter::Add(left, right) = parse_integer("P - S + 1") else {
+        let IntegerParameter::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = parse_integer("P - S + 1")
+        else {
             panic!("expected addition");
         };
         assert_eq!(*left, parse_integer("P - S"));
         assert_eq!(*right, IntegerParameter::Literal(1));
-        let IntegerParameter::Subtract(left, right) = parse_integer("P - S - 1") else {
+        let IntegerParameter::Binary {
+            op: BinaryOp::Subtract,
+            left,
+            right,
+        } = parse_integer("P - S - 1")
+        else {
             panic!("expected subtraction");
         };
         assert_eq!(*left, parse_integer("P - S"));
@@ -445,7 +468,12 @@ mod tests {
 
     #[test]
     fn parentheses_preserve_grouping() {
-        let IntegerParameter::Add(left, right) = parse_integer("P + (S + 1)") else {
+        let IntegerParameter::Binary {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = parse_integer("P + (S + 1)")
+        else {
             panic!("expected addition");
         };
         assert_eq!(*left, IntegerParameter::Variable("P".into()));
@@ -530,10 +558,11 @@ mod tests {
         };
         assert_eq!(
             *condition,
-            IntegerParameter::GreaterThan(
-                Box::new(parse_integer("init_prec")),
-                Box::new(IntegerParameter::Literal(38))
-            )
+            IntegerParameter::Binary {
+                op: BinaryOp::GreaterThan,
+                left: Box::new(parse_integer("init_prec")),
+                right: Box::new(IntegerParameter::Literal(38)),
+            }
         );
         assert_eq!(*then_value, parse_integer("scale_after_borrow"));
         assert_eq!(*else_value, parse_integer("init_scale"));
