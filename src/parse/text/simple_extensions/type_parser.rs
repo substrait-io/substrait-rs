@@ -280,13 +280,20 @@ impl<'a> Parser<'a> {
         } else {
             self.parse_integer_operand()?
         };
-        while let Some(operator @ (TokenKind::Plus | TokenKind::Minus)) = self.peek() {
-            self.index += 1;
-            let right = self.parse_integer_operand()?;
-            expression = match operator {
-                TokenKind::Plus => IntegerParameter::Add(Box::new(expression), Box::new(right)),
-                _ => IntegerParameter::Subtract(Box::new(expression), Box::new(right)),
-            };
+        loop {
+            match self.peek() {
+                Some(TokenKind::Plus) => {
+                    self.index += 1;
+                    let right = self.parse_integer_operand()?;
+                    expression = IntegerParameter::Add(Box::new(expression), Box::new(right));
+                }
+                Some(TokenKind::Minus) => {
+                    self.index += 1;
+                    let right = self.parse_integer_operand()?;
+                    expression = IntegerParameter::Subtract(Box::new(expression), Box::new(right));
+                }
+                _ => break,
+            }
         }
         Ok(expression)
     }
