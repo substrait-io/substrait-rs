@@ -690,7 +690,7 @@ scalar_functions:
     #[cfg(feature = "extensions")]
     #[test]
     fn test_core_conditional_return_is_retained() {
-        use super::super::{IntegerParameter, ReturnType};
+        use super::super::ReturnType;
 
         let registry = Registry::from_core_extensions();
         let urn = Urn::from_str("extension:io.substrait:functions_arithmetic_decimal").unwrap();
@@ -706,7 +706,10 @@ scalar_functions:
         assert_eq!(assignments[6].name, "scale");
         assert_eq!(
             assignments[6].value,
-            IntegerParameter::parse("init_prec > 38 ? scale_after_borrow : init_scale").unwrap()
+            super::super::type_parser::parse_integer_parameter(
+                "init_prec > 38 ? scale_after_borrow : init_scale"
+            )
+            .unwrap()
         );
         assert_eq!(return_type.to_string(), "decimal<prec, scale>");
         let declaration = &function.impls[0].return_type;

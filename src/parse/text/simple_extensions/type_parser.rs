@@ -27,7 +27,8 @@ pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
     Ok(expression)
 }
 
-/// Parse a complete numeric parameter without binding names or evaluating arithmetic.
+/// Parse a standalone numeric expression for tests, rejecting trailing tokens.
+#[cfg(test)]
 pub(super) fn parse_integer_parameter(source: &str) -> Result<IntegerParameter, TypeParseError> {
     let mut parser = Parser::new(source)?;
     let expression = parser.parse_integer_expression()?;
@@ -738,7 +739,7 @@ mod tests {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
                 parser.parse_integer_expression().unwrap(),
-                IntegerParameter::parse("P + (S + 1)").unwrap(),
+                parse_integer("P + (S + 1)"),
                 "{source}"
             );
             assert_eq!(parser.peek(), Some(separator), "{source}");
