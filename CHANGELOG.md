@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.66.0](https://github.com/substrait-io/substrait-rs/compare/v0.65.0...v0.66.0) - 2026-10-30
+
+### Added
+
+- parse function types in signatures ([#570](https://github.com/substrait-io/substrait-rs/pull/570))
+- load functions with nested symbolic return types ([#562](https://github.com/substrait-io/substrait-rs/pull/562))
+- load functions with named numeric return parameters ([#561](https://github.com/substrait-io/substrait-rs/pull/561))
+- load functions returning numbered type variables ([#560](https://github.com/substrait-io/substrait-rs/pull/560))
+
+### Fixed
+
+- keep nullable and user-defined type strings parseable ([#557](https://github.com/substrait-io/substrait-rs/pull/557))
+- normalize built-in type names ([#558](https://github.com/substrait-io/substrait-rs/pull/558))
+
+### Other
+
+- parse type expressions from tokens ([#574](https://github.com/substrait-io/substrait-rs/pull/574))
+- introduce type syntax tokenization ([#573](https://github.com/substrait-io/substrait-rs/pull/573))
+- separate type expression parsing steps ([#571](https://github.com/substrait-io/substrait-rs/pull/571))
+- unify parsed type representations ([#565](https://github.com/substrait-io/substrait-rs/pull/565))
+
 ## [0.65.0](https://github.com/substrait-io/substrait-rs/compare/v0.64.1...v0.65.0) - 2026-08-27
 
 ### Added
