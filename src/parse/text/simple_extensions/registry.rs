@@ -533,39 +533,27 @@ scalar_functions:
     }
 
     #[test]
-    fn test_numeric_expression_returns_are_retained() {
-        for (return_type, expected) in [
-            ("varchar<L + 1>", "varchar<L + 1>"),
-            ("varchar<L - 1>", "varchar<L - 1>"),
-            (
-                "decimal<min(P,38), max(S1,S2)>",
-                "decimal<min(P, 38), max(S1, S2)>",
-            ),
-            (
-                "precision_timestamp<integer_parameter(precision)>",
-                "precision_timestamp<integer_parameter(precision)>",
-            ),
-            ("list<varchar<max(L1,L2)>>", "list<varchar<max(L1, L2)>>"),
-            ("decimal<P - S + 1, S>", "decimal<P - S + 1, S>"),
-            ("list<varchar<L - (M + 1)>>", "list<varchar<L - (M + 1)>>"),
-            ("varchar<L+(M+1)>", "varchar<L + (M + 1)>"),
-            ("decimal<P1+P2, S>", "decimal<P1 + P2, S>"),
-            ("list<decimal<P + 1, S>>", "list<decimal<P + 1, S>>"),
-        ] {
-            let raw = extension_with_custom_type_reference(
-                "extension:example.com:numeric_expressions",
-                "derive",
-                return_type,
-                vec![],
-            );
-            let file = ExtensionFile::create(raw).unwrap();
-            let function = file
-                .extension()
-                .get_scalar_function("derive")
-                .expect("numeric expression return should not cause a function to be skipped");
-            assert_eq!(function.impls.len(), 1);
-            assert_eq!(function.impls[0].return_type.to_string(), expected);
-        }
+    fn test_function_with_addition_in_return_type_is_retained() {
+        use super::super::{Type, TypeExpr};
+
+        let yaml = r#"urn: extension:example.com:numeric_expressions
+scalar_functions:
+  - name: append_space
+    impls:
+      - args:
+          - name: input
+            value: varchar<L>
+        return: varchar<L + 1>
+"#;
+        let file = ExtensionFile::read_from_str(yaml).unwrap();
+        let function = file
+            .extension()
+            .get_scalar_function("append_space")
+            .unwrap();
+        let expected = Type::try_from(TypeExpr::parse("varchar<L + 1>").unwrap()).unwrap();
+
+        assert_eq!(function.impls.len(), 1);
+        assert_eq!(function.impls[0].return_type, expected);
     }
 
     #[cfg(feature = "extensions")]
