@@ -300,7 +300,7 @@ impl<'a> Parser<'a> {
         while self.peek() == Some(TokenKind::CloseAngle)
             && self.peek_next().is_some_and(Self::starts_integer_operand)
         {
-            self.index += 1;
+            self.consume(TokenKind::CloseAngle);
             let right = self.parse_integer_sum()?;
             expression = IntegerParameter::GreaterThan(Box::new(expression), Box::new(right));
         }
