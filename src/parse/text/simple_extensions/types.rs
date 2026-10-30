@@ -283,17 +283,41 @@ impl fmt::Display for TypeKind {
     }
 }
 
-/// An integer literal or a named parameter in a type expression.
+/// A binary operator in an unevaluated numeric expression.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BinaryOp {
+    /// Integer addition.
+    Add,
+}
+
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Add => f.write_str("+"),
+        }
+    }
+}
+
+/// An integer literal, named parameter, or unevaluated numeric expression.
 #[derive(Clone, Debug, PartialEq)]
 pub enum IntegerParameter {
     /// A known integer value.
     Literal(i64),
     /// A name whose value depends on a function call.
     Variable(String),
+    /// A binary expression, retained without evaluation.
+    BinaryExpression {
+        /// The operator applied to the operands.
+        op: BinaryOp,
+        /// The left operand.
+        left: Box<Self>,
+        /// The right operand.
+        right: Box<Self>,
+    },
 }
 
 impl IntegerParameter {
-    /// Returns whether this parameter is a literal rather than a variable.
+    /// Returns whether this parameter is a literal rather than an unresolved expression.
     pub fn is_concrete(&self) -> bool {
         matches!(self, Self::Literal(_))
     }
@@ -304,6 +328,13 @@ impl fmt::Display for IntegerParameter {
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
+            Self::BinaryExpression { op, left, right } => {
+                if matches!(**right, Self::BinaryExpression { .. }) {
+                    write!(f, "{left} {op} ({right})")
+                } else {
+                    write!(f, "{left} {op} {right}")
+                }
+            }
         }
     }
 }
@@ -1103,8 +1134,8 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
 fn max_literal_scale(precision: &IntegerParameter) -> i32 {
     match precision {
         IntegerParameter::Literal(precision) => *precision as i32,
-        // A named precision is at most the maximum decimal precision.
-        IntegerParameter::Variable(_) => 38,
+        // An unresolved precision must eventually satisfy the decimal precision limit.
+        IntegerParameter::Variable(_) | IntegerParameter::BinaryExpression { .. } => 38,
     }
 }
 
@@ -1294,6 +1325,48 @@ mod tests {
         assert!(refs.is_empty(), "{s} should not add an extension reference");
 
         Type::try_from(parsed).unwrap()
+    }
+
+    #[test]
+    fn integer_expression_display() {
+        let expression = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        assert_eq!(expression.to_string(), "P + 1");
+    }
+
+    #[test]
+    fn integer_expression_display_preserves_grouping() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let left_grouped = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(sum.clone()),
+            right: Box::new(IntegerParameter::Variable("S".into())),
+        };
+        let right_grouped = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("S".into())),
+            right: Box::new(sum),
+        };
+        assert_eq!(left_grouped.to_string(), "P + 1 + S");
+        assert_eq!(right_grouped.to_string(), "S + (P + 1)");
+    }
+
+    #[test]
+    fn integer_expressions_are_not_concrete_even_with_literal_operands() {
+        let expression = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Literal(1)),
+            right: Box::new(IntegerParameter::Literal(2)),
+        };
+        assert!(!expression.is_concrete());
+        assert!(IntegerParameter::Literal(3).is_concrete());
     }
 
     #[test]
