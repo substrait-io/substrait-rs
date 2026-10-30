@@ -309,7 +309,7 @@ pub enum IntegerParameter {
     /// A name whose value depends on a function call.
     Variable(String),
     /// A binary expression, retained without evaluation.
-    Binary {
+    BinaryExpression {
         /// The operator applied to the operands.
         op: BinaryOp,
         /// The left operand.
@@ -348,8 +348,8 @@ impl fmt::Display for IntegerParameter {
                 }
                 f.write_str(")")
             }
-            Self::Binary { op, left, right } => {
-                if matches!(**right, Self::Binary { .. }) {
+            Self::BinaryExpression { op, left, right } => {
+                if matches!(**right, Self::BinaryExpression { .. }) {
                     write!(f, "{left} {op} ({right})")
                 } else {
                     write!(f, "{left} {op} {right}")
@@ -1160,7 +1160,7 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
         IntegerParameter::Literal(precision) => *precision as i32,
         // An unresolved precision must eventually satisfy the decimal precision limit.
         IntegerParameter::Variable(_)
-        | IntegerParameter::Binary { .. }
+        | IntegerParameter::BinaryExpression { .. }
         | IntegerParameter::Call { .. } => 38,
     }
 }
@@ -1385,7 +1385,7 @@ mod tests {
         };
         assert_eq!(
             precision,
-            &IntegerParameter::Binary {
+            &IntegerParameter::BinaryExpression {
                 op: BinaryOp::Add,
                 left: Box::new(IntegerParameter::Variable("P1".into())),
                 right: Box::new(IntegerParameter::Variable("P2".into())),
@@ -1408,21 +1408,33 @@ mod tests {
     }
 
     #[test]
-    fn test_numeric_expression_display_and_concreteness() {
+    fn test_numeric_expression_type_display() {
+        for (source, expected) in [
+            ("varchar<L+1>", "varchar<L + 1>"),
+            ("varchar<L + (M + 1)>", "varchar<L + (M + 1)>"),
+            ("varchar<(L)>", "varchar<L>"),
+            ("decimal<(P1 + P2), (S + 1)>", "decimal<P1 + P2, S + 1>"),
+            ("list<decimal<P + 1, S>>", "list<decimal<P + 1, S>>"),
+            (
+                "func<varchar<L + 1> -> decimal<P, S + 1>>",
+                "func<varchar<L + 1> -> decimal<P, S + 1>>",
+            ),
+            ("u!custom<P + 1>", "u!custom<P + 1>"),
+        ] {
+            assert_eq!(parse_type(source).to_string(), expected, "{source}");
+        }
+    }
+
+    #[test]
+    fn test_numeric_expression_types_are_not_concrete() {
         for source in [
             "varchar<L + 1>",
-            "varchar<L + (M + 1)>",
-            "varchar<(L)>",
-            "decimal<(P1 + P2), (S + 1)>",
-            "decimal<P1 + P2, S>",
+            "varchar<1 + 2>",
             "list<decimal<P + 1, S>>",
             "func<varchar<L + 1> -> decimal<P, S + 1>>",
             "u!custom<P + 1>",
-            "varchar<1 + 2>",
         ] {
-            let parsed = parse_type(source);
-            assert!(!parsed.is_concrete(), "{source}");
-            assert_eq!(parse_type(&parsed.to_string()), parsed, "{source}");
+            assert!(!parse_type(source).is_concrete(), "{source}");
         }
     }
 

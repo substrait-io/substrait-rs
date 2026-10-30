@@ -123,6 +123,7 @@ impl<'a> TypeExpr<'a> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::types::BinaryOp;
     use super::*;
 
     fn parse(expr: &str) -> TypeExpr<'_> {
@@ -228,9 +229,11 @@ mod tests {
         assert_eq!(parameters.len(), 2);
         assert_eq!(
             parameters[0],
-            TypeExprParam::Expression(
-                super::super::type_parser::parse_integer_parameter("P1 + P2").unwrap()
-            )
+            TypeExprParam::Expression(IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::Variable("P1".into())),
+                right: Box::new(IntegerParameter::Variable("P2".into())),
+            })
         );
         assert_eq!(
             parameters[1],
