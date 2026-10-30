@@ -538,7 +538,7 @@ scalar_functions:
 
     #[test]
     fn test_function_with_addition_in_return_type_is_retained() {
-        use super::super::{Type, TypeExpr};
+        use super::super::{BinaryOp, IntegerParameter, Type, TypeKind};
 
         let yaml = r#"urn: extension:example.com:numeric_expressions
 scalar_functions:
@@ -554,7 +554,16 @@ scalar_functions:
             .extension()
             .get_scalar_function("append_space")
             .unwrap();
-        let expected = Type::try_from(TypeExpr::parse("varchar<L + 1>").unwrap()).unwrap();
+        let expected = Type::new(
+            TypeKind::VarChar {
+                length: IntegerParameter::Binary {
+                    op: BinaryOp::Add,
+                    left: Box::new(IntegerParameter::Variable("L".into())),
+                    right: Box::new(IntegerParameter::Literal(1)),
+                },
+            },
+            false,
+        );
 
         assert_eq!(function.impls.len(), 1);
         assert_eq!(function.impls[0].return_type, expected.into());
