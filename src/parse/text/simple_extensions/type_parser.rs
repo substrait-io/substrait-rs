@@ -243,25 +243,30 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a type or numeric parameter, leaving its separator unconsumed.
-    /// Names followed by `+`, `-`, or `(` begin numeric expressions; other names begin types.
+    /// Arithmetic, calls, and conditionals distinguish numeric expressions from types.
     fn parse_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
         match self.peek() {
             Some(
                 TokenKind::Integer | TokenKind::Plus | TokenKind::Minus | TokenKind::OpenParen,
             ) => self.parse_numeric_parameter(),
-            Some(kind)
-                if kind.is_name()
-                    && matches!(
-                        self.peek_next(),
-                        Some(TokenKind::Plus | TokenKind::Minus | TokenKind::OpenParen)
-                    ) =>
-            {
+            Some(kind) if kind.is_name() && self.name_begins_numeric_expression() => {
                 self.parse_numeric_parameter()
             }
             Some(TokenKind::Comma | TokenKind::CloseAngle | TokenKind::CloseParen) | None => {
                 Err(TypeParseError::EmptyParameter)
             }
             _ => Ok(TypeExprParam::Type(self.parse_type()?)),
+        }
+    }
+
+    fn name_begins_numeric_expression(&self) -> bool {
+        match self.peek_next() {
+            Some(TokenKind::Plus | TokenKind::Minus | TokenKind::OpenParen) => true,
+            Some(TokenKind::CloseAngle | TokenKind::QuestionMark) => self
+                .tokens
+                .get(self.index + 2)
+                .is_some_and(|token| Self::starts_integer_operand(token.kind)),
+            _ => false,
         }
     }
 
@@ -273,8 +278,45 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parse left-associative addition and subtraction, with grouped operands.
+    /// Parse a right-associative ternary, with comparison and arithmetic binding tighter.
     fn parse_integer_expression(&mut self) -> Result<IntegerParameter, TypeParseError> {
+        let condition = self.parse_integer_comparison()?;
+        if !self.consume(TokenKind::QuestionMark) {
+            return Ok(condition);
+        }
+        let then_value = self.parse_integer_expression()?;
+        self.expect(TokenKind::Colon)?;
+        let else_value = self.parse_integer_expression()?;
+        Ok(IntegerParameter::Conditional {
+            condition: Box::new(condition),
+            then_value: Box::new(then_value),
+            else_value: Box::new(else_value),
+        })
+    }
+
+    /// A `>` followed by an operand is a comparison; otherwise it closes a type.
+    fn parse_integer_comparison(&mut self) -> Result<IntegerParameter, TypeParseError> {
+        let mut expression = self.parse_integer_sum()?;
+        while self.peek() == Some(TokenKind::CloseAngle)
+            && self.peek_next().is_some_and(Self::starts_integer_operand)
+        {
+            self.index += 1;
+            let right = self.parse_integer_sum()?;
+            expression = IntegerParameter::GreaterThan(Box::new(expression), Box::new(right));
+        }
+        Ok(expression)
+    }
+
+    fn starts_integer_operand(kind: TokenKind) -> bool {
+        kind.is_name()
+            || matches!(
+                kind,
+                TokenKind::Integer | TokenKind::Plus | TokenKind::Minus | TokenKind::OpenParen
+            )
+    }
+
+    /// Parse left-associative addition and subtraction, with grouped operands.
+    fn parse_integer_sum(&mut self) -> Result<IntegerParameter, TypeParseError> {
         let mut expression = if self.peek() == Some(TokenKind::Plus) {
             IntegerParameter::Literal(self.parse_integer_literal()?)
         } else {
@@ -470,6 +512,94 @@ mod tests {
     }
 
     #[test]
+    fn conditionals_retain_comparisons_and_both_branches() {
+        let IntegerParameter::Conditional {
+            condition,
+            then_value,
+            else_value,
+        } = parse_integer("init_prec > 38 ? scale_after_borrow : init_scale")
+        else {
+            panic!("expected conditional");
+        };
+        assert_eq!(
+            *condition,
+            IntegerParameter::GreaterThan(
+                Box::new(parse_integer("init_prec")),
+                Box::new(IntegerParameter::Literal(38))
+            )
+        );
+        assert_eq!(*then_value, parse_integer("scale_after_borrow"));
+        assert_eq!(*else_value, parse_integer("init_scale"));
+        let IntegerParameter::Conditional {
+            condition,
+            then_value,
+            else_value,
+        } = parse_integer("P + 1 > S - 1 ? 38 : P > 0 ? P : 1")
+        else {
+            panic!("expected conditional");
+        };
+        assert_eq!(*condition, parse_integer("P + 1 > S - 1"));
+        assert_eq!(*then_value, IntegerParameter::Literal(38));
+        assert_eq!(*else_value, parse_integer("P > 0 ? P : 1"));
+    }
+
+    #[test]
+    fn conditional_display_preserves_precedence_and_grouping() {
+        for source in [
+            "P > S",
+            "P > +1",
+            "P > -1",
+            "P > S > 1",
+            "P > (S > 1)",
+            "(P > 38 ? 38 : P) + 1",
+            "P - (S > 38 ? 38 : S)",
+            "(P > 1) + (S > 1)",
+            "(P > 1 ? 1 : 0) > S",
+            "(P ? S : 1) ? 2 : 3",
+            "P ? S ? 1 : 2 : 3",
+            "P ? 1 : S ? 2 : 3",
+            "min(P > 38 ? 38 : P, 10)",
+        ] {
+            let expression = parse_integer(source);
+            assert_eq!(
+                parse_integer(&expression.to_string()),
+                expression,
+                "{source}"
+            );
+            assert!(!expression.is_concrete());
+        }
+    }
+
+    #[test]
+    fn conditionals_do_not_consume_type_delimiters_or_nullability() {
+        for source in [
+            "decimal<P > 38 ? 38 : P, S>",
+            "list<varchar<L > 10 ? 10 : L>>",
+            "func<varchar<L + 1> -> decimal<P + 1, S + 1>>",
+            "list<any1?>",
+            "map<string, any?>",
+        ] {
+            let type_ = super::super::Type::try_from(parse(source).unwrap()).unwrap();
+            assert_eq!(
+                super::super::Type::try_from(parse(&type_.to_string()).unwrap()).unwrap(),
+                type_,
+                "{source}"
+            );
+        }
+        for source in [
+            "P ?",
+            "P ? S",
+            "P ? : S",
+            "P ? S :",
+            "P >",
+            "P > ? S : 1",
+            "P : S",
+        ] {
+            assert!(parse_integer_parameter(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
     fn invalid_or_unsupported_expressions() {
         for source in [
             "",
@@ -485,8 +615,6 @@ mod tests {
             "P + ()",
             "(P)(S)",
             "(P +)",
-            "P > S",
-            "P ? S : 1",
             "9223372036854775808",
             "@ + 1",
         ] {

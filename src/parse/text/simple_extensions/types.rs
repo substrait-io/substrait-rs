@@ -294,6 +294,17 @@ pub enum IntegerParameter {
     Add(Box<Self>, Box<Self>),
     /// Subtraction of two integer expressions, retained without evaluation.
     Subtract(Box<Self>, Box<Self>),
+    /// A greater-than comparison used by a numeric derivation.
+    GreaterThan(Box<Self>, Box<Self>),
+    /// A ternary conditional, retained without selecting a branch.
+    Conditional {
+        /// The condition to test when evaluating the derivation.
+        condition: Box<Self>,
+        /// The value when the condition is true.
+        then_value: Box<Self>,
+        /// The value when the condition is false.
+        else_value: Box<Self>,
+    },
     /// A numeric function call, retained without resolving or executing the function.
     Call {
         /// The function name as written in the declaration.
@@ -308,7 +319,8 @@ impl IntegerParameter {
     ///
     /// Both operators associate to the left unless grouped with parentheses, as in
     /// `P - (S + 1)`. Calls such as `max(S1, S2)` retain their names and arguments.
-    /// No operation is evaluated.
+    /// Greater-than comparisons and right-associative ternary conditionals are also
+    /// retained, as in `P > 38 ? 38 : P`. No operation is evaluated.
     pub fn parse(source: &str) -> Result<Self, TypeParseError> {
         super::type_parser::parse_integer_parameter(source)
     }
@@ -319,8 +331,22 @@ impl IntegerParameter {
     }
 }
 
-impl fmt::Display for IntegerParameter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl IntegerParameter {
+    fn precedence(&self) -> u8 {
+        match self {
+            Self::Conditional { .. } => 1,
+            Self::GreaterThan(..) => 2,
+            Self::Add(..) | Self::Subtract(..) => 3,
+            _ => 4,
+        }
+    }
+
+    fn fmt_with_precedence(&self, f: &mut fmt::Formatter<'_>, minimum: u8) -> fmt::Result {
+        let precedence = self.precedence();
+        let needs_parentheses = precedence < minimum;
+        if needs_parentheses {
+            f.write_str("(")?;
+        }
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
@@ -334,19 +360,37 @@ impl fmt::Display for IntegerParameter {
                 }
                 f.write_str(")")
             }
-            Self::Add(left, right) | Self::Subtract(left, right) => {
-                let operator = if matches!(self, Self::Add(..)) {
-                    "+"
-                } else {
-                    "-"
+            Self::Add(left, right)
+            | Self::Subtract(left, right)
+            | Self::GreaterThan(left, right) => {
+                let operator = match self {
+                    Self::Add(..) => "+",
+                    Self::Subtract(..) => "-",
+                    _ => ">",
                 };
-                if matches!(**right, Self::Add(..) | Self::Subtract(..)) {
-                    write!(f, "{left} {operator} ({right})")
-                } else {
-                    write!(f, "{left} {operator} {right}")
-                }
+                left.fmt_with_precedence(f, precedence)?;
+                write!(f, " {operator} ")?;
+                right.fmt_with_precedence(f, precedence + 1)
             }
+            Self::Conditional {
+                condition,
+                then_value,
+                else_value,
+            } => {
+                condition.fmt_with_precedence(f, precedence + 1)?;
+                write!(f, " ? {then_value} : {else_value}")
+            }
+        }?;
+        if needs_parentheses {
+            f.write_str(")")?;
         }
+        Ok(())
+    }
+}
+
+impl fmt::Display for IntegerParameter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt_with_precedence(f, 0)
     }
 }
 
@@ -1153,7 +1197,9 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
         IntegerParameter::Variable(_)
         | IntegerParameter::Add(..)
         | IntegerParameter::Subtract(..)
-        | IntegerParameter::Call { .. } => 38,
+        | IntegerParameter::Call { .. }
+        | IntegerParameter::GreaterThan(..)
+        | IntegerParameter::Conditional { .. } => 38,
     }
 }
 
