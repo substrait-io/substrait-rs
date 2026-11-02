@@ -555,7 +555,7 @@ scalar_functions:
             false,
         );
         assert_eq!(function.impls.len(), 1);
-        assert_eq!(function.impls[0].return_type, expected);
+        assert_eq!(function.impls[0].return_type, expected.into());
     }
 
     #[test]
