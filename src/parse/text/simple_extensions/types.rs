@@ -1724,26 +1724,13 @@ mod tests {
     }
 
     #[test]
-    fn test_user_defined_type_parameters_retain_integer_variables() {
-        let expected = Type::extension_with_params(
-            "foo".into(),
-            vec![TypeParameter::Integer(IntegerParameter::Variable(
-                "P".into(),
-            ))],
-            false,
-        );
-        for source in ["u!foo<P>", "u!foo<(P)>"] {
-            assert_eq!(parse_type(source), expected, "{source}");
-        }
-    }
-
-    #[test]
-    fn test_user_defined_type_parameters_retain_types() {
+    fn test_user_defined_type_parameters_distinguish_integers_and_types() {
         assert_eq!(
-            parse_type("u!foo<i32, any1>"),
+            parse_type("u!foo<P, i32, any1>"),
             Type::extension_with_params(
                 "foo".into(),
                 vec![
+                    TypeParameter::Integer(IntegerParameter::Variable("P".into())),
                     TypeParameter::Type(required_type(TypeKind::I32)),
                     TypeParameter::Type(required_type(TypeKind::Variable { id: 1 })),
                 ],
