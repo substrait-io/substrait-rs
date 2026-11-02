@@ -265,17 +265,11 @@ impl<'a> Parser<'a> {
         } else {
             self.parse_integer_operand()?
         };
-        loop {
-            let op = match self.peek() {
-                Some(TokenKind::Plus) => {
-                    self.consume(TokenKind::Plus);
-                    BinaryOp::Add
-                }
-                Some(TokenKind::Minus) => {
-                    self.consume(TokenKind::Minus);
-                    BinaryOp::Subtract
-                }
-                _ => break,
+        while let Some(kind) = self.consume_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
+            let op = if kind == TokenKind::Plus {
+                BinaryOp::Add
+            } else {
+                BinaryOp::Subtract
             };
             let right = self.parse_integer_operand()?;
             expression = IntegerParameter::BinaryExpression {
