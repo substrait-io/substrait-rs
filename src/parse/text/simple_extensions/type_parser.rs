@@ -303,10 +303,10 @@ impl<'a> Parser<'a> {
             self.parse_integer_operand()?
         };
         while let Some(kind) = self.consume_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
-            let op = if kind == TokenKind::Plus {
-                BinaryOp::Add
-            } else {
-                BinaryOp::Subtract
+            let op = match kind {
+                TokenKind::Plus => BinaryOp::Add,
+                TokenKind::Minus => BinaryOp::Subtract,
+                _ => unreachable!(),
             };
             let right = self.parse_integer_operand()?;
             expression = IntegerParameter::BinaryExpression {
