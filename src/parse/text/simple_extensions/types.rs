@@ -328,7 +328,13 @@ impl fmt::Display for IntegerParameter {
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
-            Self::BinaryExpression { op, left, right } => write!(f, "{left} {op} {right}"),
+            Self::BinaryExpression { op, left, right } => {
+                if matches!(**right, Self::BinaryExpression { .. }) {
+                    write!(f, "{left} {op} ({right})")
+                } else {
+                    write!(f, "{left} {op} {right}")
+                }
+            }
         }
     }
 }
@@ -1328,7 +1334,14 @@ mod tests {
 
     #[test]
     fn integer_expression_display_roundtrips() {
-        for source in ["P + S + 1", "$P + _S", "P + -2", "9223372036854775807 + 1"] {
+        for source in [
+            "P + S + 1",
+            "P + (S + 1)",
+            "P + S + (1 + (T + 2))",
+            "$P + _S",
+            "P + -2",
+            "9223372036854775807 + 1",
+        ] {
             let expression = parse_integer_expression(source).unwrap();
             assert_eq!(expression.to_string(), source);
         }
@@ -1360,9 +1373,25 @@ mod tests {
     }
 
     #[test]
+    fn test_expression_literals_still_validate_ranges() {
+        for source in ["decimal<(0), 0>", "decimal<(39), 0>", "decimal<10, (11)>"] {
+            assert!(
+                matches!(
+                    parse_type_result(source),
+                    Err(ExtensionTypeError::InvalidParameterRange { .. })
+                ),
+                "{source}"
+            );
+        }
+    }
+
+    #[test]
     fn test_numeric_expression_type_display() {
         for (source, expected) in [
             ("varchar<L+1>", "varchar<L + 1>"),
+            ("varchar<L + (M + 1)>", "varchar<L + (M + 1)>"),
+            ("varchar<(L)>", "varchar<L>"),
+            ("decimal<(P1 + P2), (S + 1)>", "decimal<P1 + P2, S + 1>"),
             ("list<decimal<P + 1, S>>", "list<decimal<P + 1, S>>"),
             (
                 "func<varchar<L + 1> -> decimal<P, S + 1>>",
@@ -1692,6 +1721,20 @@ mod tests {
                 "{input} should not be accepted as a signature type"
             );
         }
+    }
+
+    #[test]
+    fn test_user_defined_integer_parameters_support_grouping() {
+        assert_eq!(
+            parse_type("u!foo<(P)>"),
+            Type::extension_with_params(
+                "foo".into(),
+                vec![TypeParameter::Integer(IntegerParameter::Variable(
+                    "P".into(),
+                ))],
+                false,
+            )
+        );
     }
 
     #[test]
