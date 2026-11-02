@@ -246,6 +246,10 @@ mod tests {
         for source in [
             "varchar<L +>",
             "varchar<L + * 2>",
+            "varchar<(L)>",
+            "varchar<(10)>",
+            "varchar<(L + 1)>",
+            "varchar<L + (M + 1)>",
             "varchar<(L + 1>",
             "varchar<L + 1)>",
             "varchar<()>",
