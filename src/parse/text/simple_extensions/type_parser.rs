@@ -66,6 +66,18 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Consume one token matching any of the given kinds and return its kind.
+    /// Leave non-matching tokens unconsumed.
+    fn consume_one_of(&mut self, kinds: &[TokenKind]) -> Option<TokenKind> {
+        let kind = self.peek()?;
+        if kinds.contains(&kind) {
+            self.consume(kind);
+            Some(kind)
+        } else {
+            None
+        }
+    }
+
     /// Consume a required token or report what was expected at the current position.
     fn expect(&mut self, kind: TokenKind) -> Result<Token<'a>, TypeParseError> {
         if self.peek() != Some(kind) {
@@ -198,30 +210,32 @@ impl<'a> Parser<'a> {
     /// Parse one integer literal or nested type, leaving its separator unconsumed.
     ///
     /// For `decimal<10, 2>`, the first call consumes only `10`, not the comma.
-    /// A sign is combined with its digits here, allowing the full `i64` range
-    /// without making `-` part of every integer token.
     fn parse_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
         match self.peek() {
             Some(TokenKind::Integer | TokenKind::Plus | TokenKind::Minus) => {
-                let start = self.tokens[self.index].position;
-                if !self.consume(TokenKind::Plus) {
-                    self.consume(TokenKind::Minus);
-                }
-                let token = self.expect(TokenKind::Integer)?;
-                let end = token.position + token.text.len();
-                let value = self.source[start..end].parse().map_err(|_| {
-                    TypeParseError::UnexpectedToken {
-                        position: start,
-                        expected: "an i64 integer literal",
-                    }
-                })?;
-                Ok(TypeExprParam::Integer(value))
+                Ok(TypeExprParam::Integer(self.parse_integer_literal()?))
             }
             Some(TokenKind::Comma | TokenKind::CloseAngle | TokenKind::CloseParen) | None => {
                 Err(TypeParseError::EmptyParameter)
             }
             _ => Ok(TypeExprParam::Type(self.parse_type()?)),
         }
+    }
+
+    /// Combine a sign with its digits, preserving the full `i64` range.
+    ///
+    /// For example, `-9223372036854775808` is parsed as one value, including its sign.
+    fn parse_integer_literal(&mut self) -> Result<i64, TypeParseError> {
+        let start = self.tokens[self.index].position;
+        self.consume_one_of(&[TokenKind::Plus, TokenKind::Minus]);
+        let token = self.expect(TokenKind::Integer)?;
+        let end = token.position + token.text.len();
+        self.source[start..end]
+            .parse()
+            .map_err(|_| TypeParseError::UnexpectedToken {
+                position: start,
+                expected: "an i64 integer literal",
+            })
     }
 }
 
@@ -233,6 +247,23 @@ fn parse_type_variable_id(name: &str) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn consume_one_of_returns_the_matched_kind() {
+        for (source, expected) in [
+            ("+1", Some(TokenKind::Plus)),
+            ("-1", Some(TokenKind::Minus)),
+            ("P", None),
+            ("", None),
+        ] {
+            let mut parser = Parser::new(source).unwrap();
+            assert_eq!(
+                parser.consume_one_of(&[TokenKind::Plus, TokenKind::Minus]),
+                expected,
+                "{source}"
+            );
+        }
+    }
 
     #[test]
     fn function_parameters_leave_the_arrow_for_the_caller() {
@@ -298,7 +329,7 @@ mod tests {
     }
 
     #[test]
-    fn integer_parameters_support_signs_and_the_full_i64_range() {
+    fn parse_integer_literals_support_signs_and_the_full_i64_range() {
         for (source, expected) in [
             ("0,", 0),
             ("+10,", 10),
@@ -309,8 +340,8 @@ mod tests {
         ] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
-                parser.parse_parameter().unwrap(),
-                TypeExprParam::Integer(expected),
+                parser.parse_integer_literal().unwrap(),
+                expected,
                 "{source}"
             );
             assert_eq!(parser.peek(), Some(TokenKind::Comma), "{source}");
