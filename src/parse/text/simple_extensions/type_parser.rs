@@ -84,6 +84,18 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Consume one token matching any of the given kinds and return its kind.
+    /// Leave non-matching tokens unconsumed.
+    fn consume_one_of(&mut self, kinds: &[TokenKind]) -> Option<TokenKind> {
+        let kind = self.peek()?;
+        if kinds.contains(&kind) {
+            self.consume(kind);
+            Some(kind)
+        } else {
+            None
+        }
+    }
+
     /// Consume a required token or report what was expected at the current position.
     fn expect(&mut self, kind: TokenKind) -> Result<Token<'a>, TypeParseError> {
         if self.peek() != Some(kind) {
@@ -256,17 +268,11 @@ impl<'a> Parser<'a> {
         } else {
             self.parse_integer_operand()?
         };
-        loop {
-            let op = match self.peek() {
-                Some(TokenKind::Plus) => {
-                    self.consume(TokenKind::Plus);
-                    BinaryOp::Add
-                }
-                Some(TokenKind::Minus) => {
-                    self.consume(TokenKind::Minus);
-                    BinaryOp::Subtract
-                }
-                _ => break,
+        while let Some(kind) = self.consume_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
+            let op = if kind == TokenKind::Plus {
+                BinaryOp::Add
+            } else {
+                BinaryOp::Subtract
             };
             let right = self.parse_integer_operand()?;
             expression = IntegerParameter::BinaryExpression {
@@ -328,9 +334,7 @@ impl<'a> Parser<'a> {
     /// For example, `-9223372036854775808` is parsed as one value, including its sign.
     fn parse_integer_literal(&mut self) -> Result<i64, TypeParseError> {
         let start = self.tokens[self.index].position;
-        if !self.consume(TokenKind::Plus) {
-            self.consume(TokenKind::Minus);
-        }
+        self.consume_one_of(&[TokenKind::Plus, TokenKind::Minus]);
         let token = self.expect(TokenKind::Integer)?;
         let end = token.position + token.text.len();
         self.source[start..end]
@@ -350,6 +354,23 @@ fn parse_type_variable_id(name: &str) -> Option<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn consume_one_of_returns_the_matched_kind() {
+        for (source, expected) in [
+            ("+1", Some(TokenKind::Plus)),
+            ("-1", Some(TokenKind::Minus)),
+            ("P", None),
+            ("", None),
+        ] {
+            let mut parser = Parser::new(source).unwrap();
+            assert_eq!(
+                parser.consume_one_of(&[TokenKind::Plus, TokenKind::Minus]),
+                expected,
+                "{source}"
+            );
+        }
+    }
 
     #[test]
     fn addition_retains_operands_and_associates_to_the_left() {
