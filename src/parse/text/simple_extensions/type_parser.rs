@@ -8,8 +8,8 @@
 //! expects its own arrow. No rule needs to count brackets or search ahead.
 //!
 //! Names borrow from the source, and token positions are byte offsets into that
-//! source. Bare parameter names are classified as types or numeric variables.
-//! Type validity, parameter counts, and literal ranges are validated later when
+//! source. Built-in types select whether their parameters are types or integer
+//! expressions. Parameter counts and literal ranges are validated later when
 //! converting the AST to [`Type`](super::types::Type).
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
@@ -32,12 +32,7 @@ pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
 #[cfg(test)]
 pub(super) fn parse_integer_parameter(source: &str) -> Result<IntegerParameter, TypeParseError> {
     let mut parser = Parser::new(source)?;
-    let first_operand = if parser.peek() == Some(TokenKind::Plus) {
-        IntegerParameter::Literal(parser.parse_integer_literal()?)
-    } else {
-        parser.parse_integer_operand()?
-    };
-    let expression = parser.parse_integer_sum(first_operand)?;
+    let expression = parser.parse_integer_parameter_expression()?;
     if parser.peek().is_some() {
         return Err(parser.error("end of numeric expression"));
     }
@@ -129,21 +124,49 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parse a user-defined type such as `u!point?<i32>`.
+    /// Parse an unparameterized user-defined type such as `u!point?`.
     fn parse_user_defined_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
         self.expect(TokenKind::UserDefined)?;
         let name = self.expect_name()?;
         let nullable = self.consume(TokenKind::QuestionMark);
-        let parameters = self.parse_optional_type_parameters()?;
-        Ok(TypeExpr::UserDefined(name.text, parameters, nullable))
+        if self.peek() == Some(TokenKind::OpenAngle) {
+            return Err(TypeParseError::UnsupportedTypeParameters(
+                self.source.into(),
+            ));
+        }
+        Ok(TypeExpr::UserDefined(name.text, Vec::new(), nullable))
     }
 
-    /// Parse a name with optional nullability and parameters, such as `list?<i32>`.
-    /// Unknown names are retained for semantic validation.
+    /// Parse a named type using its built-in parameter grammar.
+    ///
+    /// `decimal<P, S>` takes integer expressions, while `list<i32>` takes types.
     fn parse_named_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
         let name = self.expect_name()?;
         let nullable = self.consume(TokenKind::QuestionMark);
-        let parameters = self.parse_optional_type_parameters()?;
+        let parameters = match name.text.to_ascii_lowercase().as_str() {
+            "fixedchar"
+            | "varchar"
+            | "fixedbinary"
+            | "decimal"
+            | "precision_time"
+            | "precision_timestamp"
+            | "precision_timestamp_tz"
+            | "interval_day"
+            | "interval_compound" => self.parse_parameters(|parser| {
+                parser
+                    .parse_integer_parameter_expression()
+                    .map(TypeExprParam::Integer)
+            })?,
+            "list" | "map" | "struct" => self.parse_parameters(Self::parse_type_parameter)?,
+            _ => {
+                if self.peek() == Some(TokenKind::OpenAngle) {
+                    return Err(TypeParseError::UnsupportedTypeParameters(
+                        self.source.into(),
+                    ));
+                }
+                Vec::new()
+            }
+        };
         Ok(TypeExpr::Simple(name.text, parameters, nullable))
     }
 
@@ -151,41 +174,31 @@ impl<'a> Parser<'a> {
     /// Variables do not take parameters. Uppercase prefixes and out-of-range IDs
     /// remain named types.
     fn parse_type_variable(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        let name = self.expect(TokenKind::AnyVar)?;
-        let nullable = self.consume(TokenKind::QuestionMark);
-        let Some(id) = parse_type_variable_id(name.text) else {
-            let parameters = self.parse_optional_type_parameters()?;
-            return Ok(TypeExpr::Simple(name.text, parameters, nullable));
+        let Some(id) = parse_type_variable_id(self.tokens[self.index].text) else {
+            return self.parse_named_type();
         };
+        self.expect(TokenKind::AnyVar)?;
+        let nullable = self.consume(TokenKind::QuestionMark);
         Ok(TypeExpr::TypeVariable(id, nullable))
     }
 
-    /// Parse an optional `<...>` parameter list, consuming both angle brackets.
-    fn parse_optional_type_parameters(&mut self) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
-        if self.consume(TokenKind::OpenAngle) {
-            self.parse_type_parameters()
-        } else {
-            Ok(Vec::new())
-        }
-    }
-
-    /// Parse comma-separated parameters after `<`, consuming the closing `>`.
+    /// Parse an optional `<...>` list using the enclosing type's parameter grammar.
     ///
-    /// In `map<string, list<i32>>`, parsing `list<i32>` consumes the inner `>`,
-    /// leaving the outer `>` for this rule. Empty lists are retained so semantic
-    /// validation can check arity, but empty entries such as `list<i32,>` fail.
-    fn parse_type_parameters(&mut self) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
+    /// In `map<string, list<i32>>`, each call consumes only its own angle brackets.
+    /// Empty lists are retained for arity validation, but empty entries fail.
+    fn parse_parameters(
+        &mut self,
+        parse_parameter: fn(&mut Self) -> Result<TypeExprParam<'a>, TypeParseError>,
+    ) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
+        if !self.consume(TokenKind::OpenAngle) {
+            return Ok(Vec::new());
+        }
         let mut parameters = Vec::new();
         if self.consume(TokenKind::CloseAngle) {
             return Ok(parameters);
         }
         loop {
-            parameters.push(self.parse_parameter()?);
-            if matches!(self.peek(), Some(TokenKind::Plus | TokenKind::Minus)) {
-                return Err(TypeParseError::UnsupportedNumericExpression(
-                    self.source.to_string(),
-                ));
-            }
+            parameters.push(parse_parameter(self)?);
             if self.consume(TokenKind::CloseAngle) {
                 return Ok(parameters);
             }
@@ -212,65 +225,41 @@ impl<'a> Parser<'a> {
     /// Parse one function parameter or a nonempty parenthesized parameter list.
     fn parse_function_parameters(&mut self) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
         if !self.consume(TokenKind::OpenParen) {
-            return Ok(vec![self.parse_parameter()?]);
+            return Ok(vec![self.parse_type_parameter()?]);
         }
         if self.peek() == Some(TokenKind::CloseParen) {
             return Err(self.error("a function parameter"));
         }
 
-        let mut parameters = vec![self.parse_parameter()?];
+        let mut parameters = vec![self.parse_type_parameter()?];
         while self.consume(TokenKind::Comma) {
-            parameters.push(self.parse_parameter()?);
+            parameters.push(self.parse_type_parameter()?);
         }
         self.expect(TokenKind::CloseParen)?;
         Ok(parameters)
     }
 
-    /// Parse a type or numeric parameter, leaving its separator unconsumed.
+    /// Parse a type parameter, leaving its separator unconsumed.
     ///
-    /// For `decimal<P + 1, S>`, the first call consumes only `P + 1`, not the comma.
-    fn parse_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
-        let parameter = match self.peek() {
-            Some(TokenKind::Integer | TokenKind::Plus | TokenKind::Minus) => {
-                TypeExprParam::Integer(IntegerParameter::Literal(self.parse_integer_literal()?))
-            }
+    /// In `map<string, i32>`, consume `string` but leave the comma.
+    fn parse_type_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
+        match self.peek() {
             Some(TokenKind::Comma | TokenKind::CloseAngle | TokenKind::CloseParen) | None => {
-                return Err(TypeParseError::EmptyParameter);
+                Err(TypeParseError::EmptyParameter)
             }
-            _ => self.parse_named_parameter()?,
+            _ => self.parse_type().map(TypeExprParam::Type),
+        }
+    }
+
+    /// Parse an integer expression, leaving its separator unconsumed.
+    ///
+    /// In `decimal<P + S + 1, S>`, consume `P + S + 1` as `(P + S) + 1`.
+    fn parse_integer_parameter_expression(&mut self) -> Result<IntegerParameter, TypeParseError> {
+        let mut expression = if self.peek() == Some(TokenKind::Plus) {
+            IntegerParameter::Literal(self.parse_integer_literal()?)
+        } else {
+            self.parse_integer_operand()?
         };
-        match parameter {
-            TypeExprParam::Integer(first_operand) => Ok(TypeExprParam::Integer(
-                self.parse_integer_sum(first_operand)?,
-            )),
-            parameter => Ok(parameter),
-        }
-    }
-
-    /// Classify a bare unknown name as a numeric parameter, retaining types otherwise.
-    ///
-    /// `P` becomes an integer variable, while `i32`, `any1`, and `u!point` stay types.
-    fn parse_named_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
-        let parameter = self.parse_type()?;
-        match parameter {
-            TypeExpr::Simple(name, parameters, false)
-                if parameters.is_empty() && !TypeKind::is_builtin_name(name) =>
-            {
-                Ok(TypeExprParam::Integer(IntegerParameter::Variable(
-                    name.into(),
-                )))
-            }
-            parameter => Ok(TypeExprParam::Type(parameter)),
-        }
-    }
-
-    /// Extend an already parsed operand with any following additions.
-    ///
-    /// After parsing `P` in `P + S + 1`, consume `+ S + 1` to build `(P + S) + 1`.
-    fn parse_integer_sum(
-        &mut self,
-        mut expression: IntegerParameter,
-    ) -> Result<IntegerParameter, TypeParseError> {
         while self.consume(TokenKind::Plus) {
             let right = self.parse_integer_operand()?;
             expression = IntegerParameter::BinaryExpression {
@@ -278,6 +267,11 @@ impl<'a> Parser<'a> {
                 left: Box::new(expression),
                 right: Box::new(right),
             };
+        }
+        if self.peek() == Some(TokenKind::Minus) {
+            return Err(TypeParseError::UnsupportedNumericExpression(
+                self.source.into(),
+            ));
         }
         Ok(expression)
     }
@@ -293,8 +287,7 @@ impl<'a> Parser<'a> {
             Some(kind)
                 if kind.is_name() && is_integer_parameter_name(self.tokens[self.index].text) =>
             {
-                let name = self.expect_name()?;
-                Ok(IntegerParameter::Variable(name.text.to_string()))
+                Ok(IntegerParameter::Variable(self.expect_name()?.text.into()))
             }
             _ => Err(self.error("an integer literal or parameter name")),
         }
@@ -371,6 +364,22 @@ mod tests {
     }
 
     #[test]
+    fn addition_preserves_signed_literals() {
+        assert_eq!(
+            parse("varchar<+10 + -2>").unwrap(),
+            TypeExpr::Simple(
+                "varchar",
+                vec![TypeExprParam::Integer(IntegerParameter::BinaryExpression {
+                    op: BinaryOp::Add,
+                    left: Box::new(IntegerParameter::Literal(10)),
+                    right: Box::new(IntegerParameter::Literal(-2)),
+                })],
+                false,
+            )
+        );
+    }
+
+    #[test]
     fn parse_numeric_parameters_reject_numbered_type_variables() {
         for source in [
             "decimal<any1 + 1, S>",
@@ -420,17 +429,38 @@ mod tests {
     }
 
     #[test]
-    fn extension_parameters_distinguish_integer_names_and_types() {
+    fn parameterized_user_defined_and_unknown_types_are_unsupported() {
+        for source in [
+            "u!foo<>",
+            "u!foo<P>",
+            "u!foo?<i32>",
+            "list<u!foo<1>>",
+            "unknown<i32>",
+        ] {
+            assert_eq!(
+                parse(source),
+                Err(TypeParseError::UnsupportedTypeParameters(source.into())),
+                "{source}"
+            );
+        }
+    }
+
+    #[test]
+    fn type_parameters_reject_integer_arguments() {
+        for source in [
+            "list<1>",
+            "map<i32, 2>",
+            "struct<1, i32>",
+            "func<5 -> i32>",
+            "list<P + 1>",
+        ] {
+            assert!(parse(source).is_err(), "{source}");
+        }
         assert_eq!(
-            parse("u!foo<P, i32, any1, u!point>").unwrap(),
-            TypeExpr::UserDefined(
-                "foo",
-                vec![
-                    TypeExprParam::Integer(IntegerParameter::Variable("P".into())),
-                    TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
-                    TypeExprParam::Type(TypeExpr::TypeVariable(1, false)),
-                    TypeExprParam::Type(TypeExpr::UserDefined("point", vec![], false)),
-                ],
+            parse("list<P>").unwrap(),
+            TypeExpr::Simple(
+                "list",
+                vec![TypeExprParam::Type(TypeExpr::Simple("P", vec![], false))],
                 false,
             )
         );
@@ -457,6 +487,7 @@ mod tests {
             "P +",
             "+ P",
             "P ++ 1",
+            "P ++1",
             "P S",
             "P - 1",
             "P * 2",
@@ -527,18 +558,18 @@ mod tests {
         for (source, expected) in [
             ("<>>", vec![]),
             (
-                "<list<i32>, 2>>",
+                "<list<i32>, any1>>",
                 vec![
                     TypeExprParam::Type(parse("list<i32>").unwrap()),
-                    TypeExprParam::Integer(IntegerParameter::Literal(2)),
+                    TypeExprParam::Type(TypeExpr::TypeVariable(1, false)),
                 ],
             ),
         ] {
             let mut parser = Parser::new(source).unwrap();
-            parser.expect(TokenKind::OpenAngle).unwrap();
-
             assert_eq!(
-                parser.parse_type_parameters().unwrap(),
+                parser
+                    .parse_parameters(Parser::parse_type_parameter)
+                    .unwrap(),
                 expected,
                 "{source}"
             );
@@ -550,10 +581,10 @@ mod tests {
 
     #[test]
     fn type_parameters_reject_empty_entries() {
-        for source in [",i32>", "i32,>", "i32,,i64>"] {
+        for source in ["<,i32>", "<i32,>", "<i32,,i64>"] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
-                parser.parse_type_parameters(),
+                parser.parse_parameters(Parser::parse_type_parameter),
                 Err(TypeParseError::EmptyParameter),
                 "{source}"
             );
@@ -571,7 +602,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_parameters_retain_addition_and_leave_the_separator() {
+    fn integer_expressions_leave_the_separator_for_the_caller() {
         for (source, separator) in [
             ("P + 1, S", TokenKind::Comma),
             ("P + 1>", TokenKind::CloseAngle),
@@ -579,12 +610,12 @@ mod tests {
         ] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
-                parser.parse_parameter().unwrap(),
-                TypeExprParam::Integer(IntegerParameter::BinaryExpression {
+                parser.parse_integer_parameter_expression().unwrap(),
+                IntegerParameter::BinaryExpression {
                     op: BinaryOp::Add,
                     left: Box::new(IntegerParameter::Variable("P".into())),
                     right: Box::new(IntegerParameter::Literal(1)),
-                }),
+                },
                 "{source}"
             );
             assert_eq!(parser.peek(), Some(separator), "{source}");
@@ -621,7 +652,10 @@ mod tests {
             "+i32",
         ] {
             let mut parser = Parser::new(source).unwrap();
-            assert!(parser.parse_parameter().is_err(), "{source}");
+            assert!(
+                parser.parse_integer_parameter_expression().is_err(),
+                "{source}"
+            );
         }
     }
 
@@ -647,7 +681,7 @@ mod tests {
     fn nested_type_parameters_leave_the_separator_for_the_caller() {
         let mut parser = Parser::new("map<string, func<i32 -> i64>>, boolean").unwrap();
         assert_eq!(
-            parser.parse_parameter().unwrap(),
+            parser.parse_type_parameter().unwrap(),
             TypeExprParam::Type(parse("map<string, func<i32 -> i64>>").unwrap())
         );
         assert_eq!(parser.peek(), Some(TokenKind::Comma));
@@ -682,14 +716,10 @@ mod tests {
             "func", "List", "DECIMAL", "any", "any1", "i32", "Map", "VARCHAR", "string", "dec",
             "NStruct",
         ] {
-            let source = format!("u!{name}<i32>");
+            let source = format!("u!{name}");
             assert_eq!(
                 parse(&source).unwrap(),
-                TypeExpr::UserDefined(
-                    name,
-                    vec![TypeExprParam::Type(parse("i32").unwrap())],
-                    false
-                ),
+                TypeExpr::UserDefined(name, vec![], false),
             );
         }
         assert_eq!(parse("any1").unwrap(), TypeExpr::TypeVariable(1, false));
@@ -731,10 +761,7 @@ mod tests {
         for name in ["ANY1", "any4294967296"] {
             assert_eq!(parse(name).unwrap(), TypeExpr::Simple(name, vec![], false));
             let source = format!("{name}?<i32>");
-            assert_eq!(
-                parse(&source).unwrap(),
-                TypeExpr::Simple(name, vec![TypeExprParam::Type(parse("i32").unwrap())], true,)
-            );
+            assert!(parse(&source).is_err(), "{source}");
         }
     }
 
@@ -763,8 +790,11 @@ mod tests {
                     expected: "a type name",
                 },
             ),
-            ("u!point<i32,>", TypeParseError::EmptyParameter),
-            ("ANY1<i32,>", TypeParseError::EmptyParameter),
+            ("list<i32,>", TypeParseError::EmptyParameter),
+            (
+                "ANY1<i32,>",
+                TypeParseError::UnsupportedTypeParameters("ANY1<i32,>".into()),
+            ),
             (
                 "func<i32 -> i64",
                 TypeParseError::UnexpectedToken {
