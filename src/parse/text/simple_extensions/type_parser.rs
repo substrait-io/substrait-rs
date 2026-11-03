@@ -8,13 +8,14 @@
 //! expects its own arrow. No rule needs to count brackets or search ahead.
 //!
 //! Names borrow from the source, and token positions are byte offsets into that
-//! source. Built-in names, parameter counts, and literal ranges are validated
-//! later when converting the AST to [`Type`](super::types::Type).
+//! source. Recognized type names are excluded from numeric expressions. Type
+//! validity, parameter counts, and literal ranges are validated later when
+//! converting the AST to [`Type`](super::types::Type).
 
 use super::return_type::{IntegerAssignment, ReturnTypeExpr};
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
 use super::type_tokenizer::{Token, TokenKind, tokenize};
-use super::types::{BinaryOp, IntegerParameter};
+use super::types::{BinaryOp, IntegerParameter, is_builtin_type_name};
 
 /// Parse one complete type, rejecting any tokens left after it.
 ///
@@ -267,7 +268,11 @@ impl<'a> Parser<'a> {
             Some(
                 TokenKind::Integer | TokenKind::Plus | TokenKind::Minus | TokenKind::OpenParen,
             ) => self.parse_numeric_parameter(),
-            Some(kind) if kind.is_name() && self.name_begins_numeric_expression() => {
+            Some(kind)
+                if kind.is_name()
+                    && is_integer_parameter_name(self.tokens[self.index].text)
+                    && self.name_begins_numeric_expression() =>
+            {
                 self.parse_numeric_parameter()
             }
             Some(TokenKind::Comma | TokenKind::CloseAngle | TokenKind::CloseParen) | None => {
@@ -386,34 +391,37 @@ impl<'a> Parser<'a> {
                 self.expect(TokenKind::CloseParen)?;
                 Ok(expression)
             }
-            Some(TokenKind::AnyVar)
-                if parse_type_variable_id(self.tokens[self.index].text).is_some() =>
+            Some(kind)
+                if kind.is_name() && is_integer_parameter_name(self.tokens[self.index].text) =>
             {
-                Err(self.error("a parameter name, not a numbered type variable"))
-            }
-            Some(kind) if kind.is_name() => {
                 let name = self.expect_name()?;
-                if self.consume(TokenKind::OpenParen) {
-                    let mut arguments = Vec::new();
-                    if !self.consume(TokenKind::CloseParen) {
-                        loop {
-                            arguments.push(self.parse_integer_expression()?);
-                            if self.consume(TokenKind::CloseParen) {
-                                break;
-                            }
-                            self.expect(TokenKind::Comma)?;
-                        }
-                    }
-                    Ok(IntegerParameter::Call {
-                        name: name.text.to_string(),
-                        arguments,
-                    })
-                } else {
-                    Ok(IntegerParameter::Variable(name.text.to_string()))
-                }
+                self.parse_integer_name(name.text)
             }
             _ => Err(self.error("an integer literal, parameter name, or '('")),
         }
+    }
+
+    /// Parse optional call arguments after an already consumed integer parameter name.
+    ///
+    /// After `max` in `max(P, S)`, consume `(P, S)` and retain the call.
+    fn parse_integer_name(&mut self, name: &str) -> Result<IntegerParameter, TypeParseError> {
+        if !self.consume(TokenKind::OpenParen) {
+            return Ok(IntegerParameter::Variable(name.to_string()));
+        }
+        let mut arguments = Vec::new();
+        if !self.consume(TokenKind::CloseParen) {
+            loop {
+                arguments.push(self.parse_integer_expression()?);
+                if self.consume(TokenKind::CloseParen) {
+                    break;
+                }
+                self.expect(TokenKind::Comma)?;
+            }
+        }
+        Ok(IntegerParameter::Call {
+            name: name.to_string(),
+            arguments,
+        })
     }
 
     /// Combine a sign with its digits, preserving the full `i64` range.
@@ -433,6 +441,11 @@ impl<'a> Parser<'a> {
     }
 }
 
+/// Recognize integer parameter names without treating type names as variables.
+fn is_integer_parameter_name(name: &str) -> bool {
+    !is_builtin_type_name(name) && parse_type_variable_id(name).is_none()
+}
+
 /// Recognize a case-sensitive `any` prefix followed by a `u32` variable ID.
 fn parse_type_variable_id(name: &str) -> Option<u32> {
     name.strip_prefix("any")?.parse().ok()
@@ -444,11 +457,11 @@ mod tests {
 
     #[test]
     fn consume_one_of_returns_the_matched_kind() {
-        for (source, expected) in [
-            ("+1", Some(TokenKind::Plus)),
-            ("-1", Some(TokenKind::Minus)),
-            ("P", None),
-            ("", None),
+        for (source, expected, consumed) in [
+            ("+1", Some(TokenKind::Plus), 1),
+            ("-1", Some(TokenKind::Minus), 1),
+            ("P", None, 0),
+            ("", None, 0),
         ] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
@@ -456,6 +469,7 @@ mod tests {
                 expected,
                 "{source}"
             );
+            assert_eq!(parser.index, consumed, "{source}");
         }
     }
 
@@ -785,6 +799,39 @@ mod tests {
                 vec![
                     TypeExprParam::Type(TypeExpr::Simple("string", vec![], false)),
                     TypeExprParam::Type(TypeExpr::Simple("any", vec![], true)),
+                ],
+                false,
+            )
+        );
+    }
+
+    #[test]
+    fn numeric_expressions_reject_type_names_as_operands() {
+        for name in [
+            "i32", "boolean", "decimal", "list", "map", "struct", "func", "any",
+        ] {
+            for spelling in [name.to_string(), name.to_ascii_uppercase()] {
+                for expression in [format!("{spelling} + 1"), format!("P + {spelling}")] {
+                    assert!(
+                        parse_integer_parameter(&expression).is_err(),
+                        "{expression}"
+                    );
+                    let source = format!("varchar<{expression}>");
+                    assert!(parse(&source).is_err(), "{source}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn bare_parameter_names_remain_simple_types() {
+        assert_eq!(
+            parse("decimal<P, S>").unwrap(),
+            TypeExpr::Simple(
+                "decimal",
+                vec![
+                    TypeExprParam::Type(TypeExpr::Simple("P", vec![], false)),
+                    TypeExprParam::Type(TypeExpr::Simple("S", vec![], false)),
                 ],
                 false,
             )
