@@ -322,11 +322,11 @@ mod tests {
 
     #[test]
     fn consume_one_of_returns_the_matched_kind() {
-        for (source, expected) in [
-            ("+1", Some(TokenKind::Plus)),
-            ("-1", Some(TokenKind::Minus)),
-            ("P", None),
-            ("", None),
+        for (source, expected, consumed) in [
+            ("+1", Some(TokenKind::Plus), 1),
+            ("-1", Some(TokenKind::Minus), 1),
+            ("P", None, 0),
+            ("", None, 0),
         ] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
@@ -334,6 +334,7 @@ mod tests {
                 expected,
                 "{source}"
             );
+            assert_eq!(parser.index, consumed, "{source}");
         }
     }
 
