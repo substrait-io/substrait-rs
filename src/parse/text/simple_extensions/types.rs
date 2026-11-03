@@ -1599,6 +1599,34 @@ mod tests {
     }
 
     #[test]
+    fn test_is_builtin_name() {
+        for (name, expected) in [
+            ("i32", true),
+            ("boolean", true),
+            ("bool", true),
+            ("decimal", true),
+            ("varchar", true),
+            ("precision_timestamp", true),
+            ("list", true),
+            ("map", true),
+            ("struct", true),
+            ("func", true),
+            ("any", true),
+            ("", false),
+            ("P", false),
+            ("any1", false),
+            ("u!point", false),
+            ("missing_type", false),
+            ("dec", false),
+            ("precisiontime", false),
+        ] {
+            for spelling in [name.to_string(), name.to_ascii_uppercase()] {
+                assert_eq!(TypeKind::is_builtin_name(&spelling), expected, "{spelling}");
+            }
+        }
+    }
+
+    #[test]
     fn test_builtin_scalar_parsing() {
         let cases = vec![
             ("bool", Some(TypeKind::Boolean)),
