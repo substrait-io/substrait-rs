@@ -376,6 +376,15 @@ impl fmt::Display for TypeParameter {
     }
 }
 
+/// Recognize built-in type names, including containers and wildcard types.
+pub(super) fn is_builtin_type_name(name: &str) -> bool {
+    TypeKind::is_name(name)
+        || matches!(
+            name.to_ascii_lowercase().as_str(),
+            "any" | "func" | "list" | "map" | "struct"
+        )
+}
+
 /// Parse a primitive (no type parameters) builtin type name
 fn primitive_builtin(lower_name: &str) -> Option<TypeKind> {
     match lower_name {
@@ -1021,7 +1030,9 @@ fn parse_integer_parameter(
 ) -> Result<IntegerParameter, ExtensionTypeError> {
     let value = match param {
         TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
-            if parameters.is_empty() && CustomType::validate_name(name).is_ok() =>
+            if parameters.is_empty()
+                && !is_builtin_type_name(name)
+                && CustomType::validate_name(name).is_ok() =>
         {
             return Ok(IntegerParameter::Variable(name.to_string()));
         }
@@ -1125,7 +1136,9 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
                     TypeExpr::Simple(_, parameters, false) if parameters.is_empty()
                 );
                 match Type::try_from(expression) {
-                    Err(ExtensionTypeError::UnknownTypeName { name }) if is_bare_name => {
+                    Err(ExtensionTypeError::UnknownTypeName { name })
+                        if is_bare_name && !is_builtin_type_name(&name) =>
+                    {
                         CustomType::validate_name(&name)?;
                         TypeParameter::Integer(IntegerParameter::Variable(name))
                     }
@@ -1789,11 +1802,46 @@ mod tests {
             "List<missing_type?>",
             "List<decimal<any1>>",
             "List<i32<P>>",
+            "u!foo<func>",
+            "u!foo<FuNc>",
         ] {
             assert!(
                 Type::try_from(TypeExpr::parse(input).unwrap()).is_err(),
                 "{input} should not be accepted as a signature type"
             );
+        }
+    }
+
+    #[test]
+    fn test_reserved_type_names_are_not_integer_parameters() {
+        for name in [
+            "i32",
+            "bool",
+            "boolean",
+            "varchar",
+            "decimal",
+            "precision_time",
+            "list",
+            "map",
+            "struct",
+            "func",
+            "any",
+        ] {
+            for spelling in [name.to_string(), name.to_ascii_uppercase()] {
+                for source in [
+                    format!("varchar<{spelling}>"),
+                    format!("decimal<{spelling}, S>"),
+                    format!("decimal<P, {spelling}>"),
+                ] {
+                    assert!(
+                        matches!(
+                            parse_type_result(&source),
+                            Err(ExtensionTypeError::InvalidParameterKind { .. })
+                        ),
+                        "{source} should not treat a type name as an integer parameter"
+                    );
+                }
+            }
         }
     }
 
