@@ -527,7 +527,7 @@ scalar_functions:
         let raw = extension_with_custom_type_reference(
             "extension:example.com:missing",
             "wrap",
-            "list<u!missing<any1>>",
+            "map<any1, u!missing>",
             vec![],
         );
         assert!(matches!(
@@ -596,7 +596,7 @@ scalar_functions:
         let raw = extension_with_custom_type_reference(
             "extension:example.com:derivations",
             "derive",
-            "precision = min(P + 1, 38)\nlist<u!missing<precision>>",
+            "precision = min(P + 1, 38)\nmap<varchar<precision>, u!missing>",
             vec![],
         );
         assert!(matches!(ExtensionFile::create(raw),
