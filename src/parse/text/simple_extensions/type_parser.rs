@@ -94,6 +94,11 @@ impl<'a> Parser<'a> {
         self.tokens.get(self.index).map(|token| token.kind)
     }
 
+    /// Look one token beyond `peek()` without consuming either token.
+    fn peek_next(&self) -> Option<TokenKind> {
+        self.tokens.get(self.index + 1).map(|token| token.kind)
+    }
+
     fn error(&self, expected: &'static str) -> TypeParseError {
         TypeParseError::UnexpectedToken {
             position: self
