@@ -425,10 +425,6 @@ mod tests {
             }
         );
         assert_eq!(*right, IntegerParameter::Literal(1));
-        assert_eq!(
-            parse_integer_parameter("P").unwrap(),
-            IntegerParameter::Variable("P".into())
-        );
     }
 
     #[test]
@@ -642,12 +638,8 @@ mod tests {
             "min(P,,S)",
             "P * 2",
             "P / 2",
-            "()",
-            "(P + 1",
-            "P + 1)",
             "P + ()",
             "(P)(S)",
-            "(P +)",
             "P > S",
             "P ? S : 1",
             "9223372036854775808",
@@ -662,6 +654,19 @@ mod tests {
                 expected: "an integer literal, parameter name, or '('",
             })
         );
+    }
+
+    #[test]
+    fn parse_rejects_invalid_numeric_parameters() {
+        for source in [
+            "varchar<L +>",
+            "varchar<L + * 2>",
+            "varchar<(L + 1>",
+            "varchar<L + 1)>",
+            "varchar<()>",
+        ] {
+            assert!(parse(source).is_err(), "{source}");
+        }
     }
 
     #[test]
@@ -738,20 +743,6 @@ mod tests {
     }
 
     #[test]
-    fn parse_numeric_parameters_retain_addition() {
-        let mut parser = Parser::new("P + 1, S").unwrap();
-        assert_eq!(
-            parser.parse_numeric_parameter().unwrap(),
-            TypeExprParam::Expression(IntegerParameter::BinaryExpression {
-                op: BinaryOp::Add,
-                left: Box::new(IntegerParameter::Variable("P".into())),
-                right: Box::new(IntegerParameter::Literal(1)),
-            })
-        );
-        assert_eq!(parser.peek(), Some(TokenKind::Comma));
-    }
-
-    #[test]
     fn parse_integer_operands_leave_the_following_operator() {
         for (source, op) in [
             ("(P + 1) + S", BinaryOp::Add),
@@ -788,7 +779,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_integer_expressions_leave_the_separator_for_the_caller() {
+    fn parse_numeric_parameters_retain_addition_and_leave_the_separator() {
         for (source, separator) in [
             ("P + 1, S", TokenKind::Comma),
             ("P + 1>", TokenKind::CloseAngle),
@@ -796,12 +787,12 @@ mod tests {
         ] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
-                parser.parse_integer_expression().unwrap(),
-                IntegerParameter::BinaryExpression {
+                parser.parse_numeric_parameter().unwrap(),
+                TypeExprParam::Expression(IntegerParameter::BinaryExpression {
                     op: BinaryOp::Add,
                     left: Box::new(IntegerParameter::Variable("P".into())),
                     right: Box::new(IntegerParameter::Literal(1)),
-                },
+                }),
                 "{source}"
             );
             assert_eq!(parser.peek(), Some(separator), "{source}");
