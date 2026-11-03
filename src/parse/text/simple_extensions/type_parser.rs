@@ -542,8 +542,8 @@ mod tests {
             TypeExpr::Simple(
                 "decimal",
                 vec![
-                    TypeExprParam::Type(TypeExpr::Simple("P", vec![], false)),
-                    TypeExprParam::Type(TypeExpr::Simple("S", vec![], false)),
+                    TypeExprParam::Integer(IntegerParameter::Variable("P".into())),
+                    TypeExprParam::Integer(IntegerParameter::Variable("S".into())),
                 ],
                 false,
             )
