@@ -8,11 +8,13 @@
 //! expects its own arrow. No rule needs to count brackets or search ahead.
 //!
 //! Names borrow from the source, and token positions are byte offsets into that
-//! source. Built-in names, parameter counts, and literal ranges are validated
-//! later when converting the AST to [`Type`](super::types::Type).
+//! source. Bare parameter names are classified as types or numeric variables.
+//! Type validity, parameter counts, and literal ranges are validated later when
+//! converting the AST to [`Type`](super::types::Type).
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
 use super::type_tokenizer::{Token, TokenKind, tokenize};
+use super::types::{IntegerParameter, TypeKind};
 
 /// Parse one complete type, rejecting any tokens left after it.
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
@@ -207,18 +209,36 @@ impl<'a> Parser<'a> {
         Ok(parameters)
     }
 
-    /// Parse one integer literal or nested type, leaving its separator unconsumed.
+    /// Parse one integer literal, numeric parameter name, or nested type.
+    /// Leave the parameter's separator unconsumed.
     ///
     /// For `decimal<10, 2>`, the first call consumes only `10`, not the comma.
     fn parse_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
         match self.peek() {
-            Some(TokenKind::Integer | TokenKind::Plus | TokenKind::Minus) => {
-                Ok(TypeExprParam::Integer(self.parse_integer_literal()?))
-            }
+            Some(TokenKind::Integer | TokenKind::Plus | TokenKind::Minus) => Ok(
+                TypeExprParam::Integer(IntegerParameter::Literal(self.parse_integer_literal()?)),
+            ),
             Some(TokenKind::Comma | TokenKind::CloseAngle | TokenKind::CloseParen) | None => {
                 Err(TypeParseError::EmptyParameter)
             }
-            _ => Ok(TypeExprParam::Type(self.parse_type()?)),
+            _ => self.parse_named_parameter(),
+        }
+    }
+
+    /// Classify a bare unknown name as a numeric parameter, retaining types otherwise.
+    ///
+    /// `P` becomes an integer variable, while `i32`, `any1`, and `u!point` stay types.
+    fn parse_named_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
+        let parameter = self.parse_type()?;
+        match parameter {
+            TypeExpr::Simple(name, parameters, false)
+                if parameters.is_empty() && !TypeKind::is_builtin_name(name) =>
+            {
+                Ok(TypeExprParam::Integer(IntegerParameter::Variable(
+                    name.into(),
+                )))
+            }
+            parameter => Ok(TypeExprParam::Type(parameter)),
         }
     }
 
@@ -267,6 +287,54 @@ mod tests {
     }
 
     #[test]
+    fn numeric_parameter_names_are_explicit_in_the_ast() {
+        for name in ["P", "$L", "_S", "Any1", "any4294967296"] {
+            let source = format!("decimal<{name}, 0>");
+            assert_eq!(
+                parse(&source).unwrap(),
+                TypeExpr::Simple(
+                    "decimal",
+                    vec![
+                        TypeExprParam::Integer(IntegerParameter::Variable(name.into())),
+                        TypeExprParam::Integer(IntegerParameter::Literal(0)),
+                    ],
+                    false,
+                ),
+                "{source}"
+            );
+        }
+    }
+
+    #[test]
+    fn extension_parameters_distinguish_integer_names_and_types() {
+        assert_eq!(
+            parse("u!foo<P, i32, any1, u!point>").unwrap(),
+            TypeExpr::UserDefined(
+                "foo",
+                vec![
+                    TypeExprParam::Integer(IntegerParameter::Variable("P".into())),
+                    TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
+                    TypeExprParam::Type(TypeExpr::TypeVariable(1, false)),
+                    TypeExprParam::Type(TypeExpr::UserDefined("point", vec![], false)),
+                ],
+                false,
+            )
+        );
+    }
+
+    #[test]
+    fn arithmetic_parameters_remain_unsupported() {
+        for source in [
+            "varchar<P + 1>",
+            "varchar<1 + 2>",
+            "u!foo<P + 1>",
+            "varchar<(P)>",
+        ] {
+            assert!(parse(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
     fn function_parameters_leave_the_arrow_for_the_caller() {
         for (source, parameter_types) in [
             ("i32 -> i64", vec!["i32"]),
@@ -299,7 +367,7 @@ mod tests {
                 "<list<i32>, 2>>",
                 vec![
                     TypeExprParam::Type(parse("list<i32>").unwrap()),
-                    TypeExprParam::Integer(2),
+                    TypeExprParam::Integer(IntegerParameter::Literal(2)),
                 ],
             ),
         ] {

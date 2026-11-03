@@ -20,6 +20,8 @@
 //
 // Therefore, the grammar is manually implemented.
 
+use super::types::IntegerParameter;
+
 /// A parsed type expression from a type string, with lifetime tied to the original string.
 ///
 /// This represents the syntactic structure only - type names are not validated.
@@ -49,8 +51,8 @@ pub enum TypeExpr<'a> {
 pub enum TypeExprParam<'a> {
     /// A nested type parameter
     Type(TypeExpr<'a>),
-    /// An integer literal parameter
-    Integer(i64),
+    /// An integer literal or named numeric parameter.
+    Integer(IntegerParameter),
 }
 
 #[derive(Debug, PartialEq, thiserror::Error)]
