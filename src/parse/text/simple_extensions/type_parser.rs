@@ -73,6 +73,11 @@ pub(super) fn parse_return_type(source: &str) -> Result<ReturnTypeExpr<'_>, Type
     })
 }
 
+enum ParameterKind {
+    Integer,
+    Type,
+}
+
 /// Recursive-descent parser whose index points to the next unconsumed token.
 /// Nested rules share this position and leave their caller's delimiters intact.
 struct Parser<'a> {
@@ -193,12 +198,8 @@ impl<'a> Parser<'a> {
             | "precision_timestamp"
             | "precision_timestamp_tz"
             | "interval_day"
-            | "interval_compound" => self.parse_parameters(|parser| {
-                parser
-                    .parse_integer_parameter_expression()
-                    .map(TypeExprParam::Integer)
-            })?,
-            "list" | "map" | "struct" => self.parse_parameters(Self::parse_type_parameter)?,
+            | "interval_compound" => self.parse_parameters(ParameterKind::Integer)?,
+            "list" | "map" | "struct" => self.parse_parameters(ParameterKind::Type)?,
             _ => {
                 if self.peek() == Some(TokenKind::OpenAngle) {
                     return Err(TypeParseError::UnsupportedTypeParameters(
@@ -217,7 +218,7 @@ impl<'a> Parser<'a> {
     /// Empty lists are retained for arity validation, but empty entries fail.
     fn parse_parameters(
         &mut self,
-        parse_parameter: fn(&mut Self) -> Result<TypeExprParam<'a>, TypeParseError>,
+        kind: ParameterKind,
     ) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
         if !self.consume(TokenKind::OpenAngle) {
             return Ok(Vec::new());
@@ -227,7 +228,12 @@ impl<'a> Parser<'a> {
             return Ok(parameters);
         }
         loop {
-            parameters.push(parse_parameter(self)?);
+            parameters.push(match kind {
+                ParameterKind::Integer => {
+                    TypeExprParam::Integer(self.parse_integer_parameter_expression()?)
+                }
+                ParameterKind::Type => self.parse_type_parameter()?,
+            });
             if self.consume(TokenKind::CloseAngle) {
                 return Ok(parameters);
             }
@@ -817,9 +823,7 @@ mod tests {
         ] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
-                parser
-                    .parse_parameters(Parser::parse_type_parameter)
-                    .unwrap(),
+                parser.parse_parameters(ParameterKind::Type).unwrap(),
                 expected,
                 "{source}"
             );
@@ -834,7 +838,7 @@ mod tests {
         for source in ["<,i32>", "<i32,>", "<i32,,i64>"] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
-                parser.parse_parameters(Parser::parse_type_parameter),
+                parser.parse_parameters(ParameterKind::Type),
                 Err(TypeParseError::EmptyParameter),
                 "{source}"
             );
