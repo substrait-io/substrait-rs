@@ -163,6 +163,7 @@ impl<'a> Parser<'a> {
         match self.peek() {
             Some(TokenKind::UserDefined) => self.parse_user_defined_type(),
             Some(TokenKind::Func) => self.parse_function_type(),
+            Some(TokenKind::AnyVar) => self.parse_type_variable(),
             _ => self.parse_named_type(),
         }
     }
@@ -180,15 +181,12 @@ impl<'a> Parser<'a> {
         Ok(TypeExpr::UserDefined(name.text, Vec::new(), nullable))
     }
 
-    /// Parse a numbered variable or a named type using its built-in parameter grammar.
+    /// Parse a named type using its built-in parameter grammar.
     ///
     /// `decimal<P, S>` takes integer expressions, while `list<i32>` takes types.
     fn parse_named_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
         let name = self.expect_name()?;
         let nullable = self.consume(TokenKind::QuestionMark);
-        if let Some(id) = parse_type_variable_id(name) {
-            return Ok(TypeExpr::TypeVariable(id, nullable));
-        }
         let parameters = match name.text.to_ascii_lowercase().as_str() {
             "fixedchar"
             | "varchar"
@@ -210,6 +208,19 @@ impl<'a> Parser<'a> {
             }
         };
         Ok(TypeExpr::Simple(name.text, parameters, nullable))
+    }
+
+    /// Parse a numbered variable such as `any1?`, requiring its ID to fit in `u32`.
+    fn parse_type_variable(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
+        let name = self.expect(TokenKind::AnyVar)?;
+        let id = name.text[3..]
+            .parse()
+            .map_err(|_| TypeParseError::UnexpectedToken {
+                position: name.position,
+                expected: "a u32 type variable ID",
+            })?;
+        let nullable = self.consume(TokenKind::QuestionMark);
+        Ok(TypeExpr::TypeVariable(id, nullable))
     }
 
     /// Parse an optional `<...>` list using the enclosing type's parameter grammar.
@@ -427,15 +438,7 @@ impl<'a> Parser<'a> {
 
 /// Recognize integer parameter names without treating type names as variables.
 fn is_integer_parameter_name(name: Token<'_>) -> bool {
-    !TypeKind::is_builtin_name(name.text) && parse_type_variable_id(name).is_none()
-}
-
-/// Parse a numbered variable token's ID, which must fit in `u32`.
-fn parse_type_variable_id(name: Token<'_>) -> Option<u32> {
-    match name.kind {
-        TokenKind::AnyVar => name.text[3..].parse().ok(),
-        _ => None,
-    }
+    !TypeKind::is_builtin_name(name.text) && name.kind != TokenKind::AnyVar
 }
 
 #[cfg(test)]
@@ -769,6 +772,10 @@ mod tests {
             ("decimal<P + Any1, S>", 12),
             ("decimal<(any1), S>", 9),
             ("decimal<P + (any1 + 1), S>", 13),
+            ("decimal<any4294967296, S>", 8),
+            ("decimal<P, ANY4294967296>", 11),
+            ("decimal<any4294967296 + 1, S>", 8),
+            ("decimal<P + ANY4294967296, S>", 12),
         ] {
             assert_eq!(
                 parse(source),
@@ -841,7 +848,7 @@ mod tests {
 
     #[test]
     fn numeric_parameter_names_are_explicit_in_the_ast() {
-        for name in ["P", "$L", "_S", "any1extra", "any4294967296"] {
+        for name in ["P", "$L", "_S", "any1extra"] {
             let source = format!("decimal<{name}, 0>");
             assert_eq!(
                 parse(&source).unwrap(),
@@ -898,8 +905,8 @@ mod tests {
     }
 
     #[test]
-    fn parse_integer_expressions_preserve_type_variable_name_fallbacks() {
-        for name in ["any1extra", "any4294967296"] {
+    fn parse_integer_expressions_preserve_identifier_spellings() {
+        for name in ["any1extra", "ANY1extra"] {
             assert_eq!(
                 parse_integer_parameter(&format!("{name} + 1")).unwrap(),
                 IntegerParameter::BinaryExpression {
@@ -1244,13 +1251,6 @@ mod tests {
                 TypeExpr::UserDefined(name, vec![], false),
             );
         }
-        for name in ["any1", "ANY1", "Any1"] {
-            assert_eq!(parse(name).unwrap(), TypeExpr::TypeVariable(1, false));
-            assert_eq!(
-                parse(&format!("{name}?")).unwrap(),
-                TypeExpr::TypeVariable(1, true)
-            );
-        }
         assert_eq!(
             parse("ANY").unwrap(),
             TypeExpr::Simple("ANY", vec![], false)
@@ -1266,28 +1266,38 @@ mod tests {
     }
 
     #[test]
-    fn numbered_type_variable_tokens_have_u32_ids() {
-        for (name, expected) in [
-            ("any0", Some(0)),
-            ("any1", Some(1)),
-            ("any4294967295", Some(u32::MAX)),
-            ("any4294967296", None),
-            ("ANY1", Some(1)),
-            ("Any1", Some(1)),
-            ("any", None),
-            ("anything", None),
+    fn numbered_type_variables_are_case_insensitive_and_support_u32_ids() {
+        for (source, id, nullable) in [
+            ("any0", 0, false),
+            ("any1", 1, false),
+            ("ANY1", 1, false),
+            ("Any1?", 1, true),
+            ("any4294967295", u32::MAX, false),
         ] {
-            let token = tokenize(name).unwrap()[0];
-            assert_eq!(parse_type_variable_id(token), expected, "{name}");
+            assert_eq!(
+                parse(source).unwrap(),
+                TypeExpr::TypeVariable(id, nullable),
+                "{source}"
+            );
         }
     }
 
     #[test]
-    fn out_of_range_variable_ids_remain_named_types() {
-        for name in ["any4294967296", "ANY4294967296"] {
-            assert_eq!(parse(name).unwrap(), TypeExpr::Simple(name, vec![], false));
-            let source = format!("{name}?<i32>");
-            assert!(parse(&source).is_err(), "{source}");
+    fn out_of_range_type_variable_ids_are_rejected() {
+        for (source, position) in [
+            ("any4294967296", 0),
+            ("ANY4294967296?", 0),
+            ("list<any4294967296>", 5),
+            ("func<i32 -> any4294967296>", 12),
+        ] {
+            assert_eq!(
+                parse(source),
+                Err(TypeParseError::UnexpectedToken {
+                    position,
+                    expected: "a u32 type variable ID",
+                }),
+                "{source}"
+            );
         }
     }
 
@@ -1320,8 +1330,8 @@ mod tests {
             ),
             ("list<i32,>", TypeParseError::EmptyParameter),
             (
-                "any4294967296<i32,>",
-                TypeParseError::UnsupportedTypeParameters("any4294967296<i32,>".into()),
+                "unknown<i32,>",
+                TypeParseError::UnsupportedTypeParameters("unknown<i32,>".into()),
             ),
             (
                 "func<i32 -> i64",
