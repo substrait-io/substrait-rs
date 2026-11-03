@@ -119,7 +119,6 @@ impl<'a> Parser<'a> {
         match self.peek() {
             Some(TokenKind::UserDefined) => self.parse_user_defined_type(),
             Some(TokenKind::Func) => self.parse_function_type(),
-            Some(TokenKind::AnyVar) => self.parse_type_variable(),
             _ => self.parse_named_type(),
         }
     }
@@ -137,12 +136,15 @@ impl<'a> Parser<'a> {
         Ok(TypeExpr::UserDefined(name.text, Vec::new(), nullable))
     }
 
-    /// Parse a named type using its built-in parameter grammar.
+    /// Parse a numbered variable or a named type using its built-in parameter grammar.
     ///
     /// `decimal<P, S>` takes integer expressions, while `list<i32>` takes types.
     fn parse_named_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
         let name = self.expect_name()?;
         let nullable = self.consume(TokenKind::QuestionMark);
+        if let Some(id) = parse_type_variable_id(name.text) {
+            return Ok(TypeExpr::TypeVariable(id, nullable));
+        }
         let parameters = match name.text.to_ascii_lowercase().as_str() {
             "fixedchar"
             | "varchar"
@@ -168,18 +170,6 @@ impl<'a> Parser<'a> {
             }
         };
         Ok(TypeExpr::Simple(name.text, parameters, nullable))
-    }
-
-    /// Parse a numbered variable such as `any1?`.
-    /// Variables do not take parameters. Uppercase prefixes and out-of-range IDs
-    /// remain named types.
-    fn parse_type_variable(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        let Some(id) = parse_type_variable_id(self.tokens[self.index].text) else {
-            return self.parse_named_type();
-        };
-        self.expect(TokenKind::AnyVar)?;
-        let nullable = self.consume(TokenKind::QuestionMark);
-        Ok(TypeExpr::TypeVariable(id, nullable))
     }
 
     /// Parse an optional `<...>` list using the enclosing type's parameter grammar.
