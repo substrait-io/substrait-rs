@@ -8,8 +8,8 @@
 //! expects its own arrow. No rule needs to count brackets or search ahead.
 //!
 //! Names borrow from the source, and token positions are byte offsets into that
-//! source. Recognized type names are excluded from numeric expressions. Type
-//! validity, parameter counts, and literal ranges are validated later when
+//! source. Bare parameter names are classified as types or numeric variables.
+//! Type validity, parameter counts, and literal ranges are validated later when
 //! converting the AST to [`Type`](super::types::Type).
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
@@ -32,7 +32,12 @@ pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
 #[cfg(test)]
 pub(super) fn parse_integer_parameter(source: &str) -> Result<IntegerParameter, TypeParseError> {
     let mut parser = Parser::new(source)?;
-    let expression = parser.parse_integer_expression()?;
+    let first_operand = if parser.peek() == Some(TokenKind::Plus) {
+        IntegerParameter::Literal(parser.parse_integer_literal()?)
+    } else {
+        parser.parse_integer_operand()?
+    };
+    let expression = parser.parse_integer_sum(first_operand)?;
     if parser.peek().is_some() {
         return Err(parser.error("end of numeric expression"));
     }
@@ -225,55 +230,38 @@ impl<'a> Parser<'a> {
     ///
     /// For `decimal<P + 1, S>`, the first call consumes only `P + 1`, not the comma.
     fn parse_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
-        match self.peek() {
+        let parameter = match self.peek() {
             Some(TokenKind::Integer | TokenKind::Plus | TokenKind::Minus) => {
-                self.parse_numeric_parameter()
+                TypeExprParam::Integer(IntegerParameter::Literal(self.parse_integer_literal()?))
             }
             Some(TokenKind::Comma | TokenKind::CloseAngle | TokenKind::CloseParen) | None => {
-                Err(TypeParseError::EmptyParameter)
+                return Err(TypeParseError::EmptyParameter);
             }
-            _ => self.parse_named_parameter(),
+            _ => self.parse_named_parameter()?,
+        };
+        match parameter {
+            TypeExprParam::Integer(first_operand) => Ok(TypeExprParam::Integer(
+                self.parse_integer_sum(first_operand)?,
+            )),
+            parameter => Ok(parameter),
         }
     }
 
-    /// Parse a type, or continue a bare integer parameter name as an expression.
+    /// Classify a bare unknown name as a numeric parameter, retaining types otherwise.
     ///
-    /// `P` stays a simple name, while `P + 1` becomes an integer expression.
+    /// `P` becomes an integer variable, while `i32`, `any1`, and `u!point` stay types.
     fn parse_named_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
         let parameter = self.parse_type()?;
-        if let TypeExpr::Simple(name, parameters, false) = &parameter
-            && parameters.is_empty()
-            && is_integer_parameter_name(name)
-        {
-            let expression =
-                self.parse_integer_sum(IntegerParameter::Variable(name.to_string()))?;
-            if !matches!(expression, IntegerParameter::Variable(_)) {
-                return Ok(TypeExprParam::Expression(expression));
+        match parameter {
+            TypeExpr::Simple(name, parameters, false)
+                if parameters.is_empty() && !TypeKind::is_builtin_name(name) =>
+            {
+                Ok(TypeExprParam::Integer(IntegerParameter::Variable(
+                    name.into(),
+                )))
             }
+            parameter => Ok(TypeExprParam::Type(parameter)),
         }
-        Ok(TypeExprParam::Type(parameter))
-    }
-
-    /// Preserve plain literals separately so built-in range validation still applies.
-    ///
-    /// For example, `10` becomes an integer parameter, while `P + 1` stays an expression.
-    fn parse_numeric_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
-        match self.parse_integer_expression()? {
-            IntegerParameter::Literal(value) => Ok(TypeExprParam::Integer(value)),
-            expression => Ok(TypeExprParam::Expression(expression)),
-        }
-    }
-
-    /// Parse left-associative addition without grouping parentheses.
-    ///
-    /// For example, `P + S + 1` groups as `(P + S) + 1`.
-    fn parse_integer_expression(&mut self) -> Result<IntegerParameter, TypeParseError> {
-        let expression = if self.peek() == Some(TokenKind::Plus) {
-            IntegerParameter::Literal(self.parse_integer_literal()?)
-        } else {
-            self.parse_integer_operand()?
-        };
-        self.parse_integer_sum(expression)
     }
 
     /// Extend an already parsed operand with any following additions.
@@ -413,14 +401,35 @@ mod tests {
     }
 
     #[test]
-    fn bare_parameter_names_remain_simple_types() {
+    fn numeric_parameter_names_are_explicit_in_the_ast() {
+        for name in ["P", "$L", "_S", "Any1", "any4294967296"] {
+            let source = format!("decimal<{name}, 0>");
+            assert_eq!(
+                parse(&source).unwrap(),
+                TypeExpr::Simple(
+                    "decimal",
+                    vec![
+                        TypeExprParam::Integer(IntegerParameter::Variable(name.into())),
+                        TypeExprParam::Integer(IntegerParameter::Literal(0)),
+                    ],
+                    false,
+                ),
+                "{source}"
+            );
+        }
+    }
+
+    #[test]
+    fn extension_parameters_distinguish_integer_names_and_types() {
         assert_eq!(
-            parse("decimal<P, S>").unwrap(),
-            TypeExpr::Simple(
-                "decimal",
+            parse("u!foo<P, i32, any1, u!point>").unwrap(),
+            TypeExpr::UserDefined(
+                "foo",
                 vec![
-                    TypeExprParam::Type(TypeExpr::Simple("P", vec![], false)),
-                    TypeExprParam::Type(TypeExpr::Simple("S", vec![], false)),
+                    TypeExprParam::Integer(IntegerParameter::Variable("P".into())),
+                    TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
+                    TypeExprParam::Type(TypeExpr::TypeVariable(1, false)),
+                    TypeExprParam::Type(TypeExpr::UserDefined("point", vec![], false)),
                 ],
                 false,
             )
@@ -521,7 +530,7 @@ mod tests {
                 "<list<i32>, 2>>",
                 vec![
                     TypeExprParam::Type(parse("list<i32>").unwrap()),
-                    TypeExprParam::Integer(2),
+                    TypeExprParam::Integer(IntegerParameter::Literal(2)),
                 ],
             ),
         ] {
@@ -562,7 +571,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_numeric_parameters_retain_addition_and_leave_the_separator() {
+    fn parse_parameters_retain_addition_and_leave_the_separator() {
         for (source, separator) in [
             ("P + 1, S", TokenKind::Comma),
             ("P + 1>", TokenKind::CloseAngle),
@@ -570,8 +579,8 @@ mod tests {
         ] {
             let mut parser = Parser::new(source).unwrap();
             assert_eq!(
-                parser.parse_numeric_parameter().unwrap(),
-                TypeExprParam::Expression(IntegerParameter::BinaryExpression {
+                parser.parse_parameter().unwrap(),
+                TypeExprParam::Integer(IntegerParameter::BinaryExpression {
                     op: BinaryOp::Add,
                     left: Box::new(IntegerParameter::Variable("P".into())),
                     right: Box::new(IntegerParameter::Literal(1)),
