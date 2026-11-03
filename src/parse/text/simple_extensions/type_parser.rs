@@ -164,7 +164,10 @@ impl<'a> Parser<'a> {
             Some(TokenKind::UserDefined) => self.parse_user_defined_type(),
             Some(TokenKind::Func) => self.parse_function_type(),
             Some(TokenKind::AnyVar) => self.parse_type_variable(),
-            _ => self.parse_named_type(),
+            _ => {
+                let name = self.expect_name()?;
+                self.parse_named_type(name)
+            }
         }
     }
 
@@ -181,11 +184,11 @@ impl<'a> Parser<'a> {
         Ok(TypeExpr::UserDefined(name.text, Vec::new(), nullable))
     }
 
-    /// Parse a named type using its built-in parameter grammar.
+    /// Parse nullability and parameters for an already-consumed type name.
     ///
     /// `decimal<P, S>` takes integer expressions, while `list<i32>` takes types.
-    fn parse_named_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        let name = self.expect_name()?;
+    fn parse_named_type(&mut self, name: Token<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
+        debug_assert!(name.kind.is_name() && name.kind != TokenKind::AnyVar);
         let nullable = self.consume(TokenKind::QuestionMark);
         let parameters = match name.text.to_ascii_lowercase().as_str() {
             "fixedchar"
@@ -338,26 +341,24 @@ impl<'a> Parser<'a> {
                 self.expect(TokenKind::CloseParen)?;
                 Ok(expression)
             }
-            Some(kind) if kind.is_name() => {
-                let name = self.expect_name()?;
-                if !is_integer_parameter_name(name) {
-                    return Err(TypeParseError::UnexpectedToken {
-                        position: name.position,
-                        expected: "an integer literal, parameter name, or '('",
-                    });
-                }
-                self.parse_integer_name(name.text)
-            }
+            Some(kind) if kind.is_name() => self.parse_integer_parameter_name(),
             _ => Err(self.error("an integer literal, parameter name, or '('")),
         }
     }
 
-    /// Parse optional call arguments after an already consumed integer parameter name.
+    /// Parse an integer parameter name and any call arguments.
     ///
-    /// After `max` in `max(P, S)`, consume `(P, S)` and retain the call.
-    fn parse_integer_name(&mut self, name: &str) -> Result<IntegerParameter, TypeParseError> {
+    /// For `max(P, S)`, consume the name and argument list and retain the call.
+    fn parse_integer_parameter_name(&mut self) -> Result<IntegerParameter, TypeParseError> {
+        let name = self.expect_name()?;
+        if !is_integer_parameter_name(name) {
+            return Err(TypeParseError::UnexpectedToken {
+                position: name.position,
+                expected: "an integer literal, parameter name, or '('",
+            });
+        }
         if !self.consume(TokenKind::OpenParen) {
-            return Ok(IntegerParameter::Variable(name.to_string()));
+            return Ok(IntegerParameter::Variable(name.text.into()));
         }
         let mut arguments = Vec::new();
         if !self.consume(TokenKind::CloseParen) {
@@ -370,7 +371,7 @@ impl<'a> Parser<'a> {
             }
         }
         Ok(IntegerParameter::Call {
-            name: name.to_string(),
+            name: name.text.into(),
             arguments,
         })
     }
