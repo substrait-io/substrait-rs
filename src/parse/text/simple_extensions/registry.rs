@@ -523,7 +523,7 @@ scalar_functions:
         let raw = extension_with_custom_type_reference(
             "extension:example.com:missing",
             "wrap",
-            "list<u!missing<any1>>",
+            "map<any1, u!missing>",
             vec![],
         );
         assert!(matches!(
