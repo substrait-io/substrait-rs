@@ -1042,22 +1042,15 @@ fn parse_integer_parameter(
     range: Option<RangeInclusive<i32>>,
 ) -> Result<IntegerParameter, ExtensionTypeError> {
     let value = match param {
-        TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
-            if parameters.is_empty()
-                && !TypeKind::is_builtin_name(name)
-                && CustomType::validate_name(name).is_ok() =>
-        {
-            return Ok(IntegerParameter::Variable(name.to_string()));
-        }
-        TypeExprParam::Integer(value)
-        | TypeExprParam::Expression(IntegerParameter::Literal(value)) => i32::try_from(*value)
-            .map_err(|_| ExtensionTypeError::InvalidParameterValue {
+        TypeExprParam::Integer(IntegerParameter::Literal(value)) => {
+            i32::try_from(*value).map_err(|_| ExtensionTypeError::InvalidParameterValue {
                 type_name: type_name.to_string(),
                 index,
                 value: *value,
                 expected: "an i32",
-            }),
-        TypeExprParam::Expression(expression) => return Ok(expression.clone()),
+            })
+        }
+        TypeExprParam::Integer(parameter) => return Ok(parameter.clone()),
         _ => Err(ExtensionTypeError::InvalidParameterKind {
             type_name: type_name.to_string(),
             index,
@@ -1126,13 +1119,11 @@ fn expect_type_argument<'a>(
 ) -> Result<Type, ExtensionTypeError> {
     match param {
         TypeExprParam::Type(t) => Type::try_from(t),
-        TypeExprParam::Integer(_) | TypeExprParam::Expression(_) => {
-            Err(ExtensionTypeError::InvalidParameterKind {
-                type_name: type_name.to_string(),
-                index,
-                expected: "a type",
-            })
-        }
+        TypeExprParam::Integer(_) => Err(ExtensionTypeError::InvalidParameterKind {
+            type_name: type_name.to_string(),
+            index,
+            expected: "a type",
+        }),
     }
 }
 
@@ -1141,23 +1132,8 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
 
     fn try_from(param: TypeExprParam<'a>) -> Result<Self, Self::Error> {
         Ok(match param {
-            TypeExprParam::Integer(v) => TypeParameter::Integer(IntegerParameter::Literal(v)),
-            TypeExprParam::Expression(expression) => TypeParameter::Integer(expression),
-            TypeExprParam::Type(expression) => {
-                let is_bare_name = matches!(
-                    &expression,
-                    TypeExpr::Simple(_, parameters, false) if parameters.is_empty()
-                );
-                match Type::try_from(expression) {
-                    Err(ExtensionTypeError::UnknownTypeName { name })
-                        if is_bare_name && !TypeKind::is_builtin_name(&name) =>
-                    {
-                        CustomType::validate_name(&name)?;
-                        TypeParameter::Integer(IntegerParameter::Variable(name))
-                    }
-                    result => TypeParameter::Type(result?),
-                }
-            }
+            TypeExprParam::Integer(parameter) => TypeParameter::Integer(parameter),
+            TypeExprParam::Type(expression) => TypeParameter::Type(Type::try_from(expression)?),
         })
     }
 }
@@ -1849,6 +1825,9 @@ mod tests {
     #[test]
     fn test_invalid_nested_signature_types() {
         for input in [
+            "List<P>",
+            "Map<i32, P>",
+            "func<P -> i32>",
             "List<any1, any2>",
             "Map<any1>",
             "Struct<1, any1>",
