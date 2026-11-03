@@ -128,7 +128,8 @@ impl<'a> Parser<'a> {
         Ok(TypeExpr::Simple(name.text, parameters, nullable))
     }
 
-    /// Parse a numbered variable such as `any1?`, requiring its ID to fit in `u32`.
+    /// Parse a numbered variable such as `any1?`.
+    /// Variables do not take parameters.
     fn parse_type_variable(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
         let name = self.expect(TokenKind::AnyVar)?;
         let id = name.text[3..]
