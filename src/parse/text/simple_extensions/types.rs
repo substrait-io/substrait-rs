@@ -178,8 +178,8 @@ pub enum TypeKind {
 }
 
 impl TypeKind {
-    /// Check if a string is a valid name for a builtin scalar type
-    pub fn is_name(name: &str) -> bool {
+    /// Check if a string names a builtin type, ignoring ASCII case.
+    pub fn is_builtin_name(name: &str) -> bool {
         let lower = name.to_ascii_lowercase();
         primitive_builtin(&lower).is_some()
             || matches!(
@@ -193,6 +193,11 @@ impl TypeKind {
                     | "precision_timestamp_tz"
                     | "interval_day"
                     | "interval_compound"
+                    | "any"
+                    | "func"
+                    | "list"
+                    | "map"
+                    | "struct"
             )
     }
 
@@ -441,15 +446,6 @@ impl fmt::Display for TypeParameter {
             TypeParameter::Name(name) => f.write_str(name),
         }
     }
-}
-
-/// Recognize built-in type names, including containers and wildcard types.
-pub(super) fn is_builtin_type_name(name: &str) -> bool {
-    TypeKind::is_name(name)
-        || matches!(
-            name.to_ascii_lowercase().as_str(),
-            "any" | "func" | "list" | "map" | "struct"
-        )
 }
 
 /// Parse a primitive (no type parameters) builtin type name
@@ -1098,7 +1094,7 @@ fn parse_integer_parameter(
     let value = match param {
         TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
             if parameters.is_empty()
-                && !is_builtin_type_name(name)
+                && !TypeKind::is_builtin_name(name)
                 && CustomType::validate_name(name).is_ok() =>
         {
             return Ok(IntegerParameter::Variable(name.to_string()));
@@ -1204,7 +1200,7 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
                 );
                 match Type::try_from(expression) {
                     Err(ExtensionTypeError::UnknownTypeName { name })
-                        if is_bare_name && !is_builtin_type_name(&name) =>
+                        if is_bare_name && !TypeKind::is_builtin_name(&name) =>
                     {
                         CustomType::validate_name(&name)?;
                         TypeParameter::Integer(IntegerParameter::Variable(name))
@@ -2322,7 +2318,7 @@ mod tests {
             "precisiontimestamptz",
         ] {
             for spelling in [name.to_string(), name.to_ascii_uppercase()] {
-                assert!(!TypeKind::is_name(&spelling));
+                assert!(!TypeKind::is_builtin_name(&spelling));
                 assert_eq!(
                     parse_type_result(&format!("{spelling}<3>")),
                     Err(ExtensionTypeError::UnknownTypeName { name: spelling })
