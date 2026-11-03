@@ -51,10 +51,8 @@ pub enum TypeExpr<'a> {
 pub enum TypeExprParam<'a> {
     /// A nested type parameter
     Type(TypeExpr<'a>),
-    /// An integer literal parameter
-    Integer(i64),
-    /// An unevaluated arithmetic expression in a numeric parameter.
-    Expression(IntegerParameter),
+    /// An integer literal, named numeric parameter, or unevaluated expression.
+    Integer(IntegerParameter),
 }
 
 #[derive(Debug, PartialEq, thiserror::Error)]
