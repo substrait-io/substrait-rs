@@ -14,7 +14,7 @@
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
 use super::type_tokenizer::{Token, TokenKind, tokenize};
-use super::types::{BinaryOp, IntegerParameter, is_builtin_type_name};
+use super::types::{BinaryOp, IntegerParameter, TypeKind};
 
 /// Parse one complete type, rejecting any tokens left after it.
 ///
@@ -331,7 +331,7 @@ impl<'a> Parser<'a> {
 
 /// Recognize integer parameter names without treating type names as variables.
 fn is_integer_parameter_name(name: &str) -> bool {
-    !is_builtin_type_name(name) && parse_type_variable_id(name).is_none()
+    !TypeKind::is_builtin_name(name) && parse_type_variable_id(name).is_none()
 }
 
 /// Recognize a case-sensitive `any` prefix followed by a `u32` variable ID.
