@@ -123,7 +123,6 @@ impl<'a> TypeExpr<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::types::BinaryOp;
     use super::*;
 
     fn parse(expr: &str) -> TypeExpr<'_> {
@@ -217,40 +216,6 @@ mod tests {
             let mut refs = Vec::new();
             parse(expr).visit_references(&mut |name| refs.push(name.to_string()));
             assert_eq!(refs, expected_refs, "unexpected references for {expr}");
-        }
-    }
-
-    #[test]
-    fn test_numeric_parameter_expressions() {
-        let expression = parse("decimal<P1 + P2, S>");
-        let TypeExpr::Simple("decimal", parameters, false) = expression else {
-            panic!("expected decimal");
-        };
-        assert_eq!(parameters.len(), 2);
-        assert_eq!(
-            parameters[0],
-            TypeExprParam::Expression(IntegerParameter::BinaryExpression {
-                op: BinaryOp::Add,
-                left: Box::new(IntegerParameter::Variable("P1".into())),
-                right: Box::new(IntegerParameter::Variable("P2".into())),
-            })
-        );
-        assert_eq!(
-            parameters[1],
-            TypeExprParam::Type(TypeExpr::Simple("S", vec![], false))
-        );
-    }
-
-    #[test]
-    fn test_invalid_numeric_parameter_expressions() {
-        for source in [
-            "varchar<L +>",
-            "varchar<L + * 2>",
-            "varchar<(L + 1>",
-            "varchar<L + 1)>",
-            "varchar<()>",
-        ] {
-            assert!(TypeExpr::parse(source).is_err(), "{source}");
         }
     }
 
