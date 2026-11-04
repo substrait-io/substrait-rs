@@ -287,16 +287,22 @@ impl<'a> Parser<'a> {
         Ok(expression)
     }
 
-    /// Parse one integer literal or parameter name.
+    /// Parse one integer, parameter name, or parenthesized addition expression.
     ///
-    /// For `P + 1`, consume `P` and leave the following `+` for the caller.
+    /// For `(P + 1) + S`, consume `(P + 1)` and leave the following `+` for the caller.
     fn parse_integer_operand(&mut self) -> Result<IntegerParameter, TypeParseError> {
         match self.peek() {
             Some(TokenKind::Integer | TokenKind::Minus) => {
                 Ok(IntegerParameter::Literal(self.parse_integer_literal()?))
             }
+            Some(TokenKind::OpenParen) => {
+                self.expect(TokenKind::OpenParen)?;
+                let expression = self.parse_integer_parameter_expression()?;
+                self.expect(TokenKind::CloseParen)?;
+                Ok(expression)
+            }
             Some(kind) if kind.is_name() => self.parse_integer_parameter_name(),
-            _ => Err(self.error("an integer literal or parameter name")),
+            _ => Err(self.error("an integer literal, parameter name, or '('")),
         }
     }
 
@@ -306,7 +312,7 @@ impl<'a> Parser<'a> {
         if !is_integer_parameter_name(name) {
             return Err(TypeParseError::UnexpectedToken {
                 position: name.position,
-                expected: "an integer literal or parameter name",
+                expected: "an integer literal, parameter name, or '('",
             });
         }
         Ok(IntegerParameter::Variable(name.text.into()))
@@ -378,6 +384,27 @@ mod tests {
     }
 
     #[test]
+    fn parentheses_preserve_grouping() {
+        let IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left,
+            right,
+        } = parse_integer_parameter("P + (S + 1)").unwrap()
+        else {
+            panic!("expected addition");
+        };
+        assert_eq!(*left, IntegerParameter::Variable("P".into()));
+        assert_eq!(
+            *right,
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::Variable("S".into())),
+                right: Box::new(IntegerParameter::Literal(1)),
+            }
+        );
+    }
+
+    #[test]
     fn addition_preserves_signed_literals() {
         assert_eq!(
             parse("varchar<+10 + -2>").unwrap(),
@@ -403,6 +430,8 @@ mod tests {
             ("decimal<P + any1, S>", 12),
             ("decimal<ANY1 + 1, S>", 8),
             ("decimal<P + Any1, S>", 12),
+            ("decimal<(any1), S>", 9),
+            ("decimal<P + (any1 + 1), S>", 13),
             ("decimal<P, ANY4294967296>", 11),
             ("decimal<any4294967296 + 1, S>", 8),
             ("decimal<P + ANY4294967296, S>", 12),
@@ -411,7 +440,7 @@ mod tests {
                 parse(source),
                 Err(TypeParseError::UnexpectedToken {
                     position,
-                    expected: "an integer literal or parameter name",
+                    expected: "an integer literal, parameter name, or '('",
                 }),
                 "{source}"
             );
@@ -458,6 +487,7 @@ mod tests {
         for source in [
             "u!foo<>",
             "u!foo<P>",
+            "u!foo<(P)>",
             "u!foo?<i32>",
             "list<u!foo<1>>",
             "unknown<i32>",
@@ -521,8 +551,8 @@ mod tests {
             "P * 2",
             "P / 2",
             "min(P, S)",
-            "(P)",
-            "P + (S + 1)",
+            "P + ()",
+            "(P)(S)",
             "P > S",
             "P ? S : 1",
             "9223372036854775808",
@@ -534,7 +564,7 @@ mod tests {
             parse_integer_parameter("P +"),
             Err(TypeParseError::UnexpectedToken {
                 position: 3,
-                expected: "an integer literal or parameter name",
+                expected: "an integer literal, parameter name, or '('",
             })
         );
     }
@@ -543,7 +573,7 @@ mod tests {
     fn parse_rejects_invalid_numeric_parameters() {
         for source in [
             "varchar<L +>",
-            "varchar<(L)>",
+            "varchar<(L + 1>",
             "varchar<L + 1)>",
             "varchar<L + i32>",
         ] {
@@ -613,11 +643,25 @@ mod tests {
     }
 
     #[test]
+    fn parse_grouped_numeric_literals_remain_integers() {
+        let mut parser = Parser::new("(10), S").unwrap();
+        assert_eq!(
+            parser.parse_integer_parameter_expression().unwrap(),
+            IntegerParameter::Literal(10)
+        );
+        assert_eq!(parser.peek(), Some(TokenKind::Comma));
+    }
+
+    #[test]
     fn parse_integer_operands_leave_the_following_operator() {
-        let mut parser = Parser::new("P + 1").unwrap();
+        let mut parser = Parser::new("(P + 1) + S").unwrap();
         assert_eq!(
             parser.parse_integer_operand().unwrap(),
-            IntegerParameter::Variable("P".into())
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::Variable("P".into())),
+                right: Box::new(IntegerParameter::Literal(1)),
+            }
         );
         assert_eq!(parser.peek(), Some(TokenKind::Plus));
     }
@@ -641,6 +685,18 @@ mod tests {
             );
             assert_eq!(parser.peek(), Some(separator), "{source}");
         }
+    }
+
+    #[test]
+    fn parse_grouped_integer_literals_remain_literal_parameters() {
+        assert_eq!(
+            parse("varchar<((10))>").unwrap(),
+            TypeExpr::Simple(
+                "varchar",
+                vec![TypeExprParam::Integer(IntegerParameter::Literal(10))],
+                false,
+            )
+        );
     }
 
     #[test]
