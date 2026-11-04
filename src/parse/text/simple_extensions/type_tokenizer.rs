@@ -28,7 +28,7 @@ pub(super) enum TokenKind {
     Arrow,
     /// `<`, opening a type's parameter list or function-type body.
     OpenAngle,
-    /// `>`, closing a type's parameter list or function-type body.
+    /// `>`, closing a type's parameter list or comparing numeric expressions.
     CloseAngle,
     /// `(`, opening grouped function parameters such as `(i32, i64)`.
     OpenParen,
@@ -36,7 +36,7 @@ pub(super) enum TokenKind {
     CloseParen,
     /// `,`, separating parameters at the current nesting level.
     Comma,
-    /// `?`, marking a nullable type, as in `i32?` or `list?<i32>`.
+    /// `?`, marking a nullable type or introducing a conditional branch.
     QuestionMark,
     /// `+`, currently accepted as an explicit sign on an integer literal.
     Plus,
@@ -44,6 +44,8 @@ pub(super) enum TokenKind {
     Minus,
     /// `=`, assigning an integer parameter in a return derivation.
     Equals,
+    /// `:`, separating the branches of a ternary conditional.
+    Colon,
 }
 
 impl TokenKind {
@@ -68,6 +70,7 @@ impl TokenKind {
             Self::Plus => "'+'",
             Self::Minus => "'-'",
             Self::Equals => "'='",
+            Self::Colon => "':'",
         }
     }
 
@@ -153,11 +156,7 @@ impl<'a> Tokenizer<'a> {
                     .unwrap_or(remaining.len());
                 (TokenKind::Integer, length)
             }
-            ':' => {
-                return Err(TypeParseError::UnsupportedNumericExpression(
-                    self.source.to_string(),
-                ));
-            }
+            ':' => (TokenKind::Colon, 1),
             '[' | ']' => {
                 return Err(TypeParseError::UnsupportedVariation(
                     self.source.to_string(),
