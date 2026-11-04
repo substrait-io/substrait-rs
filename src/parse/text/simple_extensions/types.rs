@@ -991,14 +991,7 @@ fn parse_integer_parameter(
     range: Option<RangeInclusive<i32>>,
 ) -> Result<IntegerParameter, ExtensionTypeError> {
     let value = match param {
-        TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
-            if parameters.is_empty()
-                && !TypeKind::is_builtin_name(name)
-                && CustomType::validate_name(name).is_ok() =>
-        {
-            return Ok(IntegerParameter::Variable(name.to_string()));
-        }
-        TypeExprParam::Integer(value) => {
+        TypeExprParam::Integer(IntegerParameter::Literal(value)) => {
             i32::try_from(*value).map_err(|_| ExtensionTypeError::InvalidParameterValue {
                 type_name: type_name.to_string(),
                 index,
@@ -1006,6 +999,7 @@ fn parse_integer_parameter(
                 expected: "an i32",
             })
         }
+        TypeExprParam::Integer(parameter) => return Ok(parameter.clone()),
         _ => Err(ExtensionTypeError::InvalidParameterKind {
             type_name: type_name.to_string(),
             index,
@@ -1087,22 +1081,8 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
 
     fn try_from(param: TypeExprParam<'a>) -> Result<Self, Self::Error> {
         Ok(match param {
-            TypeExprParam::Integer(v) => TypeParameter::Integer(IntegerParameter::Literal(v)),
-            TypeExprParam::Type(expression) => {
-                let is_bare_name = matches!(
-                    &expression,
-                    TypeExpr::Simple(_, parameters, false) if parameters.is_empty()
-                );
-                match Type::try_from(expression) {
-                    Err(ExtensionTypeError::UnknownTypeName { name })
-                        if is_bare_name && !TypeKind::is_builtin_name(&name) =>
-                    {
-                        CustomType::validate_name(&name)?;
-                        TypeParameter::Name(name)
-                    }
-                    result => TypeParameter::Type(result?),
-                }
-            }
+            TypeExprParam::Integer(parameter) => TypeParameter::Integer(parameter),
+            TypeExprParam::Type(expression) => TypeParameter::Type(Type::try_from(expression)?),
         })
     }
 }
@@ -1289,8 +1269,7 @@ mod tests {
 
     /// Parse a string into a [Type], returning the result
     fn parse_type_result(expr: &str) -> Result<Type, ExtensionTypeError> {
-        let parsed = TypeExpr::parse(expr).unwrap();
-        Type::try_from(parsed)
+        Type::try_from(TypeExpr::parse(expr)?)
     }
 
     /// Parse a string into a builtin [Type], with no unresolved
@@ -1418,18 +1397,18 @@ mod tests {
     #[test]
     fn test_extension_integer_parameters_preserve_i64_range() {
         let input = format!("u!wide<{}>", i64::MAX);
-        let parsed = parse_type(&input);
+        let parsed = Type::try_from(TypeExpr::UserDefined(
+            "wide",
+            vec![TypeExprParam::Integer(IntegerParameter::Literal(i64::MAX))],
+            false,
+        ))
+        .unwrap();
         assert!(parsed.is_concrete());
         assert_eq!(parsed.to_string(), input);
         assert!(matches!(
             parse_type_result(&format!("varchar<{}>", i64::MAX)),
             Err(ExtensionTypeError::InvalidParameterValue { .. })
         ));
-    }
-
-    /// Create a type parameter from a type expression string
-    fn type_param(expr: &str) -> TypeParameter {
-        TypeParameter::Type(parse_type(expr))
     }
 
     /// Create an extension type
@@ -1623,28 +1602,42 @@ mod tests {
     }
 
     #[test]
-    fn test_symbolic_user_defined_type_parameters() {
-        let ty = parse_type("u!Box?<List<decimal<P, S>>, 5, N>");
+    fn test_user_defined_parameter_conversion() {
+        let expression = TypeExpr::UserDefined(
+            "foo",
+            vec![
+                TypeExprParam::Type(TypeExpr::Simple(
+                    "list",
+                    vec![TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false))],
+                    false,
+                )),
+                TypeExprParam::Integer(IntegerParameter::Literal(5)),
+                TypeExprParam::Integer(IntegerParameter::Variable("P".into())),
+                TypeExprParam::Type(TypeExpr::TypeVariable(1, false)),
+            ],
+            true,
+        );
         assert_eq!(
-            ty,
+            Type::try_from(expression).unwrap(),
             Type::extension_with_params(
-                "Box".to_string(),
+                "foo".into(),
                 vec![
-                    TypeParameter::Type(parse_type("List<decimal<P, S>>")),
+                    TypeParameter::Type(Type::list(required_type(TypeKind::I32), false)),
                     TypeParameter::Integer(IntegerParameter::Literal(5)),
-                    TypeParameter::Name("N".to_string()),
+                    TypeParameter::Integer(IntegerParameter::Variable("P".into())),
+                    TypeParameter::Type(required_type(TypeKind::Variable { id: 1 })),
                 ],
                 true,
             )
         );
-        assert!(!ty.is_concrete());
-        assert!(!parse_type("u!Box<5, N>").is_concrete());
-        assert_eq!(ty.to_string(), "u!Box?<list<decimal<P, S>>, 5, N>");
     }
 
     #[test]
     fn test_invalid_nested_signature_types() {
         for input in [
+            "List<P>",
+            "Map<i32, P>",
+            "func<P -> i32>",
             "List<any1, any2>",
             "Map<any1>",
             "Struct<1, any1>",
@@ -1655,7 +1648,7 @@ mod tests {
             "u!foo<FuNc>",
         ] {
             assert!(
-                Type::try_from(TypeExpr::parse(input).unwrap()).is_err(),
+                parse_type_result(input).is_err(),
                 "{input} should not be accepted as a signature type"
             );
         }
@@ -1685,7 +1678,7 @@ mod tests {
                     assert!(
                         matches!(
                             parse_type_result(&source),
-                            Err(ExtensionTypeError::InvalidParameterKind { .. })
+                            Err(ExtensionTypeError::ParseType(_))
                         ),
                         "{source} should not treat a type name as an integer parameter"
                     );
@@ -1795,7 +1788,7 @@ mod tests {
             "missing<P>",
         ] {
             assert!(
-                Type::try_from(TypeExpr::parse(input).unwrap()).is_err(),
+                parse_type_result(input).is_err(),
                 "{input} should not be accepted as a signature type"
             );
         }
@@ -1963,33 +1956,10 @@ mod tests {
 
     #[test]
     fn test_extension_types() {
-        let cases = vec![
-            (
-                "u!geo<List<i32>, 10>",
-                extension(
-                    "geo",
-                    vec![
-                        type_param("List<i32>"),
-                        TypeParameter::Integer(IntegerParameter::Literal(10)),
-                    ],
-                    false,
-                ),
-            ),
-            (
-                "u!Geo?<List<i32?>>",
-                extension("Geo", vec![type_param("List<i32?>")], true),
-            ),
-            (
-                "u!Custom<string?, bool>",
-                extension(
-                    "Custom",
-                    vec![
-                        type_param("string?"),
-                        TypeParameter::Type(Type::new(TypeKind::Boolean, false)),
-                    ],
-                    false,
-                ),
-            ),
+        let cases = [
+            ("u!geo", extension("geo", vec![], false)),
+            ("u!Geo?", extension("Geo", vec![], true)),
+            ("u!Custom", extension("Custom", vec![], false)),
         ];
 
         for (expr, expected) in cases {
@@ -2064,8 +2034,9 @@ mod tests {
         ] {
             for spelling in [name.to_string(), name.to_ascii_uppercase()] {
                 assert!(!TypeKind::is_builtin_name(&spelling));
+                assert!(TypeExpr::parse(&format!("{spelling}<3>")).is_err());
                 assert_eq!(
-                    parse_type_result(&format!("{spelling}<3>")),
+                    parse_type_result(&spelling),
                     Err(ExtensionTypeError::UnknownTypeName { name: spelling })
                 );
             }
@@ -2122,9 +2093,9 @@ mod tests {
             ("InTeRvAl_DaY?<3>", "interval_day?<3>"),
             ("INTERVAL_COMPOUND?<3>", "interval_compound?<3>"),
             ("u!geometry?", "u!geometry?"),
-            ("u!CustomType?<i32>", "u!CustomType?<i32>"),
-            ("u!custom<i32>", "u!custom<i32>"),
-            ("u!custom?<i32, 5>", "u!custom?<i32, 5>"),
+            ("u!CustomType?", "u!CustomType?"),
+            ("u!custom", "u!custom"),
+            ("u!custom?", "u!custom?"),
             ("list?<u!geometry?>", "list?<u!geometry?>"),
         ];
 

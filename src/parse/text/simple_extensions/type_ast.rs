@@ -20,6 +20,8 @@
 //
 // Therefore, the grammar is manually implemented.
 
+use super::types::IntegerParameter;
+
 /// A parsed type expression from a type string, with lifetime tied to the original string.
 ///
 /// This represents the syntactic structure only - type names are not validated.
@@ -49,8 +51,8 @@ pub enum TypeExpr<'a> {
 pub enum TypeExprParam<'a> {
     /// A nested type parameter
     Type(TypeExpr<'a>),
-    /// An integer literal parameter
-    Integer(i64),
+    /// An integer literal or named numeric parameter.
+    Integer(IntegerParameter),
 }
 
 #[derive(Debug, PartialEq, thiserror::Error)]
@@ -69,6 +71,8 @@ pub enum TypeParseError {
     EmptyParameter,
     #[error("numeric expressions are not supported yet: {0}")]
     UnsupportedNumericExpression(String),
+    #[error("parameters are not supported for this type: {0}")]
+    UnsupportedTypeParameters(String),
     #[error("expected {expected} at byte {position}")]
     UnexpectedToken {
         position: usize,
@@ -78,6 +82,9 @@ pub enum TypeParseError {
 
 impl<'a> TypeExpr<'a> {
     /// Parse a type string into a [`TypeExpr`].
+    ///
+    /// Built-in parameters are parsed as types or integers according to
+    /// the enclosing type. Parameters on user-defined and unknown types are unsupported.
     pub fn parse(type_str: &'a str) -> Result<Self, TypeParseError> {
         super::type_parser::parse(type_str)
     }
@@ -162,26 +169,9 @@ mod tests {
     }
 
     #[test]
-    fn test_user_defined_and_parameters() {
+    fn test_user_defined_and_container_types() {
         let cases = [
-            (
-                "u!geo?<i32?, point<i32, i32>>",
-                TypeExpr::UserDefined(
-                    "geo",
-                    vec![
-                        TypeExprParam::Type(TypeExpr::Simple("i32", vec![], true)),
-                        TypeExprParam::Type(TypeExpr::Simple(
-                            "point",
-                            vec![
-                                TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
-                                TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
-                            ],
-                            false,
-                        )),
-                    ],
-                    true,
-                ),
-            ),
+            ("u!geo?", TypeExpr::UserDefined("geo", vec![], true)),
             (
                 "Map?<i32, string>",
                 TypeExpr::Simple(
@@ -204,8 +194,8 @@ mod tests {
         let cases = vec![
             ("DECIMAL<10,2>", Vec::<String>::new()),
             ("List<string>", Vec::<String>::new()),
-            ("u!custom<i32>", vec!["custom".to_string()]),
-            ("u!Geo<string>", vec!["Geo".to_string()]),
+            ("list<u!custom>", vec!["custom".to_string()]),
+            ("u!Geo", vec!["Geo".to_string()]),
         ];
 
         for (expr, expected_refs) in cases {
