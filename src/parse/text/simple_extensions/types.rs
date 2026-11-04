@@ -1348,19 +1348,17 @@ mod tests {
 
     #[test]
     fn test_numeric_parameter_expressions() {
-        let parsed = parse_type("decimal<P1 + P2, S>");
-        let TypeKind::Decimal { precision, scale } = &parsed.kind else {
-            panic!("expected decimal");
-        };
         assert_eq!(
-            precision,
-            &IntegerParameter::BinaryExpression {
-                op: BinaryOp::Add,
-                left: Box::new(IntegerParameter::Variable("P1".into())),
-                right: Box::new(IntegerParameter::Variable("P2".into())),
-            }
+            parse_type("decimal<P1 + P2, S>"),
+            required_type(TypeKind::Decimal {
+                precision: IntegerParameter::BinaryExpression {
+                    op: BinaryOp::Add,
+                    left: Box::new(IntegerParameter::Variable("P1".into())),
+                    right: Box::new(IntegerParameter::Variable("P2".into())),
+                },
+                scale: IntegerParameter::Variable("S".into()),
+            })
         );
-        assert_eq!(scale, &IntegerParameter::Variable("S".into()));
     }
 
     #[test]
