@@ -51,7 +51,7 @@ pub enum TypeExpr<'a> {
 pub enum TypeExprParam<'a> {
     /// A nested type parameter
     Type(TypeExpr<'a>),
-    /// An integer literal or named numeric parameter.
+    /// An integer literal, named numeric parameter, or unevaluated expression.
     Integer(IntegerParameter),
 }
 
@@ -83,7 +83,7 @@ pub enum TypeParseError {
 impl<'a> TypeExpr<'a> {
     /// Parse a type string into a [`TypeExpr`].
     ///
-    /// Built-in parameters are parsed as types or integers according to
+    /// Built-in parameters are parsed as types or integer expressions according to
     /// the enclosing type. Parameters on user-defined and unknown types are unsupported.
     pub fn parse(type_str: &'a str) -> Result<Self, TypeParseError> {
         super::type_parser::parse(type_str)
