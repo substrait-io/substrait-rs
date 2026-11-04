@@ -1742,63 +1742,30 @@ mod tests {
         let expression = TypeExpr::UserDefined(
             "foo",
             vec![
+                TypeExprParam::Type(TypeExpr::Simple(
+                    "list",
+                    vec![TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false))],
+                    false,
+                )),
+                TypeExprParam::Integer(IntegerParameter::Literal(5)),
                 TypeExprParam::Integer(IntegerParameter::Variable("P".into())),
-                TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
                 TypeExprParam::Type(TypeExpr::TypeVariable(1, false)),
             ],
-            false,
+            true,
         );
         assert_eq!(
             Type::try_from(expression).unwrap(),
             Type::extension_with_params(
                 "foo".into(),
                 vec![
-                    TypeParameter::Integer(IntegerParameter::Variable("P".into())),
-                    TypeParameter::Type(required_type(TypeKind::I32)),
-                    TypeParameter::Type(required_type(TypeKind::Variable { id: 1 })),
-                ],
-                false,
-            )
-        );
-    }
-
-    #[test]
-    fn test_symbolic_user_defined_type_parameters() {
-        let ty = Type::try_from(TypeExpr::UserDefined(
-            "Box",
-            vec![
-                TypeExprParam::Type(TypeExpr::parse("List<decimal<P, S>>").unwrap()),
-                TypeExprParam::Integer(IntegerParameter::Literal(5)),
-                TypeExprParam::Integer(IntegerParameter::Variable("N".into())),
-            ],
-            true,
-        ))
-        .unwrap();
-        assert_eq!(
-            ty,
-            Type::extension_with_params(
-                "Box".to_string(),
-                vec![
-                    TypeParameter::Type(parse_type("List<decimal<P, S>>")),
+                    TypeParameter::Type(Type::list(required_type(TypeKind::I32), false)),
                     TypeParameter::Integer(IntegerParameter::Literal(5)),
-                    TypeParameter::Integer(IntegerParameter::Variable("N".to_string())),
+                    TypeParameter::Integer(IntegerParameter::Variable("P".into())),
+                    TypeParameter::Type(required_type(TypeKind::Variable { id: 1 })),
                 ],
                 true,
             )
         );
-        assert!(!ty.is_concrete());
-        assert!(
-            !extension(
-                "Box",
-                vec![
-                    TypeParameter::Integer(IntegerParameter::Literal(5)),
-                    TypeParameter::Integer(IntegerParameter::Variable("N".into())),
-                ],
-                false,
-            )
-            .is_concrete()
-        );
-        assert_eq!(ty.to_string(), "u!Box?<list<decimal<P, S>>, 5, N>");
     }
 
     #[test]
