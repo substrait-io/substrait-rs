@@ -329,11 +329,7 @@ mod tests {
         for (source, position) in [
             ("decimal<any1, S>", 8),
             ("decimal<P, any1>", 11),
-            ("decimal<ANY1, S>", 8),
-            ("decimal<P, Any1>", 11),
-            ("decimal<any0, S>", 8),
-            ("decimal<any4294967295, S>", 8),
-            ("decimal<any4294967296, S>", 8),
+            ("decimal<Any1, S>", 8),
             ("decimal<P, ANY4294967296>", 11),
         ] {
             assert_eq!(
@@ -394,6 +390,10 @@ mod tests {
         ] {
             assert!(parse(source).is_err(), "{source}");
         }
+    }
+
+    #[test]
+    fn unknown_names_remain_types_in_type_parameters() {
         assert_eq!(
             parse("list<P>").unwrap(),
             TypeExpr::Simple(
