@@ -42,6 +42,8 @@ pub(super) enum TokenKind {
     Plus,
     /// `-`, currently accepted as a negative literal's sign; distinct from `->`.
     Minus,
+    /// `=`, assigning an integer parameter in a return derivation.
+    Equals,
 }
 
 impl TokenKind {
@@ -65,6 +67,7 @@ impl TokenKind {
             Self::QuestionMark => "'?'",
             Self::Plus => "'+'",
             Self::Minus => "'-'",
+            Self::Equals => "'='",
         }
     }
 
@@ -150,6 +153,11 @@ impl<'a> Tokenizer<'a> {
                     .unwrap_or(remaining.len());
                 (TokenKind::Integer, length)
             }
+            ':' => {
+                return Err(TypeParseError::UnsupportedNumericExpression(
+                    self.source.to_string(),
+                ));
+            }
             '[' | ']' => {
                 return Err(TypeParseError::UnsupportedVariation(
                     self.source.to_string(),
@@ -163,6 +171,7 @@ impl<'a> Tokenizer<'a> {
             '?' => (TokenKind::QuestionMark, 1),
             '+' => (TokenKind::Plus, 1),
             '-' => (TokenKind::Minus, 1),
+            '=' => (TokenKind::Equals, 1),
             _ => {
                 return Err(TypeParseError::UnexpectedToken {
                     position,
