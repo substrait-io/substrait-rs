@@ -15,7 +15,7 @@
 use super::return_type::{IntegerAssignment, ReturnTypeExpr};
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
 use super::type_tokenizer::{Token, TokenKind, tokenize};
-use super::types::{BinaryOp, IntegerParameter, TypeKind};
+use super::types::{BinaryOp, IntegerParameter, NumericFunction, TypeKind};
 
 /// Parse one complete type, rejecting any tokens left after it.
 ///
@@ -346,7 +346,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parse an integer parameter name and any call arguments.
+    /// Parse an integer parameter name or a supported numeric function call.
     ///
     /// For `max(P, S)`, consume the name and argument list and retain the call.
     fn parse_integer_parameter_name(&mut self) -> Result<IntegerParameter, TypeParseError> {
@@ -360,6 +360,17 @@ impl<'a> Parser<'a> {
         if !self.consume(TokenKind::OpenParen) {
             return Ok(IntegerParameter::Variable(name.text.into()));
         }
+        let function = match name.text.to_ascii_lowercase().as_str() {
+            "min" => NumericFunction::Min,
+            "max" => NumericFunction::Max,
+            "integer_parameter" => NumericFunction::IntegerParameter,
+            _ => {
+                return Err(TypeParseError::UnexpectedToken {
+                    position: name.position,
+                    expected: "'min', 'max', or 'integer_parameter'",
+                });
+            }
+        };
         let mut arguments = Vec::new();
         if !self.consume(TokenKind::CloseParen) {
             loop {
@@ -371,7 +382,7 @@ impl<'a> Parser<'a> {
             }
         }
         Ok(IntegerParameter::Call {
-            name: name.text.into(),
+            function,
             arguments,
         })
     }
@@ -559,14 +570,14 @@ mod tests {
     }
 
     #[test]
-    fn parse_calls_retain_names_and_ordered_arguments() {
+    fn parse_calls_identify_functions_and_retain_ordered_arguments() {
         let sum = IntegerParameter::BinaryExpression {
             op: BinaryOp::Add,
             left: Box::new(IntegerParameter::Variable("S2".into())),
             right: Box::new(IntegerParameter::Literal(1)),
         };
         let expected = IntegerParameter::Call {
-            name: "max".into(),
+            function: NumericFunction::Max,
             arguments: vec![IntegerParameter::Variable("S1".into()), sum],
         };
         assert_eq!(
@@ -578,14 +589,14 @@ mod tests {
     #[test]
     fn parse_calls_retain_nested_calls() {
         let maximum = IntegerParameter::Call {
-            name: "max".into(),
+            function: NumericFunction::Max,
             arguments: vec![
                 IntegerParameter::Variable("P".into()),
                 IntegerParameter::Literal(38),
             ],
         };
         let expected = IntegerParameter::Call {
-            name: "min".into(),
+            function: NumericFunction::Min,
             arguments: vec![maximum, IntegerParameter::Literal(10)],
         };
         assert_eq!(
@@ -595,14 +606,33 @@ mod tests {
     }
 
     #[test]
-    fn parse_calls_allow_empty_argument_lists() {
-        assert_eq!(
-            parse_integer_parameter("custom()").unwrap(),
-            IntegerParameter::Call {
-                name: "custom".into(),
-                arguments: vec![],
-            }
-        );
+    fn parse_integer_parameter_calls_are_case_insensitive() {
+        for source in [
+            "integer_parameter(precision)",
+            "INTEGER_PARAMETER(precision)",
+        ] {
+            assert_eq!(
+                parse_integer_parameter(source).unwrap(),
+                IntegerParameter::Call {
+                    function: NumericFunction::IntegerParameter,
+                    arguments: vec![IntegerParameter::Variable("precision".into())],
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn parse_calls_reject_unknown_functions() {
+        for (source, position) in [("custom()", 0), ("custom(P)", 0), ("min(custom(P), S)", 4)] {
+            assert_eq!(
+                parse_integer_parameter(source),
+                Err(TypeParseError::UnexpectedToken {
+                    position,
+                    expected: "'min', 'max', or 'integer_parameter'",
+                }),
+                "{source}"
+            );
+        }
     }
 
     #[test]
@@ -784,6 +814,7 @@ mod tests {
             "varchar<(L + 1>",
             "varchar<L + 1)>",
             "varchar<L + i32>",
+            "varchar<custom(L)>",
         ] {
             assert!(parse(source).is_err(), "{source}");
         }
@@ -886,7 +917,7 @@ mod tests {
         assert_eq!(
             parser.parse_integer_operand().unwrap(),
             IntegerParameter::Call {
-                name: "max".into(),
+                function: NumericFunction::Max,
                 arguments: vec![
                     IntegerParameter::Variable("P".into()),
                     IntegerParameter::Variable("S".into()),

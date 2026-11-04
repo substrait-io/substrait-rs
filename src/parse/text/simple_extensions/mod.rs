@@ -36,7 +36,8 @@ pub use scalar_functions::{
 };
 pub use type_ast::TypeExpr;
 pub use types::{
-    BinaryOp, CustomType, ExtensionTypeError, IntegerParameter, Type, TypeKind, TypeParameter,
+    BinaryOp, CustomType, ExtensionTypeError, IntegerParameter, NumericFunction, Type, TypeKind,
+    TypeParameter,
 };
 
 use crate::urn::Urn;
