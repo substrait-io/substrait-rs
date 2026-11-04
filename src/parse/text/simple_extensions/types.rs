@@ -318,6 +318,27 @@ impl fmt::Display for BinaryOp {
     }
 }
 
+/// A supported numeric function in an unevaluated type derivation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NumericFunction {
+    /// The minimum of two integers.
+    Min,
+    /// The maximum of two integers.
+    Max,
+    /// An integer parameter supplied to the function call.
+    IntegerParameter,
+}
+
+impl fmt::Display for NumericFunction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Min => f.write_str("min"),
+            Self::Max => f.write_str("max"),
+            Self::IntegerParameter => f.write_str("integer_parameter"),
+        }
+    }
+}
+
 /// An integer literal, named parameter, or unevaluated numeric expression.
 #[derive(Clone, Debug, PartialEq)]
 pub enum IntegerParameter {
@@ -343,10 +364,10 @@ pub enum IntegerParameter {
         /// The value when the condition is false.
         else_value: Box<Self>,
     },
-    /// A numeric function call, retained without resolving or executing the function.
+    /// A supported numeric function call, retained without evaluation.
     Call {
-        /// The function name as written in the declaration.
-        name: String,
+        /// The numeric function being called.
+        function: NumericFunction,
         /// Ordered numeric arguments.
         arguments: Vec<Self>,
     },
@@ -377,8 +398,11 @@ impl IntegerParameter {
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
-            Self::Call { name, arguments } => {
-                write!(f, "{name}(")?;
+            Self::Call {
+                function,
+                arguments,
+            } => {
+                write!(f, "{function}(")?;
                 for (index, argument) in arguments.iter().enumerate() {
                     if index > 0 {
                         f.write_str(", ")?;
@@ -1402,7 +1426,6 @@ mod tests {
             "max(S1, S2)",
             "integer_parameter(precision)",
             "min(max(P1 - S1, P2 - S2) + 1, 38)",
-            "custom()",
             "P + S + (1 + (T + 2))",
             "$P + _S",
             "P + -2",

@@ -606,7 +606,9 @@ scalar_functions:
 
     #[test]
     fn test_multiline_return_is_retained() {
-        use super::super::{IntegerAssignment, IntegerParameter, ReturnType, Type, TypeKind};
+        use super::super::{
+            IntegerAssignment, IntegerParameter, NumericFunction, ReturnType, Type, TypeKind,
+        };
 
         let raw = extension_with_custom_type_reference(
             "extension:example.com:derivations",
@@ -625,7 +627,7 @@ scalar_functions:
             panic!("expected a return derivation");
         };
         let precision = IntegerParameter::Call {
-            name: "min".into(),
+            function: NumericFunction::Min,
             arguments: vec![
                 IntegerParameter::Variable("P".into()),
                 IntegerParameter::Literal(38),
