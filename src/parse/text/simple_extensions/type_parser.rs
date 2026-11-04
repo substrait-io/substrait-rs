@@ -264,30 +264,30 @@ impl<'a> Parser<'a> {
 
     /// Parse an integer expression, leaving its separator unconsumed.
     ///
-    /// In `decimal<P + S + 1, S>`, consume `P + S + 1` as `(P + S) + 1`.
+    /// In `decimal<P - S + 1, S>`, consume `P - S + 1` as `(P - S) + 1`.
     fn parse_integer_parameter_expression(&mut self) -> Result<IntegerParameter, TypeParseError> {
         let mut expression = if self.peek() == Some(TokenKind::Plus) {
             IntegerParameter::Literal(self.parse_integer_literal()?)
         } else {
             self.parse_integer_operand()?
         };
-        while self.consume(TokenKind::Plus) {
+        while let Some(kind) = self.consume_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
+            let op = match kind {
+                TokenKind::Plus => BinaryOp::Add,
+                TokenKind::Minus => BinaryOp::Subtract,
+                _ => unreachable!(),
+            };
             let right = self.parse_integer_operand()?;
             expression = IntegerParameter::BinaryExpression {
-                op: BinaryOp::Add,
+                op,
                 left: Box::new(expression),
                 right: Box::new(right),
             };
         }
-        if self.peek() == Some(TokenKind::Minus) {
-            return Err(TypeParseError::UnsupportedNumericExpression(
-                self.source.into(),
-            ));
-        }
         Ok(expression)
     }
 
-    /// Parse one integer, parameter name, or parenthesized addition expression.
+    /// Parse one integer, parameter name, or parenthesized arithmetic expression.
     ///
     /// For `(P + 1) + S`, consume `(P + 1)` and leave the following `+` for the caller.
     fn parse_integer_operand(&mut self) -> Result<IntegerParameter, TypeParseError> {
@@ -381,6 +381,51 @@ mod tests {
             }
         );
         assert_eq!(*right, IntegerParameter::Literal(1));
+    }
+
+    #[test]
+    fn parse_subtraction_shares_addition_precedence() {
+        let difference = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Variable("S".into())),
+        };
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(difference),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        assert_eq!(parse_integer_parameter("P - S + 1").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_subtraction_associates_to_the_left() {
+        let difference = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Variable("S".into())),
+        };
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(difference),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        assert_eq!(parse_integer_parameter("P - S - 1").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_subtraction_preserves_grouping() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("S".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(sum),
+        };
+        assert_eq!(parse_integer_parameter("P - (S + 1)").unwrap(), expected);
     }
 
     #[test]
@@ -545,9 +590,12 @@ mod tests {
             "",
             "+ P",
             "P ++ 1",
+            "P -",
+            "P -- S",
+            "P - ()",
+            "P - - 1",
             "P ++1",
             "P S",
-            "P - 1",
             "P * 2",
             "P / 2",
             "min(P, S)",
@@ -654,16 +702,22 @@ mod tests {
 
     #[test]
     fn parse_integer_operands_leave_the_following_operator() {
-        let mut parser = Parser::new("(P + 1) + S").unwrap();
-        assert_eq!(
-            parser.parse_integer_operand().unwrap(),
-            IntegerParameter::BinaryExpression {
-                op: BinaryOp::Add,
-                left: Box::new(IntegerParameter::Variable("P".into())),
-                right: Box::new(IntegerParameter::Literal(1)),
-            }
-        );
-        assert_eq!(parser.peek(), Some(TokenKind::Plus));
+        for (source, op) in [
+            ("(P + 1) + S", BinaryOp::Add),
+            ("(P - 1) + S", BinaryOp::Subtract),
+        ] {
+            let mut parser = Parser::new(source).unwrap();
+            assert_eq!(
+                parser.parse_integer_operand().unwrap(),
+                IntegerParameter::BinaryExpression {
+                    op,
+                    left: Box::new(IntegerParameter::Variable("P".into())),
+                    right: Box::new(IntegerParameter::Literal(1)),
+                },
+                "{source}"
+            );
+            assert_eq!(parser.peek(), Some(TokenKind::Plus), "{source}");
+        }
     }
 
     #[test]

@@ -116,8 +116,8 @@ pub struct Impl {
     pub nullability: NullabilityHandling,
     /// The return type, retaining variables and parameters within nested types.
     ///
-    /// Variables are not bound or resolved during parsing. Addition in numeric
-    /// parameters is retained without evaluation; other derivations remain unsupported.
+    /// Variables are not bound or resolved during parsing. Addition and subtraction
+    /// in numeric parameters are retained without evaluation; other derivations remain unsupported.
     pub return_type: Type,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
@@ -156,7 +156,7 @@ impl Impl {
                     | Err(ExtensionTypeError::ExpectedConcreteType { .. })
                     | Err(ExtensionTypeError::InvalidParameter(_))
                     | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
-                        // Numeric expressions other than addition are not yet supported.
+                        // Other numeric derivations are not yet supported.
                         // See: https://github.com/substrait-io/substrait-rs/issues/452
                         return Err(ScalarFunctionError::NotYetImplemented(
                             "Type variables in function signatures - issue #452".to_string(),
