@@ -117,15 +117,16 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse a numbered variable such as `any1?`.
-    /// Variables do not take parameters. Uppercase prefixes and out-of-range IDs
-    /// remain named types.
+    /// Variables do not take parameters.
     fn parse_type_variable(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
         let name = self.expect(TokenKind::AnyVar)?;
+        let id = name.text[3..]
+            .parse()
+            .map_err(|_| TypeParseError::UnexpectedToken {
+                position: name.position,
+                expected: "a u32 type variable ID",
+            })?;
         let nullable = self.consume(TokenKind::QuestionMark);
-        let Some(id) = parse_type_variable_id(name.text) else {
-            let parameters = self.parse_optional_type_parameters()?;
-            return Ok(TypeExpr::Simple(name.text, parameters, nullable));
-        };
         Ok(TypeExpr::TypeVariable(id, nullable))
     }
 
@@ -223,11 +224,6 @@ impl<'a> Parser<'a> {
             _ => Ok(TypeExprParam::Type(self.parse_type()?)),
         }
     }
-}
-
-/// Recognize a case-sensitive `any` prefix followed by a `u32` variable ID.
-fn parse_type_variable_id(name: &str) -> Option<u32> {
-    name.strip_prefix("any")?.parse().ok()
 }
 
 #[cfg(test)]
@@ -398,11 +394,6 @@ mod tests {
                 ),
             );
         }
-        assert_eq!(parse("any1").unwrap(), TypeExpr::TypeVariable(1, false));
-        assert_eq!(
-            parse("ANY1").unwrap(),
-            TypeExpr::Simple("ANY1", vec![], false)
-        );
         assert_eq!(
             parse("ANY").unwrap(),
             TypeExpr::Simple("ANY", vec![], false)
@@ -418,28 +409,38 @@ mod tests {
     }
 
     #[test]
-    fn type_variable_ids_require_a_lowercase_prefix_and_fit_in_u32() {
-        for (name, expected) in [
-            ("any0", Some(0)),
-            ("any1", Some(1)),
-            ("any4294967295", Some(u32::MAX)),
-            ("any4294967296", None),
-            ("ANY1", None),
-            ("any", None),
-            ("anything", None),
+    fn numbered_type_variables_are_case_insensitive_and_support_u32_ids() {
+        for (source, id, nullable) in [
+            ("any0", 0, false),
+            ("any1", 1, false),
+            ("ANY1", 1, false),
+            ("Any1?", 1, true),
+            ("any4294967295", u32::MAX, false),
         ] {
-            assert_eq!(parse_type_variable_id(name), expected, "{name}");
+            assert_eq!(
+                parse(source).unwrap(),
+                TypeExpr::TypeVariable(id, nullable),
+                "{source}"
+            );
         }
     }
 
     #[test]
-    fn numbered_variable_spellings_preserve_named_type_fallbacks() {
-        for name in ["ANY1", "any4294967296"] {
-            assert_eq!(parse(name).unwrap(), TypeExpr::Simple(name, vec![], false));
-            let source = format!("{name}?<i32>");
+    fn out_of_range_type_variable_ids_are_rejected() {
+        for (source, position) in [
+            ("any4294967296", 0),
+            ("ANY4294967296?", 0),
+            ("list<any4294967296>", 5),
+            ("func<i32 -> any4294967296>", 12),
+            ("decimal<any4294967296, 0>", 8),
+        ] {
             assert_eq!(
-                parse(&source).unwrap(),
-                TypeExpr::Simple(name, vec![TypeExprParam::Type(parse("i32").unwrap())], true,)
+                parse(source),
+                Err(TypeParseError::UnexpectedToken {
+                    position,
+                    expected: "a u32 type variable ID",
+                }),
+                "{source}"
             );
         }
     }
@@ -450,6 +451,8 @@ mod tests {
             "any1<>",
             "any1<i32>",
             "any1?<i32>",
+            "ANY1<i32>",
+            "Any1?<i32>",
             "any1<i32,>",
             "list<any1<i32>>",
             "func<any1<i32> -> i64>",
@@ -470,7 +473,7 @@ mod tests {
                 },
             ),
             ("u!point<i32,>", TypeParseError::EmptyParameter),
-            ("ANY1<i32,>", TypeParseError::EmptyParameter),
+            ("unknown<i32,>", TypeParseError::EmptyParameter),
             (
                 "func<i32 -> i64",
                 TypeParseError::UnexpectedToken {
