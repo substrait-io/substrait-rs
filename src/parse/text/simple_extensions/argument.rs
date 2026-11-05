@@ -6,6 +6,7 @@ use std::{collections::HashSet, ops::Deref};
 
 use thiserror::Error;
 
+use super::{ExtensionTypeError, Type, TypeExpr};
 use crate::{
     parse::{Context, Parse},
     text::simple_extensions,
@@ -238,9 +239,7 @@ pub struct ValueArg {
     /// Additional description for this argument.
     description: Option<String>,
 
-    /// A fully defined type or a type expression.
-    ///
-    /// TODO(#452): parse this to a typed representation once type variables are supported.
+    /// The original YAML type representation, retained for serialization.
     value: simple_extensions::Type,
 
     /// Whether this argument is required to be a constant for invocation. For
@@ -262,6 +261,16 @@ impl ValueArg {
     /// See [`simple_extensions::ValueArg::description`].
     pub fn description(&self) -> Option<&String> {
         self.description.as_ref()
+    }
+
+    /// Parses the argument's type on each call, without changing its YAML representation.
+    ///
+    /// Supports string expressions and object-form named structs. Variables are
+    /// retained, not bound, and user-defined type references are not resolved.
+    /// Unsupported or malformed expressions return an error; loading the argument
+    /// itself does not require this conversion to succeed.
+    pub fn type_expression(&self) -> Result<Type, ExtensionTypeError> {
+        Type::try_from(&self.value)
     }
 
     /// Returns the constant of this argument.
@@ -320,9 +329,7 @@ pub struct TypeArg {
     /// Additional description for this argument.
     description: Option<String>,
 
-    /// A partially or completely parameterized type. E.g. `List<K>` or `K`.
-    ///
-    /// TODO(#452): parse this to a typed representation once type variables are supported.
+    /// The original type expression string, retained for serialization.
     type_: String,
 }
 
@@ -339,6 +346,15 @@ impl TypeArg {
     /// See [`simple_extensions::TypeArg::description`].
     pub fn description(&self) -> Option<&String> {
         self.description.as_ref()
+    }
+
+    /// Parses the type expression on each call, without changing its stored string.
+    ///
+    /// Variables are retained, not bound, and user-defined type references are not
+    /// resolved. Unsupported or malformed expressions return an error rather than
+    /// preventing the argument from loading.
+    pub fn type_expression(&self) -> Result<Type, ExtensionTypeError> {
+        Type::try_from(TypeExpr::parse(&self.type_)?)
     }
 }
 
@@ -380,6 +396,7 @@ impl From<TypeArg> for ArgumentsItem {
 
 #[cfg(test)]
 mod tests {
+    use super::super::{TypeKind, TypeParameter};
     use super::*;
     use crate::text::simple_extensions;
     use crate::{parse::Context, text};
@@ -475,6 +492,127 @@ mod tests {
             _ => unreachable!(),
         };
         Ok(())
+    }
+
+    #[test]
+    fn typed_accessors_preserve_original_strings() {
+        for (input, expected) in [
+            (
+                "LIST?<any1?>",
+                Type::list(Type::new(TypeKind::Variable { id: 1 }, true), true),
+            ),
+            (
+                "u!CaseType<any1>",
+                Type::extension_with_params(
+                    "CaseType".to_string(),
+                    vec![TypeParameter::Type(Type::new(
+                        TypeKind::Variable { id: 1 },
+                        false,
+                    ))],
+                    false,
+                ),
+            ),
+        ] {
+            let raw_value = simple_extensions::ValueArg {
+                name: Some("value".to_string()),
+                description: None,
+                value: simple_extensions::Type::String(input.to_string()),
+                constant: Some(true),
+            };
+            let value = raw_value.clone().parse(&mut TestContext).unwrap();
+            assert_eq!(value.type_expression().unwrap(), expected);
+            let round_tripped: simple_extensions::ValueArg = value.into();
+            assert_eq!(round_tripped, raw_value);
+
+            let raw_type = simple_extensions::TypeArg {
+                name: Some("type".to_string()),
+                description: None,
+                type_: input.to_string(),
+            };
+            let type_argument = raw_type.clone().parse(&mut TestContext).unwrap();
+            assert_eq!(type_argument.type_expression().unwrap(), expected);
+            let round_tripped: simple_extensions::TypeArg = type_argument.into();
+            assert_eq!(round_tripped, raw_type);
+        }
+    }
+
+    #[test]
+    fn typed_object_argument_preserves_field_order_and_raw_values() {
+        let raw: simple_extensions::ValueArg = serde_yaml::from_str(
+            r#"value:
+  beta: List<decimal<P, S>>
+  alpha: any2?
+"#,
+        )
+        .unwrap();
+        let argument = raw.clone().parse(&mut TestContext).unwrap();
+        let TypeKind::NamedStruct { fields } = argument.type_expression().unwrap().kind else {
+            panic!("expected a named struct");
+        };
+        assert_eq!(
+            fields.keys().map(String::as_str).collect::<Vec<_>>(),
+            ["beta", "alpha"]
+        );
+        assert!(matches!(fields["beta"].kind, TypeKind::List(_)));
+        assert_eq!(
+            fields["alpha"],
+            Type::new(TypeKind::Variable { id: 2 }, true)
+        );
+
+        let round_tripped: simple_extensions::ValueArg = argument.into();
+        assert_eq!(round_tripped, raw);
+        let serialized = serde_yaml::to_string(&round_tripped).unwrap();
+        let reparsed: simple_extensions::ValueArg = serde_yaml::from_str(&serialized).unwrap();
+        let simple_extensions::Type::Object(fields) = reparsed.value else {
+            panic!("expected object form to be preserved");
+        };
+        assert_eq!(
+            fields.keys().map(String::as_str).collect::<Vec<_>>(),
+            ["beta", "alpha"]
+        );
+    }
+
+    #[test]
+    fn unsupported_argument_types_do_not_prevent_loading() {
+        let yaml = r#"urn: extension:example.com:arguments
+scalar_functions:
+  - name: unsupported_arguments
+    impls:
+      - args:
+          - value: varchar<L + 1>
+          - type: decimal<P + 1, S>
+        return: i32
+"#;
+        let file = super::super::ExtensionFile::read_from_str(yaml).unwrap();
+        let function = file
+            .extension()
+            .get_scalar_function("unsupported_arguments")
+            .unwrap();
+        let ArgumentsItem::ValueArgument(value) = &function.impls[0].args[0] else {
+            panic!("expected value argument");
+        };
+        assert!(value.type_expression().is_err());
+        let ArgumentsItem::TypeArgument(type_argument) = &function.impls[0].args[1] else {
+            panic!("expected type argument");
+        };
+        assert!(type_argument.type_expression().is_err());
+    }
+
+    #[test]
+    fn typed_argument_access_reports_invalid_expressions() {
+        let raw: simple_extensions::ValueArg = serde_yaml::from_str("value: list<any1").unwrap();
+        let argument = raw.parse(&mut TestContext).unwrap();
+        assert!(matches!(
+            argument.type_expression(),
+            Err(ExtensionTypeError::ParseType(_))
+        ));
+
+        let raw: simple_extensions::ValueArg = serde_yaml::from_str("value: {field: 42}").unwrap();
+        let argument = raw.parse(&mut TestContext).unwrap();
+        assert!(matches!(
+            argument.type_expression(),
+            Err(ExtensionTypeError::InvalidFieldType(_))
+        ));
     }
 
     #[test]
