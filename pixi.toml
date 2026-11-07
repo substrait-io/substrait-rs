@@ -16,7 +16,7 @@ openjdk = ">=11"
 python = ">=3.10"
 
 [tasks]
-# Regenerate the committed ANTLR parser from the submodule grammar.
+# Regenerate the committed ANTLR parser from the pinned Substrait grammar.
 gen-antlr = "python antlr/antlr.py"
 
 # Verify the committed ANTLR parser is in sync with the grammar (used in CI).

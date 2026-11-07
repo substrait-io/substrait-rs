@@ -11,23 +11,26 @@ that dependency, the **generated parser is committed to the repository** (under
 `src/parse/text/simple_extensions/derivations/`). CI verifies that the committed
 files are in sync with the grammar.
 
-The grammar itself is not vendored here; it is tracked through the `substrait`
-submodule at `substrait/grammar/SubstraitType.g4` (which imports
-`SubstraitLexer.g4` from the same directory).
+The grammar itself is not vendored here. `antlr.py` downloads
+`grammar/SubstraitType.g4` (and the `SubstraitLexer.g4` it imports) from the
+[Substrait repository][substrait] at the tag matching the exact `substrait-prost`
+version pin in `Cargo.toml`, the same pin `build.rs` uses to derive the Substrait
+version. Bumping that pin therefore moves the grammar too, and CI flags the
+committed parser as stale until it is regenerated.
 
 ## Usage
 
 A Java runtime and Python are provided through [pixi]:
 
 ```shell
-# Regenerate the committed parser from the submodule grammar.
+# Regenerate the committed parser from the pinned grammar.
 pixi run gen-antlr
 
 # Verify the committed parser is up to date (used in CI).
 pixi run check-codegen
 ```
 
-`antlr.py` downloads the pinned ANTLR fork jar (verifying its SHA-256), runs it
+`antlr.py` downloads the grammar and the pinned ANTLR fork jar (verifying its SHA-256), runs it
 with `-Dlanguage=Rust`, prepends a license header and lint allowances, and copies
 the generated `substraittypelexer.rs`, `substraittypeparser.rs` and
 `substraittypelistener.rs` into the destination directory.
@@ -35,3 +38,4 @@ the generated `substraittypelexer.rs`, `substraittypeparser.rs` and
 [ANTLR]: https://www.antlr.org/
 [antlr4rust]: https://github.com/antlr4rust/antlr4
 [pixi]: https://pixi.sh/
+[substrait]: https://github.com/substrait-io/substrait

@@ -9,7 +9,9 @@ use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use super::{SimpleExtensionsError, scalar_functions::ScalarFunction, types::CustomType};
+use super::{
+    ExtensionFile, SimpleExtensionsError, scalar_functions::ScalarFunction, types::CustomType,
+};
 use crate::{
     parse::{Context, Parse},
     text::simple_extensions::SimpleExtensions as RawExtensions,
@@ -128,7 +130,10 @@ impl Context for TypeContext {}
 
 // Implement parsing for the raw text representation to produce an `ExtensionFile`.
 impl Parse<TypeContext> for RawExtensions {
-    type Parsed = (Urn, SimpleExtensions);
+    // A local type (rather than a `(Urn, SimpleExtensions)` tuple) so the
+    // `Parsed: Into<Self>` round-trip bound can be satisfied without an
+    // orphan-rule violation on the foreign `RawExtensions`.
+    type Parsed = ExtensionFile;
     type Error = super::SimpleExtensionsError;
 
     fn parse(self, ctx: &mut TypeContext) -> Result<Self::Parsed, Self::Error> {
@@ -167,27 +172,31 @@ impl Parse<TypeContext> for RawExtensions {
             });
         }
 
-        Ok((urn, extension))
+        Ok(ExtensionFile { urn, extension })
     }
 }
 
-impl From<(Urn, SimpleExtensions)> for RawExtensions {
-    fn from((urn, extension): (Urn, SimpleExtensions)) -> Self {
-        let types = extension
-            .into_types()
-            .into_values()
-            .map(Into::into)
-            .collect();
+/// Build the raw text representation ([`RawExtensions`]) from a canonical
+/// [`Urn`] and parsed [`SimpleExtensions`].
+///
+/// This is a free function rather than a `From` impl because [`RawExtensions`]
+/// is defined in the `substrait-extensions` crate, so the orphan rule forbids
+/// implementing `From` for it here.
+pub(super) fn to_raw_extensions(urn: Urn, extension: SimpleExtensions) -> RawExtensions {
+    let types = extension
+        .into_types()
+        .into_values()
+        .map(Into::into)
+        .collect();
 
-        RawExtensions {
-            urn: urn.to_string(),
-            aggregate_functions: vec![],
-            dependencies: IndexMap::new(),
-            metadata: Default::default(),
-            scalar_functions: vec![],
-            type_variations: vec![],
-            types,
-            window_functions: vec![],
-        }
+    RawExtensions {
+        urn: urn.to_string(),
+        aggregate_functions: vec![],
+        dependencies: IndexMap::new(),
+        metadata: Default::default(),
+        scalar_functions: vec![],
+        type_variations: vec![],
+        types,
+        window_functions: vec![],
     }
 }

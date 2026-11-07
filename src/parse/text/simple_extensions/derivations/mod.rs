@@ -2,8 +2,9 @@
 
 //! ANTLR-generated parser for the Substrait type-derivation DSL.
 //!
-//! These submodules are generated from `substrait/grammar/SubstraitType.g4`
-//! (tracked via the `substrait` submodule) using the ANTLR Rust target. They
+//! These submodules are generated from the Substrait `grammar/SubstraitType.g4`
+//! (at the spec version pinned by `substrait-prost` in `Cargo.toml`) using the
+//! ANTLR Rust target. They
 //! are committed to the repository so that an ordinary `cargo build` does not
 //! require a Java runtime.
 //!
@@ -11,7 +12,7 @@
 //! regenerate them. See `antlr/README.md` for details.
 //!
 //! [`evaluate`] consumes the generated parser to evaluate type-derivation
-//! expressions into [`ConcreteType`](super::types::ConcreteType)s.
+//! expressions into [`Type`](super::types::Type)s.
 
 mod evaluate;
 mod substraittypelexer;

@@ -9,13 +9,12 @@ jobs:
     name: Minimum Supported Rust Version
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          submodules: recursive
-      - uses: dtolnay/rust-toolchain@1.85.1
+      - uses: dtolnay/rust-toolchain@1.88
         id: rust-toolchain
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/bin/
@@ -35,13 +34,12 @@ jobs:
     name: Check
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
         id: rust-toolchain
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/bin/
@@ -55,6 +53,18 @@ jobs:
             ${{ runner.os }}-cargo-${{ steps.rust-toolchain.outputs.cachekey }}-
             ${{ runner.os }}-cargo-
       - run: cargo check --all-targets --no-default-features --features protoc
+      # `protox` compiles the `.proto` files in-process instead of shelling out,
+      # so these cover building without a protobuf toolchain at all. `PROTOC`
+      # points at a path that does not exist so a `protoc` binary can never
+      # satisfy the build instead: without that, these steps would keep passing
+      # if the feature stopped taking effect. `serde` is included because it
+      # takes a different path through the `substrait-prost` build script.
+      - run: cargo check --all-targets --no-default-features --features protox
+        env:
+          PROTOC: /nonexistent
+      - run: cargo check --all-targets --no-default-features --features protox,serde,embed-descriptor
+        env:
+          PROTOC: /nonexistent
       - run: cargo check --all-targets --all-features
       # Check that each feature compiles. Note that we use protoc everywhere because its necessary for CI.
       - run: cargo check --all-targets --no-default-features --features protoc,extensions
@@ -70,13 +80,12 @@ jobs:
     name: Test
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
         id: rust-toolchain
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/bin/
@@ -98,7 +107,7 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
@@ -108,15 +117,14 @@ jobs:
     name: Clippy
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
         id: rust-toolchain
         with:
           components: clippy
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/bin/
@@ -136,13 +144,12 @@ jobs:
     name: Package
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
         id: rust-toolchain
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/bin/

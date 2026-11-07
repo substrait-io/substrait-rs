@@ -138,30 +138,6 @@ fn enter_binary(&mut self, _ctx: &BinaryContext<'input>) { }
  */
 fn exit_binary(&mut self, _ctx: &BinaryContext<'input>) { }
 /**
- * Enter a parse tree produced by the {@code timestamp}
- * labeled alternative in {@link SubstraitTypeParser#scalarType}.
- * @param ctx the parse tree
- */
-fn enter_timestamp(&mut self, _ctx: &TimestampContext<'input>) { }
-/**
- * Exit a parse tree produced by the {@code timestamp}
- * labeled alternative in {@link SubstraitTypeParser#scalarType}.
- * @param ctx the parse tree
- */
-fn exit_timestamp(&mut self, _ctx: &TimestampContext<'input>) { }
-/**
- * Enter a parse tree produced by the {@code timestampTz}
- * labeled alternative in {@link SubstraitTypeParser#scalarType}.
- * @param ctx the parse tree
- */
-fn enter_timestampTz(&mut self, _ctx: &TimestampTzContext<'input>) { }
-/**
- * Exit a parse tree produced by the {@code timestampTz}
- * labeled alternative in {@link SubstraitTypeParser#scalarType}.
- * @param ctx the parse tree
- */
-fn exit_timestampTz(&mut self, _ctx: &TimestampTzContext<'input>) { }
-/**
  * Enter a parse tree produced by the {@code date}
  * labeled alternative in {@link SubstraitTypeParser#scalarType}.
  * @param ctx the parse tree
@@ -173,18 +149,6 @@ fn enter_date(&mut self, _ctx: &DateContext<'input>) { }
  * @param ctx the parse tree
  */
 fn exit_date(&mut self, _ctx: &DateContext<'input>) { }
-/**
- * Enter a parse tree produced by the {@code time}
- * labeled alternative in {@link SubstraitTypeParser#scalarType}.
- * @param ctx the parse tree
- */
-fn enter_time(&mut self, _ctx: &TimeContext<'input>) { }
-/**
- * Exit a parse tree produced by the {@code time}
- * labeled alternative in {@link SubstraitTypeParser#scalarType}.
- * @param ctx the parse tree
- */
-fn exit_time(&mut self, _ctx: &TimeContext<'input>) { }
 /**
  * Enter a parse tree produced by the {@code intervalYear}
  * labeled alternative in {@link SubstraitTypeParser#scalarType}.
@@ -482,17 +446,17 @@ fn enter_IfExpr(&mut self, _ctx: &IfExprContext<'input>) { }
  */
 fn exit_IfExpr(&mut self, _ctx: &IfExprContext<'input>) { }
 /**
- * Enter a parse tree produced by the {@code TypeLiteral}
+ * Enter a parse tree produced by the {@code Or}
  * labeled alternative in {@link SubstraitTypeParser#expr}.
  * @param ctx the parse tree
  */
-fn enter_TypeLiteral(&mut self, _ctx: &TypeLiteralContext<'input>) { }
+fn enter_Or(&mut self, _ctx: &OrContext<'input>) { }
 /**
- * Exit a parse tree produced by the {@code TypeLiteral}
+ * Exit a parse tree produced by the {@code Or}
  * labeled alternative in {@link SubstraitTypeParser#expr}.
  * @param ctx the parse tree
  */
-fn exit_TypeLiteral(&mut self, _ctx: &TypeLiteralContext<'input>) { }
+fn exit_Or(&mut self, _ctx: &OrContext<'input>) { }
 /**
  * Enter a parse tree produced by the {@code MultilineDefinition}
  * labeled alternative in {@link SubstraitTypeParser#expr}.
@@ -506,6 +470,30 @@ fn enter_MultilineDefinition(&mut self, _ctx: &MultilineDefinitionContext<'input
  */
 fn exit_MultilineDefinition(&mut self, _ctx: &MultilineDefinitionContext<'input>) { }
 /**
+ * Enter a parse tree produced by the {@code MulDiv}
+ * labeled alternative in {@link SubstraitTypeParser#expr}.
+ * @param ctx the parse tree
+ */
+fn enter_MulDiv(&mut self, _ctx: &MulDivContext<'input>) { }
+/**
+ * Exit a parse tree produced by the {@code MulDiv}
+ * labeled alternative in {@link SubstraitTypeParser#expr}.
+ * @param ctx the parse tree
+ */
+fn exit_MulDiv(&mut self, _ctx: &MulDivContext<'input>) { }
+/**
+ * Enter a parse tree produced by the {@code AddSub}
+ * labeled alternative in {@link SubstraitTypeParser#expr}.
+ * @param ctx the parse tree
+ */
+fn enter_AddSub(&mut self, _ctx: &AddSubContext<'input>) { }
+/**
+ * Exit a parse tree produced by the {@code AddSub}
+ * labeled alternative in {@link SubstraitTypeParser#expr}.
+ * @param ctx the parse tree
+ */
+fn exit_AddSub(&mut self, _ctx: &AddSubContext<'input>) { }
+/**
  * Enter a parse tree produced by the {@code Ternary}
  * labeled alternative in {@link SubstraitTypeParser#expr}.
  * @param ctx the parse tree
@@ -518,17 +506,53 @@ fn enter_Ternary(&mut self, _ctx: &TernaryContext<'input>) { }
  */
 fn exit_Ternary(&mut self, _ctx: &TernaryContext<'input>) { }
 /**
- * Enter a parse tree produced by the {@code BinaryExpr}
+ * Enter a parse tree produced by the {@code ParameterName}
  * labeled alternative in {@link SubstraitTypeParser#expr}.
  * @param ctx the parse tree
  */
-fn enter_BinaryExpr(&mut self, _ctx: &BinaryExprContext<'input>) { }
+fn enter_ParameterName(&mut self, _ctx: &ParameterNameContext<'input>) { }
 /**
- * Exit a parse tree produced by the {@code BinaryExpr}
+ * Exit a parse tree produced by the {@code ParameterName}
  * labeled alternative in {@link SubstraitTypeParser#expr}.
  * @param ctx the parse tree
  */
-fn exit_BinaryExpr(&mut self, _ctx: &BinaryExprContext<'input>) { }
+fn exit_ParameterName(&mut self, _ctx: &ParameterNameContext<'input>) { }
+/**
+ * Enter a parse tree produced by the {@code TypeLiteral}
+ * labeled alternative in {@link SubstraitTypeParser#expr}.
+ * @param ctx the parse tree
+ */
+fn enter_TypeLiteral(&mut self, _ctx: &TypeLiteralContext<'input>) { }
+/**
+ * Exit a parse tree produced by the {@code TypeLiteral}
+ * labeled alternative in {@link SubstraitTypeParser#expr}.
+ * @param ctx the parse tree
+ */
+fn exit_TypeLiteral(&mut self, _ctx: &TypeLiteralContext<'input>) { }
+/**
+ * Enter a parse tree produced by the {@code Comparison}
+ * labeled alternative in {@link SubstraitTypeParser#expr}.
+ * @param ctx the parse tree
+ */
+fn enter_Comparison(&mut self, _ctx: &ComparisonContext<'input>) { }
+/**
+ * Exit a parse tree produced by the {@code Comparison}
+ * labeled alternative in {@link SubstraitTypeParser#expr}.
+ * @param ctx the parse tree
+ */
+fn exit_Comparison(&mut self, _ctx: &ComparisonContext<'input>) { }
+/**
+ * Enter a parse tree produced by the {@code And}
+ * labeled alternative in {@link SubstraitTypeParser#expr}.
+ * @param ctx the parse tree
+ */
+fn enter_And(&mut self, _ctx: &AndContext<'input>) { }
+/**
+ * Exit a parse tree produced by the {@code And}
+ * labeled alternative in {@link SubstraitTypeParser#expr}.
+ * @param ctx the parse tree
+ */
+fn exit_And(&mut self, _ctx: &AndContext<'input>) { }
 /**
  * Enter a parse tree produced by the {@code ParenExpression}
  * labeled alternative in {@link SubstraitTypeParser#expr}.
@@ -541,18 +565,6 @@ fn enter_ParenExpression(&mut self, _ctx: &ParenExpressionContext<'input>) { }
  * @param ctx the parse tree
  */
 fn exit_ParenExpression(&mut self, _ctx: &ParenExpressionContext<'input>) { }
-/**
- * Enter a parse tree produced by the {@code ParameterName}
- * labeled alternative in {@link SubstraitTypeParser#expr}.
- * @param ctx the parse tree
- */
-fn enter_ParameterName(&mut self, _ctx: &ParameterNameContext<'input>) { }
-/**
- * Exit a parse tree produced by the {@code ParameterName}
- * labeled alternative in {@link SubstraitTypeParser#expr}.
- * @param ctx the parse tree
- */
-fn exit_ParameterName(&mut self, _ctx: &ParameterNameContext<'input>) { }
 /**
  * Enter a parse tree produced by the {@code FunctionCall}
  * labeled alternative in {@link SubstraitTypeParser#expr}.
@@ -577,6 +589,18 @@ fn enter_NotExpr(&mut self, _ctx: &NotExprContext<'input>) { }
  * @param ctx the parse tree
  */
 fn exit_NotExpr(&mut self, _ctx: &NotExprContext<'input>) { }
+/**
+ * Enter a parse tree produced by the {@code Equality}
+ * labeled alternative in {@link SubstraitTypeParser#expr}.
+ * @param ctx the parse tree
+ */
+fn enter_Equality(&mut self, _ctx: &EqualityContext<'input>) { }
+/**
+ * Exit a parse tree produced by the {@code Equality}
+ * labeled alternative in {@link SubstraitTypeParser#expr}.
+ * @param ctx the parse tree
+ */
+fn exit_Equality(&mut self, _ctx: &EqualityContext<'input>) { }
 /**
  * Enter a parse tree produced by the {@code LiteralNumber}
  * labeled alternative in {@link SubstraitTypeParser#expr}.

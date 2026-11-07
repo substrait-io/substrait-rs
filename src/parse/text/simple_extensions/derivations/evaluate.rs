@@ -5,7 +5,7 @@
 //! This parses a derivation expression (the string form used in extension
 //! function `return` clauses, e.g. `decimal<P1 + 1, S1 + 1>`) with the
 //! ANTLR-generated [`super::substraittypeparser`] and evaluates it against a
-//! set of bound parameter values into a [`ConcreteType`].
+//! set of bound parameter values into a [`Type`].
 //!
 //! Scalars, parameterized types (`decimal`, `varchar`, precision types, …),
 //! `list` and `map` are supported, along with arithmetic, `min`/`max`,
@@ -33,15 +33,12 @@ use antlr4rust::token_factory::{TokenAware, TokenFactory};
 use antlr4rust::tree::ParseTree;
 use thiserror::Error;
 
-use super::super::types::{BasicBuiltinType, ConcreteType};
-use super::substraittypelexer::SubstraitTypeLexer;
+use super::super::types::{IntegerParameter, Type, TypeKind};
+use super::substraittypelexer::{Identifier as IDENTIFIER_TOKEN_TYPE, SubstraitTypeLexer};
 use super::substraittypeparser::*;
 
-/// Token type for `Identifier` in the generated lexer
-/// (`SubstraitTypeLexer::Identifier`). Used to filter terminal children in
-/// multiline definitions; a mismatch after a grammar change would be caught by
-/// the `multiline`/`decimal_example` unit tests below.
-const IDENTIFIER_TOKEN_TYPE: i32 = 83;
+/// The token type produced by the generated parser (private there).
+type TokenType<'input> = <LocalTokenFactory<'input> as TokenFactory<'input>>::Tok;
 
 /// A value produced while evaluating a derivation expression.
 ///
@@ -54,7 +51,7 @@ pub enum Value {
     /// A boolean (the result of a comparison).
     Boolean(bool),
     /// A resolved type.
-    Type(ConcreteType),
+    Type(Type),
 }
 
 /// Errors that can occur while evaluating a derivation expression.
@@ -124,19 +121,14 @@ fn eval_expr(
     values: &mut HashMap<String, Value>,
 ) -> Result<Value, DerivationError> {
     match x {
-        ExprContextAll::BinaryExprContext(c) => {
-            let left = eval_expr(c.left.as_deref().ok_or(DerivationError::Malformed)?, values)?;
-            let right = eval_expr(
-                c.right.as_deref().ok_or(DerivationError::Malformed)?,
-                values,
-            )?;
-            let op =
-                c.op.as_ref()
-                    .ok_or(DerivationError::Malformed)?
-                    .get_text()
-                    .to_string();
-            apply_binary(&op, left, right)
-        }
+        // The grammar splits binary operators into one alternative per
+        // precedence level; they all evaluate the same way.
+        ExprContextAll::MulDivContext(c) => eval_binary(&c.left, &c.op, &c.right, values),
+        ExprContextAll::AddSubContext(c) => eval_binary(&c.left, &c.op, &c.right, values),
+        ExprContextAll::ComparisonContext(c) => eval_binary(&c.left, &c.op, &c.right, values),
+        ExprContextAll::EqualityContext(c) => eval_binary(&c.left, &c.op, &c.right, values),
+        ExprContextAll::AndContext(c) => eval_binary(&c.left, &c.op, &c.right, values),
+        ExprContextAll::OrContext(c) => eval_binary(&c.left, &c.op, &c.right, values),
         ExprContextAll::ParenExpressionContext(c) => {
             let inner = c.expr();
             eval_expr(inner.as_deref().ok_or(DerivationError::Malformed)?, values)
@@ -201,6 +193,18 @@ fn eval_expr(
     }
 }
 
+fn eval_binary<'input>(
+    left: &Option<Rc<ExprContextAll<'input>>>,
+    op: &Option<TokenType<'input>>,
+    right: &Option<Rc<ExprContextAll<'input>>>,
+    values: &mut HashMap<String, Value>,
+) -> Result<Value, DerivationError> {
+    let left = eval_expr(left.as_deref().ok_or(DerivationError::Malformed)?, values)?;
+    let right = eval_expr(right.as_deref().ok_or(DerivationError::Malformed)?, values)?;
+    let op = op.as_ref().ok_or(DerivationError::Malformed)?.get_text();
+    apply_binary(op, left, right)
+}
+
 fn eval_type_def(
     x: &TypeDefContext,
     values: &mut HashMap<String, Value>,
@@ -220,24 +224,21 @@ fn eval_type_def(
 
 fn eval_scalar(x: &ScalarTypeContextAll, nullable: bool) -> Result<Value, DerivationError> {
     let builtin = match x {
-        ScalarTypeContextAll::BooleanContext(_) => BasicBuiltinType::Boolean,
-        ScalarTypeContextAll::I8Context(_) => BasicBuiltinType::I8,
-        ScalarTypeContextAll::I16Context(_) => BasicBuiltinType::I16,
-        ScalarTypeContextAll::I32Context(_) => BasicBuiltinType::I32,
-        ScalarTypeContextAll::I64Context(_) => BasicBuiltinType::I64,
-        ScalarTypeContextAll::Fp32Context(_) => BasicBuiltinType::Fp32,
-        ScalarTypeContextAll::Fp64Context(_) => BasicBuiltinType::Fp64,
-        ScalarTypeContextAll::StringContext(_) => BasicBuiltinType::String,
-        ScalarTypeContextAll::BinaryContext(_) => BasicBuiltinType::Binary,
-        ScalarTypeContextAll::TimestampContext(_) => BasicBuiltinType::Timestamp,
-        ScalarTypeContextAll::TimestampTzContext(_) => BasicBuiltinType::TimestampTz,
-        ScalarTypeContextAll::DateContext(_) => BasicBuiltinType::Date,
-        ScalarTypeContextAll::TimeContext(_) => BasicBuiltinType::Time,
-        ScalarTypeContextAll::IntervalYearContext(_) => BasicBuiltinType::IntervalYear,
-        ScalarTypeContextAll::UuidContext(_) => BasicBuiltinType::Uuid,
+        ScalarTypeContextAll::BooleanContext(_) => TypeKind::Boolean,
+        ScalarTypeContextAll::I8Context(_) => TypeKind::I8,
+        ScalarTypeContextAll::I16Context(_) => TypeKind::I16,
+        ScalarTypeContextAll::I32Context(_) => TypeKind::I32,
+        ScalarTypeContextAll::I64Context(_) => TypeKind::I64,
+        ScalarTypeContextAll::Fp32Context(_) => TypeKind::Fp32,
+        ScalarTypeContextAll::Fp64Context(_) => TypeKind::Fp64,
+        ScalarTypeContextAll::StringContext(_) => TypeKind::String,
+        ScalarTypeContextAll::BinaryContext(_) => TypeKind::Binary,
+        ScalarTypeContextAll::DateContext(_) => TypeKind::Date,
+        ScalarTypeContextAll::IntervalYearContext(_) => TypeKind::IntervalYear,
+        ScalarTypeContextAll::UuidContext(_) => TypeKind::Uuid,
         ScalarTypeContextAll::Error(_) => return Err(DerivationError::Malformed),
     };
-    Ok(Value::Type(ConcreteType::builtin(builtin, nullable)))
+    Ok(Value::Type(Type::new(builtin, nullable)))
 }
 
 fn eval_parameterized(
@@ -256,13 +257,13 @@ fn eval_parameterized(
                 c.scale.as_deref().ok_or(DerivationError::Malformed)?,
                 values,
             )?;
-            return Ok(Value::Type(ConcreteType::builtin(
-                BasicBuiltinType::Decimal { precision, scale },
+            return Ok(Value::Type(Type::new(
+                TypeKind::Decimal { precision, scale },
                 c.isnull.is_some(),
             )));
         }
         ParameterizedTypeContextAll::VarCharContext(c) => (
-            BasicBuiltinType::VarChar {
+            TypeKind::VarChar {
                 length: eval_numeric(
                     c.length.as_deref().ok_or(DerivationError::Malformed)?,
                     values,
@@ -271,7 +272,7 @@ fn eval_parameterized(
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::FixedCharContext(c) => (
-            BasicBuiltinType::FixedChar {
+            TypeKind::FixedChar {
                 length: eval_numeric(
                     c.length.as_deref().ok_or(DerivationError::Malformed)?,
                     values,
@@ -280,7 +281,7 @@ fn eval_parameterized(
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::FixedBinaryContext(c) => (
-            BasicBuiltinType::FixedBinary {
+            TypeKind::FixedBinary {
                 length: eval_numeric(
                     c.length.as_deref().ok_or(DerivationError::Malformed)?,
                     values,
@@ -289,7 +290,7 @@ fn eval_parameterized(
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::PrecisionTimeContext(c) => (
-            BasicBuiltinType::PrecisionTime {
+            TypeKind::PrecisionTime {
                 precision: eval_numeric(
                     c.precision.as_deref().ok_or(DerivationError::Malformed)?,
                     values,
@@ -298,7 +299,7 @@ fn eval_parameterized(
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::PrecisionTimestampContext(c) => (
-            BasicBuiltinType::PrecisionTimestamp {
+            TypeKind::PrecisionTimestamp {
                 precision: eval_numeric(
                     c.precision.as_deref().ok_or(DerivationError::Malformed)?,
                     values,
@@ -307,7 +308,7 @@ fn eval_parameterized(
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::PrecisionTimestampTZContext(c) => (
-            BasicBuiltinType::PrecisionTimestampTz {
+            TypeKind::PrecisionTimestampTz {
                 precision: eval_numeric(
                     c.precision.as_deref().ok_or(DerivationError::Malformed)?,
                     values,
@@ -316,7 +317,7 @@ fn eval_parameterized(
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::PrecisionIntervalDayContext(c) => (
-            BasicBuiltinType::IntervalDay {
+            TypeKind::IntervalDay {
                 precision: eval_numeric(
                     c.precision.as_deref().ok_or(DerivationError::Malformed)?,
                     values,
@@ -325,7 +326,7 @@ fn eval_parameterized(
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::PrecisionIntervalCompoundContext(c) => (
-            BasicBuiltinType::IntervalCompound {
+            TypeKind::IntervalCompound {
                 precision: eval_numeric(
                     c.precision.as_deref().ok_or(DerivationError::Malformed)?,
                     values,
@@ -339,7 +340,7 @@ fn eval_parameterized(
                 element.as_deref().ok_or(DerivationError::Malformed)?,
                 values,
             )?;
-            return Ok(Value::Type(ConcreteType::list(
+            return Ok(Value::Type(Type::list(
                 as_type(element)?,
                 c.isnull.is_some(),
             )));
@@ -350,7 +351,7 @@ fn eval_parameterized(
                 c.value.as_deref().ok_or(DerivationError::Malformed)?,
                 values,
             )?;
-            return Ok(Value::Type(ConcreteType::map(
+            return Ok(Value::Type(Type::map(
                 as_type(key)?,
                 as_type(value)?,
                 c.isnull.is_some(),
@@ -370,13 +371,13 @@ fn eval_parameterized(
         }
         ParameterizedTypeContextAll::Error(_) => return Err(DerivationError::Malformed),
     };
-    Ok(Value::Type(ConcreteType::builtin(builtin, nullable)))
+    Ok(Value::Type(Type::new(builtin, nullable)))
 }
 
 fn eval_numeric(
     x: &NumericParameterContextAll,
     values: &mut HashMap<String, Value>,
-) -> Result<i32, DerivationError> {
+) -> Result<IntegerParameter, DerivationError> {
     let value = match x {
         NumericParameterContextAll::NumericLiteralContext(c) => Value::Integer(parse_int(
             &c.Number().ok_or(DerivationError::Malformed)?.get_text(),
@@ -391,10 +392,7 @@ fn eval_numeric(
         }
         NumericParameterContextAll::Error(_) => return Err(DerivationError::Malformed),
     };
-    let int = as_int(value)?;
-    i32::try_from(int).map_err(|_| {
-        DerivationError::NotYetImplemented(format!("numeric parameter {int} does not fit in i32"))
-    })
+    Ok(IntegerParameter::Literal(as_int(value)?))
 }
 
 fn apply_binary(op: &str, left: Value, right: Value) -> Result<Value, DerivationError> {
@@ -454,7 +452,7 @@ fn as_bool(value: Value) -> Result<bool, DerivationError> {
     }
 }
 
-fn as_type(value: Value) -> Result<ConcreteType, DerivationError> {
+fn as_type(value: Value) -> Result<Type, DerivationError> {
     match value {
         Value::Type(t) => Ok(t),
         other => Err(DerivationError::UnexpectedValue {
@@ -495,7 +493,6 @@ impl<'a, T: Recognizer<'a>> ErrorListener<'a, T> for CollectingErrorListener {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::text::simple_extensions::types::ConcreteTypeKind;
 
     fn eval(expr: &str) -> Value {
         evaluate(expr, &HashMap::new()).expect("evaluation succeeds")
@@ -513,8 +510,12 @@ mod tests {
         Value::Integer(n)
     }
 
-    fn builtin(b: BasicBuiltinType, nullable: bool) -> Value {
-        Value::Type(ConcreteType::builtin(b, nullable))
+    fn lit(n: i64) -> IntegerParameter {
+        IntegerParameter::Literal(n)
+    }
+
+    fn builtin(kind: TypeKind, nullable: bool) -> Value {
+        Value::Type(Type::new(kind, nullable))
     }
 
     #[test]
@@ -533,6 +534,13 @@ mod tests {
     }
 
     #[test]
+    fn operator_precedence() {
+        assert_eq!(eval("1 + 2 * 3"), int(7));
+        assert_eq!(eval("2 * 3 - 1"), int(5));
+        assert_eq!(eval_with("var + 1 > 3 ? 1 : 0", &[("var", int(3))]), int(1));
+    }
+
+    #[test]
     fn min_max() {
         assert_eq!(
             eval_with("min(var, 7) + max(var, 7)", &[("var", int(5))]),
@@ -548,15 +556,15 @@ mod tests {
 
     #[test]
     fn simple_data_types() {
-        assert_eq!(eval("i8"), builtin(BasicBuiltinType::I8, false));
-        assert_eq!(eval("i16"), builtin(BasicBuiltinType::I16, false));
-        assert_eq!(eval("i32"), builtin(BasicBuiltinType::I32, false));
-        assert_eq!(eval("i64"), builtin(BasicBuiltinType::I64, false));
-        assert_eq!(eval("fp32"), builtin(BasicBuiltinType::Fp32, false));
-        assert_eq!(eval("fp64"), builtin(BasicBuiltinType::Fp64, false));
-        assert_eq!(eval("boolean"), builtin(BasicBuiltinType::Boolean, false));
-        assert_eq!(eval("i8?"), builtin(BasicBuiltinType::I8, true));
-        assert_eq!(eval("boolean?"), builtin(BasicBuiltinType::Boolean, true));
+        assert_eq!(eval("i8"), builtin(TypeKind::I8, false));
+        assert_eq!(eval("i16"), builtin(TypeKind::I16, false));
+        assert_eq!(eval("i32"), builtin(TypeKind::I32, false));
+        assert_eq!(eval("i64"), builtin(TypeKind::I64, false));
+        assert_eq!(eval("fp32"), builtin(TypeKind::Fp32, false));
+        assert_eq!(eval("fp64"), builtin(TypeKind::Fp64, false));
+        assert_eq!(eval("boolean"), builtin(TypeKind::Boolean, false));
+        assert_eq!(eval("i8?"), builtin(TypeKind::I8, true));
+        assert_eq!(eval("boolean?"), builtin(TypeKind::Boolean, true));
     }
 
     #[test]
@@ -564,9 +572,9 @@ mod tests {
         assert_eq!(
             eval_with("decimal<P + 1, S + 1>", &[("P", int(20)), ("S", int(10))]),
             builtin(
-                BasicBuiltinType::Decimal {
-                    precision: 21,
-                    scale: 11
+                TypeKind::Decimal {
+                    precision: lit(21),
+                    scale: lit(11)
                 },
                 false
             )
@@ -578,9 +586,9 @@ mod tests {
         assert_eq!(
             eval_with("decimal?<P + 1, S + 1>", &[("P", int(20)), ("S", int(10))]),
             builtin(
-                BasicBuiltinType::Decimal {
-                    precision: 21,
-                    scale: 11
+                TypeKind::Decimal {
+                    precision: lit(21),
+                    scale: lit(11)
                 },
                 true
             )
@@ -593,15 +601,15 @@ mod tests {
         // carry their own `?` nullability, not silently drop it.
         assert_eq!(
             eval("varchar?<10>"),
-            builtin(BasicBuiltinType::VarChar { length: 10 }, true)
+            builtin(TypeKind::VarChar { length: lit(10) }, true)
         );
         assert_eq!(
             eval("varchar<10>"),
-            builtin(BasicBuiltinType::VarChar { length: 10 }, false)
+            builtin(TypeKind::VarChar { length: lit(10) }, false)
         );
         assert_eq!(
             eval_with("precision_timestamp?<P>", &[("P", int(6))]),
-            builtin(BasicBuiltinType::PrecisionTimestamp { precision: 6 }, true)
+            builtin(TypeKind::PrecisionTimestamp { precision: lit(6) }, true)
         );
     }
 
@@ -614,9 +622,9 @@ mod tests {
         assert_eq!(
             result,
             builtin(
-                BasicBuiltinType::Decimal {
-                    precision: 13,
-                    scale: 11
+                TypeKind::Decimal {
+                    precision: lit(13),
+                    scale: lit(11)
                 },
                 false
             )
@@ -647,9 +655,9 @@ DECIMAL<prec, scale>";
         assert_eq!(
             result,
             builtin(
-                BasicBuiltinType::Decimal {
-                    precision: 21,
-                    scale: 8
+                TypeKind::Decimal {
+                    precision: lit(21),
+                    scale: lit(8)
                 },
                 false
             )
@@ -661,16 +669,13 @@ DECIMAL<prec, scale>";
         let result = eval("list<i32>");
         assert_eq!(
             result,
-            Value::Type(ConcreteType::list(
-                ConcreteType::builtin(BasicBuiltinType::I32, false),
-                false
-            ))
+            Value::Type(Type::list(Type::new(TypeKind::I32, false), false))
         );
     }
 
     #[test]
     fn any_variable_binds_type() {
-        let bound = ConcreteType::builtin(BasicBuiltinType::I64, false);
+        let bound = Type::new(TypeKind::I64, false);
         assert_eq!(
             eval_with("any1", &[("any1", Value::Type(bound.clone()))]),
             Value::Type(bound)
@@ -687,7 +692,5 @@ DECIMAL<prec, scale>";
     fn struct_not_yet_implemented() {
         let err = evaluate("struct<i32, i32>", &HashMap::new()).unwrap_err();
         assert!(matches!(err, DerivationError::NotYetImplemented(_)));
-        // Sanity: ConcreteTypeKind is in scope (named-struct path is deliberately absent).
-        let _ = ConcreteTypeKind::Struct(vec![]);
     }
 }

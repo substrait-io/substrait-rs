@@ -50,9 +50,6 @@ impl Registry {
     }
 
     /// Create a Global Registry from the built-in core extensions.
-    ///
-    /// Most core extensions are included. Some are skipped due to bugs in the upstream
-    /// YAML files (see <https://github.com/substrait-io/substrait/issues/935>).
     #[cfg(feature = "extensions")]
     pub fn from_core_extensions() -> Self {
         use crate::extensions::EXTENSIONS;
@@ -60,20 +57,11 @@ impl Registry {
         // Parse the core extensions from the raw extensions format to the parsed format
         let extensions: HashMap<Urn, SimpleExtensions> = EXTENSIONS
             .iter()
-            .filter_map(|(orig_urn, simple_extensions)| {
-                // Skip specific core extensions that have bugs (missing u! prefix on type references).
-                // Most core extensions are included; only these problematic ones are filtered out.
-                // See: https://github.com/substrait-io/substrait/issues/935
-                let urn_str = orig_urn.to_string();
-                if urn_str == "extension:io.substrait:extension_types" ||
-                   urn_str == "extension:io.substrait:unknown" {
-                    return None;
-                }
-
+            .map(|(orig_urn, simple_extensions)| {
                 let ExtensionFile { urn, extension } = ExtensionFile::create(simple_extensions.clone())
                     .unwrap_or_else(|err| panic!("Core extensions should be valid, but failed to create extension file for {orig_urn}: {err}"));
                 debug_assert_eq!(orig_urn, &urn);
-                Some((urn, extension))
+                (urn, extension)
             })
             .collect();
 
@@ -113,6 +101,7 @@ mod tests {
             .iter()
             .map(|name| SimpleExtensionsTypesItem {
                 name: (*name).to_string(),
+                deprecated: None,
                 description: None,
                 metadata: Default::default(),
                 parameters: None,
@@ -199,11 +188,12 @@ mod tests {
         let type_via_registry = registry.get_type(&urn, "geometry");
         assert!(type_via_registry.is_some());
 
-        // Verify extension_types is skipped due to u! prefix bug (substrait#935)
-        let extension_types_urn = Urn::from_str("extension:io.substrait:extension_types").unwrap();
+        // `unsigned_integers` was added to the catalog in Substrait v0.101.0.
+        let unsigned_integers_urn =
+            Urn::from_str("extension:io.substrait:unsigned_integers").unwrap();
         assert!(
-            registry.get_extension(&extension_types_urn).is_none(),
-            "extension_types should be skipped due to missing u! prefix bug"
+            registry.get_extension(&unsigned_integers_urn).is_some(),
+            "unsigned_integers should be a core extension"
         );
     }
 
@@ -217,8 +207,11 @@ mod tests {
                 name: "bad_function".to_string(),
                 description: None,
                 metadata: Default::default(),
+                deprecated: None,
                 impls: vec![simple_extensions::ScalarFunctionImplsItem {
                     args: None,
+                    deprecated: None,
+                    description: None,
                     options: None,
                     variadic: None,
                     session_dependent: None,
@@ -269,8 +262,11 @@ mod tests {
                 name: function_name.to_string(),
                 description: None,
                 metadata: Default::default(),
+                deprecated: None,
                 impls: vec![simple_extensions::ScalarFunctionImplsItem {
                     args: None,
+                    deprecated: None,
+                    description: None,
                     options: None,
                     variadic: None,
                     session_dependent: None,
@@ -291,6 +287,7 @@ mod tests {
                 .into_iter()
                 .map(|name| SimpleExtensionsTypesItem {
                     name: name.to_string(),
+                    deprecated: None,
                     description: None,
                     metadata: Default::default(),
                     parameters: None,
@@ -338,6 +335,218 @@ mod tests {
                 assert_eq!(type_name, "rectangle");
             }
             other => panic!("Expected UnresolvedTypeReference error, got {:?}", other),
+        }
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_core_functions_with_variable_returns() {
+        let registry = Registry::from_core_extensions();
+        let urn = Urn::from_str("extension:io.substrait:functions_comparison").unwrap();
+        for name in ["coalesce", "nullif"] {
+            assert!(
+                registry.get_scalar_function(&urn, name).is_some(),
+                "{name} should not be skipped because of its variable return type"
+            );
+        }
+    }
+
+    #[test]
+    fn test_numbered_variable_returns() {
+        use super::super::{Type, TypeKind, argument::ArgumentsItem};
+
+        for (return_type, id, nullable) in [("any1", 1, false), ("any2?", 2, true)] {
+            let yaml = format!(
+                r#"urn: extension:example.com:variables
+scalar_functions:
+  - name: identity
+    impls:
+      - args:
+          - value: {return_type}
+        return: {return_type}
+"#
+            );
+            let file = ExtensionFile::read_from_str(yaml).unwrap();
+            let urn = file.urn().clone();
+            let registry = Registry::new(vec![file]).unwrap();
+            let function = registry.get_scalar_function(&urn, "identity").unwrap();
+            assert_eq!(
+                function.impls[0].return_type,
+                Type {
+                    kind: TypeKind::Variable { id },
+                    nullable
+                }
+            );
+
+            let ArgumentsItem::ValueArgument(argument) = function.impls[0].args[0].clone() else {
+                panic!("expected value argument");
+            };
+            let raw: crate::text::simple_extensions::ValueArg = argument.into();
+            assert_eq!(
+                raw.value,
+                crate::text::simple_extensions::Type::String(return_type.to_string())
+            );
+        }
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_core_functions_with_numeric_parameter_returns() {
+        let registry = Registry::from_core_extensions();
+        let urn = Urn::from_str("extension:io.substrait:functions_string").unwrap();
+        for name in ["lower", "upper"] {
+            assert!(
+                registry.get_scalar_function(&urn, name).is_some(),
+                "{name} should not be skipped because of its named numeric parameters"
+            );
+        }
+    }
+
+    #[test]
+    fn test_numeric_parameter_returns() {
+        use super::super::{IntegerParameter, Type, TypeKind};
+
+        let yaml = r#"urn: extension:example.com:numeric_parameters
+scalar_functions:
+  - name: upper
+    impls:
+      - args:
+          - value: varchar<L>
+        return: varchar<L>
+"#;
+        let file = ExtensionFile::read_from_str(yaml).unwrap();
+        let urn = file.urn().clone();
+        let registry = Registry::new(vec![file]).unwrap();
+        let function = registry.get_scalar_function(&urn, "upper").unwrap();
+        assert_eq!(
+            function.impls[0].return_type,
+            Type::new(
+                TypeKind::VarChar {
+                    length: IntegerParameter::Variable("L".to_string()),
+                },
+                false
+            )
+        );
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_core_function_with_nested_symbolic_return() {
+        use super::super::{IntegerParameter, Type, TypeKind};
+
+        let registry = Registry::from_core_extensions();
+        let urn = Urn::from_str("extension:io.substrait:functions_string").unwrap();
+        let function = registry
+            .get_scalar_function(&urn, "regexp_match_substring_all")
+            .expect("regexp_match_substring_all should not be skipped because it returns List<varchar<L1>>");
+        assert_eq!(
+            function.impls[0].return_type,
+            Type::list(
+                Type::new(
+                    TypeKind::VarChar {
+                        length: IntegerParameter::Variable("L1".to_string()),
+                    },
+                    false,
+                ),
+                false,
+            )
+        );
+    }
+
+    #[test]
+    fn test_function_type_returns() {
+        use super::super::{Type, TypeKind};
+
+        let yaml = r#"urn: extension:example.com:function_types
+scalar_functions:
+  - name: transform_values
+    impls:
+      - args:
+          - value: func<any1 -> any2>
+            name: transformer
+        return: func<any1 -> any2>
+"#;
+        let file = ExtensionFile::read_from_str(yaml).unwrap();
+        let urn = file.urn().clone();
+        let registry = Registry::new(vec![file]).unwrap();
+        let function = registry
+            .get_scalar_function(&urn, "transform_values")
+            .unwrap();
+        assert_eq!(
+            function.impls[0].return_type,
+            Type::new(
+                TypeKind::Func {
+                    parameters: vec![Type::new(TypeKind::Variable { id: 1 }, false)],
+                    return_type: Box::new(Type::new(TypeKind::Variable { id: 2 }, false)),
+                },
+                false,
+            )
+        );
+    }
+
+    #[test]
+    fn test_nested_return_preserves_object_arguments() {
+        use super::super::{Type, TypeKind, argument::ArgumentsItem};
+        use crate::text::simple_extensions as raw;
+
+        let yaml = r#"urn: extension:example.com:nested
+scalar_functions:
+  - name: wrap_field
+    impls:
+      - args:
+          - value: {field: any1}
+        return: list<any1>
+"#;
+        let file = ExtensionFile::read_from_str(yaml).unwrap();
+        let urn = file.urn().clone();
+        let registry = Registry::new(vec![file]).unwrap();
+        let function = registry.get_scalar_function(&urn, "wrap_field").unwrap();
+        assert_eq!(
+            function.impls[0].return_type,
+            Type::list(Type::new(TypeKind::Variable { id: 1 }, false), false)
+        );
+        let ArgumentsItem::ValueArgument(argument) = function.impls[0].args[0].clone() else {
+            panic!("expected value argument");
+        };
+        let argument: raw::ValueArg = argument.into();
+        let raw::Type::Object(fields) = argument.value else {
+            panic!("expected object-form type to be preserved");
+        };
+        assert_eq!(
+            fields["field"],
+            serde_json::Value::String("any1".to_string())
+        );
+    }
+
+    #[test]
+    fn test_missing_symbolic_type_reference() {
+        let raw = extension_with_custom_type_reference(
+            "extension:example.com:missing",
+            "wrap",
+            "list<u!missing<any1>>",
+            vec![],
+        );
+        assert!(matches!(
+            ExtensionFile::create(raw),
+            Err(SimpleExtensionsError::UnresolvedTypeReference { type_name }) if type_name == "missing"
+        ));
+    }
+
+    #[test]
+    fn test_numeric_expression_returns_are_still_skipped() {
+        for return_type in ["varchar<L + 1>", "decimal<P + 1, S>"] {
+            let raw = extension_with_custom_type_reference(
+                "extension:example.com:unsupported",
+                "unsupported",
+                return_type,
+                vec![],
+            );
+            let file = ExtensionFile::create(raw).unwrap();
+            assert!(
+                file.extension()
+                    .get_scalar_function("unsupported")
+                    .is_none()
+            );
         }
     }
 
@@ -410,10 +619,7 @@ mod tests {
             session_dependent: false,
             deterministic: true,
             nullability: NullabilityHandling::Mirror,
-            return_type: ConcreteType {
-                kind: ConcreteTypeKind::Builtin(BasicBuiltinType::I8),
-                nullable: false,
-            },
+            return_type: Type::new(TypeKind::I8, false),
             implementation: HashMap::new(),
         };
 
