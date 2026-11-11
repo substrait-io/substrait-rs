@@ -376,6 +376,7 @@ scalar_functions:
                     kind: TypeKind::Variable { id },
                     nullable
                 }
+                .into()
             );
 
             let ArgumentsItem::ValueArgument(argument) = function.impls[0].args[0].clone() else {
@@ -426,6 +427,7 @@ scalar_functions:
                 },
                 false
             )
+            .into()
         );
     }
 
@@ -468,6 +470,7 @@ scalar_functions:
                 ),
                 false,
             )
+            .into()
         );
     }
 
@@ -499,6 +502,7 @@ scalar_functions:
                 },
                 false,
             )
+            .into()
         );
     }
 
@@ -521,7 +525,7 @@ scalar_functions:
         let function = registry.get_scalar_function(&urn, "wrap_field").unwrap();
         assert_eq!(
             function.impls[0].return_type,
-            Type::list(Type::new(TypeKind::Variable { id: 1 }, false), false)
+            Type::list(Type::new(TypeKind::Variable { id: 1 }, false), false).into()
         );
         let ArgumentsItem::ValueArgument(argument) = function.impls[0].args[0].clone() else {
             panic!("expected value argument");
@@ -569,7 +573,7 @@ scalar_functions:
             false,
         );
         assert_eq!(function.impls.len(), 1);
-        assert_eq!(function.impls[0].return_type, expected);
+        assert_eq!(function.impls[0].return_type, expected.into());
     }
 
     #[test]
@@ -602,7 +606,68 @@ scalar_functions:
         );
 
         assert_eq!(function.impls.len(), 1);
-        assert_eq!(function.impls[0].return_type, expected);
+        assert_eq!(function.impls[0].return_type, expected.into());
+    }
+
+    #[test]
+    fn test_multiline_return_validates_type_references() {
+        let raw = extension_with_custom_type_reference(
+            "extension:example.com:derivations",
+            "derive",
+            "precision = min(P + 1, 38)\nmap<varchar<precision>, u!missing>",
+            vec![],
+        );
+        assert!(matches!(ExtensionFile::create(raw),
+            Err(SimpleExtensionsError::UnresolvedTypeReference { type_name }) if type_name == "missing"
+        ));
+    }
+
+    #[test]
+    fn test_multiline_return_is_retained() {
+        use super::super::{
+            IntegerAssignment, IntegerParameter, NumericFunction, ReturnType, Type, TypeKind,
+        };
+
+        let raw = extension_with_custom_type_reference(
+            "extension:example.com:derivations",
+            "derive",
+            "precision = min(P, 38)\ndecimal<precision, 0>",
+            vec![],
+        );
+        let file = ExtensionFile::create(raw).unwrap();
+        let function = file.extension().get_scalar_function("derive").unwrap();
+        assert_eq!(function.impls.len(), 1);
+        let ReturnType::Derivation {
+            assignments,
+            return_type,
+        } = &function.impls[0].return_type
+        else {
+            panic!("expected a return derivation");
+        };
+        let precision = IntegerParameter::Call {
+            function: NumericFunction::Min,
+            arguments: vec![
+                IntegerParameter::Variable("P".into()),
+                IntegerParameter::Literal(38),
+            ],
+        };
+        assert_eq!(
+            assignments,
+            &vec![IntegerAssignment {
+                name: "precision".into(),
+                value: precision
+            }]
+        );
+        assert_eq!(
+            return_type,
+            &Type::new(
+                TypeKind::Decimal {
+                    precision: IntegerParameter::Variable("precision".into()),
+                    scale: IntegerParameter::Literal(0),
+                },
+                false,
+            )
+        );
     }
 
     #[cfg(feature = "extensions")]
@@ -674,7 +739,7 @@ scalar_functions:
             session_dependent: false,
             deterministic: true,
             nullability: NullabilityHandling::Mirror,
-            return_type: Type::new(TypeKind::I8, false),
+            return_type: Type::new(TypeKind::I8, false).into(),
             implementation: HashMap::new(),
         };
 

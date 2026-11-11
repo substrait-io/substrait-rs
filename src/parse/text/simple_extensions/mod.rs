@@ -20,6 +20,7 @@ pub mod argument;
 mod extensions;
 mod file;
 mod registry;
+mod return_type;
 mod scalar_functions;
 mod type_ast;
 mod type_parser;
@@ -29,6 +30,7 @@ mod types;
 pub use extensions::SimpleExtensions;
 pub use file::ExtensionFile;
 pub use registry::Registry;
+pub use return_type::{IntegerAssignment, ReturnType};
 pub use scalar_functions::{
     Impl as ScalarFunctionImpl, NullabilityHandling, Options, ScalarFunction, VariadicBehavior,
 };
