@@ -971,6 +971,30 @@ impl From<Type> for RawType {
     }
 }
 
+/// Parses extension YAML type syntax without resolving user-defined references.
+/// Object-form named structs preserve field order and require string-valued field types.
+impl TryFrom<&RawType> for Type {
+    type Error = ExtensionTypeError;
+
+    fn try_from(raw: &RawType) -> Result<Self, Self::Error> {
+        match raw {
+            RawType::String(expression) => Self::try_from(TypeExpr::parse(expression)?),
+            RawType::Object(raw_fields) => {
+                let mut fields = IndexMap::new();
+                for (name, value) in raw_fields {
+                    let expression = value.as_str().ok_or_else(|| {
+                        ExtensionTypeError::InvalidFieldType(format!(
+                            "Struct field '{name}' type must be a string"
+                        ))
+                    })?;
+                    fields.insert(name.clone(), Self::try_from(TypeExpr::parse(expression)?)?);
+                }
+                Ok(Self::named_struct(fields, false))
+            }
+        }
+    }
+}
+
 /// Parse an integer literal or parameter name for a built-in type.
 /// Validate literals against the supplied range.
 ///
