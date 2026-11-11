@@ -11,9 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- parse function types in signatures ([#570](https://github.com/substrait-io/substrait-rs/pull/570))
+- [**breaking**] Function signatures now support function types. Add a `TypeExpr::Func` arm to exhaustive matches on `TypeExpr` ([#570](https://github.com/substrait-io/substrait-rs/pull/570)).
 - load functions with nested symbolic return types ([#562](https://github.com/substrait-io/substrait-rs/pull/562))
-- load functions with named numeric return parameters ([#561](https://github.com/substrait-io/substrait-rs/pull/561))
+- [**breaking**] The parser now loads functions with named numeric parameters in their return type. Add an `ExtensionTypeError::ExpectedConcreteType` arm to exhaustive matches on `ExtensionTypeError` ([#561](https://github.com/substrait-io/substrait-rs/pull/561)).
 - load functions returning numbered type variables ([#560](https://github.com/substrait-io/substrait-rs/pull/560))
 
 ### Fixed
@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - parse type expressions from tokens ([#574](https://github.com/substrait-io/substrait-rs/pull/574))
 - introduce type syntax tokenization ([#573](https://github.com/substrait-io/substrait-rs/pull/573))
 - separate type expression parsing steps ([#571](https://github.com/substrait-io/substrait-rs/pull/571))
-- unify parsed type representations ([#565](https://github.com/substrait-io/substrait-rs/pull/565))
+- [**breaking**] `Type` replaces `ConcreteType` in `parse::text::simple_extensions`. Match on its `kind` field using `TypeKind`. If you require a concrete type, call `Type::is_concrete` ([#565](https://github.com/substrait-io/substrait-rs/pull/565)).
 
 ## [0.65.0](https://github.com/substrait-io/substrait-rs/compare/v0.64.1...v0.65.0) - 2026-08-27
 
