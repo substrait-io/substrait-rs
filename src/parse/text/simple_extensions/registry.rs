@@ -569,6 +569,28 @@ scalar_functions:
     }
 
     #[test]
+    fn test_function_with_grouped_return_parameter_is_retained() {
+        use super::super::{IntegerParameter, Type, TypeKind};
+
+        let raw = extension_with_custom_type_reference(
+            "extension:example.com:grouping",
+            "identity",
+            "varchar<(L)>",
+            vec![],
+        );
+        let file = ExtensionFile::create(raw).unwrap();
+        let function = file.extension().get_scalar_function("identity").unwrap();
+        let expected = Type::new(
+            TypeKind::VarChar {
+                length: IntegerParameter::Variable("L".into()),
+            },
+            false,
+        );
+        assert_eq!(function.impls.len(), 1);
+        assert_eq!(function.impls[0].return_type, expected);
+    }
+
+    #[test]
     fn test_function_with_addition_in_return_type_is_retained() {
         use super::super::{BinaryOp, IntegerParameter, Type, TypeKind};
 
