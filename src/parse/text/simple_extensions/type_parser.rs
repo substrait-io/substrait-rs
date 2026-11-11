@@ -296,10 +296,55 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parse an integer expression, leaving its separator unconsumed.
+    /// Parse a right-associative ternary, with comparison and arithmetic binding tighter.
     ///
-    /// In `decimal<P - S + 1, S>`, consume `P - S + 1` as `(P - S) + 1`.
+    /// For `P > 38 ? 38 : P + 1`, the condition is `P > 38` and the else branch is `P + 1`.
     fn parse_integer_parameter_expression(&mut self) -> Result<IntegerParameter, TypeParseError> {
+        let condition = self.parse_integer_comparison()?;
+        if !self.consume(TokenKind::QuestionMark) {
+            return Ok(condition);
+        }
+        let then_value = self.parse_integer_parameter_expression()?;
+        self.expect(TokenKind::Colon)?;
+        let else_value = self.parse_integer_parameter_expression()?;
+        Ok(IntegerParameter::Conditional {
+            condition: Box::new(condition),
+            then_value: Box::new(then_value),
+            else_value: Box::new(else_value),
+        })
+    }
+
+    /// A `>` followed by an operand is a comparison; otherwise it closes a type.
+    ///
+    /// For `P + 1 > S`, compare `P + 1` with `S`; for `varchar<P + 1>`, leave `>` unconsumed.
+    fn parse_integer_comparison(&mut self) -> Result<IntegerParameter, TypeParseError> {
+        let mut expression = self.parse_integer_sum()?;
+        while self.peek() == Some(TokenKind::CloseAngle)
+            && self.peek_next().is_some_and(Self::starts_integer_operand)
+        {
+            self.consume(TokenKind::CloseAngle);
+            let right = self.parse_integer_sum()?;
+            expression = IntegerParameter::BinaryExpression {
+                op: BinaryOp::GreaterThan,
+                left: Box::new(expression),
+                right: Box::new(right),
+            };
+        }
+        Ok(expression)
+    }
+
+    fn starts_integer_operand(kind: TokenKind) -> bool {
+        kind.is_name()
+            || matches!(
+                kind,
+                TokenKind::Integer | TokenKind::Plus | TokenKind::Minus | TokenKind::OpenParen
+            )
+    }
+
+    /// Parse left-associative addition and subtraction, with grouped operands.
+    ///
+    /// For example, `P - S + 1` groups as `(P - S) + 1`, not `P - (S + 1)`.
+    fn parse_integer_sum(&mut self) -> Result<IntegerParameter, TypeParseError> {
         let mut expression = if self.peek() == Some(TokenKind::Plus) {
             IntegerParameter::Literal(self.parse_integer_literal()?)
         } else {
@@ -631,6 +676,24 @@ mod tests {
     }
 
     #[test]
+    fn parse_conditionals_retain_the_condition_and_both_branches() {
+        let condition = IntegerParameter::BinaryExpression {
+            op: BinaryOp::GreaterThan,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Literal(38)),
+        };
+        let expected = IntegerParameter::Conditional {
+            condition: Box::new(condition),
+            then_value: Box::new(IntegerParameter::Literal(38)),
+            else_value: Box::new(IntegerParameter::Variable("P".into())),
+        };
+        assert_eq!(
+            parse_integer_parameter("P > 38 ? 38 : P").unwrap(),
+            expected
+        );
+    }
+
+    #[test]
     fn addition_preserves_signed_literals() {
         assert_eq!(
             parse("varchar<+10 + -2>").unwrap(),
@@ -644,6 +707,81 @@ mod tests {
                 false,
             )
         );
+    }
+
+    #[test]
+    fn parse_conditionals_bind_less_tightly_than_arithmetic() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("S".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let expected = IntegerParameter::Conditional {
+            condition: Box::new(IntegerParameter::Variable("P".into())),
+            then_value: Box::new(sum),
+            else_value: Box::new(IntegerParameter::Literal(0)),
+        };
+        assert_eq!(parse_integer_parameter("P ? S + 1 : 0").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_conditionals_associate_to_the_right() {
+        let nested = IntegerParameter::Conditional {
+            condition: Box::new(IntegerParameter::Variable("S".into())),
+            then_value: Box::new(IntegerParameter::Literal(2)),
+            else_value: Box::new(IntegerParameter::Literal(3)),
+        };
+        let expected = IntegerParameter::Conditional {
+            condition: Box::new(IntegerParameter::Variable("P".into())),
+            then_value: Box::new(IntegerParameter::Literal(1)),
+            else_value: Box::new(nested),
+        };
+        assert_eq!(
+            parse_integer_parameter("P ? 1 : S ? 2 : 3").unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn parse_comparisons_bind_less_tightly_than_arithmetic() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let difference = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(IntegerParameter::Variable("S".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let expected = IntegerParameter::BinaryExpression {
+            op: BinaryOp::GreaterThan,
+            left: Box::new(sum),
+            right: Box::new(difference),
+        };
+        assert_eq!(parse_integer_parameter("P + 1 > S - 1").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_conditionals_leave_parameter_separators() {
+        let expected = IntegerParameter::Conditional {
+            condition: Box::new(IntegerParameter::Variable("P".into())),
+            then_value: Box::new(IntegerParameter::Literal(1)),
+            else_value: Box::new(IntegerParameter::Literal(2)),
+        };
+        for (source, separator) in [
+            ("P ? 1 : 2, S", TokenKind::Comma),
+            ("P ? 1 : 2>", TokenKind::CloseAngle),
+            ("P ? 1 : 2)", TokenKind::CloseParen),
+        ] {
+            let mut parser = Parser::new(source).unwrap();
+            assert_eq!(
+                parser.parse_integer_parameter_expression().unwrap(),
+                expected.clone(),
+                "{source}"
+            );
+            assert_eq!(parser.peek(), Some(separator), "{source}");
+        }
     }
 
     #[test]
@@ -669,6 +807,46 @@ mod tests {
                 "{source}"
             );
         }
+    }
+
+    #[test]
+    fn parse_nested_conditional_types_leave_both_closing_brackets() {
+        let condition = IntegerParameter::BinaryExpression {
+            op: BinaryOp::GreaterThan,
+            left: Box::new(IntegerParameter::Variable("L".into())),
+            right: Box::new(IntegerParameter::Literal(10)),
+        };
+        let length = IntegerParameter::Conditional {
+            condition: Box::new(condition),
+            then_value: Box::new(IntegerParameter::Literal(10)),
+            else_value: Box::new(IntegerParameter::Variable("L".into())),
+        };
+        let element = TypeExpr::Simple("varchar", vec![TypeExprParam::Integer(length)], false);
+        let expected = TypeExpr::Simple("list", vec![TypeExprParam::Type(element)], false);
+        assert_eq!(parse("list<varchar<L > 10 ? 10 : L>>").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_nullable_types_do_not_start_conditionals() {
+        assert_eq!(
+            parse("list<any1?>").unwrap(),
+            TypeExpr::Simple(
+                "list",
+                vec![TypeExprParam::Type(TypeExpr::TypeVariable(1, true))],
+                false,
+            )
+        );
+        assert_eq!(
+            parse("map<string, any?>").unwrap(),
+            TypeExpr::Simple(
+                "map",
+                vec![
+                    TypeExprParam::Type(TypeExpr::Simple("string", vec![], false)),
+                    TypeExprParam::Type(TypeExpr::Simple("any", vec![], true)),
+                ],
+                false,
+            )
+        );
     }
 
     #[test]
@@ -775,6 +953,13 @@ mod tests {
             "P - - 1",
             "P ++1",
             "P S",
+            "P ?",
+            "P ? S",
+            "P ? : S",
+            "P ? S :",
+            "P >",
+            "P > ? S : 1",
+            "P : S",
             "min(",
             "min(P,)",
             "min(,P)",
@@ -784,8 +969,6 @@ mod tests {
             "P / 2",
             "P + ()",
             "(P)(S)",
-            "P > S",
-            "P ? S : 1",
             "9223372036854775808",
             "@ + 1",
         ] {
@@ -882,6 +1065,43 @@ mod tests {
             IntegerParameter::Literal(10)
         );
         assert_eq!(parser.peek(), Some(TokenKind::Comma));
+    }
+
+    #[test]
+    fn parse_integer_sums_stop_before_comparisons() {
+        let mut parser = Parser::new("P + 1 > 38").unwrap();
+        assert_eq!(
+            parser.parse_integer_sum().unwrap(),
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::Variable("P".into())),
+                right: Box::new(IntegerParameter::Literal(1)),
+            }
+        );
+        assert_eq!(parser.peek(), Some(TokenKind::CloseAngle));
+    }
+
+    #[test]
+    fn parse_integer_comparisons_leave_the_closing_type_bracket() {
+        for (source, expected) in [
+            (
+                "P > S>",
+                IntegerParameter::BinaryExpression {
+                    op: BinaryOp::GreaterThan,
+                    left: Box::new(IntegerParameter::Variable("P".into())),
+                    right: Box::new(IntegerParameter::Variable("S".into())),
+                },
+            ),
+            ("P>", IntegerParameter::Variable("P".into())),
+        ] {
+            let mut parser = Parser::new(source).unwrap();
+            assert_eq!(
+                parser.parse_integer_comparison().unwrap(),
+                expected,
+                "{source}"
+            );
+            assert_eq!(parser.peek(), Some(TokenKind::CloseAngle), "{source}");
+        }
     }
 
     #[test]
