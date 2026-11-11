@@ -431,6 +431,24 @@ scalar_functions:
         );
     }
 
+    #[test]
+    fn test_multi_digit_any_names_are_rejected_in_numeric_parameters() {
+        for name in ["any12", "ANY12"] {
+            let yaml = format!(
+                r#"urn: extension:example.com:numeric_parameters
+scalar_functions:
+  - name: decimal_identity
+    impls:
+      - return: decimal<{name}, 0>
+"#
+            );
+            assert!(
+                ExtensionFile::read_from_str(yaml).is_err(),
+                "{name} must produce an error rather than silently skip the function",
+            );
+        }
+    }
+
     #[cfg(feature = "extensions")]
     #[test]
     fn test_core_function_with_nested_symbolic_return() {
