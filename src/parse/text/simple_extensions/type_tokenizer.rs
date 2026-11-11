@@ -18,7 +18,7 @@ pub(super) enum TokenKind {
     Decimal,
     /// Bare `any`, matching an unspecified type rather than a numbered variable.
     Any,
-    /// A numbered variable such as `any1` or `any12`; the parser checks its ID.
+    /// A numbered variable with a single digit, such as `any1` or `ANY9`.
     AnyVar,
     /// Unsigned decimal digits, such as `10`; a leading sign is a separate token.
     Integer,
@@ -142,7 +142,19 @@ impl<'a> Tokenizer<'a> {
                 let length = remaining
                     .find(|c: char| !c.is_ascii_alphanumeric() && !matches!(c, '_' | '$'))
                     .unwrap_or(remaining.len());
-                (classify_word(&remaining[..length]), length)
+                let word = &remaining[..length];
+                // Reserve multi-digit anyN spellings for future type-variable support.
+                // https://github.com/substrait-io/substrait/issues/1335
+                if length > 4
+                    && word[..3].eq_ignore_ascii_case("any")
+                    && word[3..].bytes().all(|byte| byte.is_ascii_digit())
+                {
+                    return Err(TypeParseError::UnexpectedToken {
+                        position,
+                        expected: "a single-digit type variable ID",
+                    });
+                }
+                (classify_word(word), length)
             }
             '0'..='9' => {
                 let length = remaining
@@ -186,9 +198,9 @@ fn classify_word(word: &str) -> TokenKind {
         "list" => TokenKind::List,
         "decimal" => TokenKind::Decimal,
         "any" => TokenKind::Any,
-        name if name.strip_prefix("any").is_some_and(|suffix| {
-            !suffix.is_empty() && suffix.bytes().all(|byte| byte.is_ascii_digit())
-        }) =>
+        name if name
+            .strip_prefix("any")
+            .is_some_and(|suffix| suffix.len() == 1 && suffix.as_bytes()[0].is_ascii_digit()) =>
         {
             TokenKind::AnyVar
         }
@@ -285,7 +297,9 @@ mod tests {
         for (word, expected) in [
             ("LiSt", TokenKind::List),
             ("any", TokenKind::Any),
-            ("ANY12", TokenKind::AnyVar),
+            ("ANY1", TokenKind::AnyVar),
+            ("any9", TokenKind::AnyVar),
+            ("any12extra", TokenKind::Identifier),
             ("any1extra", TokenKind::Identifier),
             ("any_1", TokenKind::Identifier),
             ("$P1", TokenKind::Identifier),
@@ -331,7 +345,7 @@ mod tests {
             ("LIST", TokenKind::List),
             ("Decimal", TokenKind::Decimal),
             ("ANY", TokenKind::Any),
-            ("any12", TokenKind::AnyVar),
+            ("any1", TokenKind::AnyVar),
             ("ANY2", TokenKind::AnyVar),
         ] {
             let tokens = tokenize(source).unwrap();
