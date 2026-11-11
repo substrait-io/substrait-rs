@@ -178,8 +178,8 @@ pub enum TypeKind {
 }
 
 impl TypeKind {
-    /// Check if a string is a valid name for a builtin scalar type
-    pub fn is_name(name: &str) -> bool {
+    /// Check if a string names a builtin type, ignoring ASCII case.
+    pub fn is_builtin_name(name: &str) -> bool {
         let lower = name.to_ascii_lowercase();
         primitive_builtin(&lower).is_some()
             || matches!(
@@ -193,6 +193,11 @@ impl TypeKind {
                     | "precision_timestamp_tz"
                     | "interval_day"
                     | "interval_compound"
+                    | "any"
+                    | "func"
+                    | "list"
+                    | "map"
+                    | "struct"
             )
     }
 
@@ -987,7 +992,9 @@ fn parse_integer_parameter(
 ) -> Result<IntegerParameter, ExtensionTypeError> {
     let value = match param {
         TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
-            if parameters.is_empty() && CustomType::validate_name(name).is_ok() =>
+            if parameters.is_empty()
+                && !TypeKind::is_builtin_name(name)
+                && CustomType::validate_name(name).is_ok() =>
         {
             return Ok(IntegerParameter::Variable(name.to_string()));
         }
@@ -1087,7 +1094,9 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
                     TypeExpr::Simple(_, parameters, false) if parameters.is_empty()
                 );
                 match Type::try_from(expression) {
-                    Err(ExtensionTypeError::UnknownTypeName { name }) if is_bare_name => {
+                    Err(ExtensionTypeError::UnknownTypeName { name })
+                        if is_bare_name && !TypeKind::is_builtin_name(&name) =>
+                    {
                         CustomType::validate_name(&name)?;
                         TypeParameter::Name(name)
                     }
@@ -1448,6 +1457,38 @@ mod tests {
     }
 
     #[test]
+    fn test_is_builtin_name() {
+        for (name, expected) in [
+            ("i32", true),
+            ("boolean", true),
+            ("bool", true),
+            ("decimal", true),
+            ("varchar", true),
+            ("precision_timestamp", true),
+            ("list", true),
+            ("map", true),
+            ("struct", true),
+            ("func", true),
+            ("any", true),
+            ("DeCiMaL", true),
+            ("LiSt", true),
+            ("FuNc", true),
+            ("AnY", true),
+            ("", false),
+            ("P", false),
+            ("any1", false),
+            ("u!point", false),
+            ("missing_type", false),
+            ("dec", false),
+            ("precisiontime", false),
+        ] {
+            for spelling in [name.to_string(), name.to_ascii_uppercase()] {
+                assert_eq!(TypeKind::is_builtin_name(&spelling), expected, "{spelling}");
+            }
+        }
+    }
+
+    #[test]
     fn test_builtin_scalar_parsing() {
         let cases = vec![
             ("bool", Some(TypeKind::Boolean)),
@@ -1610,11 +1651,46 @@ mod tests {
             "List<missing_type?>",
             "List<decimal<any1>>",
             "List<i32<P>>",
+            "u!foo<func>",
+            "u!foo<FuNc>",
         ] {
             assert!(
                 Type::try_from(TypeExpr::parse(input).unwrap()).is_err(),
                 "{input} should not be accepted as a signature type"
             );
+        }
+    }
+
+    #[test]
+    fn test_reserved_type_names_are_not_integer_parameters() {
+        for name in [
+            "i32",
+            "bool",
+            "boolean",
+            "varchar",
+            "decimal",
+            "precision_time",
+            "list",
+            "map",
+            "struct",
+            "func",
+            "any",
+        ] {
+            for spelling in [name.to_string(), name.to_ascii_uppercase()] {
+                for source in [
+                    format!("varchar<{spelling}>"),
+                    format!("decimal<{spelling}, S>"),
+                    format!("decimal<P, {spelling}>"),
+                ] {
+                    assert!(
+                        matches!(
+                            parse_type_result(&source),
+                            Err(ExtensionTypeError::InvalidParameterKind { .. })
+                        ),
+                        "{source} should not treat a type name as an integer parameter"
+                    );
+                }
+            }
         }
     }
 
@@ -1987,7 +2063,7 @@ mod tests {
             "precisiontimestamptz",
         ] {
             for spelling in [name.to_string(), name.to_ascii_uppercase()] {
-                assert!(!TypeKind::is_name(&spelling));
+                assert!(!TypeKind::is_builtin_name(&spelling));
                 assert_eq!(
                     parse_type_result(&format!("{spelling}<3>")),
                     Err(ExtensionTypeError::UnknownTypeName { name: spelling })
