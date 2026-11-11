@@ -167,12 +167,7 @@ impl<'a> Parser<'a> {
     /// Variables do not take parameters.
     fn parse_type_variable(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
         let name = self.expect(TokenKind::AnyVar)?;
-        let id = name.text[3..]
-            .parse()
-            .map_err(|_| TypeParseError::UnexpectedToken {
-                position: name.position,
-                expected: "a u32 type variable ID",
-            })?;
+        let id = name.text[3..].parse().unwrap();
         let nullable = self.consume(TokenKind::QuestionMark);
         Ok(TypeExpr::TypeVariable(id, nullable))
     }
@@ -330,7 +325,7 @@ mod tests {
             ("decimal<any1, S>", 8),
             ("decimal<P, any1>", 11),
             ("decimal<Any1, S>", 8),
-            ("decimal<P, ANY4294967296>", 11),
+            ("decimal<P, ANY1>", 11),
         ] {
             assert_eq!(
                 parse(source),
@@ -606,13 +601,13 @@ mod tests {
     }
 
     #[test]
-    fn numbered_type_variables_are_case_insensitive_and_support_u32_ids() {
+    fn numbered_type_variables_are_case_insensitive() {
         for (source, id, nullable) in [
             ("any0", 0, false),
             ("any1", 1, false),
             ("ANY1", 1, false),
             ("Any1?", 1, true),
-            ("any4294967295", u32::MAX, false),
+            ("any9", 9, false),
         ] {
             assert_eq!(
                 parse(source).unwrap(),
@@ -623,20 +618,25 @@ mod tests {
     }
 
     #[test]
-    fn out_of_range_type_variable_ids_are_rejected() {
+    fn multi_digit_type_variable_names_are_rejected_everywhere() {
         for (source, position) in [
+            ("any10", 0),
+            ("ANY12?", 0),
+            ("any01", 0),
             ("any4294967296", 0),
-            ("ANY4294967296?", 0),
-            ("list<any4294967296>", 5),
-            ("func<i32 -> any4294967296>", 12),
+            ("list<any10>", 5),
+            ("decimal<ANY12, 0>", 8),
+            ("func<i32 -> any12>", 12),
+            ("u!any10", 2),
+            ("u!Box<any12>", 6),
         ] {
             assert_eq!(
                 parse(source),
                 Err(TypeParseError::UnexpectedToken {
                     position,
-                    expected: "a u32 type variable ID",
+                    expected: "a single-digit type variable ID",
                 }),
-                "{source}"
+                "{source}",
             );
         }
     }
