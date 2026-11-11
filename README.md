@@ -15,3 +15,22 @@ Rust crate for [Substrait](https://substrait.io/): Cross-Language Serialization 
 
 - [Docs (release)](https://docs.rs/substrait)
 - [Docs (main)](https://substrait-io.github.io/substrait-rs/)
+
+## Substrait version
+
+The specification version a release targets is set by the exact `substrait-prost` and
+`substrait-extensions` requirements in [Cargo.toml](Cargo.toml) — the generated types and
+the standard extension definitions come from those crates rather than being vendored here.
+[`substrait::version`](src/version.rs) reports it at runtime.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how the specification relates to this repository,
+the development environment, the build / format / lint / test commands, and the commit and
+pull request conventions. Releases are automated with
+[release-plz](https://release-plz.dev/).
+
+## Getting Involved
+
+To learn more, head over to [Substrait](https://substrait.io/), our parent project, and join
+our [community](https://substrait.io/community/).
