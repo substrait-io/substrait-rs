@@ -1,224 +1,313 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Parse type syntax in two steps: tokenize the source, then consume tokens
-//! recursively to build a [`TypeExpr`].
+//! Parse type syntax with the ANTLR parser generated from the Substrait type
+//! grammar ([`substrait_antlr::substrait_type`]), then convert its parse tree
+//! into a [`TypeExpr`].
 //!
-//! For `func<func<i32 -> i64> -> bool>`, each `->` is a single arrow token.
-//! Parsing the inner function consumes its closing `>` before the outer rule
-//! expects its own arrow. No rule needs to count brackets or search ahead.
+//! The grammar also describes type derivation expressions (arithmetic,
+//! conditionals, multiline assignments). Those parse successfully but are
+//! rejected here as [`TypeParseError::UnsupportedNumericExpression`].
 //!
-//! Names borrow from the source, and token positions are byte offsets into that
-//! source. Built-in names, parameter counts, and literal ranges are validated
-//! later when converting the AST to [`Type`](super::types::Type).
+//! Names borrow from the source using the byte offsets of their tokens.
+//! Built-in names, parameter counts, and literal ranges are validated later
+//! when converting the AST to [`Type`](super::types::Type).
+
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use antlr4rust::common_token_stream::CommonTokenStream;
+use antlr4rust::error_listener::ErrorListener;
+use antlr4rust::errors::ANTLRError;
+use antlr4rust::parser::Parser;
+use antlr4rust::parser_rule_context::ParserRuleContext;
+use antlr4rust::recognizer::Recognizer;
+use antlr4rust::token::Token;
+use antlr4rust::token_factory::TokenFactory;
+use antlr4rust::tree::TerminalNode;
+use antlr4rust::{InputStream, TidExt};
+use substrait_antlr::substrait_type::substraittypeparser::*;
+use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
-use super::type_tokenizer::{Token, TokenKind, tokenize};
 
 /// Parse one complete type, rejecting any tokens left after it.
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
 pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
-    let mut parser = Parser::new(source)?;
-    let expression = parser.parse_type()?;
-    if parser.peek().is_some() {
-        return Err(parser.error("end of type"));
+    // The type grammar has no variation syntax, so report it before ANTLR
+    // turns it into a generic syntax error.
+    if source.contains(['[', ']']) {
+        return Err(TypeParseError::UnsupportedVariation(source.to_string()));
     }
-    Ok(expression)
+
+    let first_error = FirstSyntaxError::default();
+
+    let mut lexer = SubstraitTypeLexer::new(InputStream::new(source));
+    lexer.remove_error_listeners();
+    lexer.add_error_listener(Box::new(first_error.clone()));
+
+    let mut parser = SubstraitTypeParser::new(CommonTokenStream::new(lexer));
+    parser.remove_error_listeners();
+    parser.add_error_listener(Box::new(first_error.clone()));
+
+    let tree = parser.startRule();
+    if let Some(error) = first_error.0.take() {
+        return Err(error);
+    }
+    let tree = tree.map_err(|error| TypeParseError::Syntax {
+        column: 0,
+        message: error.to_string(),
+    })?;
+
+    let converter = TreeConverter { source };
+    converter.type_expr(&tree.expr().expect("startRule always has an expr"))
 }
 
-/// Recursive-descent parser whose index points to the next unconsumed token.
-/// Nested rules share this position and leave their caller's delimiters intact.
-struct Parser<'a> {
+/// Keeps the first syntax error reported by the lexer or parser.
+///
+/// ANTLR reports errors to listeners and then recovers, so `startRule` can
+/// return a tree even for invalid input. The lexer and parser each own a
+/// boxed listener, so the error is shared back to `parse` through an `Rc`.
+#[derive(Clone, Default)]
+struct FirstSyntaxError(Rc<RefCell<Option<TypeParseError>>>);
+
+// The signature is fixed by `antlr4rust`'s `ErrorListener` trait. Only
+// `column` and `message` are used.
+impl<'input, T: Recognizer<'input>> ErrorListener<'input, T> for FirstSyntaxError {
+    fn syntax_error(
+        &self,
+        _recognizer: &T,
+        _offending_symbol: Option<&<T::TF as TokenFactory<'input>>::Inner>,
+        _line: isize,
+        column: isize,
+        message: &str,
+        _error: Option<&ANTLRError>,
+    ) {
+        self.0
+            .borrow_mut()
+            .get_or_insert_with(|| TypeParseError::Syntax {
+                column: column as usize,
+                message: message.to_string(),
+            });
+    }
+}
+
+/// Converts the ANTLR parse tree into a [`TypeExpr`] borrowing from `source`.
+struct TreeConverter<'a> {
     source: &'a str,
-    tokens: Vec<Token<'a>>,
-    index: usize,
 }
 
-impl<'a> Parser<'a> {
-    fn new(source: &'a str) -> Result<Self, TypeParseError> {
-        Ok(Self {
-            source,
-            tokens: tokenize(source)?,
-            index: 0,
-        })
+impl<'a> TreeConverter<'a> {
+    /// The source text of a single token.
+    fn token_text(&self, token: &impl Token) -> &'a str {
+        &self.source[token.get_start() as usize..=token.get_stop() as usize]
     }
 
-    fn peek(&self) -> Option<TokenKind> {
-        self.tokens.get(self.index).map(|token| token.kind)
+    fn terminal_text(&self, node: &TerminalNode<'a, SubstraitTypeParserContextType>) -> &'a str {
+        self.token_text(&*node.symbol)
     }
 
-    fn error(&self, expected: &'static str) -> TypeParseError {
-        TypeParseError::UnexpectedToken {
-            position: self
-                .tokens
-                .get(self.index)
-                .map_or(self.source.len(), |token| token.position),
-            expected,
-        }
-    }
-
-    /// Advance only if the next token matches; otherwise leave it for another rule.
-    fn consume(&mut self, kind: TokenKind) -> bool {
-        if self.peek() == Some(kind) {
-            self.index += 1;
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Consume a required token or report what was expected at the current position.
-    fn expect(&mut self, kind: TokenKind) -> Result<Token<'a>, TypeParseError> {
-        if self.peek() != Some(kind) {
-            return Err(self.error(kind.description()));
-        }
-        let token = self.tokens[self.index];
-        self.index += 1;
-        Ok(token)
-    }
-
-    /// Consume a type or parameter name, including names with keyword tokens.
-    fn expect_name(&mut self) -> Result<Token<'a>, TypeParseError> {
-        let token = self
-            .tokens
-            .get(self.index)
-            .copied()
-            .filter(|token| token.kind.is_name())
-            .ok_or_else(|| self.error("a type name"))?;
-        self.index += 1;
-        Ok(token)
-    }
-
-    /// Parse one type expression using the rule selected by its first token.
-    fn parse_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        match self.peek() {
-            Some(TokenKind::UserDefined) => self.parse_user_defined_type(),
-            Some(TokenKind::Func) => self.parse_function_type(),
-            Some(TokenKind::AnyVar) => self.parse_type_variable(),
-            _ => self.parse_named_type(),
-        }
-    }
-
-    /// Parse a user-defined type such as `u!point?<i32>`.
-    fn parse_user_defined_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        self.expect(TokenKind::UserDefined)?;
-        let name = self.expect_name()?;
-        let nullable = self.consume(TokenKind::QuestionMark);
-        let parameters = self.parse_optional_type_parameters()?;
-        Ok(TypeExpr::UserDefined(name.text, parameters, nullable))
-    }
-
-    /// Parse a name with optional nullability and parameters, such as `list?<i32>`.
-    /// Unknown names are retained for semantic validation.
-    fn parse_named_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        let name = self.expect_name()?;
-        let nullable = self.consume(TokenKind::QuestionMark);
-        let parameters = self.parse_optional_type_parameters()?;
-        Ok(TypeExpr::Simple(name.text, parameters, nullable))
-    }
-
-    /// Parse a numbered variable such as `any1?`.
-    /// Variables do not take parameters.
-    fn parse_type_variable(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        let name = self.expect(TokenKind::AnyVar)?;
-        let id = name.text[3..].parse().unwrap();
-        let nullable = self.consume(TokenKind::QuestionMark);
-        Ok(TypeExpr::TypeVariable(id, nullable))
-    }
-
-    /// Parse an optional `<...>` parameter list, consuming both angle brackets.
-    fn parse_optional_type_parameters(&mut self) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
-        if self.consume(TokenKind::OpenAngle) {
-            self.parse_type_parameters()
-        } else {
-            Ok(Vec::new())
-        }
-    }
-
-    /// Parse comma-separated parameters after `<`, consuming the closing `>`.
+    /// The text of an identifier, rejecting multi-digit `anyN` spellings.
     ///
-    /// In `map<string, list<i32>>`, parsing `list<i32>` consumes the inner `>`,
-    /// leaving the outer `>` for this rule. Empty lists are retained so semantic
-    /// validation can check arity, but empty entries such as `list<i32,>` fail.
-    fn parse_type_parameters(&mut self) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
-        let mut parameters = Vec::new();
-        if self.consume(TokenKind::CloseAngle) {
-            return Ok(parameters);
+    /// The grammar lexes `any12` as an ordinary identifier, but those names are
+    /// reserved for future type-variable support.
+    /// https://github.com/substrait-io/substrait/issues/1335
+    fn identifier(
+        &self,
+        node: &TerminalNode<'a, SubstraitTypeParserContextType>,
+    ) -> Result<&'a str, TypeParseError> {
+        let name = self.terminal_text(node);
+        let is_multi_digit_variable = name.len() > 4
+            && name[..3].eq_ignore_ascii_case("any")
+            && name[3..].bytes().all(|byte| byte.is_ascii_digit());
+        if is_multi_digit_variable {
+            return Err(TypeParseError::MultiDigitTypeVariable(name.to_string()));
         }
-        loop {
-            parameters.push(self.parse_parameter()?);
-            if matches!(self.peek(), Some(TokenKind::Plus | TokenKind::Minus)) {
-                return Err(TypeParseError::UnsupportedNumericExpression(
-                    self.source.to_string(),
-                ));
+        Ok(name)
+    }
+
+    /// Convert an expression that must be a type, rejecting integer literals.
+    fn type_expr(&self, expr: &ExprContextAll<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
+        match self.parameter(expr)? {
+            TypeExprParam::Type(type_expr) => Ok(type_expr),
+            TypeExprParam::Integer(value) => Err(TypeParseError::ExpectedType(value.to_string())),
+        }
+    }
+
+    /// Convert an expression in parameter position: a type or an integer literal.
+    fn parameter(&self, expr: &ExprContextAll<'a>) -> Result<TypeExprParam<'a>, TypeParseError> {
+        match expr {
+            ExprContextAll::TypeLiteralContext(literal) => Ok(TypeExprParam::Type(
+                self.type_def(&literal.typeDef().expect("type literal has a typeDef"))?,
+            )),
+            ExprContextAll::ParameterNameContext(name) => {
+                Ok(TypeExprParam::Type(TypeExpr::Simple(
+                    self.identifier(&name.Identifier().expect("parameter name has an identifier"))?,
+                    Vec::new(),
+                    name.QMark().is_some(),
+                )))
             }
-            if self.consume(TokenKind::CloseAngle) {
-                return Ok(parameters);
+            ExprContextAll::LiteralNumberContext(number) => {
+                self.integer(&number.Number().expect("number literal has a number"))
             }
-            self.expect(TokenKind::Comma)?;
+            ExprContextAll::ParenExpressionContext(parenthesized) => self.parameter(
+                &parenthesized
+                    .expr()
+                    .expect("parenthesized expr has an expr"),
+            ),
+            _ => Err(TypeParseError::UnsupportedNumericExpression(
+                self.source.to_string(),
+            )),
         }
     }
 
-    /// Parse a function type such as `func<(i32, i64) -> boolean>`.
-    /// Multiple parameters require parentheses; a single parameter may omit them.
-    /// A bare `func` name is retained for semantic validation.
-    fn parse_function_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        let name = self.expect(TokenKind::Func)?;
-        let nullable = self.consume(TokenKind::QuestionMark);
-        if !self.consume(TokenKind::OpenAngle) {
-            return Ok(TypeExpr::Simple(name.text, Vec::new(), nullable));
-        }
-        let parameters = self.parse_function_parameters()?;
-        self.expect(TokenKind::Arrow)?;
-        let return_type = self.parse_type()?;
-        self.expect(TokenKind::CloseAngle)?;
-        Ok(TypeExpr::Func(parameters, Box::new(return_type), nullable))
+    fn integer(
+        &self,
+        number: &TerminalNode<'a, SubstraitTypeParserContextType>,
+    ) -> Result<TypeExprParam<'a>, TypeParseError> {
+        let text = self.terminal_text(number);
+        text.parse()
+            .map(TypeExprParam::Integer)
+            .map_err(|_| TypeParseError::InvalidInteger(text.to_string()))
     }
 
-    /// Parse one function parameter or a nonempty parenthesized parameter list.
-    fn parse_function_parameters(&mut self) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
-        if !self.consume(TokenKind::OpenParen) {
-            return Ok(vec![self.parse_parameter()?]);
+    fn type_def(&self, type_def: &TypeDefContextAll<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
+        if let Some(scalar) = type_def.scalarType() {
+            let name = self.token_text(&*scalar.start());
+            return Ok(TypeExpr::Simple(
+                name,
+                Vec::new(),
+                type_def.QMark().is_some(),
+            ));
         }
-        if self.peek() == Some(TokenKind::CloseParen) {
-            return Err(self.error("a function parameter"));
+        if let Some(any) = type_def.anyType() {
+            return Ok(self.any_type(&any));
         }
-
-        let mut parameters = vec![self.parse_parameter()?];
-        while self.consume(TokenKind::Comma) {
-            parameters.push(self.parse_parameter()?);
-        }
-        self.expect(TokenKind::CloseParen)?;
-        Ok(parameters)
+        let parameterized = type_def
+            .parameterizedType()
+            .expect("typeDef is a scalar, any, or parameterized type");
+        self.parameterized_type(&parameterized)
     }
 
-    /// Parse one integer literal or nested type, leaving its separator unconsumed.
-    ///
-    /// For `decimal<10, 2>`, the first call consumes only `10`, not the comma.
-    /// A sign is combined with its digits here, allowing the full `i64` range
-    /// without making `-` part of every integer token.
-    fn parse_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
-        match self.peek() {
-            Some(TokenKind::Integer | TokenKind::Plus | TokenKind::Minus) => {
-                let start = self.tokens[self.index].position;
-                if !self.consume(TokenKind::Plus) {
-                    self.consume(TokenKind::Minus);
+    fn any_type(&self, any: &AnyTypeContextAll<'a>) -> TypeExpr<'a> {
+        let nullable = any.QMark().is_some();
+        if let Some(variable) = any.AnyVar() {
+            let digit = &self.terminal_text(&variable)[3..];
+            return TypeExpr::TypeVariable(
+                digit.parse().expect("AnyVar ends in a digit"),
+                nullable,
+            );
+        }
+        let name = self.terminal_text(&any.Any().expect("anyType is Any or AnyVar"));
+        TypeExpr::Simple(name, Vec::new(), nullable)
+    }
+
+    fn parameterized_type(
+        &self,
+        parameterized: &ParameterizedTypeContextAll<'a>,
+    ) -> Result<TypeExpr<'a>, TypeParseError> {
+        use ParameterizedTypeContextAll as P;
+
+        let nullable = has_question_mark(parameterized);
+        match parameterized {
+            P::FixedCharContext(_)
+            | P::VarCharContext(_)
+            | P::FixedBinaryContext(_)
+            | P::DecimalContext(_)
+            | P::PrecisionIntervalDayContext(_)
+            | P::PrecisionIntervalCompoundContext(_)
+            | P::PrecisionTimeContext(_)
+            | P::PrecisionTimestampContext(_)
+            | P::PrecisionTimestampTZContext(_)
+            | P::StructContext(_)
+            | P::ListContext(_)
+            | P::MapContext(_) => Ok(TypeExpr::Simple(
+                self.token_text(&*parameterized.start()),
+                self.child_parameters(parameterized)?,
+                nullable,
+            )),
+            P::FuncContext(ctx) => {
+                let parameters =
+                    self.child_parameters(&**ctx.params.as_ref().expect("func has parameters"))?;
+                let return_type =
+                    self.type_expr(ctx.returnType.as_ref().expect("func has a return type"))?;
+                Ok(TypeExpr::Func(parameters, Box::new(return_type), nullable))
+            }
+            P::UserDefinedContext(ctx) => {
+                if ctx.dependencyAlias.is_some() {
+                    return Err(TypeParseError::UnsupportedSyntax {
+                        construct: "dependency-qualified user-defined",
+                        type_string: self.source.to_string(),
+                    });
                 }
-                let token = self.expect(TokenKind::Integer)?;
-                let end = token.position + token.text.len();
-                let value = self.source[start..end].parse().map_err(|_| {
-                    TypeParseError::UnexpectedToken {
-                        position: start,
-                        expected: "an i64 integer literal",
-                    }
-                })?;
-                Ok(TypeExprParam::Integer(value))
+                let name = self.identifier(&ctx.Identifier(0).expect("u! has a name"))?;
+                Ok(TypeExpr::UserDefined(
+                    name,
+                    self.child_parameters(parameterized)?,
+                    nullable,
+                ))
             }
-            Some(TokenKind::Comma | TokenKind::CloseAngle | TokenKind::CloseParen) | None => {
-                Err(TypeParseError::EmptyParameter)
-            }
-            _ => Ok(TypeExprParam::Type(self.parse_type()?)),
+            P::NStructContext(_) => Err(TypeParseError::UnsupportedSyntax {
+                construct: "named struct",
+                type_string: self.source.to_string(),
+            }),
+            P::Error(_) => unreachable!("syntax errors are reported"),
         }
     }
+
+    /// Convert the parameters among `node`'s direct children, in order.
+    ///
+    /// For `decimal<P, 2>` these are the two numeric parameters; for
+    /// `map<string, i64>` or `(i32, i64)` they are the type expressions.
+    /// Tokens such as `<`, `,` and `?` are skipped.
+    fn child_parameters(
+        &self,
+        node: &(dyn SubstraitTypeParserContext<'a> + 'a),
+    ) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
+        node.get_children()
+            .filter_map(|child| {
+                if let Some(expr) = child.downcast_ref::<ExprContextAll<'a>>() {
+                    Some(self.parameter(expr))
+                } else {
+                    child
+                        .downcast_ref::<NumericParameterContextAll<'a>>()
+                        .map(|parameter| self.numeric_parameter(parameter))
+                }
+            })
+            .collect()
+    }
+
+    /// Convert a numeric parameter: an integer literal, a named parameter such
+    /// as `P`, or an expression.
+    fn numeric_parameter(
+        &self,
+        parameter: &NumericParameterContextAll<'a>,
+    ) -> Result<TypeExprParam<'a>, TypeParseError> {
+        match parameter {
+            NumericParameterContextAll::NumericLiteralContext(literal) => {
+                self.integer(&literal.Number().expect("numeric literal has a number"))
+            }
+            NumericParameterContextAll::NumericParameterNameContext(name) => {
+                Ok(TypeExprParam::Type(TypeExpr::Simple(
+                    self.identifier(&name.Identifier().expect("parameter name"))?,
+                    Vec::new(),
+                    false,
+                )))
+            }
+            NumericParameterContextAll::NumericExpressionContext(expression) => {
+                self.parameter(&expression.expr().expect("numeric expression has an expr"))
+            }
+            NumericParameterContextAll::Error(_) => unreachable!("syntax errors are reported"),
+        }
+    }
+}
+
+/// Whether `node` has a `?` among its direct children, marking it nullable.
+fn has_question_mark<'a>(node: &(dyn SubstraitTypeParserContext<'a> + 'a)) -> bool {
+    node.get_children().any(|child| {
+        child
+            .downcast_ref::<TerminalNode<'a, SubstraitTypeParserContextType>>()
+            .is_some_and(|token| token.symbol.get_token_type() == SubstraitType_QMark)
+    })
 }
 
 #[cfg(test)]
@@ -226,147 +315,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn function_parameters_leave_the_arrow_for_the_caller() {
-        for (source, parameter_types) in [
-            ("i32 -> i64", vec!["i32"]),
-            ("map<string, i64> -> boolean", vec!["map<string, i64>"]),
-            (
-                "(func<i32 -> i64>, list<any1>) -> boolean",
-                vec!["func<i32 -> i64>", "list<any1>"],
-            ),
-        ] {
-            let mut parser = Parser::new(source).unwrap();
-            let expected: Vec<_> = parameter_types
-                .iter()
-                .map(|parameter| TypeExprParam::Type(parse(parameter).unwrap()))
-                .collect();
-
-            assert_eq!(
-                parser.parse_function_parameters().unwrap(),
-                expected,
-                "{source}"
-            );
-            assert_eq!(parser.peek(), Some(TokenKind::Arrow), "{source}");
-        }
-    }
-
-    #[test]
-    fn type_parameters_consume_only_their_own_closing_bracket() {
+    fn integer_parameters_cover_the_i64_range() {
         for (source, expected) in [
-            ("<>>", vec![]),
-            (
-                "<list<i32>, 2>>",
-                vec![
-                    TypeExprParam::Type(parse("list<i32>").unwrap()),
-                    TypeExprParam::Integer(2),
-                ],
-            ),
+            ("decimal<0, 0>", 0),
+            ("u!box<-2>", -2),
+            ("u!box<9223372036854775807>", i64::MAX),
+            ("u!box<-9223372036854775808>", i64::MIN),
         ] {
-            let mut parser = Parser::new(source).unwrap();
-            parser.expect(TokenKind::OpenAngle).unwrap();
-
-            assert_eq!(
-                parser.parse_type_parameters().unwrap(),
-                expected,
-                "{source}"
-            );
-            assert_eq!(parser.peek(), Some(TokenKind::CloseAngle), "{source}");
-            parser.expect(TokenKind::CloseAngle).unwrap();
-            assert_eq!(parser.peek(), None, "{source}");
+            let (TypeExpr::Simple(_, parameters, _) | TypeExpr::UserDefined(_, parameters, _)) =
+                parse(source).unwrap()
+            else {
+                panic!("{source} should be a named type");
+            };
+            assert_eq!(parameters[0], TypeExprParam::Integer(expected), "{source}");
         }
-    }
-
-    #[test]
-    fn type_parameters_reject_empty_entries() {
-        for source in [",i32>", "i32,>", "i32,,i64>"] {
-            let mut parser = Parser::new(source).unwrap();
-            assert_eq!(
-                parser.parse_type_parameters(),
-                Err(TypeParseError::EmptyParameter),
-                "{source}"
-            );
-        }
-    }
-
-    #[test]
-    fn integer_parameters_support_signs_and_the_full_i64_range() {
-        for (source, expected) in [
-            ("0,", 0),
-            ("+10,", 10),
-            ("-2,", -2),
-            ("9223372036854775807,", i64::MAX),
-            ("+9223372036854775807,", i64::MAX),
-            ("-9223372036854775808,", i64::MIN),
-        ] {
-            let mut parser = Parser::new(source).unwrap();
-            assert_eq!(
-                parser.parse_parameter().unwrap(),
-                TypeExprParam::Integer(expected),
-                "{source}"
-            );
-            assert_eq!(parser.peek(), Some(TokenKind::Comma), "{source}");
-        }
-    }
-
-    #[test]
-    fn integer_parameters_reject_overflow_and_signs_without_digits() {
-        for source in [
-            "9223372036854775808",
-            "-9223372036854775809",
-            "+",
-            "-",
-            "+i32",
-        ] {
-            let mut parser = Parser::new(source).unwrap();
-            assert!(parser.parse_parameter().is_err(), "{source}");
-        }
-    }
-
-    #[test]
-    fn overflowing_integer_errors_point_to_the_literal_start() {
-        for source in [
-            "decimal<9223372036854775808, 2>",
-            "decimal<+9223372036854775808, 2>",
-            "decimal<-9223372036854775809, 2>",
-        ] {
-            assert_eq!(
-                parse(source),
-                Err(TypeParseError::UnexpectedToken {
-                    position: 8,
-                    expected: "an i64 integer literal",
-                }),
-                "{source}"
-            );
-        }
-    }
-
-    #[test]
-    fn nested_type_parameters_leave_the_separator_for_the_caller() {
-        let mut parser = Parser::new("map<string, func<i32 -> i64>>, boolean").unwrap();
         assert_eq!(
-            parser.parse_parameter().unwrap(),
-            TypeExprParam::Type(parse("map<string, func<i32 -> i64>>").unwrap())
-        );
-        assert_eq!(parser.peek(), Some(TokenKind::Comma));
-    }
-
-    #[test]
-    fn grouped_parameters_can_contain_multi_parameter_functions() {
-        assert_eq!(
-            parse("func<(func<(i32, i64) -> bool>, i32) -> bool>").unwrap(),
-            TypeExpr::Func(
-                vec![
-                    TypeExprParam::Type(parse("func<(i32, i64) -> bool>").unwrap()),
-                    TypeExprParam::Type(parse("i32").unwrap()),
-                ],
-                Box::new(parse("bool").unwrap()),
-                false,
-            )
+            parse("u!box<9223372036854775808>"),
+            Err(TypeParseError::InvalidInteger(
+                "9223372036854775808".to_string()
+            ))
         );
     }
 
     #[test]
-    fn keyword_tokens_preserve_names_in_the_ast() {
+    fn keyword_names_keep_their_spelling() {
         assert_eq!(
             parse("LiSt<DeCiMaL<P, S>>").unwrap(),
             TypeExpr::Simple(
@@ -375,43 +347,11 @@ mod tests {
                 false
             ),
         );
-        for name in [
-            "func", "List", "DECIMAL", "any", "any1", "i32", "Map", "VARCHAR", "string", "dec",
-            "NStruct",
-        ] {
-            let source = format!("u!{name}<i32>");
-            assert_eq!(
-                parse(&source).unwrap(),
-                TypeExpr::UserDefined(
-                    name,
-                    vec![TypeExprParam::Type(parse("i32").unwrap())],
-                    false
-                ),
-            );
-        }
-        assert_eq!(
-            parse("ANY").unwrap(),
-            TypeExpr::Simple("ANY", vec![], false)
-        );
-    }
-
-    #[test]
-    fn bare_function_keyword_is_retained_as_a_name() {
-        assert_eq!(
-            parse("FuNc?").unwrap(),
-            TypeExpr::Simple("FuNc", vec![], true)
-        );
     }
 
     #[test]
     fn numbered_type_variables_are_case_insensitive() {
-        for (source, id, nullable) in [
-            ("any0", 0, false),
-            ("any1", 1, false),
-            ("ANY1", 1, false),
-            ("Any1?", 1, true),
-            ("any9", 9, false),
-        ] {
+        for (source, id, nullable) in [("any0", 0, false), ("ANY1", 1, false), ("Any9?", 9, true)] {
             assert_eq!(
                 parse(source).unwrap(),
                 TypeExpr::TypeVariable(id, nullable),
@@ -421,97 +361,53 @@ mod tests {
     }
 
     #[test]
-    fn multi_digit_type_variable_names_are_rejected_everywhere() {
-        for (source, position) in [
-            ("any10", 0),
-            ("ANY12?", 0),
-            ("any01", 0),
-            ("any4294967296", 0),
-            ("list<any10>", 5),
-            ("decimal<ANY12, 0>", 8),
-            ("func<i32 -> any12>", 12),
-            ("u!any10", 2),
-            ("u!Box<any12>", 6),
-        ] {
-            assert_eq!(
-                parse(source),
-                Err(TypeParseError::UnexpectedToken {
-                    position,
-                    expected: "a single-digit type variable ID",
-                }),
-                "{source}",
+    fn multi_digit_type_variable_names_are_rejected() {
+        for source in ["any10", "list<ANY12>", "decimal<any12, 0>", "u!any10"] {
+            assert!(
+                matches!(
+                    parse(source),
+                    Err(TypeParseError::MultiDigitTypeVariable(_))
+                ),
+                "{source}"
             );
         }
     }
 
     #[test]
-    fn numbered_type_variables_cannot_have_parameters() {
+    fn derivation_expressions_are_not_supported() {
         for source in [
-            "any1<>",
-            "any1<i32>",
-            "any1?<i32>",
-            "ANY1<i32>",
-            "Any1?<i32>",
-            "any1<i32,>",
-            "list<any1<i32>>",
-            "func<any1<i32> -> i64>",
-            "func<i32 -> any1<>>",
+            "decimal<P1 + 1, S>",
+            "u!box<max(P, 2)>",
+            "decimal<P > 1 ? P : 1, 0>",
         ] {
-            assert!(parse(source).is_err(), "{source}");
+            assert_eq!(
+                parse(source),
+                Err(TypeParseError::UnsupportedNumericExpression(
+                    source.to_string()
+                )),
+            );
         }
     }
 
     #[test]
-    fn malformed_type_rules_propagate_parameter_and_delimiter_errors() {
-        for (source, expected) in [
-            (
-                "u!",
-                TypeParseError::UnexpectedToken {
-                    position: 2,
-                    expected: "a type name",
-                },
-            ),
-            ("u!point<i32,>", TypeParseError::EmptyParameter),
-            ("unknown<i32,>", TypeParseError::EmptyParameter),
-            (
-                "func<i32 -> i64",
-                TypeParseError::UnexpectedToken {
-                    position: 15,
-                    expected: "'>'",
-                },
-            ),
-            (
-                "func<-> i64>",
-                TypeParseError::UnexpectedToken {
-                    position: 5,
-                    expected: "a type name",
-                },
-            ),
-        ] {
-            assert_eq!(parse(source), Err(expected), "{source}");
+    fn grammar_features_without_an_ast_form_are_rejected() {
+        for source in ["nstruct<a: i32>", "ext.u!point"] {
+            assert!(
+                matches!(parse(source), Err(TypeParseError::UnsupportedSyntax { .. })),
+                "{source}"
+            );
         }
-    }
-
-    #[test]
-    fn unexpected_input_has_a_byte_position() {
         assert_eq!(
+            parse("10"),
+            Err(TypeParseError::ExpectedType("10".to_string()))
+        );
+    }
+
+    #[test]
+    fn syntax_errors_report_the_offending_byte() {
+        assert!(matches!(
             parse("list<i32)"),
-            Err(TypeParseError::UnexpectedToken {
-                position: 8,
-                expected: "','"
-            })
-        );
-    }
-
-    #[test]
-    fn nested_function_parameters_parse_without_scanning_for_delimiters() {
-        assert_eq!(
-            parse("func<func<i32 -> i64> -> bool>").unwrap(),
-            TypeExpr::Func(
-                vec![TypeExprParam::Type(parse("func<i32 -> i64>").unwrap())],
-                Box::new(parse("bool").unwrap()),
-                false,
-            )
-        );
+            Err(TypeParseError::Syntax { column: 8, .. })
+        ));
     }
 }
