@@ -2,7 +2,7 @@
 
 //! Parse type syntax with the ANTLR parser generated from the Substrait type
 //! grammar ([`substrait_antlr::substrait_type`]), then convert its parse tree
-//! into a [`TypeExpr`].
+//! into a [`TypeExpr`] with a generated visitor.
 //!
 //! The grammar also describes type derivation expressions (arithmetic,
 //! conditionals, multiline assignments). Those parse successfully but are
@@ -24,8 +24,9 @@ use antlr4rust::parser_rule_context::ParserRuleContext;
 use antlr4rust::recognizer::Recognizer;
 use antlr4rust::token::Token;
 use antlr4rust::token_factory::TokenFactory;
-use antlr4rust::tree::TerminalNode;
+use antlr4rust::tree::{ParseTreeVisitorCompat, TerminalNode, Tree};
 use substrait_antlr::substrait_type::substraittypeparser::*;
+use substrait_antlr::substrait_type::substraittypevisitor::SubstraitTypeVisitorCompat;
 use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
@@ -58,8 +59,11 @@ pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
         message: error.to_string(),
     })?;
 
-    let converter = TreeConverter { source };
-    converter.type_expr(&tree.expr().expect("startRule always has an expr"))
+    let mut builder = TypeExprBuilder {
+        source,
+        temp_result: None,
+    };
+    builder.type_value(&*tree.expr().expect("startRule always has an expr"))
 }
 
 /// Records the first error reported by the lexer or parser.
@@ -89,12 +93,20 @@ impl<'input, T: Recognizer<'input>> ErrorListener<'input, T> for FirstSyntaxErro
     }
 }
 
-/// Converts the ANTLR parse tree into a [`TypeExpr`] borrowing from `source`.
-struct TreeConverter<'a> {
+/// What visiting one parse tree node produces.
+///
+/// `None` is the visitor's default and only comes back for tokens; every rule
+/// node produces `Some`.
+type Visited<'a> = Option<Result<TypeExprParam<'a>, TypeParseError>>;
+
+/// Builds a [`TypeExpr`] borrowing from `source` by visiting the parse tree.
+struct TypeExprBuilder<'a> {
     source: &'a str,
+    /// Scratch space the `antlr4rust` visitor adapter requires.
+    temp_result: Visited<'a>,
 }
 
-impl<'a> TreeConverter<'a> {
+impl<'a> TypeExprBuilder<'a> {
     /// The source text of a single token.
     fn token_text(&self, token: &impl Token) -> &'a str {
         &self.source[token.get_start() as usize..=token.get_stop() as usize]
@@ -123,217 +135,236 @@ impl<'a> TreeConverter<'a> {
         Ok(name)
     }
 
-    /// Convert an expression that must be a type, rejecting integer literals.
-    fn type_expr(&self, expr: &ExprContextAll<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
-        match self.parameter(expr)? {
+    fn integer(&self, number: &TerminalNode<'a, SubstraitTypeParserContextType>) -> Visited<'a> {
+        let text = self.terminal_text(number);
+        Some(
+            text.parse()
+                .map(TypeExprParam::Integer)
+                .map_err(|_| TypeParseError::InvalidInteger(text.to_string())),
+        )
+    }
+
+    /// Visit a rule node, which always produces a value.
+    fn value(
+        &mut self,
+        node: &(dyn SubstraitTypeParserContext<'a> + 'a),
+    ) -> Result<TypeExprParam<'a>, TypeParseError> {
+        self.visit(node).expect("rule nodes always produce a value")
+    }
+
+    /// Visit a rule node that must be a type, rejecting integer literals.
+    fn type_value(
+        &mut self,
+        node: &(dyn SubstraitTypeParserContext<'a> + 'a),
+    ) -> Result<TypeExpr<'a>, TypeParseError> {
+        match self.value(node)? {
             TypeExprParam::Type(type_expr) => Ok(type_expr),
             TypeExprParam::Integer(value) => Err(TypeParseError::ExpectedType(value.to_string())),
         }
     }
 
-    /// Convert an expression in parameter position: a type or an integer literal.
-    fn parameter(&self, expr: &ExprContextAll<'a>) -> Result<TypeExprParam<'a>, TypeParseError> {
-        match expr {
-            ExprContextAll::TypeLiteralContext(literal) => Ok(TypeExprParam::Type(
-                self.type_def(&literal.typeDef().expect("type literal has a typeDef"))?,
-            )),
-            ExprContextAll::ParameterNameContext(name) => {
-                Ok(TypeExprParam::Type(TypeExpr::Simple(
-                    self.identifier(&name.Identifier().expect("parameter name has an identifier"))?,
-                    Vec::new(),
-                    name.QMark().is_some(),
-                )))
-            }
-            ExprContextAll::LiteralNumberContext(number) => {
-                self.integer(&number.Number().expect("number literal has a number"))
-            }
-            ExprContextAll::ParenExpressionContext(parenthesized) => self.parameter(
-                &parenthesized
-                    .expr()
-                    .expect("parenthesized expr has an expr"),
-            ),
-            _ => Err(TypeParseError::UnsupportedNumericExpression(
-                self.source.to_string(),
-            )),
-        }
-    }
-
-    fn integer(
-        &self,
-        number: &TerminalNode<'a, SubstraitTypeParserContextType>,
-    ) -> Result<TypeExprParam<'a>, TypeParseError> {
-        let text = self.terminal_text(number);
-        text.parse()
-            .map(TypeExprParam::Integer)
-            .map_err(|_| TypeParseError::InvalidInteger(text.to_string()))
-    }
-
-    fn type_def(&self, type_def: &TypeDefContextAll<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
-        if let Some(scalar) = type_def.scalarType() {
-            let name = self.token_text(&*scalar.start());
-            return Ok(TypeExpr::Simple(
-                name,
-                Vec::new(),
-                type_def.QMark().is_some(),
-            ));
-        }
-        if let Some(any) = type_def.anyType() {
-            return Ok(self.any_type(&any));
-        }
-        let parameterized = type_def
-            .parameterizedType()
-            .expect("typeDef is a scalar, any, or parameterized type");
-        self.parameterized_type(&parameterized)
-    }
-
-    fn any_type(&self, any: &AnyTypeContextAll<'a>) -> TypeExpr<'a> {
-        let nullable = any.QMark().is_some();
-        if let Some(variable) = any.AnyVar() {
-            let digit = &self.terminal_text(&variable)[3..];
-            return TypeExpr::TypeVariable(
-                digit.parse().expect("AnyVar ends in a digit"),
-                nullable,
-            );
-        }
-        let name = self.terminal_text(&any.Any().expect("anyType is Any or AnyVar"));
-        TypeExpr::Simple(name, Vec::new(), nullable)
-    }
-
-    fn parameterized_type(
-        &self,
-        parameterized: &ParameterizedTypeContextAll<'a>,
-    ) -> Result<TypeExpr<'a>, TypeParseError> {
-        use ParameterizedTypeContextAll as P;
-
-        let name = self.token_text(&*parameterized.start());
-        let simple = |parameters, nullable| Ok(TypeExpr::Simple(name, parameters, nullable));
-
-        match parameterized {
-            P::FixedCharContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.length.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::VarCharContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.length.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::FixedBinaryContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.length.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::DecimalContext(ctx) => simple(
-                vec![
-                    self.numeric_parameter(ctx.precision.as_ref())?,
-                    self.numeric_parameter(ctx.scale.as_ref())?,
-                ],
-                ctx.QMark().is_some(),
-            ),
-            P::PrecisionIntervalDayContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.precision.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::PrecisionIntervalCompoundContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.precision.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::PrecisionTimeContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.precision.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::PrecisionTimestampContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.precision.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::PrecisionTimestampTZContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.precision.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::StructContext(ctx) => {
-                simple(self.parameters(&ctx.expr_all())?, ctx.QMark().is_some())
-            }
-            P::ListContext(ctx) => simple(
-                vec![self.parameter(&ctx.expr().expect("list has an element type"))?],
-                ctx.QMark().is_some(),
-            ),
-            P::MapContext(ctx) => simple(
-                vec![
-                    self.parameter(ctx.key.as_ref().expect("map has a key type"))?,
-                    self.parameter(ctx.value.as_ref().expect("map has a value type"))?,
-                ],
-                ctx.QMark().is_some(),
-            ),
-            P::FuncContext(ctx) => {
-                let parameters = match ctx.params.as_deref().expect("func has parameters") {
-                    FuncParamsContextAll::SingleFuncParamContext(single) => {
-                        vec![self.parameter(&single.expr().expect("single func param"))?]
-                    }
-                    FuncParamsContextAll::FuncParamsWithParensContext(grouped) => {
-                        self.parameters(&grouped.expr_all())?
-                    }
-                    FuncParamsContextAll::Error(_) => unreachable!("syntax errors are reported"),
-                };
-                let return_type =
-                    self.type_expr(ctx.returnType.as_ref().expect("func has a return type"))?;
-                Ok(TypeExpr::Func(
-                    parameters,
-                    Box::new(return_type),
-                    ctx.QMark().is_some(),
-                ))
-            }
-            P::UserDefinedContext(ctx) => {
-                if ctx.dependencyAlias.is_some() {
-                    return Err(TypeParseError::UnsupportedSyntax {
-                        construct: "dependency-qualified user-defined",
-                        type_string: self.source.to_string(),
-                    });
-                }
-                let name = self.identifier(&ctx.Identifier(0).expect("u! has a name"))?;
-                Ok(TypeExpr::UserDefined(
-                    name,
-                    self.parameters(&ctx.expr_all())?,
-                    ctx.QMark().is_some(),
-                ))
-            }
-            P::NStructContext(_) => Err(TypeParseError::UnsupportedSyntax {
-                construct: "named struct",
-                type_string: self.source.to_string(),
-            }),
-            P::Error(_) => unreachable!("syntax errors are reported"),
-        }
-    }
-
-    fn parameters(
-        &self,
-        exprs: &[Rc<ExprContextAll<'a>>],
+    /// Visit every child of `node`, keeping the values of its rule children.
+    /// Tokens such as `<`, `,` and `?` produce nothing and are skipped.
+    fn child_values(
+        &mut self,
+        node: &(dyn SubstraitTypeParserContext<'a> + 'a),
     ) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
-        exprs.iter().map(|expr| self.parameter(expr)).collect()
+        node.get_children()
+            .filter_map(|child| self.visit(&*child))
+            .collect()
     }
 
-    /// Convert a numeric parameter: an integer literal, a named parameter such
-    /// as `P`, or an expression.
-    fn numeric_parameter(
-        &self,
-        parameter: Option<&Rc<NumericParameterContextAll<'a>>>,
+    /// A builtin introduced by a keyword, such as `list?<i32>` or `decimal<P, S>`,
+    /// whose parameters are its rule children in order.
+    fn builtin(
+        &mut self,
+        node: &(dyn SubstraitTypeParserContext<'a> + 'a),
+        nullable: bool,
+    ) -> Visited<'a> {
+        let name = self.token_text(&*node.start());
+        Some(
+            self.child_values(node).map(|parameters| {
+                TypeExprParam::Type(TypeExpr::Simple(name, parameters, nullable))
+            }),
+        )
+    }
+
+    fn func(&mut self, ctx: &FuncContext<'a>) -> Result<TypeExprParam<'a>, TypeParseError> {
+        let parameters = self.child_values(&**ctx.params.as_ref().expect("func has parameters"))?;
+        let return_type =
+            self.type_value(&**ctx.returnType.as_ref().expect("func has a return type"))?;
+        Ok(TypeExprParam::Type(TypeExpr::Func(
+            parameters,
+            Box::new(return_type),
+            ctx.QMark().is_some(),
+        )))
+    }
+
+    fn user_defined(
+        &mut self,
+        ctx: &UserDefinedContext<'a>,
     ) -> Result<TypeExprParam<'a>, TypeParseError> {
-        match parameter
-            .expect("parameterized type has its numeric parameters")
-            .as_ref()
-        {
-            NumericParameterContextAll::NumericLiteralContext(literal) => {
-                self.integer(&literal.Number().expect("numeric literal has a number"))
-            }
-            NumericParameterContextAll::NumericParameterNameContext(name) => {
-                Ok(TypeExprParam::Type(TypeExpr::Simple(
-                    self.identifier(&name.Identifier().expect("parameter name"))?,
+        let name = self.identifier(&ctx.Identifier(0).expect("u! has a name"))?;
+        let parameters = self.child_values(ctx)?;
+        Ok(TypeExprParam::Type(TypeExpr::UserDefined(
+            name,
+            parameters,
+            ctx.QMark().is_some(),
+        )))
+    }
+
+    fn unsupported(&self, construct: &'static str) -> Visited<'a> {
+        Some(Err(TypeParseError::UnsupportedSyntax {
+            construct,
+            type_string: self.source.to_string(),
+        }))
+    }
+}
+
+impl<'a> ParseTreeVisitorCompat<'a> for TypeExprBuilder<'a> {
+    type Node = SubstraitTypeParserContextType;
+    type Return = Visited<'a>;
+
+    fn temp_result(&mut self) -> &mut Self::Return {
+        &mut self.temp_result
+    }
+
+    /// Every rule without a `visit_*` override below is part of a derivation
+    /// expression (`P + 1`, `max(P, 2)`, ternaries, ...), which `TypeExpr`
+    /// cannot represent yet.
+    fn visit_children(&mut self, _node: &(dyn SubstraitTypeParserContext<'a> + 'a)) -> Visited<'a> {
+        Some(Err(TypeParseError::UnsupportedNumericExpression(
+            self.source.to_string(),
+        )))
+    }
+}
+
+impl<'a> SubstraitTypeVisitorCompat<'a> for TypeExprBuilder<'a> {
+    fn visit_TypeLiteral(&mut self, ctx: &TypeLiteralContext<'a>) -> Visited<'a> {
+        self.visit(&*ctx.typeDef().expect("type literal has a typeDef"))
+    }
+
+    fn visit_ParenExpression(&mut self, ctx: &ParenExpressionContext<'a>) -> Visited<'a> {
+        self.visit(&*ctx.expr().expect("parenthesized expr has an expr"))
+    }
+
+    fn visit_LiteralNumber(&mut self, ctx: &LiteralNumberContext<'a>) -> Visited<'a> {
+        self.integer(&ctx.Number().expect("number literal has a number"))
+    }
+
+    fn visit_ParameterName(&mut self, ctx: &ParameterNameContext<'a>) -> Visited<'a> {
+        let name = self.identifier(&ctx.Identifier().expect("parameter name has an identifier"));
+        Some(name.map(|name| {
+            TypeExprParam::Type(TypeExpr::Simple(name, Vec::new(), ctx.QMark().is_some()))
+        }))
+    }
+
+    fn visit_typeDef(&mut self, ctx: &TypeDefContext<'a>) -> Visited<'a> {
+        match ctx.scalarType() {
+            Some(scalar) => {
+                let name = self.token_text(&*scalar.start());
+                Some(Ok(TypeExprParam::Type(TypeExpr::Simple(
+                    name,
                     Vec::new(),
-                    false,
-                )))
+                    ctx.QMark().is_some(),
+                ))))
             }
-            NumericParameterContextAll::NumericExpressionContext(expression) => {
-                self.parameter(&expression.expr().expect("numeric expression has an expr"))
-            }
-            NumericParameterContextAll::Error(_) => unreachable!("syntax errors are reported"),
+            None => self.visit(&*ctx.get_child(0).expect("typeDef has a child")),
         }
+    }
+
+    fn visit_anyType(&mut self, ctx: &AnyTypeContext<'a>) -> Visited<'a> {
+        let nullable = ctx.QMark().is_some();
+        let type_expr = match ctx.AnyVar() {
+            Some(variable) => {
+                let digit = &self.terminal_text(&variable)[3..];
+                TypeExpr::TypeVariable(digit.parse().expect("AnyVar ends in a digit"), nullable)
+            }
+            None => {
+                let name = self.terminal_text(&ctx.Any().expect("anyType is Any or AnyVar"));
+                TypeExpr::Simple(name, Vec::new(), nullable)
+            }
+        };
+        Some(Ok(TypeExprParam::Type(type_expr)))
+    }
+
+    fn visit_numericLiteral(&mut self, ctx: &NumericLiteralContext<'a>) -> Visited<'a> {
+        self.integer(&ctx.Number().expect("numeric literal has a number"))
+    }
+
+    fn visit_numericParameterName(&mut self, ctx: &NumericParameterNameContext<'a>) -> Visited<'a> {
+        let name = self.identifier(&ctx.Identifier().expect("parameter name"));
+        Some(name.map(|name| TypeExprParam::Type(TypeExpr::Simple(name, Vec::new(), false))))
+    }
+
+    fn visit_numericExpression(&mut self, ctx: &NumericExpressionContext<'a>) -> Visited<'a> {
+        self.visit(&*ctx.expr().expect("numeric expression has an expr"))
+    }
+
+    fn visit_fixedChar(&mut self, ctx: &FixedCharContext<'a>) -> Visited<'a> {
+        self.builtin(ctx, ctx.QMark().is_some())
+    }
+
+    fn visit_varChar(&mut self, ctx: &VarCharContext<'a>) -> Visited<'a> {
+        self.builtin(ctx, ctx.QMark().is_some())
+    }
+
+    fn visit_fixedBinary(&mut self, ctx: &FixedBinaryContext<'a>) -> Visited<'a> {
+        self.builtin(ctx, ctx.QMark().is_some())
+    }
+
+    fn visit_decimal(&mut self, ctx: &DecimalContext<'a>) -> Visited<'a> {
+        self.builtin(ctx, ctx.QMark().is_some())
+    }
+
+    fn visit_precisionIntervalDay(&mut self, ctx: &PrecisionIntervalDayContext<'a>) -> Visited<'a> {
+        self.builtin(ctx, ctx.QMark().is_some())
+    }
+
+    fn visit_precisionIntervalCompound(
+        &mut self,
+        ctx: &PrecisionIntervalCompoundContext<'a>,
+    ) -> Visited<'a> {
+        self.builtin(ctx, ctx.QMark().is_some())
+    }
+
+    fn visit_precisionTime(&mut self, ctx: &PrecisionTimeContext<'a>) -> Visited<'a> {
+        self.builtin(ctx, ctx.QMark().is_some())
+    }
+
+    fn visit_precisionTimestamp(&mut self, ctx: &PrecisionTimestampContext<'a>) -> Visited<'a> {
+        self.builtin(ctx, ctx.QMark().is_some())
+    }
+
+    fn visit_precisionTimestampTZ(&mut self, ctx: &PrecisionTimestampTZContext<'a>) -> Visited<'a> {
+        self.builtin(ctx, ctx.QMark().is_some())
+    }
+
+    fn visit_struct(&mut self, ctx: &StructContext<'a>) -> Visited<'a> {
+        self.builtin(ctx, ctx.QMark().is_some())
+    }
+
+    fn visit_list(&mut self, ctx: &ListContext<'a>) -> Visited<'a> {
+        self.builtin(ctx, ctx.QMark().is_some())
+    }
+
+    fn visit_map(&mut self, ctx: &MapContext<'a>) -> Visited<'a> {
+        self.builtin(ctx, ctx.QMark().is_some())
+    }
+
+    fn visit_func(&mut self, ctx: &FuncContext<'a>) -> Visited<'a> {
+        Some(self.func(ctx))
+    }
+
+    fn visit_userDefined(&mut self, ctx: &UserDefinedContext<'a>) -> Visited<'a> {
+        if ctx.dependencyAlias.is_some() {
+            return self.unsupported("dependency-qualified user-defined");
+        }
+        Some(self.user_defined(ctx))
+    }
+
+    fn visit_nStruct(&mut self, _ctx: &NStructContext<'a>) -> Visited<'a> {
+        self.unsupported("named struct")
     }
 }
 

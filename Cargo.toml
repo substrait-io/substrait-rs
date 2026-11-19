@@ -64,3 +64,9 @@ toml = "1.1.3"
 
 [package.metadata.docs.rs]
 all-features = true
+
+# PROTOTYPE ONLY. Swaps in `substrait-antlr` regenerated with ANTLR's
+# `-visitor` flag (see scripts/vendor-substrait-antlr-visitor.sh). The
+# published crate would need that flag before this could be released.
+[patch.crates-io]
+substrait-antlr = { path = "vendor/substrait-antlr" }
