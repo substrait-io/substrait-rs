@@ -533,11 +533,7 @@ pub enum ExtensionTypeError {
         type_string: String,
     },
     /// Unknown type name (not a builtin, missing u! prefix for extension types)
-    #[error(
-        "Unknown type name: '{}'. Extension types must use the u! prefix (e.g., u!{})",
-        name,
-        name
-    )]
+    #[error("Unknown type name: '{name}'. Extension types must use the u! prefix (e.g., u!{name})")]
     UnknownTypeName {
         /// The unknown type name
         name: String,
