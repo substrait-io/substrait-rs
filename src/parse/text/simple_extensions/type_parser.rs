@@ -15,7 +15,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use antlr4rust::InputStream;
 use antlr4rust::common_token_stream::CommonTokenStream;
 use antlr4rust::error_listener::ErrorListener;
 use antlr4rust::errors::ANTLRError;
@@ -25,6 +24,7 @@ use antlr4rust::recognizer::Recognizer;
 use antlr4rust::token::Token;
 use antlr4rust::token_factory::TokenFactory;
 use antlr4rust::tree::TerminalNode;
+use antlr4rust::{InputStream, TidExt};
 use substrait_antlr::substrait_type::substraittypeparser::*;
 use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
@@ -205,80 +205,30 @@ impl<'a> TreeConverter<'a> {
     ) -> Result<TypeExpr<'a>, TypeParseError> {
         use ParameterizedTypeContextAll as P;
 
-        let name = self.token_text(&*parameterized.start());
-        let simple = |parameters, nullable| Ok(TypeExpr::Simple(name, parameters, nullable));
-
+        let nullable = has_question_mark(parameterized);
         match parameterized {
-            P::FixedCharContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.length.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::VarCharContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.length.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::FixedBinaryContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.length.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::DecimalContext(ctx) => simple(
-                vec![
-                    self.numeric_parameter(ctx.precision.as_ref())?,
-                    self.numeric_parameter(ctx.scale.as_ref())?,
-                ],
-                ctx.QMark().is_some(),
-            ),
-            P::PrecisionIntervalDayContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.precision.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::PrecisionIntervalCompoundContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.precision.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::PrecisionTimeContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.precision.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::PrecisionTimestampContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.precision.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::PrecisionTimestampTZContext(ctx) => simple(
-                vec![self.numeric_parameter(ctx.precision.as_ref())?],
-                ctx.QMark().is_some(),
-            ),
-            P::StructContext(ctx) => {
-                simple(self.parameters(&ctx.expr_all())?, ctx.QMark().is_some())
-            }
-            P::ListContext(ctx) => simple(
-                vec![self.parameter(&ctx.expr().expect("list has an element type"))?],
-                ctx.QMark().is_some(),
-            ),
-            P::MapContext(ctx) => simple(
-                vec![
-                    self.parameter(ctx.key.as_ref().expect("map has a key type"))?,
-                    self.parameter(ctx.value.as_ref().expect("map has a value type"))?,
-                ],
-                ctx.QMark().is_some(),
-            ),
+            P::FixedCharContext(_)
+            | P::VarCharContext(_)
+            | P::FixedBinaryContext(_)
+            | P::DecimalContext(_)
+            | P::PrecisionIntervalDayContext(_)
+            | P::PrecisionIntervalCompoundContext(_)
+            | P::PrecisionTimeContext(_)
+            | P::PrecisionTimestampContext(_)
+            | P::PrecisionTimestampTZContext(_)
+            | P::StructContext(_)
+            | P::ListContext(_)
+            | P::MapContext(_) => Ok(TypeExpr::Simple(
+                self.token_text(&*parameterized.start()),
+                self.child_parameters(parameterized)?,
+                nullable,
+            )),
             P::FuncContext(ctx) => {
-                let parameters = match ctx.params.as_deref().expect("func has parameters") {
-                    FuncParamsContextAll::SingleFuncParamContext(single) => {
-                        vec![self.parameter(&single.expr().expect("single func param"))?]
-                    }
-                    FuncParamsContextAll::FuncParamsWithParensContext(grouped) => {
-                        self.parameters(&grouped.expr_all())?
-                    }
-                    FuncParamsContextAll::Error(_) => unreachable!("syntax errors are reported"),
-                };
+                let parameters =
+                    self.child_parameters(&**ctx.params.as_ref().expect("func has parameters"))?;
                 let return_type =
                     self.type_expr(ctx.returnType.as_ref().expect("func has a return type"))?;
-                Ok(TypeExpr::Func(
-                    parameters,
-                    Box::new(return_type),
-                    ctx.QMark().is_some(),
-                ))
+                Ok(TypeExpr::Func(parameters, Box::new(return_type), nullable))
             }
             P::UserDefinedContext(ctx) => {
                 if ctx.dependencyAlias.is_some() {
@@ -290,8 +240,8 @@ impl<'a> TreeConverter<'a> {
                 let name = self.identifier(&ctx.Identifier(0).expect("u! has a name"))?;
                 Ok(TypeExpr::UserDefined(
                     name,
-                    self.parameters(&ctx.expr_all())?,
-                    ctx.QMark().is_some(),
+                    self.child_parameters(parameterized)?,
+                    nullable,
                 ))
             }
             P::NStructContext(_) => Err(TypeParseError::UnsupportedSyntax {
@@ -302,23 +252,35 @@ impl<'a> TreeConverter<'a> {
         }
     }
 
-    fn parameters(
+    /// Convert the parameters among `node`'s direct children, in order.
+    ///
+    /// For `decimal<P, 2>` these are the two numeric parameters; for
+    /// `map<string, i64>` or `(i32, i64)` they are the type expressions.
+    /// Tokens such as `<`, `,` and `?` are skipped.
+    fn child_parameters(
         &self,
-        exprs: &[Rc<ExprContextAll<'a>>],
+        node: &(dyn SubstraitTypeParserContext<'a> + 'a),
     ) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
-        exprs.iter().map(|expr| self.parameter(expr)).collect()
+        node.get_children()
+            .filter_map(|child| {
+                if let Some(expr) = child.downcast_ref::<ExprContextAll<'a>>() {
+                    Some(self.parameter(expr))
+                } else {
+                    child
+                        .downcast_ref::<NumericParameterContextAll<'a>>()
+                        .map(|parameter| self.numeric_parameter(parameter))
+                }
+            })
+            .collect()
     }
 
     /// Convert a numeric parameter: an integer literal, a named parameter such
     /// as `P`, or an expression.
     fn numeric_parameter(
         &self,
-        parameter: Option<&Rc<NumericParameterContextAll<'a>>>,
+        parameter: &NumericParameterContextAll<'a>,
     ) -> Result<TypeExprParam<'a>, TypeParseError> {
-        match parameter
-            .expect("parameterized type has its numeric parameters")
-            .as_ref()
-        {
+        match parameter {
             NumericParameterContextAll::NumericLiteralContext(literal) => {
                 self.integer(&literal.Number().expect("numeric literal has a number"))
             }
@@ -335,6 +297,15 @@ impl<'a> TreeConverter<'a> {
             NumericParameterContextAll::Error(_) => unreachable!("syntax errors are reported"),
         }
     }
+}
+
+/// Whether `node` has a `?` among its direct children, marking it nullable.
+fn has_question_mark<'a>(node: &(dyn SubstraitTypeParserContext<'a> + 'a)) -> bool {
+    node.get_children().any(|child| {
+        child
+            .downcast_ref::<TerminalNode<'a, SubstraitTypeParserContextType>>()
+            .is_some_and(|token| token.symbol.get_token_type() == SubstraitType_QMark)
+    })
 }
 
 #[cfg(test)]
