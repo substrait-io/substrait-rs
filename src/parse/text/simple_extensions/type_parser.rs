@@ -39,22 +39,22 @@ pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
         return Err(TypeParseError::UnsupportedVariation(source.to_string()));
     }
 
-    let first_error = Rc::new(RefCell::new(None));
+    let first_error = FirstSyntaxError::default();
 
     let mut lexer = SubstraitTypeLexer::new(InputStream::new(source));
     lexer.remove_error_listeners();
-    lexer.add_error_listener(Box::new(FirstSyntaxError(Rc::clone(&first_error))));
+    lexer.add_error_listener(Box::new(first_error.clone()));
 
     let mut parser = SubstraitTypeParser::new(CommonTokenStream::new(lexer));
     parser.remove_error_listeners();
-    parser.add_error_listener(Box::new(FirstSyntaxError(Rc::clone(&first_error))));
+    parser.add_error_listener(Box::new(first_error.clone()));
 
     let tree = parser.startRule();
-    if let Some(error) = first_error.take() {
+    if let Some(error) = first_error.0.take() {
         return Err(error);
     }
     let tree = tree.map_err(|error| TypeParseError::Syntax {
-        position: 0,
+        column: 0,
         message: error.to_string(),
     })?;
 
@@ -62,30 +62,32 @@ pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
     converter.type_expr(&tree.expr().expect("startRule always has an expr"))
 }
 
-/// Records the first error reported by the lexer or parser.
+/// Keeps the first syntax error reported by the lexer or parser.
 ///
-/// ANTLR recovers from syntax errors and keeps going, so the parse tree is
-/// only trustworthy when no error was reported.
+/// ANTLR reports errors to listeners and then recovers, so `startRule` can
+/// return a tree even for invalid input. The lexer and parser each own a
+/// boxed listener, so the error is shared back to `parse` through an `Rc`.
+#[derive(Clone, Default)]
 struct FirstSyntaxError(Rc<RefCell<Option<TypeParseError>>>);
 
+// The signature is fixed by `antlr4rust`'s `ErrorListener` trait. Only
+// `column` and `message` are used.
 impl<'input, T: Recognizer<'input>> ErrorListener<'input, T> for FirstSyntaxError {
     fn syntax_error(
         &self,
         _recognizer: &T,
-        offending_symbol: Option<&<T::TF as TokenFactory<'input>>::Inner>,
+        _offending_symbol: Option<&<T::TF as TokenFactory<'input>>::Inner>,
         _line: isize,
         column: isize,
         message: &str,
         _error: Option<&ANTLRError>,
     ) {
-        let mut first_error = self.0.borrow_mut();
-        if first_error.is_none() {
-            let position = offending_symbol.map_or(column, |token| token.get_start());
-            *first_error = Some(TypeParseError::Syntax {
-                position: position.max(0) as usize,
+        self.0
+            .borrow_mut()
+            .get_or_insert_with(|| TypeParseError::Syntax {
+                column: column as usize,
                 message: message.to_string(),
             });
-        }
     }
 }
 
@@ -405,7 +407,7 @@ mod tests {
     fn syntax_errors_report_the_offending_byte() {
         assert!(matches!(
             parse("list<i32)"),
-            Err(TypeParseError::Syntax { position: 8, .. })
+            Err(TypeParseError::Syntax { column: 8, .. })
         ));
     }
 }

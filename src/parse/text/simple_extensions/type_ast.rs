@@ -59,8 +59,8 @@ pub enum TypeParseError {
     MultiDigitTypeVariable(String),
     #[error("integer literal does not fit in an i64: {0}")]
     InvalidInteger(String),
-    #[error("syntax error at byte {position}: {message}")]
-    Syntax { position: usize, message: String },
+    #[error("syntax error at column {column}: {message}")]
+    Syntax { column: usize, message: String },
 }
 
 impl<'a> TypeExpr<'a> {
