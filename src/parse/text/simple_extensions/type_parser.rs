@@ -106,25 +106,6 @@ impl<'a> TreeConverter<'a> {
         self.token_text(&*node.symbol)
     }
 
-    /// The text of an identifier, rejecting multi-digit `anyN` spellings.
-    ///
-    /// The grammar lexes `any12` as an ordinary identifier, but those names are
-    /// reserved for future type-variable support.
-    /// https://github.com/substrait-io/substrait/issues/1335
-    fn identifier(
-        &self,
-        node: &TerminalNode<'a, SubstraitTypeParserContextType>,
-    ) -> Result<&'a str, TypeParseError> {
-        let name = self.terminal_text(node);
-        let is_multi_digit_variable = name.len() > 4
-            && name[..3].eq_ignore_ascii_case("any")
-            && name[3..].bytes().all(|byte| byte.is_ascii_digit());
-        if is_multi_digit_variable {
-            return Err(TypeParseError::MultiDigitTypeVariable(name.to_string()));
-        }
-        Ok(name)
-    }
-
     /// Convert an expression that must be a type, rejecting integer literals.
     fn type_expr(&self, expr: &ExprContextAll<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
         match self.parameter(expr)? {
@@ -141,7 +122,9 @@ impl<'a> TreeConverter<'a> {
             )),
             ExprContextAll::ParameterNameContext(name) => {
                 Ok(TypeExprParam::Type(TypeExpr::Simple(
-                    self.identifier(&name.Identifier().expect("parameter name has an identifier"))?,
+                    self.terminal_text(
+                        &name.Identifier().expect("parameter name has an identifier"),
+                    ),
                     Vec::new(),
                     name.QMark().is_some(),
                 )))
@@ -239,7 +222,7 @@ impl<'a> TreeConverter<'a> {
                         type_string: self.source.to_string(),
                     });
                 }
-                let name = self.identifier(&ctx.Identifier(0).expect("u! has a name"))?;
+                let name = self.terminal_text(&ctx.Identifier(0).expect("u! has a name"));
                 Ok(TypeExpr::UserDefined(
                     name,
                     self.child_parameters(parameterized)?,
@@ -288,7 +271,7 @@ impl<'a> TreeConverter<'a> {
             }
             NumericParameterContextAll::NumericParameterNameContext(name) => {
                 Ok(TypeExprParam::Type(TypeExpr::Simple(
-                    self.identifier(&name.Identifier().expect("parameter name"))?,
+                    self.terminal_text(&name.Identifier().expect("parameter name")),
                     Vec::new(),
                     false,
                 )))
@@ -355,19 +338,6 @@ mod tests {
             assert_eq!(
                 parse(source).unwrap(),
                 TypeExpr::TypeVariable(id, nullable),
-                "{source}"
-            );
-        }
-    }
-
-    #[test]
-    fn multi_digit_type_variable_names_are_rejected() {
-        for source in ["any10", "list<ANY12>", "decimal<any12, 0>", "u!any10"] {
-            assert!(
-                matches!(
-                    parse(source),
-                    Err(TypeParseError::MultiDigitTypeVariable(_))
-                ),
                 "{source}"
             );
         }

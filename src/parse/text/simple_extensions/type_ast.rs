@@ -55,8 +55,6 @@ pub enum TypeParseError {
     },
     #[error("expected a type, found integer literal {0}")]
     ExpectedType(String),
-    #[error("type variable IDs must be a single digit: {0}")]
-    MultiDigitTypeVariable(String),
     #[error("integer literal does not fit in an i64: {0}")]
     InvalidInteger(String),
     #[error("syntax error at column {column}: {message}")]
