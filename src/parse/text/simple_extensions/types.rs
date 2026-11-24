@@ -66,7 +66,7 @@ where
 /// The structure of a type expression, without its nullability.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeKind {
-    /// Boolean type - `bool`
+    /// Boolean type - `boolean`
     Boolean,
     /// 8-bit signed integer - `i8`
     I8,
