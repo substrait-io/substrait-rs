@@ -47,6 +47,9 @@ pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
 /// The tree is only returned when neither the lexer nor the parser reported
 /// an error, so [`TreeConverter`] can rely on it matching the grammar.
 fn parse_tree(source: &str) -> Result<Rc<StartRuleContextAll<'_>>, TypeParseError> {
+    // ANTLR's default listeners print errors to stderr, then recover and still
+    // return a tree. Replace them with one that records the first error, which
+    // is the only way to tell that the input was invalid.
     let first_error = FirstSyntaxError::default();
 
     let mut lexer = SubstraitTypeLexer::new(InputStream::new(source));
