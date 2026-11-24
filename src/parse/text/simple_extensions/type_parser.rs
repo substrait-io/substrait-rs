@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Parse type syntax with the ANTLR parser generated from the Substrait type
-//! grammar ([`substrait_antlr::substrait_type`]), then convert its parse tree
-//! into a [`TypeExpr`].
+//! Parse type strings with the ANTLR parser generated from the Substrait type
+//! grammar ([`substrait_antlr::substrait_type`]), then convert the parse tree
+//! into a [`TypeExpr`]. [`TreeConverter`] has one method per grammar rule,
+//! each documented with the rule it converts.
 //!
-//! The grammar also describes type derivation expressions (arithmetic,
-//! conditionals, multiline assignments). Those parse successfully but are
-//! rejected here as [`TypeParseError::UnsupportedNumericExpression`].
-//!
-//! Names borrow from the source using the byte offsets of their tokens.
-//! Built-in names, parameter counts, and literal ranges are validated later
-//! when converting the AST to [`Type`](super::types::Type).
+//! Type derivation expressions such as `P + 1` parse but are rejected as
+//! [`TypeParseError::UnsupportedNumericExpression`]. Built-in names, parameter
+//! counts and literal ranges are validated later, when converting to
+//! [`Type`](super::types::Type).
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -39,6 +37,16 @@ pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
         return Err(TypeParseError::UnsupportedVariation(source.to_string()));
     }
 
+    let tree = parse_tree(source)?;
+    let expr = tree.expr().expect("startRule is `expr EOF`");
+    TreeConverter { source }.expr_as_type(&expr)
+}
+
+/// Run the generated parser on `source`, returning its `startRule` tree.
+///
+/// The tree is only returned when neither the lexer nor the parser reported
+/// an error, so [`TreeConverter`] can rely on it matching the grammar.
+fn parse_tree(source: &str) -> Result<Rc<StartRuleContextAll<'_>>, TypeParseError> {
     let first_error = FirstSyntaxError::default();
 
     let mut lexer = SubstraitTypeLexer::new(InputStream::new(source));
@@ -53,20 +61,18 @@ pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
     if let Some(error) = first_error.0.take() {
         return Err(error);
     }
-    let tree = tree.map_err(|error| TypeParseError::Syntax {
+    tree.map_err(|error| TypeParseError::Syntax {
         column: 0,
         message: error.to_string(),
-    })?;
-
-    let converter = TreeConverter { source };
-    converter.type_expr(&tree.expr().expect("startRule always has an expr"))
+    })
 }
 
 /// Keeps the first syntax error reported by the lexer or parser.
 ///
 /// ANTLR reports errors to listeners and then recovers, so `startRule` can
 /// return a tree even for invalid input. The lexer and parser each own a
-/// boxed listener, so the error is shared back to `parse` through an `Rc`.
+/// boxed listener, so the error is shared back to [`parse_tree`] through an
+/// `Rc`.
 #[derive(Clone, Default)]
 struct FirstSyntaxError(Rc<RefCell<Option<TypeParseError>>>);
 
@@ -91,51 +97,51 @@ impl<'input, T: Recognizer<'input>> ErrorListener<'input, T> for FirstSyntaxErro
     }
 }
 
-/// Converts the ANTLR parse tree into a [`TypeExpr`] borrowing from `source`.
+/// Converts the parse tree into a [`TypeExpr`], with one method per grammar
+/// rule. Names borrow from `source` using the byte offsets of their tokens.
+///
+/// The `expect`s on child accessors rely on the tree matching the grammar,
+/// which [`parse_tree`] guarantees.
 struct TreeConverter<'a> {
     source: &'a str,
 }
 
 impl<'a> TreeConverter<'a> {
-    /// The source text of a single token.
-    fn token_text(&self, token: &impl Token) -> &'a str {
-        &self.source[token.get_start() as usize..=token.get_stop() as usize]
-    }
-
-    fn terminal_text(&self, node: &TerminalNode<'a, SubstraitTypeParserContextType>) -> &'a str {
-        self.token_text(&*node.symbol)
-    }
-
-    /// Convert an expression that must be a type, rejecting integer literals.
-    fn type_expr(&self, expr: &ExprContextAll<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
-        match self.parameter(expr)? {
+    /// Convert an `expr` that must be a type, such as a top-level type or a
+    /// function's return type. `10` is rejected here.
+    fn expr_as_type(&self, expr: &ExprContextAll<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
+        match self.expr(expr)? {
             TypeExprParam::Type(type_expr) => Ok(type_expr),
             TypeExprParam::Integer(value) => Err(TypeParseError::ExpectedType(value.to_string())),
         }
     }
 
-    /// Convert an expression in parameter position: a type or an integer literal.
-    fn parameter(&self, expr: &ExprContextAll<'a>) -> Result<TypeExprParam<'a>, TypeParseError> {
+    /// Convert an `expr`, which in parameter position is a type or an integer.
+    ///
+    /// ```text
+    /// expr: typeDef | Identifier '?'? | Number | '(' expr ')' | <derivations>
+    /// ```
+    fn expr(&self, expr: &ExprContextAll<'a>) -> Result<TypeExprParam<'a>, TypeParseError> {
         match expr {
             ExprContextAll::TypeLiteralContext(literal) => Ok(TypeExprParam::Type(
-                self.type_def(&literal.typeDef().expect("type literal has a typeDef"))?,
+                self.type_def(&literal.typeDef().expect("#TypeLiteral is a typeDef"))?,
             )),
             ExprContextAll::ParameterNameContext(name) => {
                 Ok(TypeExprParam::Type(TypeExpr::Simple(
                     self.terminal_text(
-                        &name.Identifier().expect("parameter name has an identifier"),
+                        &name.Identifier().expect("#ParameterName is an Identifier"),
                     ),
                     Vec::new(),
                     name.QMark().is_some(),
                 )))
             }
             ExprContextAll::LiteralNumberContext(number) => {
-                self.integer(&number.Number().expect("number literal has a number"))
+                self.integer(&number.Number().expect("#LiteralNumber is a Number"))
             }
-            ExprContextAll::ParenExpressionContext(parenthesized) => self.parameter(
+            ExprContextAll::ParenExpressionContext(parenthesized) => self.expr(
                 &parenthesized
                     .expr()
-                    .expect("parenthesized expr has an expr"),
+                    .expect("#ParenExpression wraps an expr"),
             ),
             _ => Err(TypeParseError::UnsupportedNumericExpression(
                 self.source.to_string(),
@@ -143,16 +149,11 @@ impl<'a> TreeConverter<'a> {
         }
     }
 
-    fn integer(
-        &self,
-        number: &TerminalNode<'a, SubstraitTypeParserContextType>,
-    ) -> Result<TypeExprParam<'a>, TypeParseError> {
-        let text = self.terminal_text(number);
-        text.parse()
-            .map(TypeExprParam::Integer)
-            .map_err(|_| TypeParseError::InvalidInteger(text.to_string()))
-    }
-
+    /// Convert a `typeDef`, such as `i32?`, `list<i32>` or `any1`.
+    ///
+    /// ```text
+    /// typeDef: scalarType '?'? | parameterizedType | anyType
+    /// ```
     fn type_def(&self, type_def: &TypeDefContextAll<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
         if let Some(scalar) = type_def.scalarType() {
             let name = self.token_text(&*scalar.start());
@@ -167,10 +168,16 @@ impl<'a> TreeConverter<'a> {
         }
         let parameterized = type_def
             .parameterizedType()
-            .expect("typeDef is a scalar, any, or parameterized type");
+            .expect("typeDef is a scalarType, parameterizedType or anyType");
         self.parameterized_type(&parameterized)
     }
 
+    /// Convert an `anyType`, such as `any` or `any1?`. `AnyVar` is always `any`
+    /// followed by one digit.
+    ///
+    /// ```text
+    /// anyType: Any '?'? | AnyVar '?'?
+    /// ```
     fn any_type(&self, any: &AnyTypeContextAll<'a>) -> TypeExpr<'a> {
         let nullable = any.QMark().is_some();
         if let Some(variable) = any.AnyVar() {
@@ -184,6 +191,12 @@ impl<'a> TreeConverter<'a> {
         TypeExpr::Simple(name, Vec::new(), nullable)
     }
 
+    /// Convert a `parameterizedType`, which is a keyword builtin such as
+    /// `decimal<P, 2>` or `list?<i32>`, a `func<...>`, a `u!name<...>` or an
+    /// `nstruct<...>`.
+    ///
+    /// The keyword builtins only differ in which parameters they take, so they
+    /// share one arm that reads the parameters from the node's children.
     fn parameterized_type(
         &self,
         parameterized: &ParameterizedTypeContextAll<'a>,
@@ -210,9 +223,9 @@ impl<'a> TreeConverter<'a> {
             )),
             P::FuncContext(ctx) => {
                 let parameters =
-                    self.child_parameters(&**ctx.params.as_ref().expect("func has parameters"))?;
+                    self.child_parameters(&**ctx.params.as_ref().expect("#func has funcParams"))?;
                 let return_type =
-                    self.type_expr(ctx.returnType.as_ref().expect("func has a return type"))?;
+                    self.expr_as_type(ctx.returnType.as_ref().expect("#func has a return type"))?;
                 Ok(TypeExpr::Func(parameters, Box::new(return_type), nullable))
             }
             P::UserDefinedContext(ctx) => {
@@ -222,7 +235,7 @@ impl<'a> TreeConverter<'a> {
                         type_string: self.source.to_string(),
                     });
                 }
-                let name = self.terminal_text(&ctx.Identifier(0).expect("u! has a name"));
+                let name = self.terminal_text(&ctx.Identifier(0).expect("#userDefined has a name"));
                 Ok(TypeExpr::UserDefined(
                     name,
                     self.child_parameters(parameterized)?,
@@ -233,14 +246,47 @@ impl<'a> TreeConverter<'a> {
                 construct: "named struct",
                 type_string: self.source.to_string(),
             }),
-            P::Error(_) => unreachable!("syntax errors are reported"),
+            P::Error(_) => unreachable!("parse_tree rejects trees with errors"),
+        }
+    }
+
+    /// Convert a `numericParameter`, such as decimal's precision and scale.
+    ///
+    /// ```text
+    /// numericParameter: Number | Identifier | expr
+    /// ```
+    fn numeric_parameter(
+        &self,
+        parameter: &NumericParameterContextAll<'a>,
+    ) -> Result<TypeExprParam<'a>, TypeParseError> {
+        match parameter {
+            NumericParameterContextAll::NumericLiteralContext(literal) => {
+                self.integer(&literal.Number().expect("#numericLiteral is a Number"))
+            }
+            NumericParameterContextAll::NumericParameterNameContext(name) => {
+                Ok(TypeExprParam::Type(TypeExpr::Simple(
+                    self.terminal_text(
+                        &name
+                            .Identifier()
+                            .expect("#numericParameterName is an Identifier"),
+                    ),
+                    Vec::new(),
+                    false,
+                )))
+            }
+            NumericParameterContextAll::NumericExpressionContext(expression) => {
+                self.expr(&expression.expr().expect("#numericExpression is an expr"))
+            }
+            NumericParameterContextAll::Error(_) => {
+                unreachable!("parse_tree rejects trees with errors")
+            }
         }
     }
 
     /// Convert the parameters among `node`'s direct children, in order.
     ///
-    /// For `decimal<P, 2>` these are the two numeric parameters; for
-    /// `map<string, i64>` or `(i32, i64)` they are the type expressions.
+    /// For `decimal<P, 2>` these are the two `numericParameter`s. For
+    /// `map<string, i64>` or the `funcParams` `(i32, i64)` they are `expr`s.
     /// Tokens such as `<`, `,` and `?` are skipped.
     fn child_parameters(
         &self,
@@ -249,7 +295,7 @@ impl<'a> TreeConverter<'a> {
         node.get_children()
             .filter_map(|child| {
                 if let Some(expr) = child.downcast_ref::<ExprContextAll<'a>>() {
-                    Some(self.parameter(expr))
+                    Some(self.expr(expr))
                 } else {
                     child
                         .downcast_ref::<NumericParameterContextAll<'a>>()
@@ -259,32 +305,28 @@ impl<'a> TreeConverter<'a> {
             .collect()
     }
 
-    /// Convert a numeric parameter: an integer literal, a named parameter such
-    /// as `P`, or an expression.
-    fn numeric_parameter(
+    fn integer(
         &self,
-        parameter: &NumericParameterContextAll<'a>,
+        number: &TerminalNode<'a, SubstraitTypeParserContextType>,
     ) -> Result<TypeExprParam<'a>, TypeParseError> {
-        match parameter {
-            NumericParameterContextAll::NumericLiteralContext(literal) => {
-                self.integer(&literal.Number().expect("numeric literal has a number"))
-            }
-            NumericParameterContextAll::NumericParameterNameContext(name) => {
-                Ok(TypeExprParam::Type(TypeExpr::Simple(
-                    self.terminal_text(&name.Identifier().expect("parameter name")),
-                    Vec::new(),
-                    false,
-                )))
-            }
-            NumericParameterContextAll::NumericExpressionContext(expression) => {
-                self.parameter(&expression.expr().expect("numeric expression has an expr"))
-            }
-            NumericParameterContextAll::Error(_) => unreachable!("syntax errors are reported"),
-        }
+        let text = self.terminal_text(number);
+        text.parse()
+            .map(TypeExprParam::Integer)
+            .map_err(|_| TypeParseError::InvalidInteger(text.to_string()))
+    }
+
+    /// The source text of a single token.
+    fn token_text(&self, token: &impl Token) -> &'a str {
+        &self.source[token.get_start() as usize..=token.get_stop() as usize]
+    }
+
+    fn terminal_text(&self, node: &TerminalNode<'a, SubstraitTypeParserContextType>) -> &'a str {
+        self.token_text(&*node.symbol)
     }
 }
 
 /// Whether `node` has a `?` among its direct children, marking it nullable.
+/// A `?` inside a nested parameter belongs to that parameter instead.
 fn has_question_mark<'a>(node: &(dyn SubstraitTypeParserContext<'a> + 'a)) -> bool {
     node.get_children().any(|child| {
         child
