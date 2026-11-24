@@ -300,17 +300,20 @@ mod tests {
     #[test]
     fn integer_parameters_cover_the_i64_range() {
         for (source, expected) in [
-            ("decimal<0, 0>", 0),
+            ("u!box<0>", 0),
             ("u!box<-2>", -2),
             ("u!box<9223372036854775807>", i64::MAX),
             ("u!box<-9223372036854775808>", i64::MIN),
         ] {
-            let (TypeExpr::Simple(_, parameters, _) | TypeExpr::UserDefined(_, parameters, _)) =
-                parse(source).unwrap()
-            else {
-                panic!("{source} should be a named type");
-            };
-            assert_eq!(parameters[0], TypeExprParam::Integer(expected), "{source}");
+            assert_eq!(
+                parse(source),
+                Ok(TypeExpr::UserDefined(
+                    "box",
+                    vec![TypeExprParam::Integer(expected)],
+                    false
+                )),
+                "{source}"
+            );
         }
         assert_eq!(
             parse("u!box<9223372036854775808>"),
@@ -318,6 +321,17 @@ mod tests {
                 "9223372036854775808".to_string()
             ))
         );
+    }
+
+    #[test]
+    fn parenthesized_types_parse_as_their_contents() {
+        for (source, expected) in [
+            ("(i32)", "i32"),
+            ("list<(i32?)>", "list<i32?>"),
+            ("decimal<(10), 2>", "decimal<10, 2>"),
+        ] {
+            assert_eq!(parse(source), parse(expected), "{source}");
+        }
     }
 
     #[test]
