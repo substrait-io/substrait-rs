@@ -429,6 +429,42 @@ scalar_functions:
         );
     }
 
+    /// The grammar only lexes single-digit `anyN` as a type variable, so
+    /// `any12` is an ordinary named parameter like `P`. This changes if
+    /// https://github.com/substrait-io/substrait/issues/1335 is adopted.
+    #[test]
+    fn test_multi_digit_any_names_are_named_numeric_parameters() {
+        use super::super::{IntegerParameter, Type, TypeKind};
+
+        for name in ["any12", "ANY12"] {
+            let yaml = format!(
+                r#"urn: extension:example.com:numeric_parameters
+scalar_functions:
+  - name: decimal_identity
+    impls:
+      - return: decimal<{name}, 0>
+"#
+            );
+            let file = ExtensionFile::read_from_str(yaml).unwrap();
+            let urn = file.urn().clone();
+            let registry = Registry::new(vec![file]).unwrap();
+            let function = registry
+                .get_scalar_function(&urn, "decimal_identity")
+                .unwrap();
+            assert_eq!(
+                function.impls[0].return_type,
+                Type::new(
+                    TypeKind::Decimal {
+                        precision: IntegerParameter::Variable(name.to_string()),
+                        scale: IntegerParameter::Literal(0),
+                    },
+                    false
+                ),
+                "{name}"
+            );
+        }
+    }
+
     #[cfg(feature = "extensions")]
     #[test]
     fn test_core_function_with_nested_symbolic_return() {

@@ -24,7 +24,6 @@ mod registry;
 mod scalar_functions;
 mod type_ast;
 mod type_parser;
-mod type_tokenizer;
 mod types;
 
 pub use extensions::SimpleExtensions;
