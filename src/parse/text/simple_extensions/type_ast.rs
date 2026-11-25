@@ -18,11 +18,11 @@ pub enum TypeExpr<'a> {
     /// A type without the `u!` prefix (expected to be a builtin like `i32`, `List`, etc.)
     ///
     /// Contains: (name, parameters, nullable)
-    Simple(&'a str, Vec<TypeExprParam<'a>>, bool),
+    Simple(&'a str, Vec<Expr<'a>>, bool),
     /// A user-defined extension type with the `u!` prefix (e.g., `u!geometry`)
     ///
     /// Contains: (name without `u!` prefix, parameters, nullable)
-    UserDefined(&'a str, Vec<TypeExprParam<'a>>, bool),
+    UserDefined(&'a str, Vec<Expr<'a>>, bool),
     /// Type variable (e.g., `any1`, `any2`)
     ///
     /// Contains: (variable id, nullable)
@@ -30,16 +30,132 @@ pub enum TypeExpr<'a> {
     /// A function type (e.g., `func<i32 -> i64>`)
     ///
     /// Contains: (parameters, return type, nullable)
-    Func(Vec<TypeExprParam<'a>>, Box<TypeExpr<'a>>, bool),
+    Func(Vec<Expr<'a>>, Box<TypeExpr<'a>>, bool),
 }
 
-/// A parsed parameter to a parameterized type
+/// A parsed expression: a type parameter, or (part of) a type derivation such
+/// as `decimal<P1 + 1, S1>` or a multiline program.
+///
+/// [`TypeExpr::parse`] only produces the [`Type`](Expr::Type) and
+/// [`Integer`](Expr::Integer) forms; the others come from
+/// [`parse_derivation`](super::type_parser::parse_derivation).
 #[derive(Clone, Debug, PartialEq)]
-pub enum TypeExprParam<'a> {
-    /// A nested type parameter
+pub enum Expr<'a> {
+    /// A type, or a parameter name such as `P` or `T?`, which parses as a
+    /// [`TypeExpr::Simple`] without parameters.
     Type(TypeExpr<'a>),
-    /// An integer literal parameter
+    /// An integer literal
     Integer(i64),
+    /// A binary operation, e.g. `P1 + 1` or `S > 0 AND P > S`
+    Binary(BinaryOp, Box<Expr<'a>>, Box<Expr<'a>>),
+    /// Boolean negation, `!c`
+    Not(Box<Expr<'a>>),
+    /// A conditional: `c ? a : b` or `IF c THEN a ELSE b`
+    If(Box<Expr<'a>>, Box<Expr<'a>>, Box<Expr<'a>>),
+    /// A function call such as `max(S1, S2)`
+    ///
+    /// Contains: (function name, arguments)
+    Call(&'a str, Vec<Expr<'a>>),
+    /// A multiline definition: `name = expr` assignments followed by a final
+    /// type, which may use them
+    ///
+    /// Contains: (assignments in order, final type)
+    Program(Vec<(&'a str, Expr<'a>)>, Box<TypeExpr<'a>>),
+}
+
+/// A binary operator in a type derivation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BinaryOp {
+    /// `+`
+    Add,
+    /// `-`
+    Subtract,
+    /// `*`
+    Multiply,
+    /// `/`
+    Divide,
+    /// `<`
+    Less,
+    /// `<=`
+    LessOrEqual,
+    /// `>`
+    Greater,
+    /// `>=`
+    GreaterOrEqual,
+    /// `=`
+    Equal,
+    /// `!=`
+    NotEqual,
+    /// `AND`
+    And,
+    /// `OR`
+    Or,
+}
+
+impl std::fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            BinaryOp::Add => "+",
+            BinaryOp::Subtract => "-",
+            BinaryOp::Multiply => "*",
+            BinaryOp::Divide => "/",
+            BinaryOp::Less => "<",
+            BinaryOp::LessOrEqual => "<=",
+            BinaryOp::Greater => ">",
+            BinaryOp::GreaterOrEqual => ">=",
+            BinaryOp::Equal => "=",
+            BinaryOp::NotEqual => "!=",
+            BinaryOp::And => "AND",
+            BinaryOp::Or => "OR",
+        })
+    }
+}
+
+impl Expr<'_> {
+    /// Visit all extension type references in this expression; see
+    /// [`TypeExpr::visit_references`].
+    pub fn visit_references<F>(&self, on_ext: &mut F)
+    where
+        F: FnMut(&str),
+    {
+        match self {
+            Expr::Type(type_expr) => type_expr.visit_references(on_ext),
+            Expr::Integer(_) => {}
+            Expr::Binary(_, left, right) => {
+                left.visit_references(on_ext);
+                right.visit_references(on_ext);
+            }
+            Expr::Not(operand) => operand.visit_references(on_ext),
+            Expr::If(condition, then, otherwise) => {
+                condition.visit_references(on_ext);
+                then.visit_references(on_ext);
+                otherwise.visit_references(on_ext);
+            }
+            Expr::Call(_, arguments) => {
+                for argument in arguments {
+                    argument.visit_references(on_ext);
+                }
+            }
+            Expr::Program(assignments, final_type) => {
+                for (_, value) in assignments {
+                    value.visit_references(on_ext);
+                }
+                final_type.visit_references(on_ext);
+            }
+        }
+    }
+
+    /// Whether this is a derivation (an operator, condition, function call or
+    /// program) rather than a type or integer, at any depth.
+    pub(super) fn is_derivation(&self) -> bool {
+        match self {
+            Expr::Type(type_expr) => type_expr.has_derivation(),
+            Expr::Integer(_) => false,
+            Expr::Binary(..) | Expr::Not(_) | Expr::If(..) | Expr::Call(..) | Expr::Program(..) => {
+                true
+            }
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, thiserror::Error)]
@@ -59,12 +175,27 @@ pub enum TypeParseError {
     InvalidInteger(String),
     #[error("syntax error at column {column}: {message}")]
     Syntax { column: usize, message: String },
+    #[error("type derivation too complex: {0}")]
+    TooComplex(String),
 }
 
 impl<'a> TypeExpr<'a> {
     /// Parse a type string into a [`TypeExpr`].
     pub fn parse(type_str: &'a str) -> Result<Self, TypeParseError> {
         super::type_parser::parse(type_str)
+    }
+
+    /// Whether any parameter, at any depth, is a derivation.
+    pub(super) fn has_derivation(&self) -> bool {
+        match self {
+            TypeExpr::Simple(_, params, _) | TypeExpr::UserDefined(_, params, _) => {
+                params.iter().any(Expr::is_derivation)
+            }
+            TypeExpr::TypeVariable(..) => false,
+            TypeExpr::Func(params, return_type, _) => {
+                params.iter().any(Expr::is_derivation) || return_type.has_derivation()
+            }
+        }
     }
 
     /// Visit all extension type references contained in a parsed type, calling `on_ext`
@@ -77,24 +208,18 @@ impl<'a> TypeExpr<'a> {
             TypeExpr::UserDefined(name, params, _) => {
                 on_ext(name);
                 for p in params {
-                    if let TypeExprParam::Type(t) = p {
-                        t.visit_references(on_ext);
-                    }
+                    p.visit_references(on_ext);
                 }
             }
             TypeExpr::Simple(_name, params, _) => {
                 for p in params {
-                    if let TypeExprParam::Type(t) = p {
-                        t.visit_references(on_ext);
-                    }
+                    p.visit_references(on_ext);
                 }
             }
             TypeExpr::TypeVariable(..) => {}
             TypeExpr::Func(parameters, return_type, _) => {
                 for parameter in parameters {
-                    if let TypeExprParam::Type(t) = parameter {
-                        t.visit_references(on_ext);
-                    }
+                    parameter.visit_references(on_ext);
                 }
                 return_type.visit_references(on_ext);
             }
@@ -153,12 +278,12 @@ mod tests {
                 TypeExpr::UserDefined(
                     "geo",
                     vec![
-                        TypeExprParam::Type(TypeExpr::Simple("i32", vec![], true)),
-                        TypeExprParam::Type(TypeExpr::UserDefined(
+                        Expr::Type(TypeExpr::Simple("i32", vec![], true)),
+                        Expr::Type(TypeExpr::UserDefined(
                             "point",
                             vec![
-                                TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
-                                TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
+                                Expr::Type(TypeExpr::Simple("i32", vec![], false)),
+                                Expr::Type(TypeExpr::Simple("i32", vec![], false)),
                             ],
                             false,
                         )),
@@ -171,8 +296,8 @@ mod tests {
                 TypeExpr::Simple(
                     "Map",
                     vec![
-                        TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
-                        TypeExprParam::Type(TypeExpr::Simple("string", vec![], false)),
+                        Expr::Type(TypeExpr::Simple("i32", vec![], false)),
+                        Expr::Type(TypeExpr::Simple("string", vec![], false)),
                     ],
                     true,
                 ),
@@ -205,7 +330,7 @@ mod tests {
             (
                 "func<i32 -> i64>",
                 TypeExpr::Func(
-                    vec![TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false))],
+                    vec![Expr::Type(TypeExpr::Simple("i32", vec![], false))],
                     Box::new(TypeExpr::Simple("i64", vec![], false)),
                     false,
                 ),
@@ -213,7 +338,7 @@ mod tests {
             (
                 "FUNC?<any1 -> any2>",
                 TypeExpr::Func(
-                    vec![TypeExprParam::Type(TypeExpr::TypeVariable(1, false))],
+                    vec![Expr::Type(TypeExpr::TypeVariable(1, false))],
                     Box::new(TypeExpr::TypeVariable(2, false)),
                     true,
                 ),
@@ -222,10 +347,10 @@ mod tests {
                 "func<(i32, list<any1>) -> i64?>",
                 TypeExpr::Func(
                     vec![
-                        TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
-                        TypeExprParam::Type(TypeExpr::Simple(
+                        Expr::Type(TypeExpr::Simple("i32", vec![], false)),
+                        Expr::Type(TypeExpr::Simple(
                             "list",
-                            vec![TypeExprParam::Type(TypeExpr::TypeVariable(1, false))],
+                            vec![Expr::Type(TypeExpr::TypeVariable(1, false))],
                             false,
                         )),
                     ],
@@ -236,9 +361,9 @@ mod tests {
             (
                 "func<i32 -> func<i64 -> i64>>",
                 TypeExpr::Func(
-                    vec![TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false))],
+                    vec![Expr::Type(TypeExpr::Simple("i32", vec![], false))],
                     Box::new(TypeExpr::Func(
-                        vec![TypeExprParam::Type(TypeExpr::Simple("i64", vec![], false))],
+                        vec![Expr::Type(TypeExpr::Simple("i64", vec![], false))],
                         Box::new(TypeExpr::Simple("i64", vec![], false)),
                         false,
                     )),
@@ -258,14 +383,14 @@ mod tests {
         assert_eq!(
             parse("func<func<i32 -> i64> -> boolean>"),
             TypeExpr::Func(
-                vec![TypeExprParam::Type(inner.clone())],
+                vec![Expr::Type(inner.clone())],
                 Box::new(parse("boolean")),
                 false,
             )
         );
         assert_eq!(
             parse("list<func<i32 -> i64>>"),
-            TypeExpr::Simple("list", vec![TypeExprParam::Type(inner)], false)
+            TypeExpr::Simple("list", vec![Expr::Type(inner)], false)
         );
     }
 
@@ -287,7 +412,7 @@ mod tests {
         assert_eq!(
             parse("func<map<string, i64> -> boolean>"),
             TypeExpr::Func(
-                vec![TypeExprParam::Type(parse("map<string, i64>"))],
+                vec![Expr::Type(parse("map<string, i64>"))],
                 Box::new(parse("boolean")),
                 false,
             )
@@ -326,10 +451,7 @@ mod tests {
             parse(" Map ? < string , List < i32 > > "),
             TypeExpr::Simple(
                 "Map",
-                vec![
-                    TypeExprParam::Type(parse("string")),
-                    TypeExprParam::Type(parse("List<i32>"))
-                ],
+                vec![Expr::Type(parse("string")), Expr::Type(parse("List<i32>"))],
                 true,
             )
         );

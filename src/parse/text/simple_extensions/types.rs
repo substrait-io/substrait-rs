@@ -7,7 +7,7 @@ use super::argument::{
     EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
 };
 use super::extensions::TypeContext;
-use super::type_ast::TypeExprParam;
+use super::type_ast::Expr;
 use crate::parse::Parse;
 use crate::parse::text::simple_extensions::type_ast::TypeParseError;
 use crate::text::simple_extensions::{
@@ -967,44 +967,7 @@ impl From<Type> for RawType {
     }
 }
 
-/// Allowed precision of `decimal`.
-pub(super) const DECIMAL_PRECISION: RangeInclusive<i32> = 1..=38;
-/// Allowed sub-second precision of `precision_time`, `precision_timestamp` and
-/// `precision_timestamp_tz` (seconds to picoseconds).
-pub(super) const SUBSECOND_PRECISION: RangeInclusive<i32> = 0..=12;
-/// Allowed sub-second precision of `interval_day` (seconds to nanoseconds).
-pub(super) const INTERVAL_DAY_PRECISION: RangeInclusive<i32> = 0..=9;
-
-/// Check an integer type parameter: it must fit in an `i32` and, if given, lie
-/// within `range`. Shared by type parsing and type-derivation evaluation so
-/// both enforce the same bounds.
-pub(super) fn check_integer_literal(
-    type_name: &str,
-    index: usize,
-    value: i64,
-    range: Option<RangeInclusive<i32>>,
-) -> Result<i64, ExtensionTypeError> {
-    let narrowed = i32::try_from(value).map_err(|_| ExtensionTypeError::InvalidParameterValue {
-        type_name: type_name.to_string(),
-        index,
-        value,
-        expected: "an i32",
-    })?;
-    match range {
-        Some(range) if !range.contains(&narrowed) => {
-            Err(ExtensionTypeError::InvalidParameterRange {
-                type_name: type_name.to_string(),
-                index,
-                value,
-                expected: range,
-            })
-        }
-        _ => Ok(value),
-    }
-}
-
 /// Parse an integer literal or parameter name for a built-in type.
-///
 /// Validate literals against the supplied range.
 ///
 /// - `type_name`: Type being validated (for error messages, e.g., "DECIMAL")
@@ -1015,31 +978,50 @@ pub(super) fn check_integer_literal(
 fn parse_integer_parameter(
     type_name: &str,
     index: usize,
-    param: &TypeExprParam<'_>,
+    param: &Expr<'_>,
     range: Option<RangeInclusive<i32>>,
 ) -> Result<IntegerParameter, ExtensionTypeError> {
-    match param {
-        TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
+    let value = match param {
+        Expr::Type(TypeExpr::Simple(name, parameters, false))
             if parameters.is_empty() && CustomType::validate_name(name).is_ok() =>
         {
-            Ok(IntegerParameter::Variable(name.to_string()))
+            return Ok(IntegerParameter::Variable(name.to_string()));
         }
-        TypeExprParam::Integer(value) => {
-            check_integer_literal(type_name, index, *value, range).map(IntegerParameter::Literal)
+        Expr::Integer(value) => {
+            i32::try_from(*value).map_err(|_| ExtensionTypeError::InvalidParameterValue {
+                type_name: type_name.to_string(),
+                index,
+                value: *value,
+                expected: "an i32",
+            })
         }
         _ => Err(ExtensionTypeError::InvalidParameterKind {
             type_name: type_name.to_string(),
             index,
             expected: "an integer",
         }),
+    }?;
+
+    if let Some(range) = range {
+        if range.contains(&value) {
+            return Ok(IntegerParameter::Literal(i64::from(value)));
+        }
+        return Err(ExtensionTypeError::InvalidParameterRange {
+            type_name: type_name.to_string(),
+            index,
+            value: i64::from(value),
+            expected: range,
+        });
     }
+
+    Ok(IntegerParameter::Literal(i64::from(value)))
 }
 
 /// Helper function - checks that param length matches expectations, returns
 /// error if not. Assumes a fixed number of expected parameters.
 fn expect_param_len(
     type_name: &str,
-    params: &[TypeExprParam<'_>],
+    params: &[Expr<'_>],
     expected: usize,
 ) -> Result<(), ExtensionTypeError> {
     if params.len() != expected {
@@ -1077,11 +1059,11 @@ fn expect_concrete_type(expression: TypeExpr<'_>) -> Result<Type, ExtensionTypeE
 fn expect_type_argument<'a>(
     type_name: &str,
     index: usize,
-    param: TypeExprParam<'a>,
+    param: Expr<'a>,
 ) -> Result<Type, ExtensionTypeError> {
     match param {
-        TypeExprParam::Type(t) => Type::try_from(t),
-        TypeExprParam::Integer(_) => Err(ExtensionTypeError::InvalidParameterKind {
+        Expr::Type(t) => Type::try_from(t),
+        _ => Err(ExtensionTypeError::InvalidParameterKind {
             type_name: type_name.to_string(),
             index,
             expected: "a type",
@@ -1089,27 +1071,36 @@ fn expect_type_argument<'a>(
     }
 }
 
-impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
-    type Error = ExtensionTypeError;
-
-    fn try_from(param: TypeExprParam<'a>) -> Result<Self, Self::Error> {
-        Ok(match param {
-            TypeExprParam::Integer(v) => TypeParameter::Integer(IntegerParameter::Literal(v)),
-            TypeExprParam::Type(expression) => {
-                let is_bare_name = matches!(
-                    &expression,
-                    TypeExpr::Simple(_, parameters, false) if parameters.is_empty()
-                );
-                match Type::try_from(expression) {
-                    Err(ExtensionTypeError::UnknownTypeName { name }) if is_bare_name => {
-                        CustomType::validate_name(&name)?;
-                        TypeParameter::Name(name)
-                    }
-                    result => TypeParameter::Type(result?),
+/// Convert parameter `index` of the user-defined type `type_name`, which may be
+/// an integer, a type, or a parameter name.
+fn user_defined_parameter(
+    type_name: &str,
+    index: usize,
+    param: Expr<'_>,
+) -> Result<TypeParameter, ExtensionTypeError> {
+    Ok(match param {
+        Expr::Integer(v) => TypeParameter::Integer(IntegerParameter::Literal(v)),
+        Expr::Type(expression) => {
+            let is_bare_name = matches!(
+                &expression,
+                TypeExpr::Simple(_, parameters, false) if parameters.is_empty()
+            );
+            match Type::try_from(expression) {
+                Err(ExtensionTypeError::UnknownTypeName { name }) if is_bare_name => {
+                    CustomType::validate_name(&name)?;
+                    TypeParameter::Name(name)
                 }
+                result => TypeParameter::Type(result?),
             }
-        })
-    }
+        }
+        _ => {
+            return Err(ExtensionTypeError::InvalidParameterKind {
+                type_name: type_name.to_string(),
+                index,
+                expected: "a type, an integer or a parameter name",
+            });
+        }
+    })
 }
 
 /// The tightest provable upper bound for a decimal scale, per the
@@ -1128,7 +1119,7 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
 fn parse_builtin<'a>(
     display_name: &str,
     lower_name: &str,
-    params: &[TypeExprParam<'a>],
+    params: &[Expr<'a>],
 ) -> Result<Option<TypeKind>, ExtensionTypeError> {
     if let Some(builtin) = primitive_builtin(lower_name) {
         expect_param_len(display_name, params, 0)?;
@@ -1154,8 +1145,7 @@ fn parse_builtin<'a>(
         }
         "decimal" => {
             expect_param_len(display_name, params, 2)?;
-            let precision =
-                parse_integer_parameter(display_name, 0, &params[0], Some(DECIMAL_PRECISION))?;
+            let precision = parse_integer_parameter(display_name, 0, &params[0], Some(1..=38))?;
             let scale = parse_integer_parameter(
                 display_name,
                 1,
@@ -1166,26 +1156,22 @@ fn parse_builtin<'a>(
         }
         "precision_time" => {
             expect_param_len(display_name, params, 1)?;
-            let precision =
-                parse_integer_parameter(display_name, 0, &params[0], Some(SUBSECOND_PRECISION))?;
+            let precision = parse_integer_parameter(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(TypeKind::PrecisionTime { precision }))
         }
         "precision_timestamp" => {
             expect_param_len(display_name, params, 1)?;
-            let precision =
-                parse_integer_parameter(display_name, 0, &params[0], Some(SUBSECOND_PRECISION))?;
+            let precision = parse_integer_parameter(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(TypeKind::PrecisionTimestamp { precision }))
         }
         "precision_timestamp_tz" => {
             expect_param_len(display_name, params, 1)?;
-            let precision =
-                parse_integer_parameter(display_name, 0, &params[0], Some(SUBSECOND_PRECISION))?;
+            let precision = parse_integer_parameter(display_name, 0, &params[0], Some(0..=12))?;
             Ok(Some(TypeKind::PrecisionTimestampTz { precision }))
         }
         "interval_day" => {
             expect_param_len(display_name, params, 1)?;
-            let precision =
-                parse_integer_parameter(display_name, 0, &params[0], Some(INTERVAL_DAY_PRECISION))?;
+            let precision = parse_integer_parameter(display_name, 0, &params[0], Some(0..=9))?;
             Ok(Some(TypeKind::IntervalDay { precision }))
         }
         "interval_compound" => {
@@ -1262,7 +1248,8 @@ impl<'a> TryFrom<TypeExpr<'a>> for Type {
             TypeExpr::UserDefined(name, params, nullable) => {
                 let parameters = params
                     .into_iter()
-                    .map(TypeParameter::try_from)
+                    .enumerate()
+                    .map(|(index, param)| user_defined_parameter(name, index, param))
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(Type::extension_with_params(
                     name.to_string(),

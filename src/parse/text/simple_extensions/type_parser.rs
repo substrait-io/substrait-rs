@@ -2,13 +2,15 @@
 
 //! Parse type strings with the ANTLR parser generated from the Substrait type
 //! grammar ([`substrait_antlr::substrait_type`]), then convert the parse tree
-//! into a [`TypeExpr`]. [`TreeConverter`] has one method per grammar rule,
-//! each documented with the rule it converts.
+//! into a [`TypeExpr`] or [`Expr`]. [`TreeConverter`] has one method per
+//! grammar rule, each documented with the rule it converts.
 //!
-//! Type derivation expressions such as `P + 1` parse but are rejected as
-//! [`TypeParseError::UnsupportedNumericExpression`]. Built-in names, parameter
-//! counts and literal ranges are validated later, when converting to
-//! [`Type`](super::types::Type).
+//! [`parse`] reads a type, and rejects type derivation expressions such as
+//! `P + 1` as [`TypeParseError::UnsupportedNumericExpression`].
+//! [`parse_derivation`] reads a whole derivation, including multiline programs,
+//! for evaluation by [`derivations`](super::derivations). Built-in names,
+//! parameter counts and literal ranges are validated later, when converting to
+//! [`Type`](super::types::Type) or evaluating.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -19,18 +21,61 @@ use antlr4rust::errors::ANTLRError;
 use antlr4rust::parser::Parser;
 use antlr4rust::parser_rule_context::ParserRuleContext;
 use antlr4rust::recognizer::Recognizer;
-use antlr4rust::token::Token;
+use antlr4rust::token::{TOKEN_DEFAULT_CHANNEL, TOKEN_EOF, Token};
 use antlr4rust::token_factory::TokenFactory;
 use antlr4rust::tree::TerminalNode;
-use antlr4rust::{InputStream, TidExt};
+use antlr4rust::{InputStream, TidExt, TokenSource};
 use substrait_antlr::substrait_type::substraittypeparser::*;
 use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
-use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
+use super::type_ast::{BinaryOp, Expr, TypeExpr, TypeParseError};
 
 /// Parse one complete type, rejecting any tokens left after it.
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
 pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
+    let type_expr = match convert(source)? {
+        Expr::Type(type_expr) => type_expr,
+        Expr::Integer(value) => return Err(TypeParseError::ExpectedType(value.to_string())),
+        _ => return Err(unsupported_derivation(source)),
+    };
+    if type_expr.has_derivation() {
+        return Err(unsupported_derivation(source));
+    }
+    Ok(type_expr)
+}
+
+/// The most (non-whitespace) tokens a derivation may have. This bounds how
+/// deep chains such as `1 + 1 + …` recurse. The longest derivations in the
+/// Substrait extensions have about 110 tokens.
+pub(super) const MAX_TOKENS: usize = 1024;
+
+/// The most opening `(` and `<` tokens a derivation may have, which bounds its
+/// nesting depth. The generated parser recurses several frames per nesting
+/// level. The longest derivations in the Substrait extensions (decimal `add`,
+/// `subtract` and `modulus`) have 6 openings and nest 2 levels deep.
+///
+/// Unoptimized (debug) builds use much larger stack frames in the generated
+/// parser and exhaust a 2 MiB thread stack at 10 levels of nesting, so the
+/// limit is kept low enough to hold in debug builds too, not just optimized
+/// ones.
+pub(super) const MAX_OPENINGS: usize = 8;
+
+/// Parse a type derivation, such as `decimal<P1 + 1, S1>`, a condition like
+/// `P > 10 ? i64 : i32`, or a multiline program ending in a type.
+///
+/// Surrounding whitespace is ignored, since YAML block scalars (`return: |`)
+/// end with a newline. Derivations larger than [`MAX_TOKENS`] or
+/// [`MAX_OPENINGS`] are rejected as [`TypeParseError::TooComplex`] before
+/// parsing, so the recursive parser cannot exhaust the stack.
+pub(super) fn parse_derivation(source: &str) -> Result<Expr<'_>, TypeParseError> {
+    let source = source.trim();
+    check_complexity(source)?;
+    convert(source)
+}
+
+/// Parse `source` as an `expr` and convert it, without restricting which
+/// forms it may take.
+fn convert(source: &str) -> Result<Expr<'_>, TypeParseError> {
     // The type grammar has no variation syntax, so report it before ANTLR
     // turns it into a generic syntax error.
     if source.contains(['[', ']']) {
@@ -39,7 +84,47 @@ pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
 
     let tree = parse_tree(source)?;
     let expr = tree.expr().expect("startRule is `expr EOF`");
-    TreeConverter { source }.expr_as_type(&expr)
+    TreeConverter { source }.expr(&expr)
+}
+
+fn unsupported_derivation(source: &str) -> TypeParseError {
+    TypeParseError::UnsupportedNumericExpression(source.to_string())
+}
+
+/// Reject derivations whose size or nesting could exhaust the stack in the
+/// recursive parser. Lexing is iterative, so this is safe to run on any
+/// input. Lexer errors are ignored here; parsing reports them.
+fn check_complexity(source: &str) -> Result<(), TypeParseError> {
+    let mut lexer = SubstraitTypeLexer::new(InputStream::new(source));
+    lexer.remove_error_listeners();
+    let (mut tokens, mut openings) = (0, 0);
+    loop {
+        let token = lexer.next_token();
+        let token_type = token.get_token_type();
+        if token_type == TOKEN_EOF {
+            return Ok(());
+        }
+        if token.get_channel() != TOKEN_DEFAULT_CHANNEL {
+            continue;
+        }
+        tokens += 1;
+        // Counting openings (closers need no tracking) bounds the nesting
+        // depth. `<` is also the less-than operator; counting it anyway only
+        // makes the bound more conservative.
+        if token_type == SubstraitType_OParen || token_type == SubstraitType_Lt {
+            openings += 1;
+        }
+        if tokens > MAX_TOKENS {
+            return Err(TypeParseError::TooComplex(format!(
+                "more than {MAX_TOKENS} tokens"
+            )));
+        }
+        if openings > MAX_OPENINGS {
+            return Err(TypeParseError::TooComplex(format!(
+                "more than {MAX_OPENINGS} opening brackets"
+            )));
+        }
+    }
 }
 
 /// Run the generated parser on `source`, returning its `startRule` tree.
@@ -114,30 +199,30 @@ impl<'a> TreeConverter<'a> {
     /// function's return type. `10` is rejected here.
     fn expr_as_type(&self, expr: &ExprContextAll<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
         match self.expr(expr)? {
-            TypeExprParam::Type(type_expr) => Ok(type_expr),
-            TypeExprParam::Integer(value) => Err(TypeParseError::ExpectedType(value.to_string())),
+            Expr::Type(type_expr) => Ok(type_expr),
+            Expr::Integer(value) => Err(TypeParseError::ExpectedType(value.to_string())),
+            _ => Err(unsupported_derivation(self.source)),
         }
     }
 
-    /// Convert an `expr`, which in parameter position is a type or an integer.
+    /// Convert an `expr`: a type, parameter name or integer, or a derivation.
     ///
     /// ```text
-    /// expr: typeDef | Identifier '?'? | Number | '(' expr ')' | <derivations>
+    /// expr: typeDef | Identifier '?'? | Number | '(' expr ')'
+    ///     | expr op expr | '!' expr | expr '?' expr ':' expr
+    ///     | IF expr THEN expr ELSE expr | Identifier '(' (expr (',' expr)*)? ')'
+    ///     | (Identifier '=' expr Newline+)+ typeDef Newline*
     /// ```
-    fn expr(&self, expr: &ExprContextAll<'a>) -> Result<TypeExprParam<'a>, TypeParseError> {
+    fn expr(&self, expr: &ExprContextAll<'a>) -> Result<Expr<'a>, TypeParseError> {
         match expr {
-            ExprContextAll::TypeLiteralContext(literal) => Ok(TypeExprParam::Type(
+            ExprContextAll::TypeLiteralContext(literal) => Ok(Expr::Type(
                 self.type_def(&literal.typeDef().expect("#TypeLiteral is a typeDef"))?,
             )),
-            ExprContextAll::ParameterNameContext(name) => {
-                Ok(TypeExprParam::Type(TypeExpr::Simple(
-                    self.terminal_text(
-                        &name.Identifier().expect("#ParameterName is an Identifier"),
-                    ),
-                    Vec::new(),
-                    name.QMark().is_some(),
-                )))
-            }
+            ExprContextAll::ParameterNameContext(name) => Ok(Expr::Type(TypeExpr::Simple(
+                self.terminal_text(&name.Identifier().expect("#ParameterName is an Identifier")),
+                Vec::new(),
+                name.QMark().is_some(),
+            ))),
             ExprContextAll::LiteralNumberContext(number) => {
                 self.integer(&number.Number().expect("#LiteralNumber is a Number"))
             }
@@ -146,10 +231,102 @@ impl<'a> TreeConverter<'a> {
                     .expr()
                     .expect("#ParenExpression wraps an expr"),
             ),
-            _ => Err(TypeParseError::UnsupportedNumericExpression(
-                self.source.to_string(),
-            )),
+            ExprContextAll::MulDivContext(ctx) => self.binary(&ctx.left, &ctx.op, &ctx.right),
+            ExprContextAll::AddSubContext(ctx) => self.binary(&ctx.left, &ctx.op, &ctx.right),
+            ExprContextAll::ComparisonContext(ctx) => self.binary(&ctx.left, &ctx.op, &ctx.right),
+            ExprContextAll::EqualityContext(ctx) => self.binary(&ctx.left, &ctx.op, &ctx.right),
+            ExprContextAll::AndContext(ctx) => self.binary(&ctx.left, &ctx.op, &ctx.right),
+            ExprContextAll::OrContext(ctx) => self.binary(&ctx.left, &ctx.op, &ctx.right),
+            ExprContextAll::NotExprContext(ctx) => Ok(Expr::Not(Box::new(
+                self.expr(&ctx.expr().expect("#NotExpr negates an expr"))?,
+            ))),
+            ExprContextAll::TernaryContext(ctx) => {
+                self.conditional(&ctx.ifExpr, &ctx.thenExpr, &ctx.elseExpr)
+            }
+            ExprContextAll::IfExprContext(ctx) => {
+                self.conditional(&ctx.ifExpr, &ctx.thenExpr, &ctx.elseExpr)
+            }
+            ExprContextAll::FunctionCallContext(ctx) => {
+                let name = self.terminal_text(&ctx.Identifier().expect("#FunctionCall has a name"));
+                let arguments = ctx
+                    .expr_all()
+                    .iter()
+                    .map(|argument| self.expr(argument))
+                    .collect::<Result<_, _>>()?;
+                Ok(Expr::Call(name, arguments))
+            }
+            ExprContextAll::MultilineDefinitionContext(ctx) => {
+                // `Identifier_all()` returns every terminal child (antlr4rust
+                // does not tell token types apart in its Rust types), so keep
+                // only the identifiers: the assignments' left-hand sides.
+                let names = ctx
+                    .Identifier_all()
+                    .into_iter()
+                    .filter(|terminal| terminal.symbol.get_token_type() == SubstraitType_Identifier)
+                    .map(|terminal| self.terminal_text(&terminal));
+                let assignments = names
+                    .zip(ctx.expr_all().iter())
+                    .map(|(name, value)| Ok((name, self.expr(value)?)))
+                    .collect::<Result<_, TypeParseError>>()?;
+                let final_type = self.type_def(
+                    ctx.finalType
+                        .as_ref()
+                        .expect("#MultilineDefinition ends in a typeDef"),
+                )?;
+                Ok(Expr::Program(assignments, Box::new(final_type)))
+            }
+            ExprContextAll::Error(_) => unreachable!("parse_tree rejects trees with errors"),
         }
+    }
+
+    /// Convert a binary operation such as `P + 1`, `S > 0` or `a AND b`.
+    fn binary(
+        &self,
+        left: &Option<Rc<ExprContextAll<'a>>>,
+        op: &Option<<LocalTokenFactory<'a> as TokenFactory<'a>>::Tok>,
+        right: &Option<Rc<ExprContextAll<'a>>>,
+    ) -> Result<Expr<'a>, TypeParseError> {
+        let op_text = self.token_text(&**op.as_ref().expect("binary expressions have an operator"));
+        let op = match op_text.to_ascii_uppercase().as_str() {
+            "+" => BinaryOp::Add,
+            "-" => BinaryOp::Subtract,
+            "*" => BinaryOp::Multiply,
+            "/" => BinaryOp::Divide,
+            "<" => BinaryOp::Less,
+            "<=" => BinaryOp::LessOrEqual,
+            ">" => BinaryOp::Greater,
+            ">=" => BinaryOp::GreaterOrEqual,
+            "=" => BinaryOp::Equal,
+            "!=" => BinaryOp::NotEqual,
+            "AND" => BinaryOp::And,
+            "OR" => BinaryOp::Or,
+            // The lexer has a `%` token, but no grammar rule uses it.
+            other => unreachable!("the grammar has no binary operator {other:?}"),
+        };
+        let left = self.expr(
+            left.as_ref()
+                .expect("binary expressions have a left operand"),
+        )?;
+        let right = self.expr(
+            right
+                .as_ref()
+                .expect("binary expressions have a right operand"),
+        )?;
+        Ok(Expr::Binary(op, Box::new(left), Box::new(right)))
+    }
+
+    /// Convert `c ? a : b` or `IF c THEN a ELSE b`.
+    fn conditional(
+        &self,
+        condition: &Option<Rc<ExprContextAll<'a>>>,
+        then: &Option<Rc<ExprContextAll<'a>>>,
+        otherwise: &Option<Rc<ExprContextAll<'a>>>,
+    ) -> Result<Expr<'a>, TypeParseError> {
+        let part = |expr: &Option<Rc<ExprContextAll<'a>>>| {
+            self.expr(expr.as_ref().expect("conditionals have three parts"))
+                .map(Box::new)
+        };
+        Ok(Expr::If(part(condition)?, part(then)?, part(otherwise)?))
     }
 
     /// Convert a `typeDef`, such as `i32?`, `list<i32>` or `any1`.
@@ -261,13 +438,13 @@ impl<'a> TreeConverter<'a> {
     fn numeric_parameter(
         &self,
         parameter: &NumericParameterContextAll<'a>,
-    ) -> Result<TypeExprParam<'a>, TypeParseError> {
+    ) -> Result<Expr<'a>, TypeParseError> {
         match parameter {
             NumericParameterContextAll::NumericLiteralContext(literal) => {
                 self.integer(&literal.Number().expect("#numericLiteral is a Number"))
             }
             NumericParameterContextAll::NumericParameterNameContext(name) => {
-                Ok(TypeExprParam::Type(TypeExpr::Simple(
+                Ok(Expr::Type(TypeExpr::Simple(
                     self.terminal_text(
                         &name
                             .Identifier()
@@ -294,7 +471,7 @@ impl<'a> TreeConverter<'a> {
     fn child_parameters(
         &self,
         node: &(dyn SubstraitTypeParserContext<'a> + 'a),
-    ) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
+    ) -> Result<Vec<Expr<'a>>, TypeParseError> {
         node.get_children()
             .filter_map(|child| {
                 if let Some(expr) = child.downcast_ref::<ExprContextAll<'a>>() {
@@ -311,10 +488,10 @@ impl<'a> TreeConverter<'a> {
     fn integer(
         &self,
         number: &TerminalNode<'a, SubstraitTypeParserContextType>,
-    ) -> Result<TypeExprParam<'a>, TypeParseError> {
+    ) -> Result<Expr<'a>, TypeParseError> {
         let text = self.terminal_text(number);
         text.parse()
-            .map(TypeExprParam::Integer)
+            .map(Expr::Integer)
             .map_err(|_| TypeParseError::InvalidInteger(text.to_string()))
     }
 
@@ -354,7 +531,7 @@ mod tests {
                 parse(source),
                 Ok(TypeExpr::UserDefined(
                     "box",
-                    vec![TypeExprParam::Integer(expected)],
+                    vec![Expr::Integer(expected)],
                     false
                 )),
                 "{source}"
@@ -385,7 +562,7 @@ mod tests {
             parse("LiSt<DeCiMaL<P, S>>").unwrap(),
             TypeExpr::Simple(
                 "LiSt",
-                vec![TypeExprParam::Type(parse("DeCiMaL<P, S>").unwrap())],
+                vec![Expr::Type(parse("DeCiMaL<P, S>").unwrap())],
                 false
             ),
         );
@@ -429,6 +606,119 @@ mod tests {
         assert_eq!(
             parse("10"),
             Err(TypeParseError::ExpectedType("10".to_string()))
+        );
+    }
+
+    fn name(name: &str) -> Expr<'_> {
+        Expr::Type(TypeExpr::Simple(name, vec![], false))
+    }
+
+    fn binary<'a>(op: BinaryOp, left: Expr<'a>, right: Expr<'a>) -> Expr<'a> {
+        Expr::Binary(op, Box::new(left), Box::new(right))
+    }
+
+    #[test]
+    fn derivations_parse_into_expressions() {
+        use BinaryOp::*;
+        assert_eq!(
+            parse_derivation("decimal<P1 + 1, S1>"),
+            Ok(Expr::Type(TypeExpr::Simple(
+                "decimal",
+                vec![binary(Add, name("P1"), Expr::Integer(1)), name("S1")],
+                false
+            )))
+        );
+        // Precedence and associativity come from the grammar.
+        assert_eq!(
+            parse_derivation("1 + 2 * 3 - 4"),
+            Ok(binary(
+                Subtract,
+                binary(
+                    Add,
+                    Expr::Integer(1),
+                    binary(Multiply, Expr::Integer(2), Expr::Integer(3))
+                ),
+                Expr::Integer(4)
+            ))
+        );
+        // Both conditional forms parse alike.
+        let conditional = Expr::If(
+            Box::new(binary(Greater, name("P"), Expr::Integer(10))),
+            Box::new(name("i64")),
+            Box::new(name("i32")),
+        );
+        assert_eq!(
+            parse_derivation("P > 10 ? i64 : i32"),
+            Ok(conditional.clone())
+        );
+        assert_eq!(
+            parse_derivation("IF P > 10 THEN i64 ELSE i32"),
+            Ok(conditional)
+        );
+        // `!` applies to everything after it, as written in the grammar
+        // (`'!' expr`), so it binds more loosely than `OR`.
+        assert_eq!(
+            parse_derivation("!(a AND b) OR c"),
+            Ok(Expr::Not(Box::new(binary(
+                Or,
+                binary(And, name("a"), name("b")),
+                name("c")
+            ))))
+        );
+        assert_eq!(
+            parse_derivation("max(S1, 2)"),
+            Ok(Expr::Call("max", vec![name("S1"), Expr::Integer(2)]))
+        );
+    }
+
+    #[test]
+    fn multiline_derivations_parse_into_programs() {
+        // A YAML block scalar ends with a newline.
+        assert_eq!(
+            parse_derivation("p = P + 1\ns = min(S, p)\ndecimal<p, s>\n"),
+            Ok(Expr::Program(
+                vec![
+                    ("p", binary(BinaryOp::Add, name("P"), Expr::Integer(1))),
+                    ("s", Expr::Call("min", vec![name("S"), name("p")])),
+                ],
+                Box::new(TypeExpr::Simple(
+                    "decimal",
+                    vec![name("p"), name("s")],
+                    false
+                ))
+            ))
+        );
+        // Types reject programs, as they reject other derivations.
+        assert_eq!(
+            parse("p = 1\ndecimal<p, 0>"),
+            Err(TypeParseError::UnsupportedNumericExpression(
+                "p = 1\ndecimal<p, 0>".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn modulo_is_not_an_operator() {
+        // The lexer knows `%`, but no grammar rule uses it.
+        assert!(matches!(
+            parse_derivation("P % 2"),
+            Err(TypeParseError::Syntax { column: 2, .. })
+        ));
+    }
+
+    #[test]
+    fn derivation_references_are_visited() {
+        let visit = |source| {
+            let mut names = Vec::new();
+            parse_derivation(source)
+                .unwrap()
+                .visit_references(&mut |name| names.push(name.to_string()));
+            names
+        };
+        assert_eq!(visit("P > 1 ? map<u!a, i32> : list<u!b>"), ["a", "b"]);
+        assert_eq!(
+            visit("t = max(P, 1) > 2 ? u!a : u!b\nlist<u!c>"),
+            ["a", "b", "c"]
         );
     }
 
