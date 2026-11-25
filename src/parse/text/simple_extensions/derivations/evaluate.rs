@@ -4,13 +4,27 @@
 //!
 //! This parses a derivation expression (the string form used in extension
 //! function `return` clauses, e.g. `decimal<P1 + 1, S1 + 1>`) with the
-//! ANTLR-generated [`super::substraittypeparser`] and evaluates it against a
+//! ANTLR-generated [`SubstraitTypeParser`] and evaluates it against a
 //! set of bound parameter values into a [`Type`].
 //!
-//! Scalars, parameterized types (`decimal`, `varchar`, precision types, …),
-//! `list` and `map` are supported, along with arithmetic, `min`/`max`,
-//! ternaries and multiline definitions. `struct`/`nStruct` and
-//! user-defined/function types are intentionally left as
+//! Supported:
+//! - scalar types, parameterized types (`decimal`, `varchar`, precision
+//!   types, …), `list` and `map`, with `?` nullability (also on bound type
+//!   variables, e.g. `any1?`);
+//! - integer arithmetic (`+ - * /`, checked for overflow), comparisons
+//!   (`< <= > >=`), equality (`= !=`), boolean `AND`/`OR`/`!`, ternaries
+//!   (`c ? a : b`), `IF c THEN a ELSE b`, and `min`/`max`;
+//! - multiline definitions (`name = expr` lines followed by a final type),
+//!   whose bindings are local to that definition.
+//!
+//! Like the grammar, names are case-insensitive: `P1`, `p1` and `ANY1` refer
+//! to the bindings `P1`, `p1` and `any1` alike.
+//!
+//! Resulting types are checked against the same parameter bounds as types
+//! parsed from extension YAML (e.g. decimal precision `1..=38`).
+//!
+//! `struct`/`nStruct`, user-defined and function types, and the
+//! `integer_parameter(...)` function are reported as
 //! [`DerivationError::NotYetImplemented`]: named structs in particular are a
 //! schema concept, not a function return type, so they are out of scope here.
 
@@ -20,30 +34,54 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::ops::RangeInclusive;
 use std::rc::Rc;
 
 use antlr4rust::InputStream;
+use antlr4rust::TokenSource;
 use antlr4rust::common_token_stream::CommonTokenStream;
 use antlr4rust::error_listener::ErrorListener;
 use antlr4rust::errors::ANTLRError;
 use antlr4rust::parser::Parser;
 use antlr4rust::recognizer::Recognizer;
-use antlr4rust::token::Token;
+use antlr4rust::token::{TOKEN_DEFAULT_CHANNEL, TOKEN_EOF, Token};
 use antlr4rust::token_factory::{TokenAware, TokenFactory};
 use antlr4rust::tree::ParseTree;
 use thiserror::Error;
 
-use super::super::types::{IntegerParameter, Type, TypeKind};
-use super::substraittypelexer::{Identifier as IDENTIFIER_TOKEN_TYPE, SubstraitTypeLexer};
-use super::substraittypeparser::*;
+use super::super::types::{
+    DECIMAL_PRECISION, ExtensionTypeError, INTERVAL_DAY_PRECISION, IntegerParameter,
+    SUBSECOND_PRECISION, Type, TypeKind, check_integer_literal,
+};
+use substrait_antlr::substrait_type::substraittypelexer::{
+    Identifier as IDENTIFIER_TOKEN_TYPE, Lt, OParen, SubstraitTypeLexer,
+};
+use substrait_antlr::substrait_type::substraittypeparser::*;
 
 /// The token type produced by the generated parser (private there).
 type TokenType<'input> = <LocalTokenFactory<'input> as TokenFactory<'input>>::Tok;
 
+/// Bindings in scope, keyed by lower-cased name.
+type Scope = HashMap<String, Value>;
+
+/// The most (non-whitespace) tokens an expression may have. This bounds how
+/// deep chains such as `1 + 1 + …` recurse during evaluation. The longest
+/// derivations in the Substrait extensions have about 110 tokens.
+pub const MAX_TOKENS: usize = 1024;
+
+/// The most opening `(` and `<` tokens an expression may have, which bounds
+/// its nesting depth. The generated parser recurses several frames per nesting
+/// level; the Substrait extensions nest at most a handful of levels deep.
+///
+/// These limits keep optimized builds well within a 2 MiB thread stack.
+/// Unoptimized (debug) builds use much larger stack frames in the generated
+/// parser and can still exhaust a 2 MiB stack at around ten levels of nesting.
+pub const MAX_OPENINGS: usize = 64;
+
 /// A value produced while evaluating a derivation expression.
 ///
 /// Sub-expressions are either integers (type parameters and arithmetic over
-/// them), booleans (comparisons feeding ternaries), or fully resolved types.
+/// them), booleans (comparisons feeding conditionals), or fully resolved types.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     /// An integer (a numeric type parameter or arithmetic result).
@@ -60,15 +98,27 @@ pub enum DerivationError {
     /// The expression could not be parsed.
     #[error("failed to parse derivation expression: {0}")]
     Parse(String),
+    /// The expression exceeds [`MAX_TOKENS`] or [`MAX_OPENINGS`].
+    #[error("derivation expression too complex: {0}")]
+    TooComplex(String),
     /// A referenced parameter was not bound in the values map.
     #[error("unbound parameter: {0}")]
     UnboundParameter(String),
-    /// An unknown function was called (only `min`/`max` are supported).
+    /// An unknown function was called.
     #[error("unknown function: {0}")]
     UnknownFunction(String),
+    /// A known function was called with unsuitable arguments.
+    #[error("invalid arguments: {0}")]
+    InvalidArguments(String),
     /// An unknown binary operator was encountered.
     #[error("unknown binary operator: {0}")]
     UnknownOperator(String),
+    /// Integer arithmetic overflowed `i64`.
+    #[error("integer overflow in `{0}`")]
+    Overflow(String),
+    /// Integer division by zero.
+    #[error("division by zero in `{0}`")]
+    DivisionByZero(String),
     /// A value of the wrong kind was used (e.g. a type where an integer was
     /// expected).
     #[error("expected {expected}, found {found:?}")]
@@ -78,6 +128,9 @@ pub enum DerivationError {
         /// What was found.
         found: Value,
     },
+    /// The resulting type is invalid (e.g. a decimal precision above 38).
+    #[error(transparent)]
+    InvalidType(#[from] ExtensionTypeError),
     /// A construct that is valid in the grammar but not supported here.
     #[error("not yet implemented: {0}")]
     NotYetImplemented(String),
@@ -89,72 +142,153 @@ pub enum DerivationError {
 /// Evaluate a derivation expression against the given parameter bindings.
 ///
 /// Integer parameters (e.g. `P`, `S`) bind to [`Value::Integer`]; type
-/// variables (e.g. `any1`) bind to [`Value::Type`].
+/// variables (e.g. `any1`) bind to [`Value::Type`]. Names are matched
+/// case-insensitively.
 pub fn evaluate(
     expression: &str,
     values: &HashMap<String, Value>,
 ) -> Result<Value, DerivationError> {
-    let lexer = SubstraitTypeLexer::new(InputStream::new(expression));
-    let token_source = CommonTokenStream::new(lexer);
-    let mut parser = SubstraitTypeParser::new(token_source);
+    // YAML block scalars (`return: |`) end with a newline, which the grammar
+    // only tolerates after multiline definitions; surrounding whitespace
+    // carries no meaning, so drop it.
+    let expression = expression.trim();
+    check_complexity(expression)?;
 
+    // Both the lexer and the parser report into the same list; ANTLR's default
+    // listeners only print to stderr and let invalid input through.
     let errors = Rc::new(RefCell::new(Vec::new()));
-    parser.remove_error_listeners();
-    parser.add_error_listener(Box::new(CollectingErrorListener {
+    let listener = CollectingErrorListener {
         messages: errors.clone(),
-    }));
+    };
+    let mut lexer = SubstraitTypeLexer::new(InputStream::new(expression));
+    lexer.remove_error_listeners();
+    lexer.add_error_listener(Box::new(listener.clone()));
+    let mut parser = SubstraitTypeParser::new(CommonTokenStream::new(lexer));
+    parser.remove_error_listeners();
+    parser.add_error_listener(Box::new(listener));
 
+    // `startRule` is `expr EOF`, so trailing input is an error rather than
+    // silently ignored (which `expr` alone would do).
     let tree = parser
-        .expr()
+        .startRule()
         .map_err(|e| DerivationError::Parse(e.to_string()))?;
     if let Some(first) = errors.borrow().first() {
         return Err(DerivationError::Parse(first.clone()));
     }
+    let tree = tree.expr().ok_or(DerivationError::Malformed)?;
 
-    // `multilineDefinition` introduces local bindings, so work on a copy.
-    let mut values = values.clone();
-    eval_expr(&tree, &mut values)
+    let scope = values
+        .iter()
+        .map(|(name, value)| (name.to_ascii_lowercase(), value.clone()))
+        .collect();
+    eval_expr(&tree, &scope)
 }
 
-fn eval_expr(
-    x: &ExprContextAll,
-    values: &mut HashMap<String, Value>,
-) -> Result<Value, DerivationError> {
-    match x {
-        // The grammar splits binary operators into one alternative per
-        // precedence level; they all evaluate the same way.
-        ExprContextAll::MulDivContext(c) => eval_binary(&c.left, &c.op, &c.right, values),
-        ExprContextAll::AddSubContext(c) => eval_binary(&c.left, &c.op, &c.right, values),
-        ExprContextAll::ComparisonContext(c) => eval_binary(&c.left, &c.op, &c.right, values),
-        ExprContextAll::EqualityContext(c) => eval_binary(&c.left, &c.op, &c.right, values),
-        ExprContextAll::AndContext(c) => eval_binary(&c.left, &c.op, &c.right, values),
-        ExprContextAll::OrContext(c) => eval_binary(&c.left, &c.op, &c.right, values),
-        ExprContextAll::ParenExpressionContext(c) => {
-            let inner = c.expr();
-            eval_expr(inner.as_deref().ok_or(DerivationError::Malformed)?, values)
+/// Reject expressions whose size or nesting could exhaust the stack in the
+/// (recursive) parser or evaluator. Lexing is iterative, so this is safe to
+/// run on any input. Lexer errors are ignored here; parsing reports them.
+fn check_complexity(expression: &str) -> Result<(), DerivationError> {
+    let mut lexer = SubstraitTypeLexer::new(InputStream::new(expression));
+    lexer.remove_error_listeners();
+    let (mut tokens, mut openings) = (0, 0);
+    loop {
+        let token = lexer.next_token();
+        let token_type = token.get_token_type();
+        if token_type == TOKEN_EOF {
+            return Ok(());
         }
+        if token.get_channel() != TOKEN_DEFAULT_CHANNEL {
+            continue;
+        }
+        tokens += 1;
+        // Counting openings (closers need no tracking) bounds the nesting
+        // depth. `<` is also the less-than operator; counting it anyway only
+        // makes the bound more conservative.
+        if token_type == OParen || token_type == Lt {
+            openings += 1;
+        }
+        if tokens > MAX_TOKENS {
+            return Err(DerivationError::TooComplex(format!(
+                "more than {MAX_TOKENS} tokens"
+            )));
+        }
+        if openings > MAX_OPENINGS {
+            return Err(DerivationError::TooComplex(format!(
+                "more than {MAX_OPENINGS} opening brackets"
+            )));
+        }
+    }
+}
+
+fn eval_expr(x: &ExprContextAll, scope: &Scope) -> Result<Value, DerivationError> {
+    match x {
+        ExprContextAll::MulDivContext(c) => eval_arithmetic(&c.left, &c.op, &c.right, scope),
+        ExprContextAll::AddSubContext(c) => eval_arithmetic(&c.left, &c.op, &c.right, scope),
+        ExprContextAll::ComparisonContext(c) => eval_arithmetic(&c.left, &c.op, &c.right, scope),
+        ExprContextAll::EqualityContext(c) => {
+            let left = eval_child(&c.left, scope)?;
+            let right = eval_child(&c.right, scope)?;
+            let equal = match (&left, &right) {
+                (Value::Integer(_), Value::Integer(_))
+                | (Value::Boolean(_), Value::Boolean(_))
+                | (Value::Type(_), Value::Type(_)) => left == right,
+                _ => {
+                    return Err(DerivationError::UnexpectedValue {
+                        expected: "operands of the same kind",
+                        found: right,
+                    });
+                }
+            };
+            match op_text(&c.op)?.as_str() {
+                "=" => Ok(Value::Boolean(equal)),
+                "!=" => Ok(Value::Boolean(!equal)),
+                other => Err(DerivationError::UnknownOperator(other.to_string())),
+            }
+        }
+        // `AND`/`OR` short-circuit, so e.g. `S > 0 AND P / S > 2` is safe.
+        ExprContextAll::AndContext(c) => {
+            if !as_bool(eval_child(&c.left, scope)?)? {
+                return Ok(Value::Boolean(false));
+            }
+            Ok(Value::Boolean(as_bool(eval_child(&c.right, scope)?)?))
+        }
+        ExprContextAll::OrContext(c) => {
+            if as_bool(eval_child(&c.left, scope)?)? {
+                return Ok(Value::Boolean(true));
+            }
+            Ok(Value::Boolean(as_bool(eval_child(&c.right, scope)?)?))
+        }
+        ExprContextAll::NotExprContext(c) => {
+            Ok(Value::Boolean(!as_bool(eval_child(&c.expr(), scope)?)?))
+        }
+        ExprContextAll::TernaryContext(c) => {
+            eval_conditional(&c.ifExpr, &c.thenExpr, &c.elseExpr, scope)
+        }
+        ExprContextAll::IfExprContext(c) => {
+            eval_conditional(&c.ifExpr, &c.thenExpr, &c.elseExpr, scope)
+        }
+        ExprContextAll::ParenExpressionContext(c) => eval_child(&c.expr(), scope),
         ExprContextAll::FunctionCallContext(c) => {
             let func = c.Identifier().ok_or(DerivationError::Malformed)?.get_text();
+            // Resolve the function before evaluating its arguments, so that
+            // e.g. `integer_parameter(precision)` is reported as unsupported
+            // rather than as an unbound `precision`.
+            let pick = resolve_function(&func)?;
             let args = c
                 .expr_all()
                 .iter()
-                .map(|e| eval_expr(e, values))
+                .map(|e| eval_expr(e, scope).and_then(as_int))
                 .collect::<Result<Vec<_>, _>>()?;
-            apply_function(&func, args)
-        }
-        ExprContextAll::TernaryContext(c) => {
-            let cond = eval_expr(
-                c.ifExpr.as_deref().ok_or(DerivationError::Malformed)?,
-                values,
-            )?;
-            let branch = if as_bool(cond)? {
-                c.thenExpr.as_deref()
-            } else {
-                c.elseExpr.as_deref()
-            };
-            eval_expr(branch.ok_or(DerivationError::Malformed)?, values)
+            pick(args.into_iter()).map(Value::Integer).ok_or_else(|| {
+                DerivationError::InvalidArguments(format!(
+                    "{}() needs an argument",
+                    func.to_ascii_lowercase()
+                ))
+            })
         }
         ExprContextAll::MultilineDefinitionContext(c) => {
+            // The assignments are local to this definition.
+            let mut scope = scope.clone();
             // `Identifier_all()` returns *every* terminal child (antlr4rust does
             // not distinguish token types at the Rust-type level), so we filter
             // to the assignment left-hand sides. The right-hand sides come back
@@ -165,15 +299,15 @@ fn eval_expr(
                 .filter(|t| t.symbol.get_token_type() == IDENTIFIER_TOKEN_TYPE)
                 .map(|t| t.get_text());
             for (name, e) in names.zip(c.expr_all().iter()) {
-                let value = eval_expr(e, values)?;
-                values.insert(name, value);
+                let value = eval_expr(e, &scope)?;
+                scope.insert(name.to_ascii_lowercase(), value);
             }
             let final_type = c.finalType.as_deref().ok_or(DerivationError::Malformed)?;
-            eval_type_def(final_type, values)
+            eval_type_def(final_type, &scope)
         }
         ExprContextAll::ParameterNameContext(c) => {
             let name = c.Identifier().ok_or(DerivationError::Malformed)?.get_text();
-            lookup(values, &name)
+            with_nullability(lookup(scope, &name)?, c.isnull.is_some())
         }
         ExprContextAll::LiteralNumberContext(c) => {
             let text = c.Number().ok_or(DerivationError::Malformed)?.get_text();
@@ -183,40 +317,77 @@ fn eval_expr(
             let type_def = c.typeDef();
             eval_type_def(
                 type_def.as_deref().ok_or(DerivationError::Malformed)?,
-                values,
+                scope,
             )
         }
-        ExprContextAll::IfExprContext(_) | ExprContextAll::NotExprContext(_) => Err(
-            DerivationError::NotYetImplemented("standalone if/not expression".to_string()),
-        ),
         ExprContextAll::Error(_) => Err(DerivationError::Malformed),
     }
 }
 
-fn eval_binary<'input>(
-    left: &Option<Rc<ExprContextAll<'input>>>,
-    op: &Option<TokenType<'input>>,
-    right: &Option<Rc<ExprContextAll<'input>>>,
-    values: &mut HashMap<String, Value>,
-) -> Result<Value, DerivationError> {
-    let left = eval_expr(left.as_deref().ok_or(DerivationError::Malformed)?, values)?;
-    let right = eval_expr(right.as_deref().ok_or(DerivationError::Malformed)?, values)?;
-    let op = op.as_ref().ok_or(DerivationError::Malformed)?.get_text();
-    apply_binary(op, left, right)
+fn eval_child(child: &Option<Rc<ExprContextAll>>, scope: &Scope) -> Result<Value, DerivationError> {
+    eval_expr(child.as_deref().ok_or(DerivationError::Malformed)?, scope)
 }
 
-fn eval_type_def(
-    x: &TypeDefContext,
-    values: &mut HashMap<String, Value>,
+fn op_text(op: &Option<TokenType>) -> Result<String, DerivationError> {
+    Ok(op
+        .as_ref()
+        .ok_or(DerivationError::Malformed)?
+        .get_text()
+        .to_string())
+}
+
+/// `c ? a : b` and `IF c THEN a ELSE b`; only the chosen branch is evaluated.
+fn eval_conditional(
+    condition: &Option<Rc<ExprContextAll>>,
+    then: &Option<Rc<ExprContextAll>>,
+    otherwise: &Option<Rc<ExprContextAll>>,
+    scope: &Scope,
 ) -> Result<Value, DerivationError> {
+    if as_bool(eval_child(condition, scope)?)? {
+        eval_child(then, scope)
+    } else {
+        eval_child(otherwise, scope)
+    }
+}
+
+/// Integer operators: `* /`, `+ -` and `< <= > >=`.
+fn eval_arithmetic(
+    left: &Option<Rc<ExprContextAll>>,
+    op: &Option<TokenType>,
+    right: &Option<Rc<ExprContextAll>>,
+    scope: &Scope,
+) -> Result<Value, DerivationError> {
+    let l = as_int(eval_child(left, scope)?)?;
+    let r = as_int(eval_child(right, scope)?)?;
+    let op = op_text(op)?;
+    let overflow = || DerivationError::Overflow(format!("{l} {op} {r}"));
+    Ok(match op.as_str() {
+        "+" => Value::Integer(l.checked_add(r).ok_or_else(overflow)?),
+        "-" => Value::Integer(l.checked_sub(r).ok_or_else(overflow)?),
+        "*" => Value::Integer(l.checked_mul(r).ok_or_else(overflow)?),
+        "/" if r == 0 => return Err(DerivationError::DivisionByZero(format!("{l} / {r}"))),
+        // Truncating division; `i64::MIN / -1` overflows.
+        "/" => Value::Integer(l.checked_div(r).ok_or_else(overflow)?),
+        ">" => Value::Boolean(l > r),
+        ">=" => Value::Boolean(l >= r),
+        "<" => Value::Boolean(l < r),
+        "<=" => Value::Boolean(l <= r),
+        other => return Err(DerivationError::UnknownOperator(other.to_string())),
+    })
+}
+
+fn eval_type_def(x: &TypeDefContext, scope: &Scope) -> Result<Value, DerivationError> {
     if let Some(scalar) = x.scalarType() {
-        let nullable = x.isnull.is_some();
-        eval_scalar(&scalar, nullable)
+        eval_scalar(&scalar, x.isnull.is_some())
     } else if let Some(parameterized) = x.parameterizedType() {
-        eval_parameterized(&parameterized, values)
+        eval_parameterized(&parameterized, scope)
     } else if let Some(any) = x.anyType() {
-        let name = any.AnyVar().ok_or(DerivationError::Malformed)?.get_text();
-        lookup(values, &name)
+        // A bare `any` is not a binding: it does not determine a type.
+        let name = any
+            .AnyVar()
+            .ok_or_else(|| DerivationError::UnboundParameter("any".to_string()))?
+            .get_text();
+        with_nullability(lookup(scope, &name)?, any.isnull.is_some())
     } else {
         Err(DerivationError::Malformed)
     }
@@ -243,119 +414,102 @@ fn eval_scalar(x: &ScalarTypeContextAll, nullable: bool) -> Result<Value, Deriva
 
 fn eval_parameterized(
     x: &ParameterizedTypeContextAll,
-    values: &mut HashMap<String, Value>,
+    scope: &Scope,
 ) -> Result<Value, DerivationError> {
-    // Each arm yields the builtin together with its own nullability flag; the
+    // Evaluate integer parameter `index` of `type_name` and check its bounds.
+    let int = |type_name: &str,
+               index: usize,
+               param: &Option<Rc<NumericParameterContextAll>>,
+               range: Option<RangeInclusive<i32>>| {
+        let value = eval_numeric(param.as_deref().ok_or(DerivationError::Malformed)?, scope)?;
+        Ok::<_, DerivationError>(IntegerParameter::Literal(check_integer_literal(
+            type_name, index, value, range,
+        )?))
+    };
+
+    // Each arm yields the kind together with its own nullability flag; the
     // `isnull` token lives on every parameterized-type alternative.
-    let (builtin, nullable) = match x {
+    let (kind, nullable) = match x {
         ParameterizedTypeContextAll::DecimalContext(c) => {
-            let precision = eval_numeric(
-                c.precision.as_deref().ok_or(DerivationError::Malformed)?,
-                values,
-            )?;
-            let scale = eval_numeric(
-                c.scale.as_deref().ok_or(DerivationError::Malformed)?,
-                values,
-            )?;
-            return Ok(Value::Type(Type::new(
-                TypeKind::Decimal { precision, scale },
-                c.isnull.is_some(),
-            )));
+            let precision = int("decimal", 0, &c.precision, Some(DECIMAL_PRECISION))?;
+            let IntegerParameter::Literal(max_scale) = precision else {
+                unreachable!("evaluated parameters are literals")
+            };
+            // `max_scale` passed the precision check, so it fits in an i32.
+            let scale = int("decimal", 1, &c.scale, Some(0..=max_scale as i32))?;
+            (TypeKind::Decimal { precision, scale }, c.isnull.is_some())
         }
         ParameterizedTypeContextAll::VarCharContext(c) => (
             TypeKind::VarChar {
-                length: eval_numeric(
-                    c.length.as_deref().ok_or(DerivationError::Malformed)?,
-                    values,
-                )?,
+                length: int("varchar", 0, &c.length, None)?,
             },
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::FixedCharContext(c) => (
             TypeKind::FixedChar {
-                length: eval_numeric(
-                    c.length.as_deref().ok_or(DerivationError::Malformed)?,
-                    values,
-                )?,
+                length: int("fixedchar", 0, &c.length, None)?,
             },
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::FixedBinaryContext(c) => (
             TypeKind::FixedBinary {
-                length: eval_numeric(
-                    c.length.as_deref().ok_or(DerivationError::Malformed)?,
-                    values,
-                )?,
+                length: int("fixedbinary", 0, &c.length, None)?,
             },
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::PrecisionTimeContext(c) => (
             TypeKind::PrecisionTime {
-                precision: eval_numeric(
-                    c.precision.as_deref().ok_or(DerivationError::Malformed)?,
-                    values,
-                )?,
+                precision: int("precision_time", 0, &c.precision, Some(SUBSECOND_PRECISION))?,
             },
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::PrecisionTimestampContext(c) => (
             TypeKind::PrecisionTimestamp {
-                precision: eval_numeric(
-                    c.precision.as_deref().ok_or(DerivationError::Malformed)?,
-                    values,
+                precision: int(
+                    "precision_timestamp",
+                    0,
+                    &c.precision,
+                    Some(SUBSECOND_PRECISION),
                 )?,
             },
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::PrecisionTimestampTZContext(c) => (
             TypeKind::PrecisionTimestampTz {
-                precision: eval_numeric(
-                    c.precision.as_deref().ok_or(DerivationError::Malformed)?,
-                    values,
+                precision: int(
+                    "precision_timestamp_tz",
+                    0,
+                    &c.precision,
+                    Some(SUBSECOND_PRECISION),
                 )?,
             },
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::PrecisionIntervalDayContext(c) => (
             TypeKind::IntervalDay {
-                precision: eval_numeric(
-                    c.precision.as_deref().ok_or(DerivationError::Malformed)?,
-                    values,
+                precision: int(
+                    "interval_day",
+                    0,
+                    &c.precision,
+                    Some(INTERVAL_DAY_PRECISION),
                 )?,
             },
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::PrecisionIntervalCompoundContext(c) => (
             TypeKind::IntervalCompound {
-                precision: eval_numeric(
-                    c.precision.as_deref().ok_or(DerivationError::Malformed)?,
-                    values,
-                )?,
+                precision: int("interval_compound", 0, &c.precision, None)?,
             },
             c.isnull.is_some(),
         ),
         ParameterizedTypeContextAll::ListContext(c) => {
-            let element = c.expr();
-            let element = eval_expr(
-                element.as_deref().ok_or(DerivationError::Malformed)?,
-                values,
-            )?;
-            return Ok(Value::Type(Type::list(
-                as_type(element)?,
-                c.isnull.is_some(),
-            )));
+            let element = as_type(eval_child(&c.expr(), scope)?)?;
+            return Ok(Value::Type(Type::list(element, c.isnull.is_some())));
         }
         ParameterizedTypeContextAll::MapContext(c) => {
-            let key = eval_expr(c.key.as_deref().ok_or(DerivationError::Malformed)?, values)?;
-            let value = eval_expr(
-                c.value.as_deref().ok_or(DerivationError::Malformed)?,
-                values,
-            )?;
-            return Ok(Value::Type(Type::map(
-                as_type(key)?,
-                as_type(value)?,
-                c.isnull.is_some(),
-            )));
+            let key = as_type(eval_child(&c.key, scope)?)?;
+            let value = as_type(eval_child(&c.value, scope)?)?;
+            return Ok(Value::Type(Type::map(key, value, c.isnull.is_some())));
         }
         ParameterizedTypeContextAll::StructContext(_)
         | ParameterizedTypeContextAll::NStructContext(_) => {
@@ -371,64 +525,55 @@ fn eval_parameterized(
         }
         ParameterizedTypeContextAll::Error(_) => return Err(DerivationError::Malformed),
     };
-    Ok(Value::Type(Type::new(builtin, nullable)))
+    Ok(Value::Type(Type::new(kind, nullable)))
 }
 
-fn eval_numeric(
-    x: &NumericParameterContextAll,
-    values: &mut HashMap<String, Value>,
-) -> Result<IntegerParameter, DerivationError> {
+fn eval_numeric(x: &NumericParameterContextAll, scope: &Scope) -> Result<i64, DerivationError> {
     let value = match x {
         NumericParameterContextAll::NumericLiteralContext(c) => Value::Integer(parse_int(
             &c.Number().ok_or(DerivationError::Malformed)?.get_text(),
         )?),
         NumericParameterContextAll::NumericParameterNameContext(c) => lookup(
-            values,
+            scope,
             &c.Identifier().ok_or(DerivationError::Malformed)?.get_text(),
         )?,
-        NumericParameterContextAll::NumericExpressionContext(c) => {
-            let inner = c.expr();
-            eval_expr(inner.as_deref().ok_or(DerivationError::Malformed)?, values)?
-        }
+        NumericParameterContextAll::NumericExpressionContext(c) => eval_child(&c.expr(), scope)?,
         NumericParameterContextAll::Error(_) => return Err(DerivationError::Malformed),
     };
-    Ok(IntegerParameter::Literal(as_int(value)?))
+    as_int(value)
 }
 
-fn apply_binary(op: &str, left: Value, right: Value) -> Result<Value, DerivationError> {
-    let (l, r) = (as_int(left)?, as_int(right)?);
-    Ok(match op {
-        "+" => Value::Integer(l + r),
-        "-" => Value::Integer(l - r),
-        "*" => Value::Integer(l * r),
-        ">" => Value::Boolean(l > r),
-        ">=" => Value::Boolean(l >= r),
-        "<" => Value::Boolean(l < r),
-        "<=" => Value::Boolean(l <= r),
-        other => return Err(DerivationError::UnknownOperator(other.to_string())),
-    })
+/// The integer functions callable in derivations.
+type IntFunction = fn(std::vec::IntoIter<i64>) -> Option<i64>;
+
+fn resolve_function(func: &str) -> Result<IntFunction, DerivationError> {
+    match func.to_ascii_lowercase().as_str() {
+        "min" => Ok(Iterator::min),
+        "max" => Ok(Iterator::max),
+        // Refers to the value of a function argument, which is not a binding
+        // the caller can provide yet.
+        "integer_parameter" => Err(DerivationError::NotYetImplemented(
+            "integer_parameter()".to_string(),
+        )),
+        _ => Err(DerivationError::UnknownFunction(func.to_string())),
+    }
 }
 
-fn apply_function(func: &str, args: Vec<Value>) -> Result<Value, DerivationError> {
-    let ints = args
-        .into_iter()
-        .map(as_int)
-        .collect::<Result<Vec<_>, _>>()?;
-    let result = match func {
-        "min" => ints.into_iter().min(),
-        "max" => ints.into_iter().max(),
-        other => return Err(DerivationError::UnknownFunction(other.to_string())),
-    };
-    result
-        .map(Value::Integer)
-        .ok_or_else(|| DerivationError::Malformed)
-}
-
-fn lookup(values: &HashMap<String, Value>, name: &str) -> Result<Value, DerivationError> {
-    values
-        .get(name)
+fn lookup(scope: &Scope, name: &str) -> Result<Value, DerivationError> {
+    scope
+        .get(&name.to_ascii_lowercase())
         .cloned()
         .ok_or_else(|| DerivationError::UnboundParameter(name.to_string()))
+}
+
+/// Apply a `?` suffix: `nullable` makes the (type) value nullable.
+fn with_nullability(value: Value, nullable: bool) -> Result<Value, DerivationError> {
+    if !nullable {
+        return Ok(value);
+    }
+    let mut t = as_type(value)?;
+    t.nullable = true;
+    Ok(Value::Type(t))
 }
 
 fn as_int(value: Value) -> Result<i64, DerivationError> {
@@ -444,7 +589,6 @@ fn as_int(value: Value) -> Result<i64, DerivationError> {
 fn as_bool(value: Value) -> Result<bool, DerivationError> {
     match value {
         Value::Boolean(b) => Ok(b),
-        Value::Integer(n) => Ok(n != 0),
         other => Err(DerivationError::UnexpectedValue {
             expected: "boolean",
             found: other,
@@ -633,7 +777,8 @@ mod tests {
 
     #[test]
     fn decimal_example() {
-        // The canonical decimal multiplication output-type derivation.
+        // The decimal add/subtract output-type derivation from
+        // `functions_arithmetic_decimal.yaml`.
         let expr = "init_scale = max(S1,S2)\n\
 init_prec = init_scale + max(P1 - S1, P2 - S2) + 1\n\
 min_scale = min(init_scale, 6)\n\
@@ -683,6 +828,43 @@ DECIMAL<prec, scale>";
     }
 
     #[test]
+    fn trailing_input_errors() {
+        for expr in ["i32 i64", "decimal<1, 2> i32", "1 + 1 2"] {
+            let err = evaluate(expr, &HashMap::new()).unwrap_err();
+            assert!(
+                matches!(err, DerivationError::Parse(_)),
+                "{expr:?}: {err:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_characters_error() {
+        for expr in ["i32}", "{name}", "i32 $"] {
+            let err = evaluate(expr, &HashMap::new()).unwrap_err();
+            assert!(
+                matches!(err, DerivationError::Parse(_)),
+                "{expr:?}: {err:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn trailing_newline_is_accepted() {
+        assert_eq!(eval("i32\n"), builtin(TypeKind::I32, false));
+        assert_eq!(
+            eval_with("p = P + 1\ndecimal<p, 0>\n", &[("P", int(9))]),
+            builtin(
+                TypeKind::Decimal {
+                    precision: lit(10),
+                    scale: lit(0)
+                },
+                false
+            )
+        );
+    }
+
+    #[test]
     fn unbound_parameter_errors() {
         let err = evaluate("P + 1", &HashMap::new()).unwrap_err();
         assert_eq!(err, DerivationError::UnboundParameter("P".to_string()));
@@ -692,5 +874,310 @@ DECIMAL<prec, scale>";
     fn struct_not_yet_implemented() {
         let err = evaluate("struct<i32, i32>", &HashMap::new()).unwrap_err();
         assert!(matches!(err, DerivationError::NotYetImplemented(_)));
+    }
+
+    fn err(expr: &str, values: &[(&str, Value)]) -> DerivationError {
+        let map = values
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.clone()))
+            .collect();
+        evaluate(expr, &map).expect_err("evaluation fails")
+    }
+
+    fn i32_type(nullable: bool) -> Type {
+        Type::new(TypeKind::I32, nullable)
+    }
+
+    #[test]
+    fn left_associativity() {
+        assert_eq!(eval("10 - 2 - 3"), int(5));
+        assert_eq!(eval("8 / 2 / 2"), int(2));
+    }
+
+    #[test]
+    fn division_truncates() {
+        assert_eq!(eval("10 / 3"), int(3));
+        assert_eq!(eval("-7 / 2"), int(-3));
+    }
+
+    #[test]
+    fn overflow_is_an_error() {
+        let max = ("P", int(i64::MAX));
+        for (expr, values) in [
+            ("9223372036854775807 + 1", vec![]),
+            ("-9223372036854775808 - 1", vec![]),
+            ("9223372036854775807 * 2", vec![]),
+            ("-9223372036854775808 / -1", vec![]),
+            ("P + 1", vec![max.clone()]),
+            ("decimal<P * P, 0>", vec![max]),
+        ] {
+            assert!(
+                matches!(err(expr, &values), DerivationError::Overflow(_)),
+                "{expr}"
+            );
+        }
+    }
+
+    #[test]
+    fn division_by_zero_is_an_error() {
+        assert!(matches!(
+            err("P / S", &[("P", int(1)), ("S", int(0))]),
+            DerivationError::DivisionByZero(_)
+        ));
+    }
+
+    #[test]
+    fn equality() {
+        assert_eq!(eval("1 = 1 ? 1 : 0"), int(1));
+        assert_eq!(eval("1 != 1 ? 1 : 0"), int(0));
+        let any1 = ("any1", Value::Type(i32_type(false)));
+        assert_eq!(
+            eval_with("any1 = i32 ? 1 : 0", std::slice::from_ref(&any1)),
+            int(1)
+        );
+        assert_eq!(eval_with("any1 != i64 ? 1 : 0", &[any1]), int(1));
+        assert!(matches!(
+            err("1 = i32", &[]),
+            DerivationError::UnexpectedValue { .. }
+        ));
+    }
+
+    #[test]
+    fn boolean_operators() {
+        assert_eq!(eval("1 > 0 AND 2 > 0 ? 1 : 0"), int(1));
+        assert_eq!(eval("1 > 0 and 2 < 0 ? 1 : 0"), int(0));
+        assert_eq!(eval("1 < 0 OR 2 > 0 ? 1 : 0"), int(1));
+        assert_eq!(eval("1 < 0 or 2 < 0 ? 1 : 0"), int(0));
+        assert_eq!(eval("!(1 > 0) ? 1 : 0"), int(0));
+        assert_eq!(eval("!(1 > 0 AND 1 < 0) ? 1 : 0"), int(1));
+    }
+
+    #[test]
+    fn boolean_operators_short_circuit() {
+        // The right-hand side would divide by zero.
+        let values = [("P", int(5)), ("S", int(0))];
+        assert_eq!(eval_with("S > 0 AND P / S > 2 ? 1 : 0", &values), int(0));
+        assert_eq!(eval_with("S = 0 OR P / S > 2 ? 1 : 0", &values), int(1));
+    }
+
+    #[test]
+    fn conditions_must_be_boolean() {
+        assert!(matches!(
+            err("1 ? 2 : 3", &[]),
+            DerivationError::UnexpectedValue {
+                expected: "boolean",
+                ..
+            }
+        ));
+        assert!(matches!(
+            err("1 AND 1 ? 2 : 3", &[]),
+            DerivationError::UnexpectedValue {
+                expected: "boolean",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn if_then_else() {
+        let values = [("P", int(11))];
+        assert_eq!(eval_with("IF P > 10 THEN 1 ELSE 2", &values), int(1));
+        assert_eq!(eval_with("if P > 20 then 1 else 2", &values), int(2));
+    }
+
+    #[test]
+    fn type_valued_conditionals() {
+        let values = [("P", int(11))];
+        assert_eq!(
+            eval_with("P > 10 ? i64 : i32", &values),
+            builtin(TypeKind::I64, false)
+        );
+        assert_eq!(
+            eval_with("IF P > 20 THEN i64 ELSE i32?", &values),
+            builtin(TypeKind::I32, true)
+        );
+    }
+
+    #[test]
+    fn map_type() {
+        assert_eq!(
+            eval_with("map?<i32, varchar<L>>", &[("L", int(5))]),
+            Value::Type(Type::map(
+                i32_type(false),
+                Type::new(TypeKind::VarChar { length: lit(5) }, false),
+                true
+            ))
+        );
+    }
+
+    #[test]
+    fn nullable_type_variable() {
+        let any1 = ("any1", Value::Type(i32_type(false)));
+        assert_eq!(
+            eval_with("any1?", std::slice::from_ref(&any1)),
+            Value::Type(i32_type(true))
+        );
+        assert_eq!(
+            eval_with("list<any1?>", std::slice::from_ref(&any1)),
+            Value::Type(Type::list(i32_type(true), false))
+        );
+        // `?` on an already nullable binding keeps it nullable; without `?` the
+        // binding is returned unchanged.
+        let nullable = ("any1", Value::Type(i32_type(true)));
+        assert_eq!(
+            eval_with("any1?", std::slice::from_ref(&nullable)),
+            Value::Type(i32_type(true))
+        );
+        assert_eq!(eval_with("any1", &[nullable]), Value::Type(i32_type(true)));
+        // Named type parameters take `?` too, but integers cannot be nullable.
+        assert_eq!(
+            eval_with("T?", &[("T", Value::Type(i32_type(false)))]),
+            Value::Type(i32_type(true))
+        );
+        assert!(matches!(
+            err("P?", &[("P", int(5))]),
+            DerivationError::UnexpectedValue {
+                expected: "type",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn bare_any_is_unbound() {
+        assert_eq!(
+            err("list?<any>", &[]),
+            DerivationError::UnboundParameter("any".to_string())
+        );
+    }
+
+    #[test]
+    fn names_are_case_insensitive() {
+        assert_eq!(
+            eval("A = 1\ndecimal<a, 0>"),
+            builtin(
+                TypeKind::Decimal {
+                    precision: lit(1),
+                    scale: lit(0)
+                },
+                false
+            )
+        );
+        assert_eq!(eval_with("p + 1", &[("P", int(5))]), int(6));
+        assert_eq!(
+            eval_with("ANY1", &[("any1", Value::Type(i32_type(false)))]),
+            Value::Type(i32_type(false))
+        );
+        assert_eq!(eval("MIN(1, 2) + Max(1, 2)"), int(3));
+    }
+
+    #[test]
+    fn multiline_bindings_are_local() {
+        // `x` is bound inside the map key only; the value cannot see it.
+        assert_eq!(
+            err("map<(x = 1\ni32), varchar<x>>", &[]),
+            DerivationError::UnboundParameter("x".to_string())
+        );
+        // Bindings may shadow parameters without affecting the caller's map.
+        assert_eq!(eval_with("P = P + 1\ndecimal<P, 0>", &[("P", int(9))]), {
+            builtin(
+                TypeKind::Decimal {
+                    precision: lit(10),
+                    scale: lit(0),
+                },
+                false,
+            )
+        });
+    }
+
+    #[test]
+    fn functions() {
+        assert!(matches!(
+            err("min()", &[]),
+            DerivationError::InvalidArguments(_)
+        ));
+        assert_eq!(
+            err("avg(1, 2)", &[]),
+            DerivationError::UnknownFunction("avg".to_string())
+        );
+        // Used by `functions_datetime.yaml`; refers to an argument's value.
+        assert!(matches!(
+            err(
+                "precision = integer_parameter(precision)\nprecision_time<precision>",
+                &[]
+            ),
+            DerivationError::NotYetImplemented(_)
+        ));
+    }
+
+    #[test]
+    fn parameter_bounds_are_checked() {
+        use ExtensionTypeError::{InvalidParameterRange, InvalidParameterValue};
+        for expr in [
+            "decimal<0, 0>",
+            "decimal<39, 0>",
+            "decimal<10, 11>",
+            "decimal<10, -1>",
+            "precision_time<13>",
+            "precision_timestamp<-1>",
+            "precision_timestamp_tz<13>",
+            "interval_day<10>",
+        ] {
+            assert!(
+                matches!(
+                    err(expr, &[]),
+                    DerivationError::InvalidType(InvalidParameterRange { .. })
+                ),
+                "{expr}"
+            );
+        }
+        assert!(matches!(
+            err("varchar<3000000000>", &[]),
+            DerivationError::InvalidType(InvalidParameterValue { .. })
+        ));
+        // Derived values are checked too, e.g. a precision past 38.
+        assert!(matches!(
+            err("decimal<P + 1, 0>", &[("P", int(38))]),
+            DerivationError::InvalidType(InvalidParameterRange { .. })
+        ));
+        // The bounds are inclusive.
+        assert_eq!(
+            eval("decimal<38, 38>"),
+            builtin(
+                TypeKind::Decimal {
+                    precision: lit(38),
+                    scale: lit(38)
+                },
+                false
+            )
+        );
+    }
+
+    #[test]
+    fn complexity_limits() {
+        let sum = |terms: usize| vec!["1"; terms].join(" + ");
+        // 100 terms is 199 tokens: fine.
+        assert_eq!(eval(&sum(100)), int(100));
+        assert!(matches!(
+            err(&sum(MAX_TOKENS / 2 + 1), &[]),
+            DerivationError::TooComplex(_)
+        ));
+        let nested = |depth: usize| format!("{}i32{}", "list<".repeat(depth), ">".repeat(depth));
+        assert!(matches!(
+            err(&nested(MAX_OPENINGS + 1), &[]),
+            DerivationError::TooComplex(_)
+        ));
+        let parens = |depth: usize| format!("{}1{}", "(".repeat(depth), ")".repeat(depth));
+        assert!(matches!(
+            err(&parens(MAX_OPENINGS + 1), &[]),
+            DerivationError::TooComplex(_)
+        ));
+        // Whitespace and comments do not count.
+        assert_eq!(eval(&format!("{}1", " ".repeat(5000))), int(1));
+    }
+
+    #[test]
+    fn surrounding_whitespace_is_ignored() {
+        assert_eq!(eval("\n  i32 \n"), builtin(TypeKind::I32, false));
     }
 }

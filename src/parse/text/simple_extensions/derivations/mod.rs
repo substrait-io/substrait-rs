@@ -1,20 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! ANTLR-generated parser for the Substrait type-derivation DSL.
+//! Type-derivation expressions: the Substrait DSL used in extension function
+//! `return` clauses, e.g. `decimal<P1 + 1, S1>` or multiline programs.
 //!
-//! These submodules are generated from the Substrait `grammar/SubstraitType.g4`
-//! (at the spec version pinned by `substrait-prost` in `Cargo.toml`) using the
-//! ANTLR Rust target. They
-//! are committed to the repository so that an ordinary `cargo build` does not
-//! require a Java runtime.
-//!
-//! Do not edit the generated files by hand; run `pixi run gen-antlr` to
-//! regenerate them. See `antlr/README.md` for details.
-//!
-//! [`evaluate`] consumes the generated parser to evaluate type-derivation
-//! expressions into [`Type`](super::types::Type)s.
+//! Parsing uses the ANTLR parser generated from the Substrait
+//! `grammar/SubstraitType.g4`, packaged in the [`substrait_antlr`] crate at the
+//! same spec version as the other Substrait dependencies. [`evaluate`]
+//! evaluates the parsed expressions into [`Type`](super::types::Type)s.
 
+#[cfg(test)]
+mod conformance;
 mod evaluate;
-mod substraittypelexer;
-mod substraittypelistener;
-mod substraittypeparser;
