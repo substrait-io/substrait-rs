@@ -967,7 +967,6 @@ impl From<Type> for RawType {
     }
 }
 
-/// Parse an integer literal or parameter name for a built-in type.
 /// Allowed precision of `decimal`.
 pub(super) const DECIMAL_PRECISION: RangeInclusive<i32> = 1..=38;
 /// Allowed sub-second precision of `precision_time`, `precision_timestamp` and
@@ -1004,6 +1003,8 @@ pub(super) fn check_integer_literal(
     }
 }
 
+/// Parse an integer literal or parameter name for a built-in type.
+///
 /// Validate literals against the supplied range.
 ///
 /// - `type_name`: Type being validated (for error messages, e.g., "DECIMAL")

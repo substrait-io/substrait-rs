@@ -71,12 +71,14 @@ pub const MAX_TOKENS: usize = 1024;
 
 /// The most opening `(` and `<` tokens an expression may have, which bounds
 /// its nesting depth. The generated parser recurses several frames per nesting
-/// level; the Substrait extensions nest at most a handful of levels deep.
+/// level. The longest derivations in the Substrait extensions (decimal
+/// `add`, `subtract` and `modulus`) have 6 openings and nest 2 levels deep.
 ///
-/// These limits keep optimized builds well within a 2 MiB thread stack.
 /// Unoptimized (debug) builds use much larger stack frames in the generated
-/// parser and can still exhaust a 2 MiB stack at around ten levels of nesting.
-pub const MAX_OPENINGS: usize = 64;
+/// parser and exhaust a 2 MiB thread stack at 10 levels of nesting, so the
+/// limit is kept low enough to hold in debug builds too, not just optimized
+/// ones.
+pub const MAX_OPENINGS: usize = 8;
 
 /// A value produced while evaluating a derivation expression.
 ///
@@ -1172,6 +1174,27 @@ DECIMAL<prec, scale>";
             err(&parens(MAX_OPENINGS + 1), &[]),
             DerivationError::TooComplex(_)
         ));
+        // The deepest nesting the limits allow fits in a 2 MiB thread stack,
+        // even in debug builds (which is how this test usually runs).
+        let deepest = [
+            nested(MAX_OPENINGS),
+            parens(MAX_OPENINGS),
+            format!(
+                "{}1{}",
+                "max(1, ".repeat(MAX_OPENINGS),
+                ")".repeat(MAX_OPENINGS)
+            ),
+        ];
+        std::thread::Builder::new()
+            .stack_size(2 << 20)
+            .spawn(move || {
+                for expr in deepest {
+                    evaluate(&expr, &HashMap::new()).expect("within limits");
+                }
+            })
+            .expect("spawn thread")
+            .join()
+            .expect("no stack overflow");
         // Whitespace and comments do not count.
         assert_eq!(eval(&format!("{}1", " ".repeat(5000))), int(1));
     }
