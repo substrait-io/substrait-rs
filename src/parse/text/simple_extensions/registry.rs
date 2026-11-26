@@ -605,7 +605,7 @@ scalar_functions:
     fn test_unsupported_numeric_returns_are_still_skipped() {
         for return_type in [
             "varchar<unknown(L, 1)>",
-            "decimal<P * 2, S>",
+            "decimal<P = 2, S>",
             "varchar<L + unknown(S, 6)>",
         ] {
             let raw = extension_with_custom_type_reference(
@@ -635,6 +635,26 @@ scalar_functions:
         let file = ExtensionFile::create(raw).unwrap();
         let function = file.extension().get_scalar_function("append").unwrap();
         assert_eq!(function.impls[0].return_type.to_string(), source);
+    }
+
+    #[test]
+    fn multiplication_and_division_returns_are_retained() {
+        for return_type in [
+            "varchar<L * 2>",
+            "decimal<(P + 1) / 2, S>",
+            "varchar<L / 0>",
+        ] {
+            let raw = extension_with_custom_type_reference(
+                "extension:example.com:arithmetic",
+                "arithmetic",
+                return_type,
+                vec![],
+            );
+            let file = ExtensionFile::create(raw).unwrap();
+            let function = file.extension().get_scalar_function("arithmetic").unwrap();
+            assert_eq!(function.impls.len(), 1);
+            assert_eq!(function.impls[0].return_type.to_string(), return_type);
+        }
     }
 
     #[test]

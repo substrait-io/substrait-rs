@@ -290,6 +290,10 @@ pub enum BinaryOp {
     Add,
     /// Integer subtraction.
     Subtract,
+    /// Integer multiplication.
+    Multiply,
+    /// Integer division.
+    Divide,
     /// Greater-than comparison.
     GreaterThan,
 }
@@ -299,6 +303,7 @@ impl BinaryOp {
         match self {
             Self::GreaterThan => 2,
             Self::Add | Self::Subtract => 3,
+            Self::Multiply | Self::Divide => 4,
         }
     }
 }
@@ -308,6 +313,8 @@ impl fmt::Display for BinaryOp {
         match self {
             Self::Add => f.write_str("+"),
             Self::Subtract => f.write_str("-"),
+            Self::Multiply => f.write_str("*"),
+            Self::Divide => f.write_str("/"),
             Self::GreaterThan => f.write_str(">"),
         }
     }
@@ -380,7 +387,7 @@ impl IntegerParameter {
         match self {
             Self::Conditional { .. } => 1,
             Self::BinaryExpression { op, .. } => op.precedence(),
-            _ => 4,
+            _ => 5,
         }
     }
 
@@ -1451,6 +1458,30 @@ mod tests {
     }
 
     #[test]
+    fn multiplication_and_division_display_roundtrips() {
+        for source in [
+            "P + S * 2",
+            "P * S + 2",
+            "(P + S) * 2",
+            "P * (S + 2)",
+            "P / S / 2",
+            "P / (S / 2)",
+            "P / (S * 2)",
+            "P * (S / 2)",
+            "P - S / 2",
+            "(P - S) / 2",
+            "P / -2",
+            "P * -2",
+            "P / 0",
+            "9223372036854775807 * 2",
+        ] {
+            let original = parse_type(&format!("varchar<{source}>"));
+            assert_eq!(original.to_string(), format!("varchar<{source}>"));
+            assert_eq!(parse_type(&original.to_string()), original, "{source}");
+        }
+    }
+
+    #[test]
     fn integer_expression_display_roundtrips() {
         for source in [
             "P + S + 1",
@@ -1481,6 +1512,10 @@ mod tests {
             "P > S > 1",
             "P > (S > 1)",
             "(P > 38 ? 38 : P) + 1",
+            "P * 2 > S / 2 ? P / 2 : S * 2",
+            "(P > 38 ? 38 : P) * 2",
+            "P / (S > 1 ? S : 1)",
+            "(P > S) * 2",
             "P - (S > 38 ? 38 : S)",
             "(P > 1) + (S > 1)",
             "(P > 1 ? 1 : 0) > S",
