@@ -288,12 +288,15 @@ impl fmt::Display for TypeKind {
 pub enum BinaryOp {
     /// Integer addition.
     Add,
+    /// Integer subtraction.
+    Subtract,
 }
 
 impl fmt::Display for BinaryOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Add => f.write_str("+"),
+            Self::Subtract => f.write_str("-"),
         }
     }
 }
@@ -1354,7 +1357,18 @@ mod tests {
 
     #[test]
     fn integer_expression_display_roundtrips() {
-        for source in ["P + S + 1", "$P + _S", "P + -2", "9223372036854775807 + 1"] {
+        for source in [
+            "P + S + 1",
+            "P + (S + 1)",
+            "P - (S + 1)",
+            "P + (S - 1)",
+            "P - (S - 1)",
+            "P - -1",
+            "P + S + (1 + (T + 2))",
+            "$P + _S",
+            "P + -2",
+            "9223372036854775807 + 1",
+        ] {
             let expression = parse_integer_expression(source).unwrap();
             assert_eq!(expression.to_string(), source);
         }
@@ -1384,9 +1398,25 @@ mod tests {
     }
 
     #[test]
+    fn test_expression_literals_still_validate_ranges() {
+        for source in ["decimal<(0), 0>", "decimal<(39), 0>", "decimal<10, (11)>"] {
+            assert!(
+                matches!(
+                    parse_type_result(source),
+                    Err(ExtensionTypeError::InvalidParameterRange { .. })
+                ),
+                "{source}"
+            );
+        }
+    }
+
+    #[test]
     fn test_numeric_expression_type_display() {
         for (source, expected) in [
             ("varchar<L+1>", "varchar<L + 1>"),
+            ("varchar<L + (M + 1)>", "varchar<L + (M + 1)>"),
+            ("varchar<(L)>", "varchar<L>"),
+            ("decimal<(P1 + P2), (S + 1)>", "decimal<P1 + P2, S + 1>"),
             ("list<decimal<P + 1, S>>", "list<decimal<P + 1, S>>"),
             (
                 "func<varchar<L + 1> -> decimal<P, S + 1>>",

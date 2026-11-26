@@ -597,10 +597,10 @@ scalar_functions:
     }
 
     #[test]
-    fn test_numeric_subtraction_returns_are_still_skipped() {
+    fn test_numeric_call_returns_are_still_skipped() {
         for return_type in [
-            "varchar<L - 1>",
-            "decimal<P + 1 - 2, S>",
+            "varchar<max(L, 1)>",
+            "decimal<min(P, 38), S>",
             "varchar<L + min(S, 6)>",
         ] {
             let raw = extension_with_custom_type_reference(

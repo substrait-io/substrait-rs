@@ -5,7 +5,7 @@
 //! into a [`TypeExpr`]. [`TreeConverter`] has one method per grammar rule,
 //! each documented with the rule it converts.
 //!
-//! Addition in numeric parameters is retained without evaluation. Other
+//! Addition and subtraction in numeric parameters are retained without evaluation. Other
 //! derivations return [`TypeParseError::UnsupportedNumericExpression`]. Built-in names, parameter
 //! counts and literal ranges are validated later, when converting to
 //! [`Type`](super::types::Type).
@@ -23,8 +23,10 @@ use antlr4rust::token::Token;
 use antlr4rust::token_factory::TokenFactory;
 use antlr4rust::tree::TerminalNode;
 use antlr4rust::{InputStream, TidExt};
-use substrait_antlr::substrait_type::substraittypeparser::SubstraitType_Plus as PLUS_TOKEN;
 use substrait_antlr::substrait_type::substraittypeparser::*;
+use substrait_antlr::substrait_type::substraittypeparser::{
+    SubstraitType_Minus as MINUS_TOKEN, SubstraitType_Plus as PLUS_TOKEN,
+};
 use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
@@ -181,6 +183,7 @@ impl<'a> TreeConverter<'a> {
                     .expect("binary expression has an operator");
                 let op = match operator.get_token_type() {
                     PLUS_TOKEN => BinaryOp::Add,
+                    MINUS_TOKEN => BinaryOp::Subtract,
                     _ => {
                         return Err(TypeParseError::UnsupportedNumericExpression(
                             self.source.to_string(),
@@ -421,6 +424,27 @@ mod tests {
     use super::*;
 
     #[test]
+    fn subtraction_preserves_order_and_grouping() {
+        for (source, expected) in [
+            ("P - S + 1", "P - S + 1"),
+            ("P - (S - 1)", "P - (S - 1)"),
+            ("P - -1", "P - -1"),
+        ] {
+            let value = parse_integer_parameter(source).unwrap();
+            assert_eq!(value.to_string(), expected);
+            assert_eq!(parse_integer_parameter(&value.to_string()).unwrap(), value);
+        }
+        assert_eq!(
+            parse_integer_parameter("P - S").unwrap(),
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Subtract,
+                left: Box::new(IntegerParameter::Variable("P".into())),
+                right: Box::new(IntegerParameter::Variable("S".into())),
+            }
+        );
+    }
+
+    #[test]
     fn numeric_parameters_have_explicit_integer_nodes() {
         assert_eq!(
             parse("decimal<P, 2>").unwrap(),
@@ -528,7 +552,7 @@ mod tests {
     #[test]
     fn derivation_expressions_are_not_supported() {
         for source in [
-            "decimal<P1 - 1, S>",
+            "decimal<P1 * 2, S>",
             "u!box<max(P, 2)>",
             "decimal<P > 1 ? P : 1, 0>",
         ] {
