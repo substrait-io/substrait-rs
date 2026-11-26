@@ -1377,6 +1377,28 @@ mod tests {
     }
 
     #[test]
+    fn grouped_additions_preserve_the_type_on_roundtrip() {
+        for source in [
+            "varchar<L + (M + 1)>",
+            "varchar<L + (M + (N + 1))>",
+            "list<decimal<P + (Q + 1), S>>",
+        ] {
+            let original = parse_type(source);
+            assert_eq!(parse_type(&original.to_string()), original, "{source}");
+        }
+    }
+
+    #[test]
+    fn parenthesized_extension_parameter_names_preserve_their_kind() {
+        let original = parse_type("u!foo<(P)>");
+        assert_eq!(
+            original,
+            Type::extension_with_params("foo".into(), vec![TypeParameter::Name("P".into())], false)
+        );
+        assert_eq!(parse_type(&original.to_string()), original);
+    }
+
+    #[test]
     fn integer_expression_display_roundtrips() {
         for source in [
             "P + S + 1",
