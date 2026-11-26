@@ -7,7 +7,7 @@ use super::argument::{
     EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
 };
 use super::extensions::TypeContext;
-use super::type_ast::TypeExprParam;
+use super::type_ast::Expr;
 use crate::parse::Parse;
 use crate::parse::text::simple_extensions::type_ast::TypeParseError;
 use crate::text::simple_extensions::{
@@ -978,16 +978,16 @@ impl From<Type> for RawType {
 fn parse_integer_parameter(
     type_name: &str,
     index: usize,
-    param: &TypeExprParam<'_>,
+    param: &Expr<'_>,
     range: Option<RangeInclusive<i32>>,
 ) -> Result<IntegerParameter, ExtensionTypeError> {
     let value = match param {
-        TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
+        Expr::Type(TypeExpr::Simple(name, parameters, false))
             if parameters.is_empty() && CustomType::validate_name(name).is_ok() =>
         {
             return Ok(IntegerParameter::Variable(name.to_string()));
         }
-        TypeExprParam::Integer(value) => {
+        Expr::Integer(value) => {
             i32::try_from(*value).map_err(|_| ExtensionTypeError::InvalidParameterValue {
                 type_name: type_name.to_string(),
                 index,
@@ -1021,7 +1021,7 @@ fn parse_integer_parameter(
 /// error if not. Assumes a fixed number of expected parameters.
 fn expect_param_len(
     type_name: &str,
-    params: &[TypeExprParam<'_>],
+    params: &[Expr<'_>],
     expected: usize,
 ) -> Result<(), ExtensionTypeError> {
     if params.len() != expected {
@@ -1059,11 +1059,11 @@ fn expect_concrete_type(expression: TypeExpr<'_>) -> Result<Type, ExtensionTypeE
 fn expect_type_argument<'a>(
     type_name: &str,
     index: usize,
-    param: TypeExprParam<'a>,
+    param: Expr<'a>,
 ) -> Result<Type, ExtensionTypeError> {
     match param {
-        TypeExprParam::Type(t) => Type::try_from(t),
-        TypeExprParam::Integer(_) => Err(ExtensionTypeError::InvalidParameterKind {
+        Expr::Type(t) => Type::try_from(t),
+        _ => Err(ExtensionTypeError::InvalidParameterKind {
             type_name: type_name.to_string(),
             index,
             expected: "a type",
@@ -1071,27 +1071,36 @@ fn expect_type_argument<'a>(
     }
 }
 
-impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
-    type Error = ExtensionTypeError;
-
-    fn try_from(param: TypeExprParam<'a>) -> Result<Self, Self::Error> {
-        Ok(match param {
-            TypeExprParam::Integer(v) => TypeParameter::Integer(IntegerParameter::Literal(v)),
-            TypeExprParam::Type(expression) => {
-                let is_bare_name = matches!(
-                    &expression,
-                    TypeExpr::Simple(_, parameters, false) if parameters.is_empty()
-                );
-                match Type::try_from(expression) {
-                    Err(ExtensionTypeError::UnknownTypeName { name }) if is_bare_name => {
-                        CustomType::validate_name(&name)?;
-                        TypeParameter::Name(name)
-                    }
-                    result => TypeParameter::Type(result?),
+/// Convert parameter `index` of the user-defined type `type_name`, which may be
+/// an integer, a type, or a parameter name.
+fn user_defined_parameter(
+    type_name: &str,
+    index: usize,
+    param: Expr<'_>,
+) -> Result<TypeParameter, ExtensionTypeError> {
+    Ok(match param {
+        Expr::Integer(v) => TypeParameter::Integer(IntegerParameter::Literal(v)),
+        Expr::Type(expression) => {
+            let is_bare_name = matches!(
+                &expression,
+                TypeExpr::Simple(_, parameters, false) if parameters.is_empty()
+            );
+            match Type::try_from(expression) {
+                Err(ExtensionTypeError::UnknownTypeName { name }) if is_bare_name => {
+                    CustomType::validate_name(&name)?;
+                    TypeParameter::Name(name)
                 }
+                result => TypeParameter::Type(result?),
             }
-        })
-    }
+        }
+        _ => {
+            return Err(ExtensionTypeError::InvalidParameterKind {
+                type_name: type_name.to_string(),
+                index,
+                expected: "a type, an integer or a parameter name",
+            });
+        }
+    })
 }
 
 /// The tightest provable upper bound for a decimal scale, per the
@@ -1110,7 +1119,7 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
 fn parse_builtin<'a>(
     display_name: &str,
     lower_name: &str,
-    params: &[TypeExprParam<'a>],
+    params: &[Expr<'a>],
 ) -> Result<Option<TypeKind>, ExtensionTypeError> {
     if let Some(builtin) = primitive_builtin(lower_name) {
         expect_param_len(display_name, params, 0)?;
@@ -1239,7 +1248,8 @@ impl<'a> TryFrom<TypeExpr<'a>> for Type {
             TypeExpr::UserDefined(name, params, nullable) => {
                 let parameters = params
                     .into_iter()
-                    .map(TypeParameter::try_from)
+                    .enumerate()
+                    .map(|(index, param)| user_defined_parameter(name, index, param))
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(Type::extension_with_params(
                     name.to_string(),
