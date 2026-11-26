@@ -11,6 +11,7 @@
 //!   extension file.
 //! * [`CustomType`] / [`Type`] – type definitions and type expressions.
 //! * [`ScalarFunction`] – parsed scalar function declarations.
+//! * [`TableFunction`] – parsed table function declarations.
 //! * [`Registry`] – a reusable lookup structure that stores validated extension
 //!   files and exposes typed access to their contents.
 
@@ -21,6 +22,7 @@ mod extensions;
 mod file;
 mod registry;
 mod scalar_functions;
+mod table_functions;
 mod type_ast;
 mod type_parser;
 mod types;
@@ -31,6 +33,7 @@ pub use registry::Registry;
 pub use scalar_functions::{
     Impl as ScalarFunctionImpl, NullabilityHandling, Options, ScalarFunction, VariadicBehavior,
 };
+pub use table_functions::{Impl as TableFunctionImpl, TableFunction};
 pub use type_ast::TypeExpr;
 pub use types::{CustomType, ExtensionTypeError, IntegerParameter, Type, TypeKind, TypeParameter};
 
@@ -48,6 +51,9 @@ pub enum SimpleExtensionsError {
     /// Scalar function error
     #[error("Scalar function error: {0}")]
     ScalarFunctionError(#[from] scalar_functions::ScalarFunctionError),
+    /// Table function error
+    #[error("Table function error: {0}")]
+    TableFunctionError(#[from] table_functions::TableFunctionError),
     /// Failed to parse SimpleExtensions YAML
     #[error("YAML parse error: {0}")]
     YamlParse(#[from] serde_yaml::Error),

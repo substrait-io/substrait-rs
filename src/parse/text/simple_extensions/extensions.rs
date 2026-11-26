@@ -2,7 +2,7 @@
 
 //! Validated simple extensions: [`SimpleExtensions`].
 //!
-//! Both type definitions and scalar function definitions are supported.
+//! Type definitions, scalar function definitions and table function definitions are supported.
 //! Aggregate functions (see #447) and window functions (see #446) are not yet supported.
 
 use indexmap::IndexMap;
@@ -10,7 +10,10 @@ use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 use super::{
-    ExtensionFile, SimpleExtensionsError, scalar_functions::ScalarFunction, types::CustomType,
+    ExtensionFile, SimpleExtensionsError,
+    scalar_functions::{ScalarFunction, ScalarFunctionError},
+    table_functions::{TableFunction, TableFunctionError},
+    types::CustomType,
 };
 use crate::{
     parse::{Context, Parse},
@@ -31,6 +34,8 @@ pub struct SimpleExtensions {
     ///
     /// TODO: Add support for window functions (issue #446) and aggregate functions (issue #447)
     scalar_functions: HashMap<String, ScalarFunction>,
+    /// Table functions defined in this extension file
+    table_functions: HashMap<String, TableFunction>,
 }
 
 impl SimpleExtensions {
@@ -99,6 +104,34 @@ impl SimpleExtensions {
     pub fn scalar_functions(&self) -> impl Iterator<Item = &ScalarFunction> {
         self.scalar_functions.values()
     }
+
+    /// Add a table function to the context, merging with existing functions of the same name.
+    ///
+    /// Duplicate names are merged the same way as scalar functions: the
+    /// implementations are unioned and the first description wins.
+    pub(super) fn add_table_function(&mut self, table_function: TableFunction) {
+        use std::collections::hash_map::Entry;
+        match self.table_functions.entry(table_function.name.clone()) {
+            Entry::Vacant(e) => {
+                e.insert(table_function);
+            }
+            Entry::Occupied(mut e) => {
+                let existing = e.get_mut();
+                existing.impls.extend(table_function.impls);
+                existing.description = existing.description.take().or(table_function.description);
+            }
+        }
+    }
+
+    /// Get a table function by name
+    pub fn get_table_function(&self, name: &str) -> Option<&TableFunction> {
+        self.table_functions.get(name)
+    }
+
+    /// Get an iterator over all table functions
+    pub fn table_functions(&self) -> impl Iterator<Item = &TableFunction> {
+        self.table_functions.values()
+    }
 }
 
 /// resolved or unresolved.
@@ -141,6 +174,7 @@ impl Parse<TypeContext> for RawExtensions {
             urn,
             types,
             scalar_functions,
+            table_functions,
             ..
         } = self;
         let urn = Urn::from_str(&urn)?;
@@ -156,9 +190,19 @@ impl Parse<TypeContext> for RawExtensions {
                 Ok(parsed_fn) => {
                     extension.add_scalar_function(parsed_fn);
                 }
-                Err(super::scalar_functions::ScalarFunctionError::NotYetImplemented(_)) => {
+                Err(ScalarFunctionError::NotYetImplemented(_)) => {
                     // Skip functions with unimplemented features (e.g., type derivations)
                     // These will be supported in a future update
+                    continue;
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
+
+        for table_fn in table_functions {
+            match TableFunction::from_raw(table_fn, ctx) {
+                Ok(parsed_fn) => extension.add_table_function(parsed_fn),
+                Err(TableFunctionError::Signature(ScalarFunctionError::NotYetImplemented(_))) => {
                     continue;
                 }
                 Err(e) => return Err(e.into()),
