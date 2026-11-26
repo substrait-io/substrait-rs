@@ -24,10 +24,13 @@ use antlr4rust::token_factory::TokenFactory;
 use antlr4rust::tree::TerminalNode;
 use antlr4rust::{InputStream, TidExt};
 use substrait_antlr::substrait_type::substraittypeparser::*;
+use substrait_antlr::substrait_type::substraittypeparser::{
+    SubstraitType_Minus as MINUS_TOKEN, SubstraitType_Plus as PLUS_TOKEN,
+};
 use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
-use super::types::{BinaryOp, CustomType, IntegerParameter, NumericFunction};
+use super::types::{BinaryOp, CustomType, IntegerParameter, NumericFunction, TypeKind};
 
 /// Parse one complete type, rejecting any tokens left after it.
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
@@ -181,8 +184,8 @@ impl<'a> TreeConverter<'a> {
                     .as_ref()
                     .expect("binary expression has an operator");
                 let op = match operator.get_token_type() {
-                    SubstraitType_Plus => BinaryOp::Add,
-                    SubstraitType_Minus => BinaryOp::Subtract,
+                    PLUS_TOKEN => BinaryOp::Add,
+                    MINUS_TOKEN => BinaryOp::Subtract,
                     _ => {
                         return Err(TypeParseError::UnsupportedNumericExpression(
                             self.source.to_string(),
@@ -241,6 +244,9 @@ impl<'a> TreeConverter<'a> {
     }
 
     fn integer_name(&self, name: &str) -> Result<IntegerParameter, TypeParseError> {
+        if TypeKind::is_name(name) {
+            return Err(TypeParseError::ExpectedInteger(self.source.to_string()));
+        }
         CustomType::validate_name(name)
             .map_err(|_| TypeParseError::ExpectedInteger(self.source.to_string()))?;
         Ok(IntegerParameter::Variable(name.to_string()))
@@ -504,6 +510,8 @@ mod tests {
             "varchar<i32>",
             "varchar<P?>",
             "varchar<i32 + 1>",
+            "varchar<bool>",
+            "varchar<bool + 1>",
         ] {
             assert!(parse(source).is_err(), "{source}");
         }
