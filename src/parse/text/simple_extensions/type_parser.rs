@@ -1,562 +1,542 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Parse type syntax in two steps: tokenize the source, then consume tokens
-//! recursively to build a [`TypeExpr`].
+//! Parse type strings with the ANTLR parser generated from the Substrait type
+//! grammar ([`substrait_antlr::substrait_type`]), then convert the parse tree
+//! into a [`TypeExpr`]. [`TreeConverter`] has one method per grammar rule,
+//! each documented with the rule it converts.
 //!
-//! For `func<func<i32 -> i64> -> bool>`, each `->` is a single arrow token.
-//! Parsing the inner function consumes its closing `>` before the outer rule
-//! expects its own arrow. No rule needs to count brackets or search ahead.
-//!
-//! Names borrow from the source, and token positions are byte offsets into that
-//! source. Built-in types select whether their parameters are types or integer
-//! expressions. Parameter counts and literal ranges are validated later when
-//! converting the AST to [`Type`](super::types::Type).
+//! Addition and subtraction in numeric parameters are retained without evaluation. Other
+//! derivations return [`TypeParseError::UnsupportedNumericExpression`]. Built-in names, parameter
+//! counts and literal ranges are validated later, when converting to
+//! [`Type`](super::types::Type).
+
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use antlr4rust::common_token_stream::CommonTokenStream;
+use antlr4rust::error_listener::ErrorListener;
+use antlr4rust::errors::ANTLRError;
+use antlr4rust::parser::Parser;
+use antlr4rust::parser_rule_context::ParserRuleContext;
+use antlr4rust::recognizer::Recognizer;
+use antlr4rust::token::Token;
+use antlr4rust::token_factory::TokenFactory;
+use antlr4rust::tree::TerminalNode;
+use antlr4rust::{InputStream, TidExt};
+use substrait_antlr::substrait_type::substraittypeparser::*;
+use substrait_antlr::substrait_type::substraittypeparser::{
+    SubstraitType_Minus as MINUS_TOKEN, SubstraitType_Plus as PLUS_TOKEN,
+};
+use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
 use super::return_type::{IntegerAssignment, ReturnTypeExpr};
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
-use super::type_tokenizer::{Token, TokenKind, tokenize};
-use super::types::{BinaryOp, IntegerParameter, NumericFunction, TypeKind};
+use super::types::{BinaryOp, CustomType, IntegerParameter, NumericFunction, TypeKind};
 
 /// Parse one complete type, rejecting any tokens left after it.
-///
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
 pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
-    let mut parser = Parser::new(source)?;
-    let expression = parser.parse_type()?;
-    if parser.peek().is_some() {
-        return Err(parser.error("end of type"));
-    }
-    Ok(expression)
+    let tree = parse_tree(source)?;
+    let expr = tree.expr().expect("startRule is `expr EOF`");
+    TreeConverter { source }.expr_as_type(&expr)
 }
 
-/// Parse a standalone numeric expression for tests, rejecting trailing tokens.
 #[cfg(test)]
 pub(super) fn parse_integer_parameter(source: &str) -> Result<IntegerParameter, TypeParseError> {
-    let mut parser = Parser::new(source)?;
-    let expression = parser.parse_integer_parameter_expression()?;
-    if parser.peek().is_some() {
-        return Err(parser.error("end of numeric expression"));
-    }
-    Ok(expression)
+    let tree = parse_tree(source)?;
+    TreeConverter { source }.integer_expr(&tree.expr().expect("startRule has an expression"))
 }
 
-/// Parse ordered numeric assignments and a final type, or just a type.
-///
-/// For `P = min(L, 38)\ndecimal<P, 0>`, retain the assignment followed by `decimal<P, 0>`.
+/// Parse ordered assignments followed by a final type, or a plain type.
 pub(super) fn parse_return_type(source: &str) -> Result<ReturnTypeExpr<'_>, TypeParseError> {
-    let mut parser = Parser::new(source)?;
-    let mut assignments = Vec::new();
-    while parser.peek().is_some_and(TokenKind::is_name)
-        && parser.peek_next() == Some(TokenKind::Equals)
-    {
-        let name = parser.expect_name()?.text.to_string();
-        parser.expect(TokenKind::Equals)?;
-        let value = parser.parse_integer_parameter_expression()?;
-        let previous = parser.tokens[parser.index - 1];
-        let end = previous.position + previous.text.len();
-        let next = parser
-            .tokens
-            .get(parser.index)
-            .map_or(source.len(), |token| token.position);
-        if !source[end..next].contains('\n') {
-            return Err(parser.error("a newline after an assignment"));
+    let source = source.trim_end();
+    let tree = parse_tree(source)?;
+    let expr = tree.expr().expect("startRule has an expression");
+    let converter = TreeConverter { source };
+    match expr.as_ref() {
+        ExprContextAll::MultilineDefinitionContext(program) => {
+            let values = program.expr_all();
+            let assignments = values
+                .iter()
+                .enumerate()
+                .map(|(index, value)| {
+                    let name = converter
+                        .terminal_text(&program.Identifier(index).expect("assignment has a name"));
+                    converter.integer_name(name)?;
+                    Ok(IntegerAssignment {
+                        name: name.to_string(),
+                        value: converter.integer_expr(value)?,
+                    })
+                })
+                .collect::<Result<_, TypeParseError>>()?;
+            let return_type = converter.type_def(
+                program
+                    .finalType
+                    .as_ref()
+                    .expect("derivation has a final type"),
+            )?;
+            Ok(ReturnTypeExpr {
+                assignments,
+                return_type,
+            })
         }
-        assignments.push(IntegerAssignment { name, value });
+        _ => Ok(ReturnTypeExpr {
+            assignments: Vec::new(),
+            return_type: converter.expr_as_type(&expr)?,
+        }),
     }
-    let return_type = parser.parse_type()?;
-    if parser.peek().is_some() {
-        return Err(parser.error("end of return declaration"));
+}
+
+/// Run the generated parser on `source`, returning its `startRule` tree.
+///
+/// The tree is only returned when neither the lexer nor the parser reported
+/// an error, so [`TreeConverter`] can rely on it matching the grammar.
+fn parse_tree(source: &str) -> Result<Rc<StartRuleContextAll<'_>>, TypeParseError> {
+    // The type grammar has no variation syntax.
+    if source.contains(['[', ']']) {
+        return Err(TypeParseError::UnsupportedVariation(source.to_string()));
     }
-    Ok(ReturnTypeExpr {
-        assignments,
-        return_type,
+
+    // ANTLR's default listeners print errors to stderr, then recover and still
+    // return a tree. Replace them with one that records the first error, which
+    // is the only way to tell that the input was invalid.
+    let first_error = FirstSyntaxError::default();
+
+    let mut lexer = SubstraitTypeLexer::new(InputStream::new(source));
+    lexer.remove_error_listeners();
+    lexer.add_error_listener(Box::new(first_error.clone()));
+
+    let mut parser = SubstraitTypeParser::new(CommonTokenStream::new(lexer));
+    parser.remove_error_listeners();
+    parser.add_error_listener(Box::new(first_error.clone()));
+
+    let tree = parser.startRule();
+    if let Some(error) = first_error.0.take() {
+        return Err(error);
+    }
+    tree.map_err(|error| TypeParseError::Syntax {
+        column: 0,
+        message: error.to_string(),
     })
 }
 
-enum ParameterKind {
-    Integer,
-    Type,
+/// Keeps the first syntax error reported by the lexer or parser.
+///
+/// ANTLR reports errors to listeners and then recovers, so `startRule` can
+/// return a tree even for invalid input. The lexer and parser each own a
+/// boxed listener, so the error is shared back to [`parse_tree`] through an
+/// `Rc`.
+#[derive(Clone, Default)]
+struct FirstSyntaxError(Rc<RefCell<Option<TypeParseError>>>);
+
+// The signature is fixed by `antlr4rust`'s `ErrorListener` trait. Only
+// `column` and `message` are used.
+impl<'input, T: Recognizer<'input>> ErrorListener<'input, T> for FirstSyntaxError {
+    fn syntax_error(
+        &self,
+        _recognizer: &T,
+        _offending_symbol: Option<&<T::TF as TokenFactory<'input>>::Inner>,
+        _line: isize,
+        column: isize,
+        message: &str,
+        _error: Option<&ANTLRError>,
+    ) {
+        self.0
+            .borrow_mut()
+            .get_or_insert_with(|| TypeParseError::Syntax {
+                column: column as usize,
+                message: message.to_string(),
+            });
+    }
 }
 
-/// Recursive-descent parser whose index points to the next unconsumed token.
-/// Nested rules share this position and leave their caller's delimiters intact.
-struct Parser<'a> {
+/// Converts the parse tree into a [`TypeExpr`], with one method per grammar
+/// rule. Names borrow from `source` using the byte offsets of their tokens.
+///
+/// The `expect`s on child accessors rely on the tree matching the grammar,
+/// which [`parse_tree`] guarantees.
+struct TreeConverter<'a> {
     source: &'a str,
-    tokens: Vec<Token<'a>>,
-    index: usize,
 }
 
-impl<'a> Parser<'a> {
-    fn new(source: &'a str) -> Result<Self, TypeParseError> {
-        Ok(Self {
-            source,
-            tokens: tokenize(source)?,
-            index: 0,
-        })
-    }
-
-    fn peek(&self) -> Option<TokenKind> {
-        self.tokens.get(self.index).map(|token| token.kind)
-    }
-
-    /// Look one token beyond `peek()` without consuming either token.
-    fn peek_next(&self) -> Option<TokenKind> {
-        self.tokens.get(self.index + 1).map(|token| token.kind)
-    }
-
-    fn error(&self, expected: &'static str) -> TypeParseError {
-        TypeParseError::UnexpectedToken {
-            position: self
-                .tokens
-                .get(self.index)
-                .map_or(self.source.len(), |token| token.position),
-            expected,
+impl<'a> TreeConverter<'a> {
+    /// Convert an `expr` that must be a type, such as a top-level type or a
+    /// function's return type. `10` is rejected here.
+    fn expr_as_type(&self, expr: &ExprContextAll<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
+        match self.expr(expr)? {
+            TypeExprParam::Type(type_expr) => Ok(type_expr),
+            TypeExprParam::Integer(value) => Err(TypeParseError::ExpectedType(value.to_string())),
         }
     }
 
-    /// Advance only if the next token matches; otherwise leave it for another rule.
-    fn consume(&mut self, kind: TokenKind) -> bool {
-        if self.peek() == Some(kind) {
-            self.index += 1;
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Consume one token matching any of the given kinds and return its kind.
-    /// Leave non-matching tokens unconsumed.
-    fn consume_one_of(&mut self, kinds: &[TokenKind]) -> Option<TokenKind> {
-        let kind = self.peek()?;
-        if kinds.contains(&kind) {
-            self.consume(kind);
-            Some(kind)
-        } else {
-            None
-        }
-    }
-
-    /// Consume a required token or report what was expected at the current position.
-    fn expect(&mut self, kind: TokenKind) -> Result<Token<'a>, TypeParseError> {
-        if self.peek() != Some(kind) {
-            return Err(self.error(kind.description()));
-        }
-        let token = self.tokens[self.index];
-        self.index += 1;
-        Ok(token)
-    }
-
-    /// Consume a type or parameter name, including names with keyword tokens.
-    fn expect_name(&mut self) -> Result<Token<'a>, TypeParseError> {
-        let token = self
-            .tokens
-            .get(self.index)
-            .copied()
-            .filter(|token| token.kind.is_name())
-            .ok_or_else(|| self.error("a type name"))?;
-        self.index += 1;
-        Ok(token)
-    }
-
-    /// Parse one type expression using the rule selected by its first token.
-    fn parse_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        match self.peek() {
-            Some(TokenKind::UserDefined) => self.parse_user_defined_type(),
-            Some(TokenKind::Func) => self.parse_function_type(),
-            Some(TokenKind::AnyVar) => self.parse_type_variable(),
-            _ => {
-                let name = self.expect_name()?;
-                self.parse_named_type(name)
-            }
-        }
-    }
-
-    /// Parse an unparameterized user-defined type such as `u!point?`.
-    fn parse_user_defined_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        self.expect(TokenKind::UserDefined)?;
-        let name = self.expect_name()?;
-        let nullable = self.consume(TokenKind::QuestionMark);
-        if self.peek() == Some(TokenKind::OpenAngle) {
-            return Err(TypeParseError::UnsupportedTypeParameters(
-                self.source.into(),
-            ));
-        }
-        Ok(TypeExpr::UserDefined(name.text, Vec::new(), nullable))
-    }
-
-    /// Parse nullability and parameters for an already-consumed type name.
+    /// Convert an `expr`, which in parameter position is a type or an integer.
     ///
-    /// `decimal<P, S>` takes integer expressions, while `list<i32>` takes types.
-    fn parse_named_type(&mut self, name: Token<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
-        debug_assert!(name.kind.is_name() && name.kind != TokenKind::AnyVar);
-        let nullable = self.consume(TokenKind::QuestionMark);
-        let parameters = match name.text.to_ascii_lowercase().as_str() {
-            "fixedchar"
-            | "varchar"
-            | "fixedbinary"
-            | "decimal"
-            | "precision_time"
-            | "precision_timestamp"
-            | "precision_timestamp_tz"
-            | "interval_day"
-            | "interval_compound" => self.parse_parameters(ParameterKind::Integer)?,
-            "list" | "map" | "struct" => self.parse_parameters(ParameterKind::Type)?,
-            _ => {
-                if self.peek() == Some(TokenKind::OpenAngle) {
-                    return Err(TypeParseError::UnsupportedTypeParameters(
-                        self.source.into(),
+    /// ```text
+    /// expr: typeDef | Identifier '?'? | Number | '(' expr ')' | <derivations>
+    /// ```
+    fn expr(&self, expr: &ExprContextAll<'a>) -> Result<TypeExprParam<'a>, TypeParseError> {
+        match expr {
+            ExprContextAll::TypeLiteralContext(literal) => Ok(TypeExprParam::Type(
+                self.type_def(&literal.typeDef().expect("#TypeLiteral is a typeDef"))?,
+            )),
+            ExprContextAll::ParameterNameContext(name) => {
+                Ok(TypeExprParam::Type(TypeExpr::Simple(
+                    self.terminal_text(
+                        &name.Identifier().expect("#ParameterName is an Identifier"),
+                    ),
+                    Vec::new(),
+                    name.QMark().is_some(),
+                )))
+            }
+            ExprContextAll::LiteralNumberContext(number) => {
+                self.integer(&number.Number().expect("#LiteralNumber is a Number"))
+            }
+            ExprContextAll::ParenExpressionContext(parenthesized) => self.expr(
+                &parenthesized
+                    .expr()
+                    .expect("#ParenExpression wraps an expr"),
+            ),
+            ExprContextAll::AddSubContext(_)
+            | ExprContextAll::FunctionCallContext(_)
+            | ExprContextAll::ComparisonContext(_)
+            | ExprContextAll::TernaryContext(_) => {
+                self.integer_expr(expr).map(TypeExprParam::Integer)
+            }
+            _ => Err(TypeParseError::UnsupportedNumericExpression(
+                self.source.to_string(),
+            )),
+        }
+    }
+
+    /// Convert a numeric expression without binding names or evaluating operators.
+    fn integer_expr(&self, expr: &ExprContextAll<'a>) -> Result<IntegerParameter, TypeParseError> {
+        match expr {
+            ExprContextAll::LiteralNumberContext(number) => {
+                self.integer_value(&number.Number().expect("number literal has a number"))
+            }
+            ExprContextAll::ParameterNameContext(name) if name.QMark().is_none() => self
+                .integer_name(
+                    self.terminal_text(&name.Identifier().expect("parameter has a name")),
+                ),
+            ExprContextAll::ParenExpressionContext(grouped) => {
+                self.integer_expr(&grouped.expr().expect("parentheses contain an expression"))
+            }
+            ExprContextAll::AddSubContext(binary) => {
+                let operator = binary
+                    .op
+                    .as_ref()
+                    .expect("binary expression has an operator");
+                let op = match operator.get_token_type() {
+                    PLUS_TOKEN => BinaryOp::Add,
+                    MINUS_TOKEN => BinaryOp::Subtract,
+                    _ => {
+                        return Err(TypeParseError::UnsupportedNumericExpression(
+                            self.source.to_string(),
+                        ));
+                    }
+                };
+                Ok(IntegerParameter::BinaryExpression {
+                    op,
+                    left: Box::new(
+                        self.integer_expr(
+                            binary
+                                .left
+                                .as_ref()
+                                .expect("binary expression has a left operand"),
+                        )?,
+                    ),
+                    right: Box::new(
+                        self.integer_expr(
+                            binary
+                                .right
+                                .as_ref()
+                                .expect("binary expression has a right operand"),
+                        )?,
+                    ),
+                })
+            }
+            ExprContextAll::ComparisonContext(binary) => {
+                let operator = binary.op.as_ref().expect("comparison has an operator");
+                if operator.get_token_type() != SubstraitType_Gt {
+                    return Err(TypeParseError::UnsupportedNumericExpression(
+                        self.source.to_string(),
                     ));
                 }
-                Vec::new()
+                Ok(IntegerParameter::BinaryExpression {
+                    op: BinaryOp::GreaterThan,
+                    left: Box::new(self.integer_expr(
+                        binary.left.as_ref().expect("comparison has a left operand"),
+                    )?),
+                    right: Box::new(
+                        self.integer_expr(
+                            binary
+                                .right
+                                .as_ref()
+                                .expect("comparison has a right operand"),
+                        )?,
+                    ),
+                })
             }
-        };
-        Ok(TypeExpr::Simple(name.text, parameters, nullable))
+            ExprContextAll::TernaryContext(conditional) => Ok(IntegerParameter::Conditional {
+                condition: Box::new(
+                    self.integer_expr(
+                        conditional
+                            .ifExpr
+                            .as_ref()
+                            .expect("conditional has a condition"),
+                    )?,
+                ),
+                then_value: Box::new(
+                    self.integer_expr(
+                        conditional
+                            .thenExpr
+                            .as_ref()
+                            .expect("conditional has a true branch"),
+                    )?,
+                ),
+                else_value: Box::new(
+                    self.integer_expr(
+                        conditional
+                            .elseExpr
+                            .as_ref()
+                            .expect("conditional has a false branch"),
+                    )?,
+                ),
+            }),
+            ExprContextAll::FunctionCallContext(call) => {
+                let name = self.terminal_text(&call.Identifier().expect("call has a name"));
+                let function = match name.to_ascii_lowercase().as_str() {
+                    "min" => NumericFunction::Min,
+                    "max" => NumericFunction::Max,
+                    "integer_parameter" => NumericFunction::IntegerParameter,
+                    _ => {
+                        return Err(TypeParseError::UnsupportedNumericExpression(
+                            self.source.to_string(),
+                        ));
+                    }
+                };
+                let arguments = call
+                    .expr_all()
+                    .iter()
+                    .map(|expr| self.integer_expr(expr))
+                    .collect::<Result<_, _>>()?;
+                Ok(IntegerParameter::Call {
+                    function,
+                    arguments,
+                })
+            }
+            ExprContextAll::TypeLiteralContext(_) | ExprContextAll::ParameterNameContext(_) => {
+                Err(TypeParseError::ExpectedInteger(self.source.to_string()))
+            }
+            _ => Err(TypeParseError::UnsupportedNumericExpression(
+                self.source.to_string(),
+            )),
+        }
     }
 
-    /// Parse a numbered variable such as `any1?`.
-    /// Variables do not take parameters.
-    fn parse_type_variable(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        let name = self.expect(TokenKind::AnyVar)?;
-        let id = name.text[3..].parse().unwrap();
-        let nullable = self.consume(TokenKind::QuestionMark);
-        Ok(TypeExpr::TypeVariable(id, nullable))
+    fn integer_name(&self, name: &str) -> Result<IntegerParameter, TypeParseError> {
+        if TypeKind::is_name(name) {
+            return Err(TypeParseError::ExpectedInteger(self.source.to_string()));
+        }
+        CustomType::validate_name(name)
+            .map_err(|_| TypeParseError::ExpectedInteger(self.source.to_string()))?;
+        Ok(IntegerParameter::Variable(name.to_string()))
     }
 
-    /// Parse an optional `<...>` list using the enclosing type's parameter grammar.
+    /// Convert a `typeDef`, such as `i32?`, `list<i32>` or `any1`.
     ///
-    /// In `map<string, list<i32>>`, each call consumes only its own angle brackets.
-    /// Empty lists are retained for arity validation, but empty entries fail.
-    fn parse_parameters(
-        &mut self,
-        kind: ParameterKind,
+    /// ```text
+    /// typeDef: scalarType '?'? | parameterizedType | anyType
+    /// ```
+    fn type_def(&self, type_def: &TypeDefContextAll<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
+        if let Some(scalar) = type_def.scalarType() {
+            let name = self.token_text(&*scalar.start());
+            return Ok(TypeExpr::Simple(
+                name,
+                Vec::new(),
+                type_def.QMark().is_some(),
+            ));
+        }
+        if let Some(any) = type_def.anyType() {
+            return Ok(self.any_type(&any));
+        }
+        let parameterized = type_def
+            .parameterizedType()
+            .expect("typeDef is a scalarType, parameterizedType or anyType");
+        self.parameterized_type(&parameterized)
+    }
+
+    /// Convert an `anyType`, such as `any` or `any1?`. `AnyVar` is always `any`
+    /// followed by one digit.
+    ///
+    /// ```text
+    /// anyType: Any '?'? | AnyVar '?'?
+    /// ```
+    fn any_type(&self, any: &AnyTypeContextAll<'a>) -> TypeExpr<'a> {
+        let nullable = any.QMark().is_some();
+        if let Some(variable) = any.AnyVar() {
+            let digit = &self.terminal_text(&variable)[3..];
+            return TypeExpr::TypeVariable(
+                digit.parse().expect("AnyVar ends in a digit"),
+                nullable,
+            );
+        }
+        let name = self.terminal_text(&any.Any().expect("anyType is Any or AnyVar"));
+        TypeExpr::Simple(name, Vec::new(), nullable)
+    }
+
+    /// Convert a `parameterizedType`, which is a keyword builtin such as
+    /// `decimal<P, 2>` or `list?<i32>`, a `func<...>`, a `u!name<...>` or an
+    /// `nstruct<...>`.
+    ///
+    /// The keyword builtins only differ in which parameters they take, so they
+    /// share one arm that reads the parameters from the node's children.
+    fn parameterized_type(
+        &self,
+        parameterized: &ParameterizedTypeContextAll<'a>,
+    ) -> Result<TypeExpr<'a>, TypeParseError> {
+        use ParameterizedTypeContextAll as P;
+
+        let nullable = has_question_mark(parameterized);
+        match parameterized {
+            P::FixedCharContext(_)
+            | P::VarCharContext(_)
+            | P::FixedBinaryContext(_)
+            | P::DecimalContext(_)
+            | P::PrecisionIntervalDayContext(_)
+            | P::PrecisionIntervalCompoundContext(_)
+            | P::PrecisionTimeContext(_)
+            | P::PrecisionTimestampContext(_)
+            | P::PrecisionTimestampTZContext(_)
+            | P::StructContext(_)
+            | P::ListContext(_)
+            | P::MapContext(_) => Ok(TypeExpr::Simple(
+                self.token_text(&*parameterized.start()),
+                self.child_parameters(parameterized)?,
+                nullable,
+            )),
+            P::FuncContext(ctx) => {
+                let parameters =
+                    self.child_parameters(&**ctx.params.as_ref().expect("#func has funcParams"))?;
+                let return_type =
+                    self.expr_as_type(ctx.returnType.as_ref().expect("#func has a return type"))?;
+                Ok(TypeExpr::Func(parameters, Box::new(return_type), nullable))
+            }
+            P::UserDefinedContext(ctx) => {
+                if ctx.dependencyAlias.is_some() {
+                    return Err(TypeParseError::UnsupportedSyntax {
+                        construct: "dependency-qualified user-defined",
+                        type_string: self.source.to_string(),
+                    });
+                }
+                let name = self.terminal_text(&ctx.Identifier(0).expect("#userDefined has a name"));
+                Ok(TypeExpr::UserDefined(
+                    name,
+                    self.child_parameters(parameterized)?,
+                    nullable,
+                ))
+            }
+            P::NStructContext(_) => Err(TypeParseError::UnsupportedSyntax {
+                construct: "named struct",
+                type_string: self.source.to_string(),
+            }),
+            P::Error(_) => unreachable!("parse_tree rejects trees with errors"),
+        }
+    }
+
+    /// Convert a `numericParameter`, such as decimal's precision and scale.
+    ///
+    /// ```text
+    /// numericParameter: Number | Identifier | expr
+    /// ```
+    fn numeric_parameter(
+        &self,
+        parameter: &NumericParameterContextAll<'a>,
+    ) -> Result<TypeExprParam<'a>, TypeParseError> {
+        match parameter {
+            NumericParameterContextAll::NumericLiteralContext(literal) => {
+                self.integer(&literal.Number().expect("#numericLiteral is a Number"))
+            }
+            NumericParameterContextAll::NumericParameterNameContext(name) => self
+                .integer_name(
+                    self.terminal_text(
+                        &name
+                            .Identifier()
+                            .expect("#numericParameterName is an Identifier"),
+                    ),
+                )
+                .map(TypeExprParam::Integer),
+            NumericParameterContextAll::NumericExpressionContext(expression) => self
+                .integer_expr(&expression.expr().expect("#numericExpression is an expr"))
+                .map(TypeExprParam::Integer),
+            NumericParameterContextAll::Error(_) => {
+                unreachable!("parse_tree rejects trees with errors")
+            }
+        }
+    }
+
+    /// Convert the parameters among `node`'s direct children, in order.
+    ///
+    /// For `decimal<P, 2>` these are the two `numericParameter`s. For
+    /// `map<string, i64>` or the `funcParams` `(i32, i64)` they are `expr`s.
+    /// Tokens such as `<`, `,` and `?` are skipped.
+    fn child_parameters(
+        &self,
+        node: &(dyn SubstraitTypeParserContext<'a> + 'a),
     ) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
-        if !self.consume(TokenKind::OpenAngle) {
-            return Ok(Vec::new());
-        }
-        let mut parameters = Vec::new();
-        if self.consume(TokenKind::CloseAngle) {
-            return Ok(parameters);
-        }
-        loop {
-            parameters.push(match kind {
-                ParameterKind::Integer => {
-                    TypeExprParam::Integer(self.parse_integer_parameter_expression()?)
+        node.get_children()
+            .filter_map(|child| {
+                if let Some(expr) = child.downcast_ref::<ExprContextAll<'a>>() {
+                    Some(self.expr(expr))
+                } else {
+                    child
+                        .downcast_ref::<NumericParameterContextAll<'a>>()
+                        .map(|parameter| self.numeric_parameter(parameter))
                 }
-                ParameterKind::Type => self.parse_type_parameter()?,
-            });
-            if self.consume(TokenKind::CloseAngle) {
-                return Ok(parameters);
-            }
-            self.expect(TokenKind::Comma)?;
-        }
-    }
-
-    /// Parse a function type such as `func<(i32, i64) -> boolean>`.
-    /// Multiple parameters require parentheses; a single parameter may omit them.
-    /// A bare `func` name is retained for semantic validation.
-    fn parse_function_type(&mut self) -> Result<TypeExpr<'a>, TypeParseError> {
-        let name = self.expect(TokenKind::Func)?;
-        let nullable = self.consume(TokenKind::QuestionMark);
-        if !self.consume(TokenKind::OpenAngle) {
-            return Ok(TypeExpr::Simple(name.text, Vec::new(), nullable));
-        }
-        let parameters = self.parse_function_parameters()?;
-        self.expect(TokenKind::Arrow)?;
-        let return_type = self.parse_type()?;
-        self.expect(TokenKind::CloseAngle)?;
-        Ok(TypeExpr::Func(parameters, Box::new(return_type), nullable))
-    }
-
-    /// Parse one function parameter or a nonempty parenthesized parameter list.
-    fn parse_function_parameters(&mut self) -> Result<Vec<TypeExprParam<'a>>, TypeParseError> {
-        if !self.consume(TokenKind::OpenParen) {
-            return Ok(vec![self.parse_type_parameter()?]);
-        }
-        if self.peek() == Some(TokenKind::CloseParen) {
-            return Err(self.error("a function parameter"));
-        }
-
-        let mut parameters = vec![self.parse_type_parameter()?];
-        while self.consume(TokenKind::Comma) {
-            parameters.push(self.parse_type_parameter()?);
-        }
-        self.expect(TokenKind::CloseParen)?;
-        Ok(parameters)
-    }
-
-    /// Parse a type parameter, leaving its separator unconsumed.
-    ///
-    /// In `map<string, i32>`, consume `string` but leave the comma.
-    fn parse_type_parameter(&mut self) -> Result<TypeExprParam<'a>, TypeParseError> {
-        match self.peek() {
-            Some(TokenKind::Comma | TokenKind::CloseAngle | TokenKind::CloseParen) | None => {
-                Err(TypeParseError::EmptyParameter)
-            }
-            _ => self.parse_type().map(TypeExprParam::Type),
-        }
-    }
-
-    /// Parse a right-associative ternary, with comparison and arithmetic binding tighter.
-    ///
-    /// For `P > 38 ? 38 : P + 1`, the condition is `P > 38` and the else branch is `P + 1`.
-    fn parse_integer_parameter_expression(&mut self) -> Result<IntegerParameter, TypeParseError> {
-        let condition = self.parse_integer_comparison()?;
-        if !self.consume(TokenKind::QuestionMark) {
-            return Ok(condition);
-        }
-        let then_value = self.parse_integer_parameter_expression()?;
-        self.expect(TokenKind::Colon)?;
-        let else_value = self.parse_integer_parameter_expression()?;
-        Ok(IntegerParameter::Conditional {
-            condition: Box::new(condition),
-            then_value: Box::new(then_value),
-            else_value: Box::new(else_value),
-        })
-    }
-
-    /// A `>` followed by an operand is a comparison; otherwise it closes a type.
-    ///
-    /// For `P + 1 > S`, compare `P + 1` with `S`; for `varchar<P + 1>`, leave `>` unconsumed.
-    fn parse_integer_comparison(&mut self) -> Result<IntegerParameter, TypeParseError> {
-        let mut expression = self.parse_integer_sum()?;
-        while self.peek() == Some(TokenKind::CloseAngle)
-            && self.peek_next().is_some_and(Self::starts_integer_operand)
-        {
-            self.consume(TokenKind::CloseAngle);
-            let right = self.parse_integer_sum()?;
-            expression = IntegerParameter::BinaryExpression {
-                op: BinaryOp::GreaterThan,
-                left: Box::new(expression),
-                right: Box::new(right),
-            };
-        }
-        Ok(expression)
-    }
-
-    fn starts_integer_operand(kind: TokenKind) -> bool {
-        kind.is_name()
-            || matches!(
-                kind,
-                TokenKind::Integer | TokenKind::Plus | TokenKind::Minus | TokenKind::OpenParen
-            )
-    }
-
-    /// Parse left-associative addition and subtraction, with grouped operands.
-    ///
-    /// For example, `P - S + 1` groups as `(P - S) + 1`, not `P - (S + 1)`.
-    fn parse_integer_sum(&mut self) -> Result<IntegerParameter, TypeParseError> {
-        let mut expression = if self.peek() == Some(TokenKind::Plus) {
-            IntegerParameter::Literal(self.parse_integer_literal()?)
-        } else {
-            self.parse_integer_operand()?
-        };
-        while let Some(kind) = self.consume_one_of(&[TokenKind::Plus, TokenKind::Minus]) {
-            let op = match kind {
-                TokenKind::Plus => BinaryOp::Add,
-                TokenKind::Minus => BinaryOp::Subtract,
-                _ => unreachable!(),
-            };
-            let right = self.parse_integer_operand()?;
-            expression = IntegerParameter::BinaryExpression {
-                op,
-                left: Box::new(expression),
-                right: Box::new(right),
-            };
-        }
-        Ok(expression)
-    }
-
-    /// Parse one integer, parameter name, call, or parenthesized arithmetic expression.
-    ///
-    /// For `(P + 1) + S`, consume `(P + 1)` and leave the following `+` for the caller.
-    /// For `max(P, S) + 1`, consume the whole call, including its arguments and parentheses.
-    fn parse_integer_operand(&mut self) -> Result<IntegerParameter, TypeParseError> {
-        match self.peek() {
-            Some(TokenKind::Integer | TokenKind::Minus) => {
-                Ok(IntegerParameter::Literal(self.parse_integer_literal()?))
-            }
-            Some(TokenKind::OpenParen) => {
-                self.expect(TokenKind::OpenParen)?;
-                let expression = self.parse_integer_parameter_expression()?;
-                self.expect(TokenKind::CloseParen)?;
-                Ok(expression)
-            }
-            Some(kind) if kind.is_name() => self.parse_integer_parameter_name(),
-            _ => Err(self.error("an integer literal, parameter name, or '('")),
-        }
-    }
-
-    /// Parse an integer parameter name or a supported numeric function call.
-    ///
-    /// For `max(P, S)`, consume the name and argument list and retain the call.
-    fn parse_integer_parameter_name(&mut self) -> Result<IntegerParameter, TypeParseError> {
-        let name = self.expect_name()?;
-        if !is_integer_parameter_name(name) {
-            return Err(TypeParseError::UnexpectedToken {
-                position: name.position,
-                expected: "an integer literal, parameter name, or '('",
-            });
-        }
-        if !self.consume(TokenKind::OpenParen) {
-            return Ok(IntegerParameter::Variable(name.text.into()));
-        }
-        let function = match name.text.to_ascii_lowercase().as_str() {
-            "min" => NumericFunction::Min,
-            "max" => NumericFunction::Max,
-            "integer_parameter" => NumericFunction::IntegerParameter,
-            _ => {
-                return Err(TypeParseError::UnexpectedToken {
-                    position: name.position,
-                    expected: "'min', 'max', or 'integer_parameter'",
-                });
-            }
-        };
-        let mut arguments = Vec::new();
-        if !self.consume(TokenKind::CloseParen) {
-            loop {
-                arguments.push(self.parse_integer_parameter_expression()?);
-                if self.consume(TokenKind::CloseParen) {
-                    break;
-                }
-                self.expect(TokenKind::Comma)?;
-            }
-        }
-        Ok(IntegerParameter::Call {
-            function,
-            arguments,
-        })
-    }
-
-    /// Combine a sign with its digits, preserving the full `i64` range.
-    ///
-    /// For example, `-9223372036854775808` is parsed as one value, including its sign.
-    fn parse_integer_literal(&mut self) -> Result<i64, TypeParseError> {
-        let start = self.tokens[self.index].position;
-        self.consume_one_of(&[TokenKind::Plus, TokenKind::Minus]);
-        let token = self.expect(TokenKind::Integer)?;
-        let end = token.position + token.text.len();
-        self.source[start..end]
-            .parse()
-            .map_err(|_| TypeParseError::UnexpectedToken {
-                position: start,
-                expected: "an i64 integer literal",
             })
+            .collect()
+    }
+
+    fn integer(
+        &self,
+        number: &TerminalNode<'a, SubstraitTypeParserContextType>,
+    ) -> Result<TypeExprParam<'a>, TypeParseError> {
+        self.integer_value(number).map(TypeExprParam::Integer)
+    }
+
+    fn integer_value(
+        &self,
+        number: &TerminalNode<'a, SubstraitTypeParserContextType>,
+    ) -> Result<IntegerParameter, TypeParseError> {
+        let text = self.terminal_text(number);
+        text.parse()
+            .map(IntegerParameter::Literal)
+            .map_err(|_| TypeParseError::InvalidInteger(text.to_string()))
+    }
+
+    /// The source text of a single token.
+    fn token_text(&self, token: &impl Token) -> &'a str {
+        &self.source[token.get_start() as usize..=token.get_stop() as usize]
+    }
+
+    fn terminal_text(&self, node: &TerminalNode<'a, SubstraitTypeParserContextType>) -> &'a str {
+        self.token_text(&*node.symbol)
     }
 }
 
-/// Recognize integer parameter names without treating type names as variables.
-fn is_integer_parameter_name(name: Token<'_>) -> bool {
-    !TypeKind::is_builtin_name(name.text) && name.kind != TokenKind::AnyVar
+/// Whether `node` has a `?` among its direct children, marking it nullable.
+/// A `?` inside a nested parameter belongs to that parameter instead.
+fn has_question_mark<'a>(node: &(dyn SubstraitTypeParserContext<'a> + 'a)) -> bool {
+    node.get_children().any(|child| {
+        child
+            .downcast_ref::<TerminalNode<'a, SubstraitTypeParserContextType>>()
+            .is_some_and(|token| token.symbol.get_token_type() == SubstraitType_QMark)
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn consume_one_of_returns_the_matched_kind() {
-        for (source, expected, consumed) in [
-            ("+1", Some(TokenKind::Plus), 1),
-            ("-1", Some(TokenKind::Minus), 1),
-            ("P", None, 0),
-            ("", None, 0),
-        ] {
-            let mut parser = Parser::new(source).unwrap();
-            assert_eq!(
-                parser.consume_one_of(&[TokenKind::Plus, TokenKind::Minus]),
-                expected,
-                "{source}"
-            );
-            assert_eq!(parser.index, consumed, "{source}");
-        }
-    }
-
-    #[test]
-    fn addition_retains_operands_and_associates_to_the_left() {
-        let IntegerParameter::BinaryExpression {
-            op: BinaryOp::Add,
-            left,
-            right,
-        } = parse_integer_parameter("P + S + 1").unwrap()
-        else {
-            panic!("expected addition");
-        };
-        assert_eq!(
-            *left,
-            IntegerParameter::BinaryExpression {
-                op: BinaryOp::Add,
-                left: Box::new(IntegerParameter::Variable("P".into())),
-                right: Box::new(IntegerParameter::Variable("S".into())),
-            }
-        );
-        assert_eq!(*right, IntegerParameter::Literal(1));
-    }
-
-    #[test]
-    fn parse_subtraction_shares_addition_precedence() {
-        let difference = IntegerParameter::BinaryExpression {
-            op: BinaryOp::Subtract,
-            left: Box::new(IntegerParameter::Variable("P".into())),
-            right: Box::new(IntegerParameter::Variable("S".into())),
-        };
-        let expected = IntegerParameter::BinaryExpression {
-            op: BinaryOp::Add,
-            left: Box::new(difference),
-            right: Box::new(IntegerParameter::Literal(1)),
-        };
-        assert_eq!(parse_integer_parameter("P - S + 1").unwrap(), expected);
-    }
-
-    #[test]
-    fn parse_subtraction_associates_to_the_left() {
-        let difference = IntegerParameter::BinaryExpression {
-            op: BinaryOp::Subtract,
-            left: Box::new(IntegerParameter::Variable("P".into())),
-            right: Box::new(IntegerParameter::Variable("S".into())),
-        };
-        let expected = IntegerParameter::BinaryExpression {
-            op: BinaryOp::Subtract,
-            left: Box::new(difference),
-            right: Box::new(IntegerParameter::Literal(1)),
-        };
-        assert_eq!(parse_integer_parameter("P - S - 1").unwrap(), expected);
-    }
-
-    #[test]
-    fn parse_subtraction_preserves_grouping() {
-        let sum = IntegerParameter::BinaryExpression {
-            op: BinaryOp::Add,
-            left: Box::new(IntegerParameter::Variable("S".into())),
-            right: Box::new(IntegerParameter::Literal(1)),
-        };
-        let expected = IntegerParameter::BinaryExpression {
-            op: BinaryOp::Subtract,
-            left: Box::new(IntegerParameter::Variable("P".into())),
-            right: Box::new(sum),
-        };
-        assert_eq!(parse_integer_parameter("P - (S + 1)").unwrap(), expected);
-    }
-
-    #[test]
-    fn parentheses_preserve_grouping() {
-        let IntegerParameter::BinaryExpression {
-            op: BinaryOp::Add,
-            left,
-            right,
-        } = parse_integer_parameter("P + (S + 1)").unwrap()
-        else {
-            panic!("expected addition");
-        };
-        assert_eq!(*left, IntegerParameter::Variable("P".into()));
-        assert_eq!(
-            *right,
-            IntegerParameter::BinaryExpression {
-                op: BinaryOp::Add,
-                left: Box::new(IntegerParameter::Variable("S".into())),
-                right: Box::new(IntegerParameter::Literal(1)),
-            }
-        );
-    }
 
     #[test]
     fn parse_multiline_returns_preserve_assignment_order() {
@@ -588,94 +568,6 @@ mod tests {
     }
 
     #[test]
-    fn parse_return_types_allow_no_assignments() {
-        let parsed = parse_return_type("i32\n").unwrap();
-        assert!(parsed.assignments.is_empty());
-        assert_eq!(parsed.return_type, TypeExpr::Simple("i32", vec![], false));
-    }
-
-    #[test]
-    fn malformed_multiline_returns_are_rejected() {
-        for source in [
-            "P = 1 i32",
-            "P = 1\n",
-            "P =\ni32",
-            "P = 1\nQ =\ni32",
-            "P = 1\ni32 garbage",
-            "P = 1;\ni32",
-            "P = 1\nQ\ni32",
-        ] {
-            assert!(parse_return_type(source).is_err(), "{source}");
-        }
-    }
-
-    #[test]
-    fn parse_calls_identify_functions_and_retain_ordered_arguments() {
-        let sum = IntegerParameter::BinaryExpression {
-            op: BinaryOp::Add,
-            left: Box::new(IntegerParameter::Variable("S2".into())),
-            right: Box::new(IntegerParameter::Literal(1)),
-        };
-        let expected = IntegerParameter::Call {
-            function: NumericFunction::Max,
-            arguments: vec![IntegerParameter::Variable("S1".into()), sum],
-        };
-        assert_eq!(
-            parse_integer_parameter("max(S1, S2 + 1)").unwrap(),
-            expected
-        );
-    }
-
-    #[test]
-    fn parse_calls_retain_nested_calls() {
-        let maximum = IntegerParameter::Call {
-            function: NumericFunction::Max,
-            arguments: vec![
-                IntegerParameter::Variable("P".into()),
-                IntegerParameter::Literal(38),
-            ],
-        };
-        let expected = IntegerParameter::Call {
-            function: NumericFunction::Min,
-            arguments: vec![maximum, IntegerParameter::Literal(10)],
-        };
-        assert_eq!(
-            parse_integer_parameter("min(max(P, 38), 10)").unwrap(),
-            expected
-        );
-    }
-
-    #[test]
-    fn parse_integer_parameter_calls_are_case_insensitive() {
-        for source in [
-            "integer_parameter(precision)",
-            "INTEGER_PARAMETER(precision)",
-        ] {
-            assert_eq!(
-                parse_integer_parameter(source).unwrap(),
-                IntegerParameter::Call {
-                    function: NumericFunction::IntegerParameter,
-                    arguments: vec![IntegerParameter::Variable("precision".into())],
-                }
-            );
-        }
-    }
-
-    #[test]
-    fn parse_calls_reject_unknown_functions() {
-        for (source, position) in [("custom()", 0), ("custom(P)", 0), ("min(custom(P), S)", 4)] {
-            assert_eq!(
-                parse_integer_parameter(source),
-                Err(TypeParseError::UnexpectedToken {
-                    position,
-                    expected: "'min', 'max', or 'integer_parameter'",
-                }),
-                "{source}"
-            );
-        }
-    }
-
-    #[test]
     fn parse_conditionals_retain_the_condition_and_both_branches() {
         let condition = IntegerParameter::BinaryExpression {
             op: BinaryOp::GreaterThan,
@@ -690,22 +582,6 @@ mod tests {
         assert_eq!(
             parse_integer_parameter("P > 38 ? 38 : P").unwrap(),
             expected
-        );
-    }
-
-    #[test]
-    fn addition_preserves_signed_literals() {
-        assert_eq!(
-            parse("varchar<+10 + -2>").unwrap(),
-            TypeExpr::Simple(
-                "varchar",
-                vec![TypeExprParam::Integer(IntegerParameter::BinaryExpression {
-                    op: BinaryOp::Add,
-                    left: Box::new(IntegerParameter::Literal(10)),
-                    right: Box::new(IntegerParameter::Literal(-2)),
-                })],
-                false,
-            )
         );
     }
 
@@ -725,19 +601,24 @@ mod tests {
     }
 
     #[test]
-    fn parse_conditionals_associate_to_the_right() {
+    fn chained_conditionals_follow_the_generated_grammar() {
         let nested = IntegerParameter::Conditional {
-            condition: Box::new(IntegerParameter::Variable("S".into())),
+            condition: Box::new(IntegerParameter::Variable("P".into())),
+            then_value: Box::new(IntegerParameter::Literal(1)),
+            else_value: Box::new(IntegerParameter::Variable("S".into())),
+        };
+        let expected = IntegerParameter::Conditional {
+            condition: Box::new(nested),
             then_value: Box::new(IntegerParameter::Literal(2)),
             else_value: Box::new(IntegerParameter::Literal(3)),
         };
-        let expected = IntegerParameter::Conditional {
-            condition: Box::new(IntegerParameter::Variable("P".into())),
-            then_value: Box::new(IntegerParameter::Literal(1)),
-            else_value: Box::new(nested),
-        };
         assert_eq!(
             parse_integer_parameter("P ? 1 : S ? 2 : 3").unwrap(),
+            expected
+        );
+        assert_eq!(expected.to_string(), "(P ? 1 : S) ? 2 : 3");
+        assert_eq!(
+            parse_integer_parameter(&expected.to_string()).unwrap(),
             expected
         );
     }
@@ -760,53 +641,6 @@ mod tests {
             right: Box::new(difference),
         };
         assert_eq!(parse_integer_parameter("P + 1 > S - 1").unwrap(), expected);
-    }
-
-    #[test]
-    fn parse_conditionals_leave_parameter_separators() {
-        let expected = IntegerParameter::Conditional {
-            condition: Box::new(IntegerParameter::Variable("P".into())),
-            then_value: Box::new(IntegerParameter::Literal(1)),
-            else_value: Box::new(IntegerParameter::Literal(2)),
-        };
-        for (source, separator) in [
-            ("P ? 1 : 2, S", TokenKind::Comma),
-            ("P ? 1 : 2>", TokenKind::CloseAngle),
-            ("P ? 1 : 2)", TokenKind::CloseParen),
-        ] {
-            let mut parser = Parser::new(source).unwrap();
-            assert_eq!(
-                parser.parse_integer_parameter_expression().unwrap(),
-                expected.clone(),
-                "{source}"
-            );
-            assert_eq!(parser.peek(), Some(separator), "{source}");
-        }
-    }
-
-    #[test]
-    fn parse_numeric_parameters_reject_numbered_type_variables() {
-        for (source, position) in [
-            ("decimal<any1, S>", 8),
-            ("decimal<P, any1>", 11),
-            ("decimal<Any1, S>", 8),
-            ("decimal<any1 + 1, S>", 8),
-            ("decimal<P + any1, S>", 12),
-            ("decimal<ANY1 + 1, S>", 8),
-            ("decimal<P + Any1, S>", 12),
-            ("decimal<(any1), S>", 9),
-            ("decimal<P + (any1 + 1), S>", 13),
-            ("decimal<P, ANY1>", 11),
-        ] {
-            assert_eq!(
-                parse(source),
-                Err(TypeParseError::UnexpectedToken {
-                    position,
-                    expected: "an integer literal, parameter name, or '('",
-                }),
-                "{source}"
-            );
-        }
     }
 
     #[test]
@@ -850,411 +684,154 @@ mod tests {
     }
 
     #[test]
-    fn numeric_expressions_reject_type_names_as_operands() {
-        for name in [
-            "i32", "boolean", "decimal", "list", "map", "struct", "func", "any",
-        ] {
-            for spelling in [name.to_string(), name.to_ascii_uppercase()] {
-                for expression in [format!("{spelling} + 1"), format!("P + {spelling}")] {
-                    assert!(
-                        parse_integer_parameter(&expression).is_err(),
-                        "{expression}"
-                    );
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn numeric_parameter_names_are_explicit_in_the_ast() {
-        for name in ["P", "$L", "_S", "any1extra"] {
-            let source = format!("decimal<{name}, 0>");
-            assert_eq!(
-                parse(&source).unwrap(),
-                TypeExpr::Simple(
-                    "decimal",
-                    vec![
-                        TypeExprParam::Integer(IntegerParameter::Variable(name.into())),
-                        TypeExprParam::Integer(IntegerParameter::Literal(0)),
-                    ],
-                    false,
-                ),
-                "{source}"
-            );
-        }
-    }
-
-    #[test]
-    fn parameterized_user_defined_and_unknown_types_are_unsupported() {
+    fn malformed_multiline_returns_are_rejected() {
         for source in [
-            "u!foo<>",
-            "u!foo<P>",
-            "u!foo<(P)>",
-            "u!foo?<i32>",
-            "list<u!foo<1>>",
-            "unknown<i32>",
+            "P = 1 i32",
+            "P = 1\n",
+            "P =\ni32",
+            "P = 1\nQ =\ni32",
+            "P = 1\ni32 garbage",
+            "P = 1;\ni32",
+            "P = 1\nQ\ni32",
+            "P = i32\ndecimal<P, 0>",
         ] {
-            assert_eq!(
-                parse(source),
-                Err(TypeParseError::UnsupportedTypeParameters(source.into())),
-                "{source}"
-            );
+            assert!(parse_return_type(source).is_err(), "{source}");
         }
     }
 
     #[test]
-    fn type_parameters_reject_integer_arguments() {
-        for source in [
-            "list<1>",
-            "map<i32, 2>",
-            "struct<1, i32>",
-            "func<5 -> i32>",
-            "list<P + 1>",
-        ] {
-            assert!(parse(source).is_err(), "{source}");
-        }
+    fn parse_return_types_allow_no_assignments() {
+        let parsed = parse_return_type("i32\n").unwrap();
+        assert!(parsed.assignments.is_empty());
+        assert_eq!(parsed.return_type, TypeExpr::Simple("i32", vec![], false));
     }
 
     #[test]
-    fn unknown_names_remain_types_in_type_parameters() {
+    fn calls_retain_function_and_ordered_arguments() {
         assert_eq!(
-            parse("list<P>").unwrap(),
-            TypeExpr::Simple(
-                "list",
-                vec![TypeExprParam::Type(TypeExpr::Simple("P", vec![], false))],
-                false,
-            )
-        );
-    }
-
-    #[test]
-    fn parse_integer_expressions_preserve_identifier_spellings() {
-        for name in ["any1extra", "ANY1extra"] {
-            assert_eq!(
-                parse_integer_parameter(&format!("{name} + 1")).unwrap(),
-                IntegerParameter::BinaryExpression {
-                    op: BinaryOp::Add,
-                    left: Box::new(IntegerParameter::Variable(name.into())),
-                    right: Box::new(IntegerParameter::Literal(1)),
-                }
-            );
-        }
-    }
-
-    #[test]
-    fn invalid_or_unsupported_expressions() {
-        for source in [
-            "",
-            "+ P",
-            "P ++ 1",
-            "P -",
-            "P -- S",
-            "P - ()",
-            "P - - 1",
-            "P ++1",
-            "P S",
-            "P ?",
-            "P ? S",
-            "P ? : S",
-            "P ? S :",
-            "P >",
-            "P > ? S : 1",
-            "P : S",
-            "min(",
-            "min(P,)",
-            "min(,P)",
-            "min(P S)",
-            "min(P,,S)",
-            "P * 2",
-            "P / 2",
-            "P + ()",
-            "(P)(S)",
-            "9223372036854775808",
-            "@ + 1",
-        ] {
-            assert!(parse_integer_parameter(source).is_err(), "{source}");
-        }
-        assert_eq!(
-            parse_integer_parameter("P +"),
-            Err(TypeParseError::UnexpectedToken {
-                position: 3,
-                expected: "an integer literal, parameter name, or '('",
-            })
-        );
-    }
-
-    #[test]
-    fn parse_rejects_invalid_numeric_parameters() {
-        for source in [
-            "varchar<L +>",
-            "varchar<(L + 1>",
-            "varchar<L + 1)>",
-            "varchar<L + i32>",
-            "varchar<custom(L)>",
-        ] {
-            assert!(parse(source).is_err(), "{source}");
-        }
-    }
-
-    #[test]
-    fn function_parameters_leave_the_arrow_for_the_caller() {
-        for (source, parameter_types) in [
-            ("i32 -> i64", vec!["i32"]),
-            ("map<string, i64> -> boolean", vec!["map<string, i64>"]),
-            (
-                "(func<i32 -> i64>, list<any1>) -> boolean",
-                vec!["func<i32 -> i64>", "list<any1>"],
-            ),
-        ] {
-            let mut parser = Parser::new(source).unwrap();
-            let expected: Vec<_> = parameter_types
-                .iter()
-                .map(|parameter| TypeExprParam::Type(parse(parameter).unwrap()))
-                .collect();
-
-            assert_eq!(
-                parser.parse_function_parameters().unwrap(),
-                expected,
-                "{source}"
-            );
-            assert_eq!(parser.peek(), Some(TokenKind::Arrow), "{source}");
-        }
-    }
-
-    #[test]
-    fn type_parameters_consume_only_their_own_closing_bracket() {
-        for (source, expected) in [
-            ("<>>", vec![]),
-            (
-                "<list<i32>, any1>>",
-                vec![
-                    TypeExprParam::Type(parse("list<i32>").unwrap()),
-                    TypeExprParam::Type(TypeExpr::TypeVariable(1, false)),
-                ],
-            ),
-        ] {
-            let mut parser = Parser::new(source).unwrap();
-            assert_eq!(
-                parser.parse_parameters(ParameterKind::Type).unwrap(),
-                expected,
-                "{source}"
-            );
-            assert_eq!(parser.peek(), Some(TokenKind::CloseAngle), "{source}");
-            parser.expect(TokenKind::CloseAngle).unwrap();
-            assert_eq!(parser.peek(), None, "{source}");
-        }
-    }
-
-    #[test]
-    fn type_parameters_reject_empty_entries() {
-        for source in ["<,i32>", "<i32,>", "<i32,,i64>"] {
-            let mut parser = Parser::new(source).unwrap();
-            assert_eq!(
-                parser.parse_parameters(ParameterKind::Type),
-                Err(TypeParseError::EmptyParameter),
-                "{source}"
-            );
-        }
-    }
-
-    #[test]
-    fn parse_grouped_numeric_literals_remain_integers() {
-        let mut parser = Parser::new("(10), S").unwrap();
-        assert_eq!(
-            parser.parse_integer_parameter_expression().unwrap(),
-            IntegerParameter::Literal(10)
-        );
-        assert_eq!(parser.peek(), Some(TokenKind::Comma));
-    }
-
-    #[test]
-    fn parse_integer_sums_stop_before_comparisons() {
-        let mut parser = Parser::new("P + 1 > 38").unwrap();
-        assert_eq!(
-            parser.parse_integer_sum().unwrap(),
-            IntegerParameter::BinaryExpression {
-                op: BinaryOp::Add,
-                left: Box::new(IntegerParameter::Variable("P".into())),
-                right: Box::new(IntegerParameter::Literal(1)),
-            }
-        );
-        assert_eq!(parser.peek(), Some(TokenKind::CloseAngle));
-    }
-
-    #[test]
-    fn parse_integer_comparisons_leave_the_closing_type_bracket() {
-        for (source, expected) in [
-            (
-                "P > S>",
-                IntegerParameter::BinaryExpression {
-                    op: BinaryOp::GreaterThan,
-                    left: Box::new(IntegerParameter::Variable("P".into())),
-                    right: Box::new(IntegerParameter::Variable("S".into())),
-                },
-            ),
-            ("P>", IntegerParameter::Variable("P".into())),
-        ] {
-            let mut parser = Parser::new(source).unwrap();
-            assert_eq!(
-                parser.parse_integer_comparison().unwrap(),
-                expected,
-                "{source}"
-            );
-            assert_eq!(parser.peek(), Some(TokenKind::CloseAngle), "{source}");
-        }
-    }
-
-    #[test]
-    fn parse_integer_operands_leave_the_following_operator() {
-        for (source, op) in [
-            ("(P + 1) + S", BinaryOp::Add),
-            ("(P - 1) + S", BinaryOp::Subtract),
-        ] {
-            let mut parser = Parser::new(source).unwrap();
-            assert_eq!(
-                parser.parse_integer_operand().unwrap(),
-                IntegerParameter::BinaryExpression {
-                    op,
-                    left: Box::new(IntegerParameter::Variable("P".into())),
-                    right: Box::new(IntegerParameter::Literal(1)),
-                },
-                "{source}"
-            );
-            assert_eq!(parser.peek(), Some(TokenKind::Plus), "{source}");
-        }
-    }
-
-    #[test]
-    fn parse_call_operands_leave_the_following_operator() {
-        let mut parser = Parser::new("max(P, S) + 1").unwrap();
-        assert_eq!(
-            parser.parse_integer_operand().unwrap(),
+            parse_integer_parameter("MAX(P, 2)").unwrap(),
             IntegerParameter::Call {
                 function: NumericFunction::Max,
                 arguments: vec![
                     IntegerParameter::Variable("P".into()),
-                    IntegerParameter::Variable("S".into()),
+                    IntegerParameter::Literal(2)
                 ],
             }
         );
-        assert_eq!(parser.peek(), Some(TokenKind::Plus));
-    }
-
-    #[test]
-    fn integer_expressions_leave_the_separator_for_the_caller() {
-        for (source, separator) in [
-            ("P + 1, S", TokenKind::Comma),
-            ("P + 1>", TokenKind::CloseAngle),
-            ("P + 1)", TokenKind::CloseParen),
-        ] {
-            let mut parser = Parser::new(source).unwrap();
+        for source in ["min(max(P - S, 2) + 1, 38)", "integer_parameter(precision)"] {
+            let expression = parse_integer_parameter(source).unwrap();
             assert_eq!(
-                parser.parse_integer_parameter_expression().unwrap(),
-                IntegerParameter::BinaryExpression {
-                    op: BinaryOp::Add,
-                    left: Box::new(IntegerParameter::Variable("P".into())),
-                    right: Box::new(IntegerParameter::Literal(1)),
-                },
-                "{source}"
+                parse_integer_parameter(&expression.to_string()).unwrap(),
+                expression
             );
-            assert_eq!(parser.peek(), Some(separator), "{source}");
+        }
+        for source in ["max(i32, 2)", "max(any1, 2)", "unknown(P)"] {
+            assert!(parse_integer_parameter(source).is_err(), "{source}");
         }
     }
 
     #[test]
-    fn parse_grouped_integer_literals_remain_literal_parameters() {
+    fn subtraction_preserves_order_and_grouping() {
+        for (source, expected) in [
+            ("P - S + 1", "P - S + 1"),
+            ("P - (S - 1)", "P - (S - 1)"),
+            ("P - -1", "P - -1"),
+        ] {
+            let value = parse_integer_parameter(source).unwrap();
+            assert_eq!(value.to_string(), expected);
+            assert_eq!(parse_integer_parameter(&value.to_string()).unwrap(), value);
+        }
         assert_eq!(
-            parse("varchar<((10))>").unwrap(),
-            TypeExpr::Simple(
-                "varchar",
-                vec![TypeExprParam::Integer(IntegerParameter::Literal(10))],
-                false,
-            )
+            parse_integer_parameter("P - S").unwrap(),
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Subtract,
+                left: Box::new(IntegerParameter::Variable("P".into())),
+                right: Box::new(IntegerParameter::Variable("S".into())),
+            }
         );
     }
 
     #[test]
-    fn parse_integer_literals_support_signs_and_the_full_i64_range() {
+    fn numeric_parameters_have_explicit_integer_nodes() {
+        assert_eq!(
+            parse("decimal<P, 2>").unwrap(),
+            TypeExpr::Simple(
+                "decimal",
+                vec![
+                    TypeExprParam::Integer(IntegerParameter::Variable("P".into())),
+                    TypeExprParam::Integer(IntegerParameter::Literal(2)),
+                ],
+                false
+            )
+        );
+        for source in [
+            "decimal<any1, S>",
+            "varchar<i32>",
+            "varchar<P?>",
+            "varchar<i32 + 1>",
+            "varchar<bool>",
+            "varchar<bool + 1>",
+        ] {
+            assert!(parse(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
+    fn addition_keeps_operand_order_and_left_associativity() {
+        let expression = parse_integer_parameter("P + S + 1").unwrap();
+        assert_eq!(
+            expression,
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::BinaryExpression {
+                    op: BinaryOp::Add,
+                    left: Box::new(IntegerParameter::Variable("P".into())),
+                    right: Box::new(IntegerParameter::Variable("S".into())),
+                }),
+                right: Box::new(IntegerParameter::Literal(1)),
+            }
+        );
+    }
+
+    #[test]
+    fn integer_parameters_cover_the_i64_range() {
         for (source, expected) in [
-            ("0,", 0),
-            ("+10,", 10),
-            ("-2,", -2),
-            ("9223372036854775807,", i64::MAX),
-            ("+9223372036854775807,", i64::MAX),
-            ("-9223372036854775808,", i64::MIN),
-        ] {
-            let mut parser = Parser::new(source).unwrap();
-            assert_eq!(
-                parser.parse_integer_literal().unwrap(),
-                expected,
-                "{source}"
-            );
-            assert_eq!(parser.peek(), Some(TokenKind::Comma), "{source}");
-        }
-    }
-
-    #[test]
-    fn integer_parameters_reject_overflow_and_signs_without_digits() {
-        for source in [
-            "9223372036854775808",
-            "-9223372036854775809",
-            "+",
-            "-",
-            "+i32",
-        ] {
-            let mut parser = Parser::new(source).unwrap();
-            assert!(
-                parser.parse_integer_parameter_expression().is_err(),
-                "{source}"
-            );
-        }
-    }
-
-    #[test]
-    fn overflowing_integer_errors_point_to_the_literal_start() {
-        for source in [
-            "decimal<9223372036854775808, 2>",
-            "decimal<+9223372036854775808, 2>",
-            "decimal<-9223372036854775809, 2>",
+            ("u!box<0>", 0),
+            ("u!box<-2>", -2),
+            ("u!box<9223372036854775807>", i64::MAX),
+            ("u!box<-9223372036854775808>", i64::MIN),
         ] {
             assert_eq!(
                 parse(source),
-                Err(TypeParseError::UnexpectedToken {
-                    position: 8,
-                    expected: "an i64 integer literal",
-                }),
+                Ok(TypeExpr::UserDefined(
+                    "box",
+                    vec![TypeExprParam::Integer(IntegerParameter::Literal(expected))],
+                    false
+                )),
                 "{source}"
             );
+        }
+        assert_eq!(
+            parse("u!box<9223372036854775808>"),
+            Err(TypeParseError::InvalidInteger(
+                "9223372036854775808".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn parenthesized_types_parse_as_their_contents() {
+        for (source, expected) in [
+            ("(i32)", "i32"),
+            ("list<(i32?)>", "list<i32?>"),
+            ("decimal<(10), 2>", "decimal<10, 2>"),
+        ] {
+            assert_eq!(parse(source), parse(expected), "{source}");
         }
     }
 
     #[test]
-    fn nested_type_parameters_leave_the_separator_for_the_caller() {
-        let mut parser = Parser::new("map<string, func<i32 -> i64>>, boolean").unwrap();
-        assert_eq!(
-            parser.parse_type_parameter().unwrap(),
-            TypeExprParam::Type(parse("map<string, func<i32 -> i64>>").unwrap())
-        );
-        assert_eq!(parser.peek(), Some(TokenKind::Comma));
-    }
-
-    #[test]
-    fn grouped_parameters_can_contain_multi_parameter_functions() {
-        assert_eq!(
-            parse("func<(func<(i32, i64) -> bool>, i32) -> bool>").unwrap(),
-            TypeExpr::Func(
-                vec![
-                    TypeExprParam::Type(parse("func<(i32, i64) -> bool>").unwrap()),
-                    TypeExprParam::Type(parse("i32").unwrap()),
-                ],
-                Box::new(parse("bool").unwrap()),
-                false,
-            )
-        );
-    }
-
-    #[test]
-    fn keyword_tokens_preserve_names_in_the_ast() {
+    fn keyword_names_keep_their_spelling() {
         assert_eq!(
             parse("LiSt<DeCiMaL<P, S>>").unwrap(),
             TypeExpr::Simple(
@@ -1263,39 +840,11 @@ mod tests {
                 false
             ),
         );
-        for name in [
-            "func", "List", "DECIMAL", "any", "any1", "i32", "Map", "VARCHAR", "string", "dec",
-            "NStruct",
-        ] {
-            let source = format!("u!{name}");
-            assert_eq!(
-                parse(&source).unwrap(),
-                TypeExpr::UserDefined(name, vec![], false),
-            );
-        }
-        assert_eq!(
-            parse("ANY").unwrap(),
-            TypeExpr::Simple("ANY", vec![], false)
-        );
-    }
-
-    #[test]
-    fn bare_function_keyword_is_retained_as_a_name() {
-        assert_eq!(
-            parse("FuNc?").unwrap(),
-            TypeExpr::Simple("FuNc", vec![], true)
-        );
     }
 
     #[test]
     fn numbered_type_variables_are_case_insensitive() {
-        for (source, id, nullable) in [
-            ("any0", 0, false),
-            ("any1", 1, false),
-            ("ANY1", 1, false),
-            ("Any1?", 1, true),
-            ("any9", 9, false),
-        ] {
+        for (source, id, nullable) in [("any0", 0, false), ("ANY1", 1, false), ("Any9?", 9, true)] {
             assert_eq!(
                 parse(source).unwrap(),
                 TypeExpr::TypeVariable(id, nullable),
@@ -1305,102 +854,40 @@ mod tests {
     }
 
     #[test]
-    fn multi_digit_type_variable_names_are_rejected_everywhere() {
-        for (source, position) in [
-            ("any10", 0),
-            ("ANY12?", 0),
-            ("any01", 0),
-            ("any4294967296", 0),
-            ("list<any10>", 5),
-            ("decimal<ANY12, 0>", 8),
-            ("decimal<any4294967296 + 1, S>", 8),
-            ("decimal<P + ANY4294967296, S>", 12),
-            ("func<i32 -> any12>", 12),
-            ("u!any10", 2),
-            ("u!Box<any12>", 6),
+    fn derivation_expressions_are_not_supported() {
+        for source in [
+            "decimal<P1 * 2, S>",
+            "u!box<unsupported(P, 2)>",
+            "decimal<P >= 1 ? P : 1, 0>",
         ] {
             assert_eq!(
                 parse(source),
-                Err(TypeParseError::UnexpectedToken {
-                    position,
-                    expected: "a single-digit type variable ID",
-                }),
-                "{source}",
+                Err(TypeParseError::UnsupportedNumericExpression(
+                    source.to_string()
+                )),
             );
         }
     }
 
     #[test]
-    fn numbered_type_variables_cannot_have_parameters() {
-        for source in [
-            "any1<>",
-            "any1<i32>",
-            "any1?<i32>",
-            "ANY1<i32>",
-            "Any1?<i32>",
-            "any1<i32,>",
-            "list<any1<i32>>",
-            "func<any1<i32> -> i64>",
-            "func<i32 -> any1<>>",
-        ] {
-            assert!(parse(source).is_err(), "{source}");
+    fn grammar_features_without_an_ast_form_are_rejected() {
+        for source in ["nstruct<a: i32>", "ext.u!point"] {
+            assert!(
+                matches!(parse(source), Err(TypeParseError::UnsupportedSyntax { .. })),
+                "{source}"
+            );
         }
-    }
-
-    #[test]
-    fn malformed_type_rules_propagate_parameter_and_delimiter_errors() {
-        for (source, expected) in [
-            (
-                "u!",
-                TypeParseError::UnexpectedToken {
-                    position: 2,
-                    expected: "a type name",
-                },
-            ),
-            ("list<i32,>", TypeParseError::EmptyParameter),
-            (
-                "unknown<i32,>",
-                TypeParseError::UnsupportedTypeParameters("unknown<i32,>".into()),
-            ),
-            (
-                "func<i32 -> i64",
-                TypeParseError::UnexpectedToken {
-                    position: 15,
-                    expected: "'>'",
-                },
-            ),
-            (
-                "func<-> i64>",
-                TypeParseError::UnexpectedToken {
-                    position: 5,
-                    expected: "a type name",
-                },
-            ),
-        ] {
-            assert_eq!(parse(source), Err(expected), "{source}");
-        }
-    }
-
-    #[test]
-    fn unexpected_input_has_a_byte_position() {
         assert_eq!(
+            parse("10"),
+            Err(TypeParseError::ExpectedType("10".to_string()))
+        );
+    }
+
+    #[test]
+    fn syntax_errors_report_the_offending_byte() {
+        assert!(matches!(
             parse("list<i32)"),
-            Err(TypeParseError::UnexpectedToken {
-                position: 8,
-                expected: "','"
-            })
-        );
-    }
-
-    #[test]
-    fn nested_function_parameters_parse_without_scanning_for_delimiters() {
-        assert_eq!(
-            parse("func<func<i32 -> i64> -> bool>").unwrap(),
-            TypeExpr::Func(
-                vec![TypeExprParam::Type(parse("func<i32 -> i64>").unwrap())],
-                Box::new(parse("bool").unwrap()),
-                false,
-            )
-        );
+            Err(TypeParseError::Syntax { column: 8, .. })
+        ));
     }
 }

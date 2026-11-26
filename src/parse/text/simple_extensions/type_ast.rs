@@ -6,19 +6,8 @@
 //! It does NOT validate that type names are valid builtins or that extension types exist -
 //! semantic validation occurs later when converting to [`Type`](super::types::Type).
 //!
-//! This module is based on the official substrait type grammar defined
-//! [here](https://github.com/substrait-io/substrait/blob/5f031b69ed211e1ec307be3db7989d64c65d33a2/grammar/SubstraitType.g4).
-
-// Ideally, this module would be generated from the grammar, but there are no
-// well-maintained ANTLR grammar modules for Rust available at the time of this
-// writing:
-// - Official Antlr4 [language
-//   support](https://github.com/antlr/antlr4/blob/594cf95e5460435c7521e80618666741e33e4d91/doc/targets.md)
-//   does not support Rust
-// - The ([`antlr4rust`](https://github.com/rrevenantt/antlr4rust) ) crate has
-//   not been updated in 3 years
-//
-// Therefore, the grammar is manually implemented.
+//! Parsing uses the parser generated from the official Substrait type grammar,
+//! published as the [`substrait_antlr`] crate.
 
 use super::types::IntegerParameter;
 
@@ -57,34 +46,27 @@ pub enum TypeExprParam<'a> {
 
 #[derive(Debug, PartialEq, thiserror::Error)]
 pub enum TypeParseError {
-    #[error("missing closing angle bracket in parameter list: {0}")]
-    ExpectedClosingAngleBracket(String),
     #[error("Type variation syntax is not supported: {0}")]
     UnsupportedVariation(String),
-    #[error("missing return arrow in function type: {0}")]
-    MissingArrow(String),
-    #[error("function type must declare at least one parameter: {0}")]
-    EmptyFunctionParameters(String),
-    #[error("multiple function parameters must be enclosed in parentheses: {0}")]
-    UnparenthesizedFunctionParameters(String),
-    #[error("type parameter must not be empty")]
-    EmptyParameter,
     #[error("numeric expressions are not supported yet: {0}")]
     UnsupportedNumericExpression(String),
-    #[error("parameters are not supported for this type: {0}")]
-    UnsupportedTypeParameters(String),
-    #[error("expected {expected} at byte {position}")]
-    UnexpectedToken {
-        position: usize,
-        expected: &'static str,
+    #[error("{construct} types are not supported yet: {type_string}")]
+    UnsupportedSyntax {
+        construct: &'static str,
+        type_string: String,
     },
+    #[error("expected a type, found integer literal {0}")]
+    ExpectedType(String),
+    #[error("expected an integer expression: {0}")]
+    ExpectedInteger(String),
+    #[error("integer literal does not fit in an i64: {0}")]
+    InvalidInteger(String),
+    #[error("syntax error at column {column}: {message}")]
+    Syntax { column: usize, message: String },
 }
 
 impl<'a> TypeExpr<'a> {
     /// Parse a type string into a [`TypeExpr`].
-    ///
-    /// Built-in parameters are parsed as types or integer expressions according to
-    /// the enclosing type. Parameters on user-defined and unknown types are unsupported.
     pub fn parse(type_str: &'a str) -> Result<Self, TypeParseError> {
         super::type_parser::parse(type_str)
     }
@@ -137,7 +119,6 @@ mod tests {
         let cases = vec![
             ("i32", TypeExpr::Simple("i32", vec![], false)),
             ("i32?", TypeExpr::Simple("i32", vec![], true)),
-            ("MAP", TypeExpr::Simple("MAP", vec![], false)),
             ("date", TypeExpr::Simple("date", vec![], false)),
             (
                 "interval_year?",
@@ -169,9 +150,26 @@ mod tests {
     }
 
     #[test]
-    fn test_user_defined_and_container_types() {
+    fn test_user_defined_and_parameters() {
         let cases = [
-            ("u!geo?", TypeExpr::UserDefined("geo", vec![], true)),
+            (
+                "u!geo?<i32?, u!point<i32, i32>>",
+                TypeExpr::UserDefined(
+                    "geo",
+                    vec![
+                        TypeExprParam::Type(TypeExpr::Simple("i32", vec![], true)),
+                        TypeExprParam::Type(TypeExpr::UserDefined(
+                            "point",
+                            vec![
+                                TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
+                                TypeExprParam::Type(TypeExpr::Simple("i32", vec![], false)),
+                            ],
+                            false,
+                        )),
+                    ],
+                    true,
+                ),
+            ),
             (
                 "Map?<i32, string>",
                 TypeExpr::Simple(
@@ -194,8 +192,8 @@ mod tests {
         let cases = vec![
             ("DECIMAL<10,2>", Vec::<String>::new()),
             ("List<string>", Vec::<String>::new()),
-            ("list<u!custom>", vec!["custom".to_string()]),
-            ("u!Geo", vec!["Geo".to_string()]),
+            ("u!custom<i32>", vec!["custom".to_string()]),
+            ("u!Geo<string>", vec!["Geo".to_string()]),
         ];
 
         for (expr, expected_refs) in cases {
@@ -262,10 +260,10 @@ mod tests {
     fn test_nested_function_parameters_and_containers() {
         let inner = parse("func<i32 -> i64>");
         assert_eq!(
-            parse("func<func<i32 -> i64> -> bool>"),
+            parse("func<func<i32 -> i64> -> boolean>"),
             TypeExpr::Func(
                 vec![TypeExprParam::Type(inner.clone())],
-                Box::new(parse("bool")),
+                Box::new(parse("boolean")),
                 false,
             )
         );
@@ -306,41 +304,14 @@ mod tests {
             "func<(i32,) -> i64>",
             "func<(i32, ) -> i64>",
             "func<(,i32) -> i64>",
-            "func<(i32,,i64) -> bool>",
-            "func<(func<i32 -> i64>,) -> bool>",
+            "func<(i32,,i64) -> boolean>",
+            "func<(func<i32 -> i64>,) -> boolean>",
+            "func<() -> i64>",
+            "func<i32, i64>",
         ] {
-            assert_eq!(
-                TypeExpr::parse(input),
-                Err(TypeParseError::EmptyParameter),
+            assert!(
+                matches!(TypeExpr::parse(input), Err(TypeParseError::Syntax { .. })),
                 "{input}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_function_type_errors() {
-        let cases = [
-            (
-                "func<i32, i64>",
-                TypeParseError::UnexpectedToken {
-                    position: 8,
-                    expected: "'->'",
-                },
-            ),
-            (
-                "func<() -> i64>",
-                TypeParseError::UnexpectedToken {
-                    position: 6,
-                    expected: "a function parameter",
-                },
-            ),
-        ];
-
-        for (expr, expected) in cases {
-            assert_eq!(
-                TypeExpr::parse(expr),
-                Err(expected),
-                "unexpected error for {expr}"
             );
         }
     }

@@ -431,8 +431,13 @@ scalar_functions:
         );
     }
 
+    /// The grammar only lexes single-digit `anyN` as a type variable, so
+    /// `any12` is an ordinary named parameter like `P`. This changes if
+    /// https://github.com/substrait-io/substrait/issues/1335 is adopted.
     #[test]
-    fn test_multi_digit_any_names_are_rejected_in_numeric_parameters() {
+    fn test_multi_digit_any_names_are_named_numeric_parameters() {
+        use super::super::{IntegerParameter, Type, TypeKind};
+
         for name in ["any12", "ANY12"] {
             let yaml = format!(
                 r#"urn: extension:example.com:numeric_parameters
@@ -442,9 +447,23 @@ scalar_functions:
       - return: decimal<{name}, 0>
 "#
             );
-            assert!(
-                ExtensionFile::read_from_str(yaml).is_err(),
-                "{name} must produce an error rather than silently skip the function",
+            let file = ExtensionFile::read_from_str(yaml).unwrap();
+            let urn = file.urn().clone();
+            let registry = Registry::new(vec![file]).unwrap();
+            let function = registry
+                .get_scalar_function(&urn, "decimal_identity")
+                .unwrap();
+            assert_eq!(
+                function.impls[0].return_type,
+                Type::new(
+                    TypeKind::Decimal {
+                        precision: IntegerParameter::Variable(name.to_string()),
+                        scale: IntegerParameter::Literal(0),
+                    },
+                    false
+                )
+                .into(),
+                "{name}"
             );
         }
     }
@@ -545,7 +564,7 @@ scalar_functions:
         let raw = extension_with_custom_type_reference(
             "extension:example.com:missing",
             "wrap",
-            "map<any1, u!missing>",
+            "list<u!missing<any1>>",
             vec![],
         );
         assert!(matches!(
@@ -555,25 +574,21 @@ scalar_functions:
     }
 
     #[test]
-    fn test_function_with_grouped_return_parameter_is_retained() {
-        use super::super::{IntegerParameter, Type, TypeKind};
-
-        let raw = extension_with_custom_type_reference(
-            "extension:example.com:grouping",
-            "identity",
-            "varchar<(L)>",
-            vec![],
-        );
-        let file = ExtensionFile::create(raw).unwrap();
-        let function = file.extension().get_scalar_function("identity").unwrap();
-        let expected = Type::new(
-            TypeKind::VarChar {
-                length: IntegerParameter::Variable("L".into()),
-            },
-            false,
-        );
-        assert_eq!(function.impls.len(), 1);
-        assert_eq!(function.impls[0].return_type, expected.into());
+    fn test_unsupported_numeric_returns_are_still_skipped() {
+        for return_type in ["varchar<unknown(L, 1)>", "decimal<P * 2, S>"] {
+            let raw = extension_with_custom_type_reference(
+                "extension:example.com:unsupported",
+                "unsupported",
+                return_type,
+                vec![],
+            );
+            let file = ExtensionFile::create(raw).unwrap();
+            assert!(
+                file.extension()
+                    .get_scalar_function("unsupported")
+                    .is_none()
+            );
+        }
     }
 
     #[test]
