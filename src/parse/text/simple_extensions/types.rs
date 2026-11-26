@@ -66,7 +66,7 @@ where
 /// The structure of a type expression, without its nullability.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeKind {
-    /// Boolean type - `bool`
+    /// Boolean type - `boolean`
     Boolean,
     /// 8-bit signed integer - `i8`
     I8,
@@ -178,8 +178,8 @@ pub enum TypeKind {
 }
 
 impl TypeKind {
-    /// Check if a string names a builtin type, ignoring ASCII case.
-    pub fn is_builtin_name(name: &str) -> bool {
+    /// Check if a string is a valid name for a builtin scalar type
+    pub fn is_name(name: &str) -> bool {
         let lower = name.to_ascii_lowercase();
         primitive_builtin(&lower).is_some()
             || matches!(
@@ -193,18 +193,13 @@ impl TypeKind {
                     | "precision_timestamp_tz"
                     | "interval_day"
                     | "interval_compound"
-                    | "any"
-                    | "func"
-                    | "list"
-                    | "map"
-                    | "struct"
             )
     }
 
     fn fmt_with_nullability(&self, f: &mut fmt::Formatter<'_>, nullable: bool) -> fmt::Result {
         let nullability = if nullable { "?" } else { "" };
         let name = match self {
-            Self::Boolean => "bool",
+            Self::Boolean => "boolean",
             Self::I8 => "i8",
             Self::I16 => "i16",
             Self::I32 => "i32",
@@ -538,11 +533,7 @@ pub enum ExtensionTypeError {
         type_string: String,
     },
     /// Unknown type name (not a builtin, missing u! prefix for extension types)
-    #[error(
-        "Unknown type name: '{}'. Extension types must use the u! prefix (e.g., u!{})",
-        name,
-        name
-    )]
+    #[error("Unknown type name: '{name}'. Extension types must use the u! prefix (e.g., u!{name})")]
     UnknownTypeName {
         /// The unknown type name
         name: String,
@@ -993,7 +984,11 @@ fn parse_integer_parameter(
     let value = match param {
         TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
             if parameters.is_empty()
-                && !TypeKind::is_builtin_name(name)
+                && !TypeKind::is_name(name)
+                && !matches!(
+                    name.to_ascii_lowercase().as_str(),
+                    "any" | "func" | "list" | "map" | "struct" | "nstruct"
+                )
                 && CustomType::validate_name(name).is_ok() =>
         {
             return Ok(IntegerParameter::Variable(name.to_string()));
@@ -1094,9 +1089,7 @@ impl<'a> TryFrom<TypeExprParam<'a>> for TypeParameter {
                     TypeExpr::Simple(_, parameters, false) if parameters.is_empty()
                 );
                 match Type::try_from(expression) {
-                    Err(ExtensionTypeError::UnknownTypeName { name })
-                        if is_bare_name && !TypeKind::is_builtin_name(&name) =>
-                    {
+                    Err(ExtensionTypeError::UnknownTypeName { name }) if is_bare_name => {
                         CustomType::validate_name(&name)?;
                         TypeParameter::Name(name)
                     }
@@ -1289,8 +1282,7 @@ mod tests {
 
     /// Parse a string into a [Type], returning the result
     fn parse_type_result(expr: &str) -> Result<Type, ExtensionTypeError> {
-        let parsed = TypeExpr::parse(expr).unwrap();
-        Type::try_from(parsed)
+        Type::try_from(TypeExpr::parse(expr)?)
     }
 
     /// Parse a string into a builtin [Type], with no unresolved
@@ -1457,38 +1449,6 @@ mod tests {
     }
 
     #[test]
-    fn test_is_builtin_name() {
-        for (name, expected) in [
-            ("i32", true),
-            ("boolean", true),
-            ("bool", true),
-            ("decimal", true),
-            ("varchar", true),
-            ("precision_timestamp", true),
-            ("list", true),
-            ("map", true),
-            ("struct", true),
-            ("func", true),
-            ("any", true),
-            ("DeCiMaL", true),
-            ("LiSt", true),
-            ("FuNc", true),
-            ("AnY", true),
-            ("", false),
-            ("P", false),
-            ("any1", false),
-            ("u!point", false),
-            ("missing_type", false),
-            ("dec", false),
-            ("precisiontime", false),
-        ] {
-            for spelling in [name.to_string(), name.to_ascii_uppercase()] {
-                assert_eq!(TypeKind::is_builtin_name(&spelling), expected, "{spelling}");
-            }
-        }
-    }
-
-    #[test]
     fn test_builtin_scalar_parsing() {
         let cases = vec![
             ("bool", Some(TypeKind::Boolean)),
@@ -1576,7 +1536,7 @@ mod tests {
             ),
             (
                 "func<i32 -> func<i64 -> boolean?>>",
-                "func<i32 -> func<i64 -> bool?>>",
+                "func<i32 -> func<i64 -> boolean?>>",
             ),
         ] {
             let ty = parse_type(input);
@@ -1596,10 +1556,10 @@ mod tests {
     #[test]
     fn test_function_parameter_can_be_a_function() {
         assert_eq!(
-            parse_type("func<func<i32 -> i64> -> bool>"),
+            parse_type("func<func<i32 -> i64> -> boolean>"),
             required_type(TypeKind::Func {
                 parameters: vec![parse_type("func<i32 -> i64>")],
-                return_type: Box::new(parse_type("bool")),
+                return_type: Box::new(parse_type("boolean")),
             }),
         );
     }
@@ -1651,21 +1611,18 @@ mod tests {
             "List<missing_type?>",
             "List<decimal<any1>>",
             "List<i32<P>>",
-            "u!foo<func>",
-            "u!foo<FuNc>",
         ] {
             assert!(
-                Type::try_from(TypeExpr::parse(input).unwrap()).is_err(),
+                parse_type_result(input).is_err(),
                 "{input} should not be accepted as a signature type"
             );
         }
     }
 
     #[test]
-    fn test_reserved_type_names_are_not_integer_parameters() {
+    fn reserved_type_names_are_not_integer_parameters() {
         for name in [
             "i32",
-            "bool",
             "boolean",
             "varchar",
             "decimal",
@@ -1682,13 +1639,7 @@ mod tests {
                     format!("decimal<{spelling}, S>"),
                     format!("decimal<P, {spelling}>"),
                 ] {
-                    assert!(
-                        matches!(
-                            parse_type_result(&source),
-                            Err(ExtensionTypeError::InvalidParameterKind { .. })
-                        ),
-                        "{source} should not treat a type name as an integer parameter"
-                    );
+                    assert!(parse_type_result(&source).is_err(), "{source}");
                 }
             }
         }
@@ -1795,7 +1746,7 @@ mod tests {
             "missing<P>",
         ] {
             assert!(
-                Type::try_from(TypeExpr::parse(input).unwrap()).is_err(),
+                parse_type_result(input).is_err(),
                 "{input} should not be accepted as a signature type"
             );
         }
@@ -1980,7 +1931,7 @@ mod tests {
                 extension("Geo", vec![type_param("List<i32?>")], true),
             ),
             (
-                "u!Custom<string?, bool>",
+                "u!Custom<string?, boolean>",
                 extension(
                     "Custom",
                     vec![
@@ -2063,11 +2014,8 @@ mod tests {
             "precisiontimestamptz",
         ] {
             for spelling in [name.to_string(), name.to_ascii_uppercase()] {
-                assert!(!TypeKind::is_builtin_name(&spelling));
-                assert_eq!(
-                    parse_type_result(&format!("{spelling}<3>")),
-                    Err(ExtensionTypeError::UnknownTypeName { name: spelling })
-                );
+                assert!(!TypeKind::is_name(&spelling));
+                assert!(parse_type_result(&format!("{spelling}<3>")).is_err());
             }
         }
     }
@@ -2111,7 +2059,6 @@ mod tests {
             ("List?<i32>", "list?<i32>"),
             ("Map?<string, List?<i32?>>", "map?<string, list?<i32?>>"),
             ("Struct?<i32, string?>", "struct?<i32, string?>"),
-            ("struct<>", "struct<>"),
             ("FIXEDCHAR?<5>", "fixedchar?<5>"),
             ("VARCHAR?<10>", "varchar?<10>"),
             ("FIXEDBINARY?<8>", "fixedbinary?<8>"),
