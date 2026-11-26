@@ -435,6 +435,9 @@ mod tests {
         );
         for source in [
             "decimal<any1, S>",
+            "decimal<any1 + 1, S>",
+            "decimal<P + ANY1, S>",
+            "decimal<(Any1) + 1, S>",
             "varchar<i32>",
             "varchar<P?>",
             "varchar<i32 + 1>",
