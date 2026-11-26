@@ -55,7 +55,7 @@ pub enum TypeParseError {
         construct: &'static str,
         type_string: String,
     },
-    #[error("expected a type, found integer literal {0}")]
+    #[error("expected a type, found numeric expression {0}")]
     ExpectedType(String),
     #[error("expected an integer expression: {0}")]
     ExpectedInteger(String),
