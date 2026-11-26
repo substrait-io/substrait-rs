@@ -290,6 +290,19 @@ pub enum BinaryOp {
     Add,
     /// Integer subtraction.
     Subtract,
+    /// Integer multiplication.
+    Multiply,
+    /// Integer division.
+    Divide,
+}
+
+impl BinaryOp {
+    fn precedence(self) -> u8 {
+        match self {
+            Self::Add | Self::Subtract => 3,
+            Self::Multiply | Self::Divide => 4,
+        }
+    }
 }
 
 impl fmt::Display for BinaryOp {
@@ -297,6 +310,8 @@ impl fmt::Display for BinaryOp {
         match self {
             Self::Add => f.write_str("+"),
             Self::Subtract => f.write_str("-"),
+            Self::Multiply => f.write_str("*"),
+            Self::Divide => f.write_str("/"),
         }
     }
 }
@@ -354,8 +369,20 @@ impl IntegerParameter {
     }
 }
 
-impl fmt::Display for IntegerParameter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl IntegerParameter {
+    fn precedence(&self) -> u8 {
+        match self {
+            Self::BinaryExpression { op, .. } => op.precedence(),
+            _ => 5,
+        }
+    }
+
+    fn fmt_with_precedence(&self, f: &mut fmt::Formatter<'_>, minimum: u8) -> fmt::Result {
+        let precedence = self.precedence();
+        let needs_parentheses = precedence < minimum;
+        if needs_parentheses {
+            f.write_str("(")?;
+        }
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
@@ -373,13 +400,21 @@ impl fmt::Display for IntegerParameter {
                 f.write_str(")")
             }
             Self::BinaryExpression { op, left, right } => {
-                if matches!(**right, Self::BinaryExpression { .. }) {
-                    write!(f, "{left} {op} ({right})")
-                } else {
-                    write!(f, "{left} {op} {right}")
-                }
+                left.fmt_with_precedence(f, precedence)?;
+                write!(f, " {op} ")?;
+                right.fmt_with_precedence(f, precedence + 1)
             }
+        }?;
+        if needs_parentheses {
+            f.write_str(")")?;
         }
+        Ok(())
+    }
+}
+
+impl fmt::Display for IntegerParameter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt_with_precedence(f, 0)
     }
 }
 
@@ -1396,6 +1431,30 @@ mod tests {
             Type::extension_with_params("foo".into(), vec![TypeParameter::Name("P".into())], false)
         );
         assert_eq!(parse_type(&original.to_string()), original);
+    }
+
+    #[test]
+    fn multiplication_and_division_display_roundtrips() {
+        for source in [
+            "P + S * 2",
+            "P * S + 2",
+            "(P + S) * 2",
+            "P * (S + 2)",
+            "P / S / 2",
+            "P / (S / 2)",
+            "P / (S * 2)",
+            "P * (S / 2)",
+            "P - S / 2",
+            "(P - S) / 2",
+            "P / -2",
+            "P * -2",
+            "P / 0",
+            "9223372036854775807 * 2",
+        ] {
+            let original = parse_type(&format!("varchar<{source}>"));
+            assert_eq!(original.to_string(), format!("varchar<{source}>"));
+            assert_eq!(parse_type(&original.to_string()), original, "{source}");
+        }
     }
 
     #[test]
