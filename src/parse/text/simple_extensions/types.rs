@@ -983,7 +983,13 @@ fn parse_integer_parameter(
 ) -> Result<IntegerParameter, ExtensionTypeError> {
     let value = match param {
         TypeExprParam::Type(TypeExpr::Simple(name, parameters, false))
-            if parameters.is_empty() && CustomType::validate_name(name).is_ok() =>
+            if parameters.is_empty()
+                && !TypeKind::is_name(name)
+                && !matches!(
+                    name.to_ascii_lowercase().as_str(),
+                    "any" | "func" | "list" | "map" | "struct" | "nstruct"
+                )
+                && CustomType::validate_name(name).is_ok() =>
         {
             return Ok(IntegerParameter::Variable(name.to_string()));
         }
@@ -1610,6 +1616,32 @@ mod tests {
                 parse_type_result(input).is_err(),
                 "{input} should not be accepted as a signature type"
             );
+        }
+    }
+
+    #[test]
+    fn reserved_type_names_are_not_integer_parameters() {
+        for name in [
+            "i32",
+            "boolean",
+            "varchar",
+            "decimal",
+            "precision_time",
+            "list",
+            "map",
+            "struct",
+            "func",
+            "any",
+        ] {
+            for spelling in [name.to_string(), name.to_ascii_uppercase()] {
+                for source in [
+                    format!("varchar<{spelling}>"),
+                    format!("decimal<{spelling}, S>"),
+                    format!("decimal<P, {spelling}>"),
+                ] {
+                    assert!(parse_type_result(&source).is_err(), "{source}");
+                }
+            }
         }
     }
 

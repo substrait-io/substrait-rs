@@ -569,6 +569,23 @@ scalar_functions:
     }
 
     #[test]
+    fn invalid_return_parameter_is_reported_even_with_a_valid_overload() {
+        let yaml = r#"urn: extension:example.com:invalid_overload
+scalar_functions:
+  - name: example
+    impls:
+      - return: i32
+      - return: varchar<i32>
+"#;
+        assert!(matches!(
+            ExtensionFile::read_from_str(yaml),
+            Err(SimpleExtensionsError::ScalarFunctionError(ScalarFunctionError::TypeError(
+                ExtensionTypeError::InvalidParameterKind { type_name, index: 0, expected: "an integer" }
+            ))) if type_name == "varchar"
+        ));
+    }
+
+    #[test]
     fn test_numeric_expression_returns_are_still_skipped() {
         for return_type in ["varchar<L + 1>", "decimal<P + 1, S>"] {
             let raw = extension_with_custom_type_reference(
