@@ -84,6 +84,11 @@ impl Registry {
     pub fn get_scalar_function(&self, urn: &Urn, name: &str) -> Option<&super::ScalarFunction> {
         self.get_extension(urn)?.get_scalar_function(name)
     }
+
+    /// Get a table function by URN and name.
+    pub fn get_table_function(&self, urn: &Urn, name: &str) -> Option<&super::TableFunction> {
+        self.get_extension(urn)?.get_table_function(name)
+    }
 }
 
 #[cfg(test)]
@@ -114,7 +119,9 @@ mod tests {
             scalar_functions: vec![],
             aggregate_functions: vec![],
             window_functions: vec![],
+            table_functions: vec![],
             dependencies: Default::default(),
+            description: None,
             metadata: Default::default(),
             type_variations: vec![],
             types,
@@ -225,7 +232,9 @@ mod tests {
             }],
             aggregate_functions: vec![],
             window_functions: vec![],
+            table_functions: vec![],
             dependencies: Default::default(),
+            description: None,
             metadata: Default::default(),
             type_variations: vec![],
             types: vec![],
@@ -280,7 +289,9 @@ mod tests {
             }],
             aggregate_functions: vec![],
             window_functions: vec![],
+            table_functions: vec![],
             dependencies: Default::default(),
+            description: None,
             metadata: Default::default(),
             type_variations: vec![],
             types: defined_types
@@ -660,5 +671,109 @@ scalar_functions:
         };
 
         assert_eq!(&add.impls[0], &expected_impl);
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_core_table_functions() {
+        use super::super::{Type, TypeKind, argument::ArgumentsItem};
+        use crate::text::simple_extensions::{Type as RawType, ValueArg as RawValueArg};
+
+        let registry = Registry::from_core_extensions();
+        let urn = Urn::from_str("extension:io.substrait:functions_table").unwrap();
+        let generate_series = registry
+            .get_table_function(&urn, "generate_series")
+            .expect("generate_series should exist");
+
+        let signatures: Vec<_> = generate_series
+            .impls
+            .iter()
+            .map(|impl_| {
+                let args: Vec<_> = impl_
+                    .args
+                    .iter()
+                    .map(|arg| {
+                        let ArgumentsItem::ValueArgument(arg) = arg.clone() else {
+                            panic!("expected value argument");
+                        };
+                        let raw: RawValueArg = arg.into();
+                        (raw.name.unwrap(), raw.value)
+                    })
+                    .collect();
+                (args, impl_.schema.clone())
+            })
+            .collect();
+
+        let signature = |name: &str, kind: TypeKind| {
+            let args = ["start", "stop", "step"]
+                .map(|arg| (arg.to_string(), RawType::String(name.to_string())))
+                .to_vec();
+            let schema = Type::new(TypeKind::Struct(vec![Type::new(kind, false)]), false);
+            (args, Some(schema))
+        };
+        assert_eq!(
+            signatures,
+            vec![
+                signature("i64", TypeKind::I64),
+                signature("i32", TypeKind::I32)
+            ]
+        );
+    }
+
+    #[test]
+    fn test_table_functions() {
+        let yaml = r#"urn: extension:example.com:table_functions
+table_functions:
+  - name: unnest_pairs
+    description: Pairs each element with its position.
+    impls:
+      - args:
+          - value: list<any1>
+        schema: struct<i64, any1>
+  - name: read_rows
+    impls:
+      - args:
+          - value: string
+            constant: true
+  - name: sugared
+    impls:
+      - schema:
+          x: i64
+"#;
+        let file = ExtensionFile::read_from_str(yaml).unwrap();
+        let extension = file.extension();
+
+        let unnest_pairs = extension.get_table_function("unnest_pairs").unwrap();
+        assert_eq!(
+            unnest_pairs.description.as_deref(),
+            Some("Pairs each element with its position.")
+        );
+        assert_eq!(
+            unnest_pairs.impls[0].schema.as_ref().unwrap().to_string(),
+            "struct<i64, any1>"
+        );
+
+        let read_rows = extension.get_table_function("read_rows").unwrap();
+        assert_eq!(read_rows.impls[0].schema, None);
+
+        assert!(
+            extension.get_table_function("sugared").is_none(),
+            "struct sugar schemas are not yet supported, so the function is skipped"
+        );
+        assert_eq!(extension.table_functions().count(), 2);
+    }
+
+    #[test]
+    fn test_table_function_schema_must_be_a_struct() {
+        let yaml = r#"urn: extension:example.com:table_functions
+table_functions:
+  - name: scalar_schema
+    impls:
+      - schema: i64
+"#;
+        assert!(matches!(
+            ExtensionFile::read_from_str(yaml),
+            Err(SimpleExtensionsError::TableFunctionError(_))
+        ));
     }
 }

@@ -5,9 +5,9 @@
 use std::collections::HashMap;
 
 use crate::text::simple_extensions::{
-    NullabilityHandling as RawNullabilityHandling, Options as RawOptions,
-    ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem as RawImpl, Type as RawType,
-    VariadicBehavior as RawVariadicBehavior, VariadicBehaviorParameterConsistency,
+    Arguments as RawArguments, NullabilityHandling as RawNullabilityHandling,
+    Options as RawOptions, ScalarFunction as RawScalarFunction, ScalarFunctionImplsItem as RawImpl,
+    Type as RawType, VariadicBehavior as RawVariadicBehavior, VariadicBehaviorParameterConsistency,
 };
 
 use super::argument::{ArgumentsItem, ArgumentsItemError};
@@ -131,64 +131,9 @@ impl Impl {
         raw: RawImpl,
         ctx: &mut TypeContext,
     ) -> Result<Self, ScalarFunctionError> {
-        // Parse and validate the return type
-        let return_type = match raw.return_.0 {
-            RawType::String(s) => {
-                // Multiline strings indicate type derivation expressions
-                // See: https://github.com/substrait-io/substrait-rs/issues/449
-                if s.contains('\n') {
-                    return Err(ScalarFunctionError::NotYetImplemented(
-                        "Type derivation expressions - issue #449".to_string(),
-                    ));
-                }
-                let type_expr = match TypeExpr::parse(&s) {
-                    Err(TypeParseError::UnsupportedNumericExpression(_)) => {
-                        return Err(ScalarFunctionError::NotYetImplemented(
-                            "Numeric expressions in type parameters - issue #449".to_string(),
-                        ));
-                    }
-                    result => result?,
-                };
-                type_expr.visit_references(&mut |name| ctx.linked(name));
-                match Type::try_from(type_expr) {
-                    Ok(expression) => expression,
-                    Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
-                    | Err(ExtensionTypeError::ExpectedConcreteType { .. })
-                    | Err(ExtensionTypeError::InvalidParameter(_))
-                    | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
-                        // General numeric expressions are not yet supported.
-                        // See: https://github.com/substrait-io/substrait-rs/issues/452
-                        return Err(ScalarFunctionError::NotYetImplemented(
-                            "Type variables in function signatures - issue #452".to_string(),
-                        ));
-                    }
-                    Err(ExtensionTypeError::UnknownTypeName { name }) => {
-                        return Err(ScalarFunctionError::TypeError(
-                            ExtensionTypeError::UnknownTypeName { name },
-                        ));
-                    }
-                    Err(e) => return Err(ScalarFunctionError::TypeError(e)),
-                }
-            }
-            RawType::Object(_) => {
-                // Struct return types (YAML syntactic sugar) are not yet supported
-                // See: https://github.com/substrait-io/substrait-rs/issues/450
-                return Err(ScalarFunctionError::NotYetImplemented(
-                    "Struct return types - issue #450".to_string(),
-                ));
-            }
-        };
-
+        let return_type = parse_return_type(raw.return_.0, ctx)?;
         let variadic = raw.variadic.map(|v| v.try_into()).transpose()?;
-
-        let args = match raw.args {
-            Some(a) => {
-                a.0.into_iter()
-                    .map(|raw_arg| raw_arg.parse(ctx))
-                    .collect::<Result<Vec<_>, _>>()?
-            }
-            None => Vec::new(),
-        };
+        let args = parse_arguments(raw.args, ctx)?;
 
         Ok(Impl {
             args,
@@ -206,6 +151,70 @@ impl Impl {
                 .map(|i| i.0.into_iter().collect())
                 .unwrap_or_default(),
         })
+    }
+}
+
+/// Parse the type a function implementation declares for its output: a scalar
+/// function's return type or a table function's schema.
+pub(super) fn parse_return_type(
+    raw: RawType,
+    ctx: &mut TypeContext,
+) -> Result<Type, ScalarFunctionError> {
+    match raw {
+        RawType::String(s) => {
+            // Multiline strings indicate type derivation expressions
+            // See: https://github.com/substrait-io/substrait-rs/issues/449
+            if s.contains('\n') {
+                return Err(ScalarFunctionError::NotYetImplemented(
+                    "Type derivation expressions - issue #449".to_string(),
+                ));
+            }
+            let type_expr = match TypeExpr::parse(&s) {
+                Err(TypeParseError::UnsupportedNumericExpression(_)) => {
+                    return Err(ScalarFunctionError::NotYetImplemented(
+                        "Numeric expressions in type parameters - issue #449".to_string(),
+                    ));
+                }
+                result => result?,
+            };
+            type_expr.visit_references(&mut |name| ctx.linked(name));
+            match Type::try_from(type_expr) {
+                Ok(expression) => Ok(expression),
+                Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
+                | Err(ExtensionTypeError::ExpectedConcreteType { .. })
+                | Err(ExtensionTypeError::InvalidParameter(_))
+                | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
+                    // General numeric expressions are not yet supported.
+                    // See: https://github.com/substrait-io/substrait-rs/issues/452
+                    Err(ScalarFunctionError::NotYetImplemented(
+                        "Type variables in function signatures - issue #452".to_string(),
+                    ))
+                }
+                Err(e) => Err(ScalarFunctionError::TypeError(e)),
+            }
+        }
+        RawType::Object(_) => {
+            // Struct return types (YAML syntactic sugar) are not yet supported
+            // See: https://github.com/substrait-io/substrait-rs/issues/450
+            Err(ScalarFunctionError::NotYetImplemented(
+                "Struct return types - issue #450".to_string(),
+            ))
+        }
+    }
+}
+
+/// Parse the arguments of a function implementation.
+pub(super) fn parse_arguments(
+    raw: Option<RawArguments>,
+    ctx: &mut TypeContext,
+) -> Result<Vec<ArgumentsItem>, ScalarFunctionError> {
+    match raw {
+        Some(a) => Ok(a
+            .0
+            .into_iter()
+            .map(|raw_arg| raw_arg.parse(ctx))
+            .collect::<Result<Vec<_>, _>>()?),
+        None => Ok(Vec::new()),
     }
 }
 
