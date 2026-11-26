@@ -154,8 +154,7 @@ impl Impl {
                     Ok(expression) => expression,
                     Err(ExtensionTypeError::InvalidAnyTypeVariable { .. })
                     | Err(ExtensionTypeError::ExpectedConcreteType { .. })
-                    | Err(ExtensionTypeError::InvalidParameter(_))
-                    | Err(ExtensionTypeError::InvalidParameterKind { .. }) => {
+                    | Err(ExtensionTypeError::InvalidParameter(_)) => {
                         // Numeric expressions other than addition are not yet supported.
                         // See: https://github.com/substrait-io/substrait-rs/issues/452
                         return Err(ScalarFunctionError::NotYetImplemented(

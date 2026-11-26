@@ -328,7 +328,13 @@ impl fmt::Display for IntegerParameter {
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
-            Self::BinaryExpression { op, left, right } => write!(f, "{left} {op} {right}"),
+            Self::BinaryExpression { op, left, right } => {
+                if matches!(**right, Self::BinaryExpression { .. }) {
+                    write!(f, "{left} {op} ({right})")
+                } else {
+                    write!(f, "{left} {op} {right}")
+                }
+            }
         }
     }
 }
@@ -1322,6 +1328,28 @@ mod tests {
         assert!(refs.is_empty(), "{s} should not add an extension reference");
 
         Type::try_from(parsed).unwrap()
+    }
+
+    #[test]
+    fn grouped_additions_preserve_the_type_on_roundtrip() {
+        for source in [
+            "varchar<L + (M + 1)>",
+            "varchar<L + (M + (N + 1))>",
+            "list<decimal<P + (Q + 1), S>>",
+        ] {
+            let original = parse_type(source);
+            assert_eq!(parse_type(&original.to_string()), original, "{source}");
+        }
+    }
+
+    #[test]
+    fn parenthesized_extension_parameter_names_preserve_their_kind() {
+        let original = parse_type("u!foo<(P)>");
+        assert_eq!(
+            original,
+            Type::extension_with_params("foo".into(), vec![TypeParameter::Name("P".into())], false)
+        );
+        assert_eq!(parse_type(&original.to_string()), original);
     }
 
     #[test]

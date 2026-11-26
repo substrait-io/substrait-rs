@@ -569,8 +569,40 @@ scalar_functions:
     }
 
     #[test]
+    fn invalid_return_parameter_is_reported_even_with_a_valid_overload() {
+        use super::super::type_ast::TypeParseError;
+
+        for return_type in ["varchar<i32>", "list<1>"] {
+            let yaml = format!(
+                r#"urn: extension:example.com:invalid_overload
+scalar_functions:
+  - name: example
+    impls:
+      - return: i32
+      - return: {return_type}
+"#
+            );
+            assert!(
+                matches!(
+                    ExtensionFile::read_from_str(&yaml),
+                    Err(SimpleExtensionsError::ScalarFunctionError(
+                        ScalarFunctionError::TypeError(
+                            ExtensionTypeError::InvalidParameterKind { .. }
+                        ) | ScalarFunctionError::TypeParseError(TypeParseError::ExpectedInteger(_))
+                    ))
+                ),
+                "{return_type}"
+            );
+        }
+    }
+
+    #[test]
     fn test_numeric_subtraction_returns_are_still_skipped() {
-        for return_type in ["varchar<L - 1>", "decimal<P + 1 - 2, S>"] {
+        for return_type in [
+            "varchar<L - 1>",
+            "decimal<P + 1 - 2, S>",
+            "varchar<L + min(S, 6)>",
+        ] {
             let raw = extension_with_custom_type_reference(
                 "extension:example.com:unsupported",
                 "unsupported",
@@ -584,6 +616,24 @@ scalar_functions:
                     .is_none()
             );
         }
+    }
+
+    #[test]
+    fn malformed_addition_returns_are_reported() {
+        use super::super::type_ast::TypeParseError;
+
+        let raw = extension_with_custom_type_reference(
+            "extension:example.com:malformed",
+            "malformed",
+            "varchar<L +>",
+            vec![],
+        );
+        assert!(matches!(
+            ExtensionFile::create(raw),
+            Err(SimpleExtensionsError::ScalarFunctionError(
+                ScalarFunctionError::TypeParseError(TypeParseError::Syntax { .. })
+            ))
+        ));
     }
 
     #[test]
