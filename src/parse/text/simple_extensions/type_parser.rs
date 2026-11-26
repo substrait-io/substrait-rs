@@ -5,7 +5,7 @@
 //! into a [`TypeExpr`]. [`TreeConverter`] has one method per grammar rule,
 //! each documented with the rule it converts.
 //!
-//! Addition and subtraction in numeric parameters are retained without evaluation. Other
+//! Arithmetic in numeric parameters is retained without evaluation. Other
 //! derivations return [`TypeParseError::UnsupportedNumericExpression`]. Built-in names, parameter
 //! counts and literal ranges are validated later, when converting to
 //! [`Type`](super::types::Type).
@@ -24,9 +24,6 @@ use antlr4rust::token_factory::TokenFactory;
 use antlr4rust::tree::TerminalNode;
 use antlr4rust::{InputStream, TidExt};
 use substrait_antlr::substrait_type::substraittypeparser::*;
-use substrait_antlr::substrait_type::substraittypeparser::{
-    SubstraitType_Minus as MINUS_TOKEN, SubstraitType_Plus as PLUS_TOKEN,
-};
 use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
@@ -156,7 +153,9 @@ impl<'a> TreeConverter<'a> {
                     .expr()
                     .expect("#ParenExpression wraps an expr"),
             ),
-            ExprContextAll::AddSubContext(_) => self.integer_expr(expr).map(TypeExprParam::Integer),
+            ExprContextAll::AddSubContext(_) | ExprContextAll::MulDivContext(_) => {
+                self.integer_expr(expr).map(TypeExprParam::Integer)
+            }
             _ => Err(TypeParseError::UnsupportedNumericExpression(
                 self.source.to_string(),
             )),
@@ -176,40 +175,36 @@ impl<'a> TreeConverter<'a> {
             ExprContextAll::ParenExpressionContext(grouped) => {
                 self.integer_expr(&grouped.expr().expect("parentheses contain an expression"))
             }
-            ExprContextAll::AddSubContext(binary) => {
-                let operator = binary
-                    .op
+            ExprContextAll::AddSubContext(binary) => self.binary_expr(
+                if binary.Plus().is_some() {
+                    BinaryOp::Add
+                } else {
+                    BinaryOp::Subtract
+                },
+                binary
+                    .left
                     .as_ref()
-                    .expect("binary expression has an operator");
-                let op = match operator.get_token_type() {
-                    PLUS_TOKEN => BinaryOp::Add,
-                    MINUS_TOKEN => BinaryOp::Subtract,
-                    _ => {
-                        return Err(TypeParseError::UnsupportedNumericExpression(
-                            self.source.to_string(),
-                        ));
-                    }
-                };
-                Ok(IntegerParameter::BinaryExpression {
-                    op,
-                    left: Box::new(
-                        self.integer_expr(
-                            binary
-                                .left
-                                .as_ref()
-                                .expect("binary expression has a left operand"),
-                        )?,
-                    ),
-                    right: Box::new(
-                        self.integer_expr(
-                            binary
-                                .right
-                                .as_ref()
-                                .expect("binary expression has a right operand"),
-                        )?,
-                    ),
-                })
-            }
+                    .expect("binary expression has a left operand"),
+                binary
+                    .right
+                    .as_ref()
+                    .expect("binary expression has a right operand"),
+            ),
+            ExprContextAll::MulDivContext(binary) => self.binary_expr(
+                if binary.Asterisk().is_some() {
+                    BinaryOp::Multiply
+                } else {
+                    BinaryOp::Divide
+                },
+                binary
+                    .left
+                    .as_ref()
+                    .expect("binary expression has a left operand"),
+                binary
+                    .right
+                    .as_ref()
+                    .expect("binary expression has a right operand"),
+            ),
             ExprContextAll::TypeLiteralContext(_) | ExprContextAll::ParameterNameContext(_) => {
                 Err(TypeParseError::ExpectedInteger(self.source.to_string()))
             }
@@ -217,6 +212,19 @@ impl<'a> TreeConverter<'a> {
                 self.source.to_string(),
             )),
         }
+    }
+
+    fn binary_expr(
+        &self,
+        op: BinaryOp,
+        left: &ExprContextAll<'a>,
+        right: &ExprContextAll<'a>,
+    ) -> Result<IntegerParameter, TypeParseError> {
+        Ok(IntegerParameter::BinaryExpression {
+            op,
+            left: Box::new(self.integer_expr(left)?),
+            right: Box::new(self.integer_expr(right)?),
+        })
     }
 
     fn integer_name(&self, name: &str) -> Result<IntegerParameter, TypeParseError> {
@@ -424,6 +432,46 @@ mod tests {
     use super::*;
 
     #[test]
+    fn multiplication_and_division_preserve_precedence_and_operand_order() {
+        assert_eq!(
+            parse_integer_parameter("P + S * 2").unwrap(),
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::Variable("P".into())),
+                right: Box::new(IntegerParameter::BinaryExpression {
+                    op: BinaryOp::Multiply,
+                    left: Box::new(IntegerParameter::Variable("S".into())),
+                    right: Box::new(IntegerParameter::Literal(2)),
+                }),
+            }
+        );
+        assert_eq!(
+            parse_integer_parameter("P / S * 2").unwrap(),
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Multiply,
+                left: Box::new(IntegerParameter::BinaryExpression {
+                    op: BinaryOp::Divide,
+                    left: Box::new(IntegerParameter::Variable("P".into())),
+                    right: Box::new(IntegerParameter::Variable("S".into())),
+                }),
+                right: Box::new(IntegerParameter::Literal(2)),
+            }
+        );
+    }
+
+    #[test]
+    fn multiplication_and_division_reject_invalid_operands() {
+        for source in [
+            "varchar<P *>",
+            "varchar<P />",
+            "varchar<P * i32>",
+            "varchar<i32 / P>",
+        ] {
+            assert!(parse(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
     fn subtraction_preserves_order_and_grouping() {
         for (source, expected) in [
             ("P - S + 1", "P - S + 1"),
@@ -552,7 +600,7 @@ mod tests {
     #[test]
     fn derivation_expressions_are_not_supported() {
         for source in [
-            "decimal<P1 * 2, S>",
+            "decimal<P1 = 2, S>",
             "u!box<max(P, 2)>",
             "decimal<P > 1 ? P : 1, 0>",
         ] {

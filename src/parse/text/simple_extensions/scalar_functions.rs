@@ -116,8 +116,8 @@ pub struct Impl {
     pub nullability: NullabilityHandling,
     /// The return type, retaining variables and parameters within nested types.
     ///
-    /// Variables are not bound or resolved during parsing. Addition and subtraction
-    /// in numeric parameters are retained without evaluation; other derivations remain unsupported.
+    /// Variables are not bound or resolved during parsing. Arithmetic in numeric
+    /// parameters is retained without evaluation; other derivations remain unsupported.
     pub return_type: Type,
     /// Language-specific implementation code (e.g., SQL, C++, Python)
     ///
