@@ -5,8 +5,8 @@
 //! into a [`TypeExpr`]. [`TreeConverter`] has one method per grammar rule,
 //! each documented with the rule it converts.
 //!
-//! Type derivation expressions such as `P + 1` parse but are rejected as
-//! [`TypeParseError::UnsupportedNumericExpression`]. Built-in names, parameter
+//! Addition and subtraction in numeric parameters are retained without evaluation. Other
+//! derivations return [`TypeParseError::UnsupportedNumericExpression`]. Built-in names, parameter
 //! counts and literal ranges are validated later, when converting to
 //! [`Type`](super::types::Type).
 
@@ -24,9 +24,13 @@ use antlr4rust::token_factory::TokenFactory;
 use antlr4rust::tree::TerminalNode;
 use antlr4rust::{InputStream, TidExt};
 use substrait_antlr::substrait_type::substraittypeparser::*;
+use substrait_antlr::substrait_type::substraittypeparser::{
+    SubstraitType_Minus as MINUS_TOKEN, SubstraitType_Plus as PLUS_TOKEN,
+};
 use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
+use super::types::{BinaryOp, CustomType, IntegerParameter, TypeKind};
 
 /// Parse one complete type, rejecting any tokens left after it.
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
@@ -40,6 +44,12 @@ pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
     let tree = parse_tree(source)?;
     let expr = tree.expr().expect("startRule is `expr EOF`");
     TreeConverter { source }.expr_as_type(&expr)
+}
+
+#[cfg(test)]
+pub(super) fn parse_integer_parameter(source: &str) -> Result<IntegerParameter, TypeParseError> {
+    let tree = parse_tree(source)?;
+    TreeConverter { source }.integer_expr(&tree.expr().expect("startRule has an expression"))
 }
 
 /// Run the generated parser on `source`, returning its `startRule` tree.
@@ -146,10 +156,76 @@ impl<'a> TreeConverter<'a> {
                     .expr()
                     .expect("#ParenExpression wraps an expr"),
             ),
+            ExprContextAll::AddSubContext(_) => self.integer_expr(expr).map(TypeExprParam::Integer),
             _ => Err(TypeParseError::UnsupportedNumericExpression(
                 self.source.to_string(),
             )),
         }
+    }
+
+    /// Convert a numeric expression without binding names or evaluating operators.
+    fn integer_expr(&self, expr: &ExprContextAll<'a>) -> Result<IntegerParameter, TypeParseError> {
+        match expr {
+            ExprContextAll::LiteralNumberContext(number) => {
+                self.integer_value(&number.Number().expect("number literal has a number"))
+            }
+            ExprContextAll::ParameterNameContext(name) if name.QMark().is_none() => self
+                .integer_name(
+                    self.terminal_text(&name.Identifier().expect("parameter has a name")),
+                ),
+            ExprContextAll::ParenExpressionContext(grouped) => {
+                self.integer_expr(&grouped.expr().expect("parentheses contain an expression"))
+            }
+            ExprContextAll::AddSubContext(binary) => {
+                let operator = binary
+                    .op
+                    .as_ref()
+                    .expect("binary expression has an operator");
+                let op = match operator.get_token_type() {
+                    PLUS_TOKEN => BinaryOp::Add,
+                    MINUS_TOKEN => BinaryOp::Subtract,
+                    _ => {
+                        return Err(TypeParseError::UnsupportedNumericExpression(
+                            self.source.to_string(),
+                        ));
+                    }
+                };
+                Ok(IntegerParameter::BinaryExpression {
+                    op,
+                    left: Box::new(
+                        self.integer_expr(
+                            binary
+                                .left
+                                .as_ref()
+                                .expect("binary expression has a left operand"),
+                        )?,
+                    ),
+                    right: Box::new(
+                        self.integer_expr(
+                            binary
+                                .right
+                                .as_ref()
+                                .expect("binary expression has a right operand"),
+                        )?,
+                    ),
+                })
+            }
+            ExprContextAll::TypeLiteralContext(_) | ExprContextAll::ParameterNameContext(_) => {
+                Err(TypeParseError::ExpectedInteger(self.source.to_string()))
+            }
+            _ => Err(TypeParseError::UnsupportedNumericExpression(
+                self.source.to_string(),
+            )),
+        }
+    }
+
+    fn integer_name(&self, name: &str) -> Result<IntegerParameter, TypeParseError> {
+        if TypeKind::is_name(name) {
+            return Err(TypeParseError::ExpectedInteger(self.source.to_string()));
+        }
+        CustomType::validate_name(name)
+            .map_err(|_| TypeParseError::ExpectedInteger(self.source.to_string()))?;
+        Ok(IntegerParameter::Variable(name.to_string()))
     }
 
     /// Convert a `typeDef`, such as `i32?`, `list<i32>` or `any1`.
@@ -266,20 +342,18 @@ impl<'a> TreeConverter<'a> {
             NumericParameterContextAll::NumericLiteralContext(literal) => {
                 self.integer(&literal.Number().expect("#numericLiteral is a Number"))
             }
-            NumericParameterContextAll::NumericParameterNameContext(name) => {
-                Ok(TypeExprParam::Type(TypeExpr::Simple(
+            NumericParameterContextAll::NumericParameterNameContext(name) => self
+                .integer_name(
                     self.terminal_text(
                         &name
                             .Identifier()
                             .expect("#numericParameterName is an Identifier"),
                     ),
-                    Vec::new(),
-                    false,
-                )))
-            }
-            NumericParameterContextAll::NumericExpressionContext(expression) => {
-                self.expr(&expression.expr().expect("#numericExpression is an expr"))
-            }
+                )
+                .map(TypeExprParam::Integer),
+            NumericParameterContextAll::NumericExpressionContext(expression) => self
+                .integer_expr(&expression.expr().expect("#numericExpression is an expr"))
+                .map(TypeExprParam::Integer),
             NumericParameterContextAll::Error(_) => {
                 unreachable!("parse_tree rejects trees with errors")
             }
@@ -312,9 +386,16 @@ impl<'a> TreeConverter<'a> {
         &self,
         number: &TerminalNode<'a, SubstraitTypeParserContextType>,
     ) -> Result<TypeExprParam<'a>, TypeParseError> {
+        self.integer_value(number).map(TypeExprParam::Integer)
+    }
+
+    fn integer_value(
+        &self,
+        number: &TerminalNode<'a, SubstraitTypeParserContextType>,
+    ) -> Result<IntegerParameter, TypeParseError> {
         let text = self.terminal_text(number);
         text.parse()
-            .map(TypeExprParam::Integer)
+            .map(IntegerParameter::Literal)
             .map_err(|_| TypeParseError::InvalidInteger(text.to_string()))
     }
 
@@ -343,6 +424,72 @@ mod tests {
     use super::*;
 
     #[test]
+    fn subtraction_preserves_order_and_grouping() {
+        for (source, expected) in [
+            ("P - S + 1", "P - S + 1"),
+            ("P - (S - 1)", "P - (S - 1)"),
+            ("P - -1", "P - -1"),
+        ] {
+            let value = parse_integer_parameter(source).unwrap();
+            assert_eq!(value.to_string(), expected);
+            assert_eq!(parse_integer_parameter(&value.to_string()).unwrap(), value);
+        }
+        assert_eq!(
+            parse_integer_parameter("P - S").unwrap(),
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Subtract,
+                left: Box::new(IntegerParameter::Variable("P".into())),
+                right: Box::new(IntegerParameter::Variable("S".into())),
+            }
+        );
+    }
+
+    #[test]
+    fn numeric_parameters_have_explicit_integer_nodes() {
+        assert_eq!(
+            parse("decimal<P, 2>").unwrap(),
+            TypeExpr::Simple(
+                "decimal",
+                vec![
+                    TypeExprParam::Integer(IntegerParameter::Variable("P".into())),
+                    TypeExprParam::Integer(IntegerParameter::Literal(2)),
+                ],
+                false
+            )
+        );
+        for source in [
+            "decimal<any1, S>",
+            "decimal<any1 + 1, S>",
+            "decimal<P + ANY1, S>",
+            "decimal<(Any1) + 1, S>",
+            "varchar<i32>",
+            "varchar<P?>",
+            "varchar<i32 + 1>",
+            "varchar<bool>",
+            "varchar<bool + 1>",
+        ] {
+            assert!(parse(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
+    fn addition_keeps_operand_order_and_left_associativity() {
+        let expression = parse_integer_parameter("P + S + 1").unwrap();
+        assert_eq!(
+            expression,
+            IntegerParameter::BinaryExpression {
+                op: BinaryOp::Add,
+                left: Box::new(IntegerParameter::BinaryExpression {
+                    op: BinaryOp::Add,
+                    left: Box::new(IntegerParameter::Variable("P".into())),
+                    right: Box::new(IntegerParameter::Variable("S".into())),
+                }),
+                right: Box::new(IntegerParameter::Literal(1)),
+            }
+        );
+    }
+
+    #[test]
     fn integer_parameters_cover_the_i64_range() {
         for (source, expected) in [
             ("u!box<0>", 0),
@@ -354,7 +501,7 @@ mod tests {
                 parse(source),
                 Ok(TypeExpr::UserDefined(
                     "box",
-                    vec![TypeExprParam::Integer(expected)],
+                    vec![TypeExprParam::Integer(IntegerParameter::Literal(expected))],
                     false
                 )),
                 "{source}"
@@ -405,7 +552,7 @@ mod tests {
     #[test]
     fn derivation_expressions_are_not_supported() {
         for source in [
-            "decimal<P1 + 1, S>",
+            "decimal<P1 * 2, S>",
             "u!box<max(P, 2)>",
             "decimal<P > 1 ? P : 1, 0>",
         ] {

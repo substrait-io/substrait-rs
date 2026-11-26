@@ -570,24 +570,39 @@ scalar_functions:
 
     #[test]
     fn invalid_return_parameter_is_reported_even_with_a_valid_overload() {
-        let yaml = r#"urn: extension:example.com:invalid_overload
+        use super::super::type_ast::TypeParseError;
+
+        for return_type in ["varchar<i32>", "list<1>"] {
+            let yaml = format!(
+                r#"urn: extension:example.com:invalid_overload
 scalar_functions:
   - name: example
     impls:
       - return: i32
-      - return: varchar<i32>
-"#;
-        assert!(matches!(
-            ExtensionFile::read_from_str(yaml),
-            Err(SimpleExtensionsError::ScalarFunctionError(ScalarFunctionError::TypeError(
-                ExtensionTypeError::InvalidParameterKind { type_name, index: 0, expected: "an integer" }
-            ))) if type_name == "varchar"
-        ));
+      - return: {return_type}
+"#
+            );
+            assert!(
+                matches!(
+                    ExtensionFile::read_from_str(&yaml),
+                    Err(SimpleExtensionsError::ScalarFunctionError(
+                        ScalarFunctionError::TypeError(
+                            ExtensionTypeError::InvalidParameterKind { .. }
+                        ) | ScalarFunctionError::TypeParseError(TypeParseError::ExpectedInteger(_))
+                    ))
+                ),
+                "{return_type}"
+            );
+        }
     }
 
     #[test]
-    fn test_numeric_expression_returns_are_still_skipped() {
-        for return_type in ["varchar<L + 1>", "decimal<P + 1, S>"] {
+    fn test_numeric_call_returns_are_still_skipped() {
+        for return_type in [
+            "varchar<max(L, 1)>",
+            "decimal<min(P, 38), S>",
+            "varchar<L + min(S, 6)>",
+        ] {
             let raw = extension_with_custom_type_reference(
                 "extension:example.com:unsupported",
                 "unsupported",
@@ -601,6 +616,57 @@ scalar_functions:
                     .is_none()
             );
         }
+    }
+
+    #[test]
+    fn malformed_addition_returns_are_reported() {
+        use super::super::type_ast::TypeParseError;
+
+        let raw = extension_with_custom_type_reference(
+            "extension:example.com:malformed",
+            "malformed",
+            "varchar<L +>",
+            vec![],
+        );
+        assert!(matches!(
+            ExtensionFile::create(raw),
+            Err(SimpleExtensionsError::ScalarFunctionError(
+                ScalarFunctionError::TypeParseError(TypeParseError::Syntax { .. })
+            ))
+        ));
+    }
+
+    #[test]
+    fn test_function_with_addition_in_return_type_is_retained() {
+        use super::super::{BinaryOp, IntegerParameter, Type, TypeKind};
+
+        let yaml = r#"urn: extension:example.com:numeric_expressions
+scalar_functions:
+  - name: append_space
+    impls:
+      - args:
+          - name: input
+            value: varchar<L>
+        return: varchar<L + 1>
+"#;
+        let file = ExtensionFile::read_from_str(yaml).unwrap();
+        let function = file
+            .extension()
+            .get_scalar_function("append_space")
+            .unwrap();
+        let expected = Type::new(
+            TypeKind::VarChar {
+                length: IntegerParameter::BinaryExpression {
+                    op: BinaryOp::Add,
+                    left: Box::new(IntegerParameter::Variable("L".into())),
+                    right: Box::new(IntegerParameter::Literal(1)),
+                },
+            },
+            false,
+        );
+
+        assert_eq!(function.impls.len(), 1);
+        assert_eq!(function.impls[0].return_type, expected);
     }
 
     #[cfg(feature = "extensions")]

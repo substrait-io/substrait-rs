@@ -9,6 +9,8 @@
 //! Parsing uses the parser generated from the official Substrait type grammar,
 //! published as the [`substrait_antlr`] crate.
 
+use super::types::IntegerParameter;
+
 /// A parsed type expression from a type string, with lifetime tied to the original string.
 ///
 /// This represents the syntactic structure only - type names are not validated.
@@ -38,8 +40,8 @@ pub enum TypeExpr<'a> {
 pub enum TypeExprParam<'a> {
     /// A nested type parameter
     Type(TypeExpr<'a>),
-    /// An integer literal parameter
-    Integer(i64),
+    /// An integer literal, named numeric parameter, or unevaluated expression.
+    Integer(IntegerParameter),
 }
 
 #[derive(Debug, PartialEq, thiserror::Error)]
@@ -53,8 +55,10 @@ pub enum TypeParseError {
         construct: &'static str,
         type_string: String,
     },
-    #[error("expected a type, found integer literal {0}")]
+    #[error("expected a type, found numeric expression {0}")]
     ExpectedType(String),
+    #[error("expected an integer expression: {0}")]
+    ExpectedInteger(String),
     #[error("integer literal does not fit in an i64: {0}")]
     InvalidInteger(String),
     #[error("syntax error at column {column}: {message}")]
