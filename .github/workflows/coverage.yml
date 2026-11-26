@@ -2,7 +2,11 @@
 
 name: Coverage
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+    tags: ["**"]
+  pull_request:
 
 permissions:
   contents: read
