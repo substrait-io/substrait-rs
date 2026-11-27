@@ -27,7 +27,7 @@ mod type_ast;
 mod type_parser;
 mod types;
 
-pub use boolean_expr::{BooleanExpr, ComparisonOp};
+pub use boolean_expr::{BooleanExpr, BooleanOp, ComparisonOp};
 pub use extensions::SimpleExtensions;
 pub use file::ExtensionFile;
 pub use registry::Registry;

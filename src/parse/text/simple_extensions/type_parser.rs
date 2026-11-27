@@ -27,7 +27,7 @@ use antlr4rust::{InputStream, TidExt};
 use substrait_antlr::substrait_type::substraittypeparser::*;
 use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
-use super::boolean_expr::{BooleanExpr, ComparisonOp};
+use super::boolean_expr::{BooleanExpr, BooleanOp, ComparisonOp};
 use super::return_type::{IntegerAssignment, ReturnTypeExpr};
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
 use super::types::{BinaryOp, CustomType, IntegerParameter, NumericFunction, TypeKind};
@@ -382,35 +382,46 @@ impl<'a> TreeConverter<'a> {
             ExprContextAll::ParenExpressionContext(grouped) => {
                 self.boolean_expr(&grouped.expr().expect("parentheses contain an expression"))
             }
-            ExprContextAll::ComparisonContext(binary) => {
-                let operator = binary.op.as_ref().expect("comparison has an operator");
-                if self.token_text(&**operator) != ">" {
-                    return Err(TypeParseError::UnsupportedNumericExpression(
-                        self.source.to_string(),
-                    ));
-                }
-                Ok(BooleanExpr::Compare {
-                    op: ComparisonOp::Greater,
-                    left: Box::new(self.integer_expr(
-                        binary.left.as_ref().expect("comparison has a left operand"),
-                    )?),
-                    right: Box::new(
-                        self.integer_expr(
-                            binary
-                                .right
-                                .as_ref()
-                                .expect("comparison has a right operand"),
-                        )?,
-                    ),
-                })
-            }
-            ExprContextAll::EqualityContext(_)
-            | ExprContextAll::AndContext(_)
-            | ExprContextAll::OrContext(_)
-            | ExprContextAll::NotExprContext(_)
-            | ExprContextAll::TernaryContext(_)
-            | ExprContextAll::IfExprContext(_) => Err(
-                TypeParseError::UnsupportedNumericExpression(self.source.to_string()),
+            ExprContextAll::NotExprContext(negation) => Ok(BooleanExpr::Not(Box::new(
+                self.boolean_expr(&negation.expr().expect("negation has an operand"))?,
+            ))),
+            ExprContextAll::ComparisonContext(binary) => self.comparison(
+                &binary.left,
+                &binary.right,
+                &**binary.op.as_ref().expect("comparison has an operator"),
+            ),
+            ExprContextAll::EqualityContext(binary) => self.comparison(
+                &binary.left,
+                &binary.right,
+                &**binary.op.as_ref().expect("equality has an operator"),
+            ),
+            ExprContextAll::AndContext(binary) => Ok(BooleanExpr::Binary {
+                op: BooleanOp::And,
+                left: Box::new(
+                    self.boolean_expr(binary.left.as_ref().expect("AND has a left operand"))?,
+                ),
+                right: Box::new(
+                    self.boolean_expr(binary.right.as_ref().expect("AND has a right operand"))?,
+                ),
+            }),
+            ExprContextAll::OrContext(binary) => Ok(BooleanExpr::Binary {
+                op: BooleanOp::Or,
+                left: Box::new(
+                    self.boolean_expr(binary.left.as_ref().expect("OR has a left operand"))?,
+                ),
+                right: Box::new(
+                    self.boolean_expr(binary.right.as_ref().expect("OR has a right operand"))?,
+                ),
+            }),
+            ExprContextAll::TernaryContext(conditional) => self.boolean_conditional(
+                &conditional.ifExpr,
+                &conditional.thenExpr,
+                &conditional.elseExpr,
+            ),
+            ExprContextAll::IfExprContext(conditional) => self.boolean_conditional(
+                &conditional.ifExpr,
+                &conditional.thenExpr,
+                &conditional.elseExpr,
             ),
             ExprContextAll::FunctionCallContext(call) => {
                 let name = self.terminal_text(&call.Identifier().expect("call has a name"));
@@ -428,6 +439,51 @@ impl<'a> TreeConverter<'a> {
             ),
             _ => Err(TypeParseError::ExpectedBoolean(self.source.to_string())),
         }
+    }
+
+    fn boolean_conditional(
+        &self,
+        condition: &Option<Rc<ExprContextAll<'a>>>,
+        then_value: &Option<Rc<ExprContextAll<'a>>>,
+        else_value: &Option<Rc<ExprContextAll<'a>>>,
+    ) -> Result<BooleanExpr, TypeParseError> {
+        Ok(BooleanExpr::Conditional {
+            condition: Box::new(
+                self.boolean_expr(condition.as_ref().expect("conditional has a condition"))?,
+            ),
+            then_value: Box::new(
+                self.boolean_expr(then_value.as_ref().expect("conditional has a true branch"))?,
+            ),
+            else_value: Box::new(
+                self.boolean_expr(else_value.as_ref().expect("conditional has a false branch"))?,
+            ),
+        })
+    }
+
+    fn comparison(
+        &self,
+        left: &Option<Rc<ExprContextAll<'a>>>,
+        right: &Option<Rc<ExprContextAll<'a>>>,
+        operator: &impl Token,
+    ) -> Result<BooleanExpr, TypeParseError> {
+        let op = match self.token_text(operator) {
+            "<" => ComparisonOp::Less,
+            "<=" => ComparisonOp::LessOrEqual,
+            ">" => ComparisonOp::Greater,
+            ">=" => ComparisonOp::GreaterOrEqual,
+            "=" => ComparisonOp::Equal,
+            "!=" => ComparisonOp::NotEqual,
+            _ => unreachable!("grammar defines comparison operators"),
+        };
+        Ok(BooleanExpr::Compare {
+            op,
+            left: Box::new(
+                self.integer_expr(left.as_ref().expect("comparison has a left operand"))?,
+            ),
+            right: Box::new(
+                self.integer_expr(right.as_ref().expect("comparison has a right operand"))?,
+            ),
+        })
     }
 
     fn binary_expr(
@@ -707,6 +763,29 @@ mod tests {
             else_value: Box::new(IntegerParameter::Literal(0)),
         };
         assert_eq!(parse_integer_parameter("P ? S + 1 : 0").unwrap(), expected);
+    }
+
+    #[test]
+    fn chained_conditionals_follow_the_generated_grammar() {
+        let nested = BooleanExpr::Conditional {
+            condition: Box::new(BooleanExpr::Variable("P".into())),
+            then_value: Box::new(BooleanExpr::Variable("Q".into())),
+            else_value: Box::new(BooleanExpr::Variable("S".into())),
+        };
+        let expected = IntegerParameter::Conditional {
+            condition: Box::new(nested),
+            then_value: Box::new(IntegerParameter::Literal(2)),
+            else_value: Box::new(IntegerParameter::Literal(3)),
+        };
+        assert_eq!(
+            parse_integer_parameter("P ? Q : S ? 2 : 3").unwrap(),
+            expected
+        );
+
+        assert_eq!(
+            parse_integer_parameter(&expected.to_string()).unwrap(),
+            expected
+        );
     }
 
     #[test]
@@ -1017,30 +1096,6 @@ mod tests {
             "P ? i32 : 1",
         ] {
             assert!(parse_integer_parameter(source).is_err(), "{source}");
-        }
-    }
-
-    #[test]
-    fn additional_boolean_operators_remain_unsupported() {
-        for source in [
-            "P < 1",
-            "P <= 1",
-            "P >= 1",
-            "P = 1",
-            "P != 1",
-            "P AND Q",
-            "P OR Q",
-            "!P",
-            "P ? Q : R",
-        ] {
-            let source = format!("varchar<({source}) ? 1 : 2>");
-            assert!(
-                matches!(
-                    parse(&source),
-                    Err(TypeParseError::UnsupportedNumericExpression(_))
-                ),
-                "{source}"
-            );
         }
     }
 
