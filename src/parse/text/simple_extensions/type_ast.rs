@@ -9,7 +9,6 @@
 //! Parsing uses the parser generated from the official Substrait type grammar,
 //! published as the [`substrait_antlr`] crate.
 
-use super::boolean_expr::BooleanExpr;
 use super::types::IntegerParameter;
 
 /// A parsed type expression from a type string, with lifetime tied to the original string.
@@ -34,15 +33,6 @@ pub enum TypeExpr<'a> {
     ///
     /// Contains: (parameters, return type, nullable)
     Func(Vec<TypeExprParam<'a>>, Box<TypeExpr<'a>>, bool),
-    /// A conditional with two type-valued branches.
-    Conditional {
-        /// Boolean condition selecting a type.
-        condition: Box<BooleanExpr>,
-        /// Type when the condition is true.
-        then_type: Box<Self>,
-        /// Type when the condition is false.
-        else_type: Box<Self>,
-    },
 }
 
 /// A parsed parameter to a parameterized type
@@ -106,14 +96,6 @@ impl<'a> TypeExpr<'a> {
                 }
             }
             TypeExpr::TypeVariable(..) => {}
-            TypeExpr::Conditional {
-                then_type,
-                else_type,
-                ..
-            } => {
-                then_type.visit_references(on_ext);
-                else_type.visit_references(on_ext);
-            }
             TypeExpr::Func(parameters, return_type, _) => {
                 for parameter in parameters {
                     if let TypeExprParam::Type(t) = parameter {

@@ -5,8 +5,8 @@
 //! into a [`TypeExpr`]. [`TreeConverter`] has one method per grammar rule,
 //! each documented with the rule it converts.
 //!
-//! Integer arithmetic, boolean conditions and type-valued conditionals are
-//! retained without evaluation. Unsupported derivations return
+//! Integer arithmetic and integer-valued ternaries with greater-than conditions
+//! are retained without evaluation. Other derivations return
 //! [`TypeParseError::UnsupportedNumericExpression`]. Built-in names, parameter
 //! counts and literal ranges are validated later, when converting to
 //! [`Type`](super::types::Type).
@@ -162,27 +162,6 @@ impl<'a> TreeConverter<'a> {
     /// Convert an `expr` that must be a type, such as a top-level type or a
     /// function's return type. `10` is rejected here.
     fn expr_as_type(&self, expr: &ExprContextAll<'a>) -> Result<TypeExpr<'a>, TypeParseError> {
-        match expr {
-            ExprContextAll::ParenExpressionContext(grouped) => {
-                return self
-                    .expr_as_type(&grouped.expr().expect("parentheses contain an expression"));
-            }
-            ExprContextAll::TernaryContext(conditional) => {
-                return self.type_conditional(
-                    &conditional.ifExpr,
-                    &conditional.thenExpr,
-                    &conditional.elseExpr,
-                );
-            }
-            ExprContextAll::IfExprContext(conditional) => {
-                return self.type_conditional(
-                    &conditional.ifExpr,
-                    &conditional.thenExpr,
-                    &conditional.elseExpr,
-                );
-            }
-            _ => {}
-        }
         match self.expr(expr)? {
             TypeExprParam::Type(type_expr) => Ok(type_expr),
             TypeExprParam::Integer(value) => Err(TypeParseError::ExpectedType(value.to_string())),
@@ -218,24 +197,10 @@ impl<'a> TreeConverter<'a> {
             ),
             ExprContextAll::AddSubContext(_)
             | ExprContextAll::MulDivContext(_)
-            | ExprContextAll::FunctionCallContext(_) => {
+            | ExprContextAll::FunctionCallContext(_)
+            | ExprContextAll::ComparisonContext(_)
+            | ExprContextAll::TernaryContext(_) => {
                 self.integer_expr(expr).map(TypeExprParam::Integer)
-            }
-            ExprContextAll::TernaryContext(_) | ExprContextAll::IfExprContext(_) => {
-                match self.integer_expr(expr) {
-                    Ok(value) => Ok(TypeExprParam::Integer(value)),
-                    Err(TypeParseError::ExpectedInteger(_)) => {
-                        self.expr_as_type(expr).map(TypeExprParam::Type)
-                    }
-                    Err(error) => Err(error),
-                }
-            }
-            ExprContextAll::ComparisonContext(_)
-            | ExprContextAll::EqualityContext(_)
-            | ExprContextAll::AndContext(_)
-            | ExprContextAll::OrContext(_)
-            | ExprContextAll::NotExprContext(_) => {
-                Err(TypeParseError::ExpectedType(self.source.to_string()))
             }
             _ => Err(TypeParseError::UnsupportedNumericExpression(
                 self.source.to_string(),
@@ -286,23 +251,35 @@ impl<'a> TreeConverter<'a> {
                     .as_ref()
                     .expect("binary expression has a right operand"),
             ),
-            ExprContextAll::ComparisonContext(_)
-            | ExprContextAll::EqualityContext(_)
-            | ExprContextAll::AndContext(_)
-            | ExprContextAll::OrContext(_)
-            | ExprContextAll::NotExprContext(_) => {
+            ExprContextAll::ComparisonContext(_) => {
                 Err(TypeParseError::ExpectedInteger(self.source.to_string()))
             }
-            ExprContextAll::TernaryContext(conditional) => self.integer_conditional(
-                &conditional.ifExpr,
-                &conditional.thenExpr,
-                &conditional.elseExpr,
-            ),
-            ExprContextAll::IfExprContext(conditional) => self.integer_conditional(
-                &conditional.ifExpr,
-                &conditional.thenExpr,
-                &conditional.elseExpr,
-            ),
+            ExprContextAll::TernaryContext(conditional) => Ok(IntegerParameter::Conditional {
+                condition: Box::new(
+                    self.boolean_expr(
+                        conditional
+                            .ifExpr
+                            .as_ref()
+                            .expect("conditional has a condition"),
+                    )?,
+                ),
+                then_value: Box::new(
+                    self.integer_expr(
+                        conditional
+                            .thenExpr
+                            .as_ref()
+                            .expect("conditional has a true branch"),
+                    )?,
+                ),
+                else_value: Box::new(
+                    self.integer_expr(
+                        conditional
+                            .elseExpr
+                            .as_ref()
+                            .expect("conditional has a false branch"),
+                    )?,
+                ),
+            }),
             ExprContextAll::FunctionCallContext(call) => {
                 let name = self.terminal_text(&call.Identifier().expect("call has a name"));
                 let function = match name.to_ascii_lowercase().as_str() {
@@ -334,57 +311,14 @@ impl<'a> TreeConverter<'a> {
         }
     }
 
-    fn integer_conditional(
-        &self,
-        condition: &Option<Rc<ExprContextAll<'a>>>,
-        then_value: &Option<Rc<ExprContextAll<'a>>>,
-        else_value: &Option<Rc<ExprContextAll<'a>>>,
-    ) -> Result<IntegerParameter, TypeParseError> {
-        Ok(IntegerParameter::Conditional {
-            condition: Box::new(
-                self.boolean_expr(condition.as_ref().expect("conditional has a condition"))?,
-            ),
-            then_value: Box::new(
-                self.integer_expr(then_value.as_ref().expect("conditional has a true branch"))?,
-            ),
-            else_value: Box::new(
-                self.integer_expr(else_value.as_ref().expect("conditional has a false branch"))?,
-            ),
-        })
-    }
-
-    fn type_conditional(
-        &self,
-        condition: &Option<Rc<ExprContextAll<'a>>>,
-        then_type: &Option<Rc<ExprContextAll<'a>>>,
-        else_type: &Option<Rc<ExprContextAll<'a>>>,
-    ) -> Result<TypeExpr<'a>, TypeParseError> {
-        Ok(TypeExpr::Conditional {
-            condition: Box::new(
-                self.boolean_expr(condition.as_ref().expect("conditional has a condition"))?,
-            ),
-            then_type: Box::new(
-                self.expr_as_type(then_type.as_ref().expect("conditional has a true branch"))?,
-            ),
-            else_type: Box::new(
-                self.expr_as_type(else_type.as_ref().expect("conditional has a false branch"))?,
-            ),
-        })
-    }
-
     fn boolean_expr(&self, expr: &ExprContextAll<'a>) -> Result<BooleanExpr, TypeParseError> {
         match expr {
-            ExprContextAll::ParameterNameContext(name) if name.QMark().is_none() => {
-                let name = self.terminal_text(&name.Identifier().expect("parameter has a name"));
-                self.integer_name(name)?;
-                Ok(BooleanExpr::Variable(name.to_string()))
-            }
             ExprContextAll::ParenExpressionContext(grouped) => {
                 self.boolean_expr(&grouped.expr().expect("parentheses contain an expression"))
             }
             ExprContextAll::ComparisonContext(binary) => {
                 let operator = binary.op.as_ref().expect("comparison has an operator");
-                if self.token_text(&**operator) != ">" {
+                if operator.get_token_type() != SubstraitType_Gt {
                     return Err(TypeParseError::UnsupportedNumericExpression(
                         self.source.to_string(),
                     ));
@@ -404,29 +338,16 @@ impl<'a> TreeConverter<'a> {
                     ),
                 })
             }
-            ExprContextAll::EqualityContext(_)
-            | ExprContextAll::AndContext(_)
-            | ExprContextAll::OrContext(_)
-            | ExprContextAll::NotExprContext(_)
-            | ExprContextAll::TernaryContext(_)
-            | ExprContextAll::IfExprContext(_) => Err(
-                TypeParseError::UnsupportedNumericExpression(self.source.to_string()),
-            ),
-            ExprContextAll::FunctionCallContext(call) => {
-                let name = self.terminal_text(&call.Identifier().expect("call has a name"));
-                match name.to_ascii_lowercase().as_str() {
-                    "min" | "max" | "integer_parameter" => {
-                        Err(TypeParseError::ExpectedBoolean(self.source.to_string()))
-                    }
-                    _ => Err(TypeParseError::UnsupportedNumericExpression(
-                        self.source.to_string(),
-                    )),
-                }
+            ExprContextAll::LiteralNumberContext(_)
+            | ExprContextAll::TypeLiteralContext(_)
+            | ExprContextAll::ParameterNameContext(_)
+            | ExprContextAll::AddSubContext(_)
+            | ExprContextAll::MulDivContext(_) => {
+                Err(TypeParseError::ExpectedBoolean(self.source.to_string()))
             }
-            ExprContextAll::MultilineDefinitionContext(_) => Err(
-                TypeParseError::UnsupportedNumericExpression(self.source.to_string()),
-            ),
-            _ => Err(TypeParseError::ExpectedBoolean(self.source.to_string())),
+            _ => Err(TypeParseError::UnsupportedNumericExpression(
+                self.source.to_string(),
+            )),
         }
     }
 
@@ -702,11 +623,34 @@ mod tests {
             right: Box::new(IntegerParameter::Literal(1)),
         };
         let expected = IntegerParameter::Conditional {
-            condition: Box::new(BooleanExpr::Variable("P".into())),
+            condition: Box::new(BooleanExpr::Compare {
+                op: ComparisonOp::Greater,
+                left: Box::new(IntegerParameter::Variable("P".into())),
+                right: Box::new(IntegerParameter::Literal(0)),
+            }),
             then_value: Box::new(sum),
             else_value: Box::new(IntegerParameter::Literal(0)),
         };
-        assert_eq!(parse_integer_parameter("P ? S + 1 : 0").unwrap(), expected);
+        assert_eq!(
+            parse_integer_parameter("P > 0 ? S + 1 : 0").unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn conditional_operands_have_distinct_types() {
+        for source in [
+            "1 ? 2 : 3",
+            "(P + 1) ? 2 : 3",
+            "i32 ? 2 : 3",
+            "(P > 1) + 1",
+            "min(P > 1, 2)",
+            "P > 1 ? i32 : 2",
+            "P > 1 ? 2 : i32",
+            "P > S > 1 ? 2 : 3",
+        ] {
+            assert!(parse_integer_parameter(source).is_err(), "{source}");
+        }
     }
 
     #[test]
@@ -995,95 +939,19 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_calls_are_rejected() {
-        let source = "u!box<unsupported(P, 2)>";
-        assert_eq!(
-            parse(source),
-            Err(TypeParseError::UnsupportedNumericExpression(
-                source.to_string()
-            )),
-        );
-    }
-
-    #[test]
-    fn boolean_expressions_cannot_be_used_as_integers() {
+    fn derivation_expressions_are_not_supported() {
         for source in [
-            "P > S",
-            "P > S > 1",
-            "(P > S) * 2",
-            "(P > 1) + (S > 1)",
-            "min(P > S, 1)",
-            "P ? 1 : S ? 2 : 3",
-            "P ? i32 : 1",
+            "decimal<P1 = 2, S>",
+            "u!box<unsupported(P, 2)>",
+            "decimal<P >= 1 ? P : 1, 0>",
         ] {
-            assert!(parse_integer_parameter(source).is_err(), "{source}");
-        }
-    }
-
-    #[test]
-    fn additional_boolean_operators_remain_unsupported() {
-        for source in [
-            "P < 1",
-            "P <= 1",
-            "P >= 1",
-            "P = 1",
-            "P != 1",
-            "P AND Q",
-            "P OR Q",
-            "!P",
-            "P ? Q : R",
-        ] {
-            let source = format!("varchar<({source}) ? 1 : 2>");
-            assert!(
-                matches!(
-                    parse(&source),
-                    Err(TypeParseError::UnsupportedNumericExpression(_))
-                ),
-                "{source}"
+            assert_eq!(
+                parse(source),
+                Err(TypeParseError::UnsupportedNumericExpression(
+                    source.to_string()
+                )),
             );
         }
-    }
-
-    #[test]
-    fn conditional_conditions_must_be_boolean() {
-        for source in [
-            "1 ? i32 : i64",
-            "i32 ? i32 : i64",
-            "(P + 1) ? i32 : i64",
-            "varchar<1 ? 2 : 3>",
-            "varchar<(P + 1) ? 2 : 3>",
-        ] {
-            assert!(
-                matches!(parse(source), Err(TypeParseError::ExpectedBoolean(_))),
-                "{source}"
-            );
-        }
-    }
-
-    #[test]
-    fn type_conditionals_require_type_branches() {
-        for source in [
-            "P > 1 ? i32 : 2",
-            "P > 1 ? 2 : i64",
-            "list<P > 1 ? i32 : 2>",
-        ] {
-            assert!(
-                matches!(parse(source), Err(TypeParseError::ExpectedType(_))),
-                "{source}"
-            );
-        }
-    }
-
-    #[test]
-    fn both_conditional_syntaxes_produce_the_same_typed_nodes() {
-        assert_eq!(
-            parse("P > 1 ? i32 : i64").unwrap(),
-            parse("IF P > 1 THEN i32 ELSE i64").unwrap()
-        );
-        assert_eq!(
-            parse_integer_parameter("P > 1 ? 2 : 3").unwrap(),
-            parse_integer_parameter("IF P > 1 THEN 2 ELSE 3").unwrap()
-        );
     }
 
     #[test]

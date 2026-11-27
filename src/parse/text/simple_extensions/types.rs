@@ -169,15 +169,6 @@ pub enum TypeKind {
         /// The return type
         return_type: Box<Type>,
     },
-    /// A type-valued conditional retained without choosing a branch.
-    Conditional {
-        /// Boolean condition determining the selected type.
-        condition: Box<BooleanExpr>,
-        /// Type produced when the condition is true.
-        then_type: Box<Type>,
-        /// Type produced when the condition is false.
-        else_type: Box<Type>,
-    },
     /// An unnumbered wildcard, such as `any`.
     Any,
     /// A numbered type variable, such as `any1`.
@@ -244,13 +235,6 @@ impl TypeKind {
                     .map(|(name, field)| KeyValueDisplay(name, field, ": "));
                 write_separated(f, fields, "{", "}", ", ")?;
                 return f.write_str(nullability);
-            }
-            Self::Conditional {
-                condition,
-                then_type,
-                else_type,
-            } => {
-                return write!(f, "(({condition}) ? {then_type} : {else_type})");
             }
             Self::Any => return write!(f, "any{nullability}"),
             Self::Variable { id } => return write!(f, "any{id}{nullability}"),
@@ -1050,7 +1034,7 @@ impl Type {
     /// Returns whether this type contains no unresolved variables.
     pub fn is_concrete(&self) -> bool {
         match &self.kind {
-            TypeKind::Any | TypeKind::Variable { .. } | TypeKind::Conditional { .. } => false,
+            TypeKind::Any | TypeKind::Variable { .. } => false,
             TypeKind::FixedChar { length }
             | TypeKind::VarChar { length }
             | TypeKind::FixedBinary { length } => length.is_concrete(),
@@ -1406,18 +1390,6 @@ impl<'a> TryFrom<TypeExpr<'a>> for Type {
             TypeExpr::TypeVariable(id, nullable) => {
                 Ok(Type::new(TypeKind::Variable { id }, nullable))
             }
-            TypeExpr::Conditional {
-                condition,
-                then_type,
-                else_type,
-            } => Ok(Type::new(
-                TypeKind::Conditional {
-                    condition,
-                    then_type: Box::new(Type::try_from(*then_type)?),
-                    else_type: Box::new(Type::try_from(*else_type)?),
-                },
-                false,
-            )),
         }
     }
 }
@@ -1537,9 +1509,8 @@ mod tests {
             "(P > 38 ? 38 : P) * 2",
             "P / (S > 1 ? S : 1)",
             "P - (S > 38 ? 38 : S)",
-            "((P > 1 ? 1 : 0) > S) ? 2 : 3",
-            "P ? S ? 1 : 2 : 3",
-            "P ? 1 : (S ? 2 : 3)",
+            "P > 1 ? (S > 1 ? 1 : 2) : 3",
+            "P > 1 ? 1 : (S > 1 ? 2 : 3)",
             "min(P > 38 ? 38 : P, 10)",
         ] {
             let expression = parse_integer_expression(source).unwrap();

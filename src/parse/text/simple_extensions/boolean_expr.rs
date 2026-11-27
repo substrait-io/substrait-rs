@@ -9,8 +9,6 @@ use super::types::IntegerParameter;
 /// A boolean-valued expression. Integer and type expressions cannot be used as conditions.
 #[derive(Clone, Debug, PartialEq)]
 pub enum BooleanExpr {
-    /// A named boolean binding.
-    Variable(String),
     /// A comparison of two integers.
     Compare {
         /// The comparison operator.
@@ -40,7 +38,6 @@ impl fmt::Display for ComparisonOp {
 impl fmt::Display for BooleanExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Variable(name) => f.write_str(name),
             Self::Compare { op, left, right } => write!(f, "({left}) {op} ({right})"),
         }
     }
