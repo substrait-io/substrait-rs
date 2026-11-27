@@ -17,6 +17,7 @@
 use thiserror::Error;
 
 pub mod argument;
+mod boolean_expr;
 mod extensions;
 mod file;
 mod registry;
@@ -26,6 +27,7 @@ mod type_ast;
 mod type_parser;
 mod types;
 
+pub use boolean_expr::{BooleanExpr, ComparisonOp};
 pub use extensions::SimpleExtensions;
 pub use file::ExtensionFile;
 pub use registry::Registry;

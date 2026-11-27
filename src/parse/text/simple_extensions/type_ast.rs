@@ -59,6 +59,8 @@ pub enum TypeParseError {
     ExpectedType(String),
     #[error("expected an integer expression: {0}")]
     ExpectedInteger(String),
+    #[error("expected a boolean expression: {0}")]
+    ExpectedBoolean(String),
     #[error("integer literal does not fit in an i64: {0}")]
     InvalidInteger(String),
     #[error("syntax error at column {column}: {message}")]

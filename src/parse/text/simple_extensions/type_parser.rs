@@ -5,8 +5,9 @@
 //! into a [`TypeExpr`]. [`TreeConverter`] has one method per grammar rule,
 //! each documented with the rule it converts.
 //!
-//! Arithmetic in numeric parameters is retained without evaluation. Other
-//! derivations return [`TypeParseError::UnsupportedNumericExpression`]. Built-in names, parameter
+//! Integer arithmetic and integer-valued ternaries with greater-than conditions
+//! are retained without evaluation. Other derivations return
+//! [`TypeParseError::UnsupportedNumericExpression`]. Built-in names, parameter
 //! counts and literal ranges are validated later, when converting to
 //! [`Type`](super::types::Type).
 
@@ -26,6 +27,7 @@ use antlr4rust::{InputStream, TidExt};
 use substrait_antlr::substrait_type::substraittypeparser::*;
 use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
+use super::boolean_expr::{BooleanExpr, ComparisonOp};
 use super::return_type::{IntegerAssignment, ReturnTypeExpr};
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
 use super::types::{BinaryOp, CustomType, IntegerParameter, NumericFunction, TypeKind};
@@ -195,7 +197,9 @@ impl<'a> TreeConverter<'a> {
             ),
             ExprContextAll::AddSubContext(_)
             | ExprContextAll::MulDivContext(_)
-            | ExprContextAll::FunctionCallContext(_) => {
+            | ExprContextAll::FunctionCallContext(_)
+            | ExprContextAll::ComparisonContext(_)
+            | ExprContextAll::TernaryContext(_) => {
                 self.integer_expr(expr).map(TypeExprParam::Integer)
             }
             _ => Err(TypeParseError::UnsupportedNumericExpression(
@@ -247,6 +251,35 @@ impl<'a> TreeConverter<'a> {
                     .as_ref()
                     .expect("binary expression has a right operand"),
             ),
+            ExprContextAll::ComparisonContext(_) => {
+                Err(TypeParseError::ExpectedInteger(self.source.to_string()))
+            }
+            ExprContextAll::TernaryContext(conditional) => Ok(IntegerParameter::Conditional {
+                condition: Box::new(
+                    self.boolean_expr(
+                        conditional
+                            .ifExpr
+                            .as_ref()
+                            .expect("conditional has a condition"),
+                    )?,
+                ),
+                then_value: Box::new(
+                    self.integer_expr(
+                        conditional
+                            .thenExpr
+                            .as_ref()
+                            .expect("conditional has a true branch"),
+                    )?,
+                ),
+                else_value: Box::new(
+                    self.integer_expr(
+                        conditional
+                            .elseExpr
+                            .as_ref()
+                            .expect("conditional has a false branch"),
+                    )?,
+                ),
+            }),
             ExprContextAll::FunctionCallContext(call) => {
                 let name = self.terminal_text(&call.Identifier().expect("call has a name"));
                 let function = match name.to_ascii_lowercase().as_str() {
@@ -271,6 +304,46 @@ impl<'a> TreeConverter<'a> {
             }
             ExprContextAll::TypeLiteralContext(_) | ExprContextAll::ParameterNameContext(_) => {
                 Err(TypeParseError::ExpectedInteger(self.source.to_string()))
+            }
+            _ => Err(TypeParseError::UnsupportedNumericExpression(
+                self.source.to_string(),
+            )),
+        }
+    }
+
+    fn boolean_expr(&self, expr: &ExprContextAll<'a>) -> Result<BooleanExpr, TypeParseError> {
+        match expr {
+            ExprContextAll::ParenExpressionContext(grouped) => {
+                self.boolean_expr(&grouped.expr().expect("parentheses contain an expression"))
+            }
+            ExprContextAll::ComparisonContext(binary) => {
+                let operator = binary.op.as_ref().expect("comparison has an operator");
+                if operator.get_token_type() != SubstraitType_Gt {
+                    return Err(TypeParseError::UnsupportedNumericExpression(
+                        self.source.to_string(),
+                    ));
+                }
+                Ok(BooleanExpr::Compare {
+                    op: ComparisonOp::Greater,
+                    left: Box::new(self.integer_expr(
+                        binary.left.as_ref().expect("comparison has a left operand"),
+                    )?),
+                    right: Box::new(
+                        self.integer_expr(
+                            binary
+                                .right
+                                .as_ref()
+                                .expect("comparison has a right operand"),
+                        )?,
+                    ),
+                })
+            }
+            ExprContextAll::LiteralNumberContext(_)
+            | ExprContextAll::TypeLiteralContext(_)
+            | ExprContextAll::ParameterNameContext(_)
+            | ExprContextAll::AddSubContext(_)
+            | ExprContextAll::MulDivContext(_) => {
+                Err(TypeParseError::ExpectedBoolean(self.source.to_string()))
             }
             _ => Err(TypeParseError::UnsupportedNumericExpression(
                 self.source.to_string(),
@@ -525,6 +598,129 @@ mod tests {
     }
 
     #[test]
+    fn parse_conditionals_retain_the_condition_and_both_branches() {
+        let condition = BooleanExpr::Compare {
+            op: ComparisonOp::Greater,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Literal(38)),
+        };
+        let expected = IntegerParameter::Conditional {
+            condition: Box::new(condition),
+            then_value: Box::new(IntegerParameter::Literal(38)),
+            else_value: Box::new(IntegerParameter::Variable("P".into())),
+        };
+        assert_eq!(
+            parse_integer_parameter("P > 38 ? 38 : P").unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn parse_conditionals_bind_less_tightly_than_arithmetic() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("S".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let expected = IntegerParameter::Conditional {
+            condition: Box::new(BooleanExpr::Compare {
+                op: ComparisonOp::Greater,
+                left: Box::new(IntegerParameter::Variable("P".into())),
+                right: Box::new(IntegerParameter::Literal(0)),
+            }),
+            then_value: Box::new(sum),
+            else_value: Box::new(IntegerParameter::Literal(0)),
+        };
+        assert_eq!(
+            parse_integer_parameter("P > 0 ? S + 1 : 0").unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn conditional_operands_have_distinct_types() {
+        for source in [
+            "1 ? 2 : 3",
+            "(P + 1) ? 2 : 3",
+            "i32 ? 2 : 3",
+            "(P > 1) + 1",
+            "min(P > 1, 2)",
+            "P > 1 ? i32 : 2",
+            "P > 1 ? 2 : i32",
+            "P > S > 1 ? 2 : 3",
+        ] {
+            assert!(parse_integer_parameter(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
+    fn parse_comparisons_bind_less_tightly_than_arithmetic() {
+        let sum = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Add,
+            left: Box::new(IntegerParameter::Variable("P".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let difference = IntegerParameter::BinaryExpression {
+            op: BinaryOp::Subtract,
+            left: Box::new(IntegerParameter::Variable("S".into())),
+            right: Box::new(IntegerParameter::Literal(1)),
+        };
+        let expected = BooleanExpr::Compare {
+            op: ComparisonOp::Greater,
+            left: Box::new(sum),
+            right: Box::new(difference),
+        };
+        let source = "P + 1 > S - 1";
+        let tree = parse_tree(source).unwrap();
+        assert_eq!(
+            TreeConverter { source }
+                .boolean_expr(&tree.expr().unwrap())
+                .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn parse_nested_conditional_types_leave_both_closing_brackets() {
+        let condition = BooleanExpr::Compare {
+            op: ComparisonOp::Greater,
+            left: Box::new(IntegerParameter::Variable("L".into())),
+            right: Box::new(IntegerParameter::Literal(10)),
+        };
+        let length = IntegerParameter::Conditional {
+            condition: Box::new(condition),
+            then_value: Box::new(IntegerParameter::Literal(10)),
+            else_value: Box::new(IntegerParameter::Variable("L".into())),
+        };
+        let element = TypeExpr::Simple("varchar", vec![TypeExprParam::Integer(length)], false);
+        let expected = TypeExpr::Simple("list", vec![TypeExprParam::Type(element)], false);
+        assert_eq!(parse("list<varchar<L > 10 ? 10 : L>>").unwrap(), expected);
+    }
+
+    #[test]
+    fn parse_nullable_types_do_not_start_conditionals() {
+        assert_eq!(
+            parse("list<any1?>").unwrap(),
+            TypeExpr::Simple(
+                "list",
+                vec![TypeExprParam::Type(TypeExpr::TypeVariable(1, true))],
+                false,
+            )
+        );
+        assert_eq!(
+            parse("map<string, any?>").unwrap(),
+            TypeExpr::Simple(
+                "map",
+                vec![
+                    TypeExprParam::Type(TypeExpr::Simple("string", vec![], false)),
+                    TypeExprParam::Type(TypeExpr::Simple("any", vec![], true)),
+                ],
+                false,
+            )
+        );
+    }
+
+    #[test]
     fn malformed_multiline_returns_are_rejected() {
         for source in [
             "P = 1 i32",
@@ -747,7 +943,7 @@ mod tests {
         for source in [
             "decimal<P1 = 2, S>",
             "u!box<unsupported(P, 2)>",
-            "decimal<P > 1 ? P : 1, 0>",
+            "decimal<P >= 1 ? P : 1, 0>",
         ] {
             assert_eq!(
                 parse(source),

@@ -6,6 +6,7 @@ use super::TypeExpr;
 use super::argument::{
     EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
 };
+use super::boolean_expr::BooleanExpr;
 use super::extensions::TypeContext;
 use super::type_ast::TypeExprParam;
 use crate::parse::Parse;
@@ -353,6 +354,15 @@ pub enum IntegerParameter {
         /// The right operand.
         right: Box<Self>,
     },
+    /// A ternary conditional, retained without selecting a branch.
+    Conditional {
+        /// The condition to test when evaluating the derivation.
+        condition: Box<BooleanExpr>,
+        /// The value when the condition is true.
+        then_value: Box<Self>,
+        /// The value when the condition is false.
+        else_value: Box<Self>,
+    },
     /// A supported numeric function call, retained without evaluation.
     Call {
         /// The numeric function being called.
@@ -372,6 +382,7 @@ impl IntegerParameter {
 impl IntegerParameter {
     fn precedence(&self) -> u8 {
         match self {
+            Self::Conditional { .. } => 1,
             Self::BinaryExpression { op, .. } => op.precedence(),
             _ => 5,
         }
@@ -403,6 +414,15 @@ impl IntegerParameter {
                 left.fmt_with_precedence(f, precedence)?;
                 write!(f, " {op} ")?;
                 right.fmt_with_precedence(f, precedence + 1)
+            }
+            Self::Conditional {
+                condition,
+                then_value,
+                else_value,
+            } => {
+                write!(f, "({condition})")?;
+                write!(f, " ? {then_value} : ")?;
+                else_value.fmt_with_precedence(f, precedence + 1)
             }
         }?;
         if needs_parentheses {
@@ -1219,7 +1239,8 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
         // A named precision is at most the maximum decimal precision.
         IntegerParameter::Variable(_)
         | IntegerParameter::BinaryExpression { .. }
-        | IntegerParameter::Call { .. } => 38,
+        | IntegerParameter::Call { .. }
+        | IntegerParameter::Conditional { .. } => 38,
     }
 }
 
@@ -1477,6 +1498,26 @@ mod tests {
         ] {
             let expression = parse_integer_expression(source).unwrap();
             assert_eq!(expression.to_string(), source);
+        }
+    }
+
+    #[test]
+    fn conditional_expression_display_roundtrips() {
+        for source in [
+            "(P > 38 ? 38 : P) + 1",
+            "P * 2 > S / 2 ? P / 2 : S * 2",
+            "(P > 38 ? 38 : P) * 2",
+            "P / (S > 1 ? S : 1)",
+            "P - (S > 38 ? 38 : S)",
+            "P > 1 ? (S > 1 ? 1 : 2) : 3",
+            "P > 1 ? 1 : (S > 1 ? 2 : 3)",
+            "min(P > 38 ? 38 : P, 10)",
+        ] {
+            let expression = parse_integer_expression(source).unwrap();
+            assert_eq!(
+                parse_integer_expression(&expression.to_string()).unwrap(),
+                expression
+            );
         }
     }
 
