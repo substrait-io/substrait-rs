@@ -26,18 +26,13 @@ use antlr4rust::{InputStream, TidExt};
 use substrait_antlr::substrait_type::substraittypeparser::*;
 use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
+use super::return_type::{IntegerAssignment, ReturnTypeExpr};
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
 use super::types::{BinaryOp, CustomType, IntegerParameter, NumericFunction, TypeKind};
 
 /// Parse one complete type, rejecting any tokens left after it.
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
 pub(super) fn parse(source: &str) -> Result<TypeExpr<'_>, TypeParseError> {
-    // The type grammar has no variation syntax, so report it before ANTLR
-    // turns it into a generic syntax error.
-    if source.contains(['[', ']']) {
-        return Err(TypeParseError::UnsupportedVariation(source.to_string()));
-    }
-
     let tree = parse_tree(source)?;
     let expr = tree.expr().expect("startRule is `expr EOF`");
     TreeConverter { source }.expr_as_type(&expr)
@@ -49,11 +44,56 @@ pub(super) fn parse_integer_parameter(source: &str) -> Result<IntegerParameter, 
     TreeConverter { source }.integer_expr(&tree.expr().expect("startRule has an expression"))
 }
 
+/// Parse ordered assignments followed by a final type, or a plain type.
+pub(super) fn parse_return_type(source: &str) -> Result<ReturnTypeExpr<'_>, TypeParseError> {
+    let source = source.trim_end();
+    let tree = parse_tree(source)?;
+    let expr = tree.expr().expect("startRule has an expression");
+    let converter = TreeConverter { source };
+    match expr.as_ref() {
+        ExprContextAll::MultilineDefinitionContext(program) => {
+            let values = program.expr_all();
+            let assignments = values
+                .iter()
+                .enumerate()
+                .map(|(index, value)| {
+                    let name = converter
+                        .terminal_text(&program.Identifier(index).expect("assignment has a name"));
+                    converter.integer_name(name)?;
+                    Ok(IntegerAssignment {
+                        name: name.to_string(),
+                        value: converter.integer_expr(value)?,
+                    })
+                })
+                .collect::<Result<_, TypeParseError>>()?;
+            let return_type = converter.type_def(
+                program
+                    .finalType
+                    .as_ref()
+                    .expect("derivation has a final type"),
+            )?;
+            Ok(ReturnTypeExpr {
+                assignments,
+                return_type,
+            })
+        }
+        _ => Ok(ReturnTypeExpr {
+            assignments: Vec::new(),
+            return_type: converter.expr_as_type(&expr)?,
+        }),
+    }
+}
+
 /// Run the generated parser on `source`, returning its `startRule` tree.
 ///
 /// The tree is only returned when neither the lexer nor the parser reported
 /// an error, so [`TreeConverter`] can rely on it matching the grammar.
 fn parse_tree(source: &str) -> Result<Rc<StartRuleContextAll<'_>>, TypeParseError> {
+    // The type grammar has no variation syntax.
+    if source.contains(['[', ']']) {
+        return Err(TypeParseError::UnsupportedVariation(source.to_string()));
+    }
+
     // ANTLR's default listeners print errors to stderr, then recover and still
     // return a tree. Replace them with one that records the first error, which
     // is the only way to tell that the input was invalid.
@@ -454,6 +494,58 @@ fn has_question_mark<'a>(node: &(dyn SubstraitTypeParserContext<'a> + 'a)) -> bo
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_multiline_returns_preserve_assignment_order() {
+        let parsed = parse_return_type("P = 10\nS = 2\ndecimal<P, S>").unwrap();
+        assert_eq!(
+            parsed.assignments,
+            vec![
+                IntegerAssignment {
+                    name: "P".into(),
+                    value: IntegerParameter::Literal(10)
+                },
+                IntegerAssignment {
+                    name: "S".into(),
+                    value: IntegerParameter::Literal(2)
+                },
+            ]
+        );
+        assert_eq!(
+            parsed.return_type,
+            TypeExpr::Simple(
+                "decimal",
+                vec![
+                    TypeExprParam::Integer(IntegerParameter::Variable("P".into())),
+                    TypeExprParam::Integer(IntegerParameter::Variable("S".into())),
+                ],
+                false,
+            )
+        );
+    }
+
+    #[test]
+    fn malformed_multiline_returns_are_rejected() {
+        for source in [
+            "P = 1 i32",
+            "P = 1\n",
+            "P =\ni32",
+            "P = 1\nQ =\ni32",
+            "P = 1\ni32 garbage",
+            "P = 1;\ni32",
+            "P = 1\nQ\ni32",
+            "P = i32\ndecimal<P, 0>",
+        ] {
+            assert!(parse_return_type(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
+    fn parse_return_types_allow_no_assignments() {
+        let parsed = parse_return_type("i32\n").unwrap();
+        assert!(parsed.assignments.is_empty());
+        assert_eq!(parsed.return_type, TypeExpr::Simple("i32", vec![], false));
+    }
 
     #[test]
     fn calls_retain_function_and_ordered_arguments() {
