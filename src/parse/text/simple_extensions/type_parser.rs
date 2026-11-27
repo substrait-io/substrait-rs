@@ -27,7 +27,7 @@ use substrait_antlr::substrait_type::substraittypeparser::*;
 use substrait_antlr::substrait_type::{SubstraitTypeLexer, SubstraitTypeParser};
 
 use super::type_ast::{TypeExpr, TypeExprParam, TypeParseError};
-use super::types::{BinaryOp, CustomType, IntegerParameter, TypeKind};
+use super::types::{BinaryOp, CustomType, IntegerParameter, NumericFunction, TypeKind};
 
 /// Parse one complete type, rejecting any tokens left after it.
 /// For example, `list<i32>` succeeds, but `list<i32> i64` does not.
@@ -153,7 +153,9 @@ impl<'a> TreeConverter<'a> {
                     .expr()
                     .expect("#ParenExpression wraps an expr"),
             ),
-            ExprContextAll::AddSubContext(_) | ExprContextAll::MulDivContext(_) => {
+            ExprContextAll::AddSubContext(_)
+            | ExprContextAll::MulDivContext(_)
+            | ExprContextAll::FunctionCallContext(_) => {
                 self.integer_expr(expr).map(TypeExprParam::Integer)
             }
             _ => Err(TypeParseError::UnsupportedNumericExpression(
@@ -205,6 +207,28 @@ impl<'a> TreeConverter<'a> {
                     .as_ref()
                     .expect("binary expression has a right operand"),
             ),
+            ExprContextAll::FunctionCallContext(call) => {
+                let name = self.terminal_text(&call.Identifier().expect("call has a name"));
+                let function = match name.to_ascii_lowercase().as_str() {
+                    "min" => NumericFunction::Min,
+                    "max" => NumericFunction::Max,
+                    "integer_parameter" => NumericFunction::IntegerParameter,
+                    _ => {
+                        return Err(TypeParseError::UnsupportedNumericExpression(
+                            self.source.to_string(),
+                        ));
+                    }
+                };
+                let arguments = call
+                    .expr_all()
+                    .iter()
+                    .map(|expr| self.integer_expr(expr))
+                    .collect::<Result<_, _>>()?;
+                Ok(IntegerParameter::Call {
+                    function,
+                    arguments,
+                })
+            }
             ExprContextAll::TypeLiteralContext(_) | ExprContextAll::ParameterNameContext(_) => {
                 Err(TypeParseError::ExpectedInteger(self.source.to_string()))
             }
@@ -432,6 +456,35 @@ mod tests {
     use super::*;
 
     #[test]
+    fn calls_retain_function_and_ordered_arguments() {
+        assert_eq!(
+            parse_integer_parameter("MAX(P, 2)").unwrap(),
+            IntegerParameter::Call {
+                function: NumericFunction::Max,
+                arguments: vec![
+                    IntegerParameter::Variable("P".into()),
+                    IntegerParameter::Literal(2)
+                ],
+            }
+        );
+        for source in [
+            "min(max(P - S, 2) + 1, 38)",
+            "min(P * 2, 38) / max(S, 1)",
+            "P * min(S / 2, 6)",
+            "integer_parameter(precision)",
+        ] {
+            let expression = parse_integer_parameter(source).unwrap();
+            assert_eq!(
+                parse_integer_parameter(&expression.to_string()).unwrap(),
+                expression
+            );
+        }
+        for source in ["max(i32, 2)", "max(any1, 2)", "unknown(P)"] {
+            assert!(parse_integer_parameter(source).is_err(), "{source}");
+        }
+    }
+
+    #[test]
     fn multiplication_and_division_preserve_precedence_and_operand_order() {
         assert_eq!(
             parse_integer_parameter("P + S * 2").unwrap(),
@@ -601,7 +654,7 @@ mod tests {
     fn derivation_expressions_are_not_supported() {
         for source in [
             "decimal<P1 = 2, S>",
-            "u!box<max(P, 2)>",
+            "u!box<unsupported(P, 2)>",
             "decimal<P > 1 ? P : 1, 0>",
         ] {
             assert_eq!(

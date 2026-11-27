@@ -597,11 +597,11 @@ scalar_functions:
     }
 
     #[test]
-    fn test_numeric_call_returns_are_still_skipped() {
+    fn test_unsupported_numeric_returns_are_still_skipped() {
         for return_type in [
-            "varchar<max(L, 1)>",
-            "decimal<min(P, 38), S>",
-            "varchar<L + min(S, 6)>",
+            "varchar<unknown(L, 1)>",
+            "decimal<P = 2, S>",
+            "varchar<L + unknown(S, 6)>",
         ] {
             let raw = extension_with_custom_type_reference(
                 "extension:example.com:unsupported",
@@ -616,6 +616,20 @@ scalar_functions:
                     .is_none()
             );
         }
+    }
+
+    #[test]
+    fn functions_with_calls_after_addition_are_retained() {
+        let source = "varchar<L + min(S, 6)>";
+        let raw = extension_with_custom_type_reference(
+            "extension:example.com:numeric_calls",
+            "append",
+            source,
+            vec![],
+        );
+        let file = ExtensionFile::create(raw).unwrap();
+        let function = file.extension().get_scalar_function("append").unwrap();
+        assert_eq!(function.impls[0].return_type.to_string(), source);
     }
 
     #[test]

@@ -316,6 +316,27 @@ impl fmt::Display for BinaryOp {
     }
 }
 
+/// A supported numeric function in an unevaluated type derivation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NumericFunction {
+    /// The minimum of two integers.
+    Min,
+    /// The maximum of two integers.
+    Max,
+    /// An integer parameter supplied to the function call.
+    IntegerParameter,
+}
+
+impl fmt::Display for NumericFunction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Min => f.write_str("min"),
+            Self::Max => f.write_str("max"),
+            Self::IntegerParameter => f.write_str("integer_parameter"),
+        }
+    }
+}
+
 /// An integer literal, named parameter, or unevaluated numeric expression.
 #[derive(Clone, Debug, PartialEq)]
 pub enum IntegerParameter {
@@ -331,6 +352,13 @@ pub enum IntegerParameter {
         left: Box<Self>,
         /// The right operand.
         right: Box<Self>,
+    },
+    /// A supported numeric function call, retained without evaluation.
+    Call {
+        /// The numeric function being called.
+        function: NumericFunction,
+        /// Ordered numeric arguments.
+        arguments: Vec<Self>,
     },
 }
 
@@ -358,6 +386,19 @@ impl IntegerParameter {
         match self {
             Self::Literal(value) => write!(f, "{value}"),
             Self::Variable(name) => f.write_str(name),
+            Self::Call {
+                function,
+                arguments,
+            } => {
+                write!(f, "{function}(")?;
+                for (index, argument) in arguments.iter().enumerate() {
+                    if index > 0 {
+                        f.write_str(", ")?;
+                    }
+                    write!(f, "{argument}")?;
+                }
+                f.write_str(")")
+            }
             Self::BinaryExpression { op, left, right } => {
                 left.fmt_with_precedence(f, precedence)?;
                 write!(f, " {op} ")?;
@@ -1176,7 +1217,9 @@ fn max_literal_scale(precision: &IntegerParameter) -> i32 {
     match precision {
         IntegerParameter::Literal(precision) => *precision as i32,
         // A named precision is at most the maximum decimal precision.
-        IntegerParameter::Variable(_) | IntegerParameter::BinaryExpression { .. } => 38,
+        IntegerParameter::Variable(_)
+        | IntegerParameter::BinaryExpression { .. }
+        | IntegerParameter::Call { .. } => 38,
     }
 }
 
@@ -1423,6 +1466,10 @@ mod tests {
             "P + (S - 1)",
             "P - (S - 1)",
             "P - -1",
+            "min(P, 38)",
+            "max(S1, S2)",
+            "integer_parameter(precision)",
+            "min(max(P1 - S1, P2 - S2) + 1, 38)",
             "P + S + (1 + (T + 2))",
             "$P + _S",
             "P + -2",
