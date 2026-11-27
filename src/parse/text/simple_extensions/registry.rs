@@ -577,7 +577,7 @@ scalar_functions:
     fn invalid_return_parameter_is_reported_even_with_a_valid_overload() {
         use super::super::type_ast::TypeParseError;
 
-        for return_type in ["varchar<i32>", "list<1>"] {
+        for return_type in ["varchar<i32>", "list<1>", "decimal<P = 2, S>"] {
             let yaml = format!(
                 r#"urn: extension:example.com:invalid_overload
 scalar_functions:
@@ -605,8 +605,9 @@ scalar_functions:
     fn test_unsupported_numeric_returns_are_still_skipped() {
         for return_type in [
             "varchar<unknown(L, 1)>",
-            "decimal<P = 2, S>",
             "varchar<L + unknown(S, 6)>",
+            "varchar<unknown(P) ? 1 : 2>",
+            "unknown(P) ? i32 : i64",
         ] {
             let raw = extension_with_custom_type_reference(
                 "extension:example.com:unsupported",
@@ -619,6 +620,47 @@ scalar_functions:
                 file.extension()
                     .get_scalar_function("unsupported")
                     .is_none()
+            );
+        }
+    }
+
+    #[test]
+    fn conditional_returns_link_both_type_branches() {
+        for return_type in [
+            "P > 1 ? u!missing : i32",
+            "P > 1 ? i32 : u!missing",
+            "list<P > 1 ? i32 : u!missing>",
+        ] {
+            let raw = extension_with_custom_type_reference(
+                "extension:example.com:conditional",
+                "conditional",
+                return_type,
+                vec![],
+            );
+            assert!(
+                matches!(
+                    ExtensionFile::create(raw),
+                    Err(SimpleExtensionsError::UnresolvedTypeReference { type_name }) if type_name == "missing"
+                ),
+                "{return_type}"
+            );
+        }
+    }
+
+    #[test]
+    fn functions_with_type_conditional_returns_are_retained() {
+        for return_type in ["P > 1 ? i32 : i64", "list<IF P > 1 THEN i32 ELSE i64>"] {
+            let raw = extension_with_custom_type_reference(
+                "extension:example.com:conditional",
+                "conditional",
+                return_type,
+                vec![],
+            );
+            let file = ExtensionFile::create(raw).unwrap();
+            assert!(
+                file.extension()
+                    .get_scalar_function("conditional")
+                    .is_some()
             );
         }
     }

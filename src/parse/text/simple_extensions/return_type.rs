@@ -105,6 +105,69 @@ mod tests {
     }
 
     #[test]
+    fn type_conditionals_preserve_both_branches_without_evaluation() {
+        let parsed = ReturnType::parse("P > 10 ? i64 : i32").unwrap();
+        let ReturnType::Type(return_type) = &parsed else {
+            panic!("expected a plain return");
+        };
+        let TypeKind::Conditional {
+            condition,
+            then_type,
+            else_type,
+        } = &return_type.kind
+        else {
+            panic!("expected a conditional type");
+        };
+        assert!(matches!(
+            condition.as_ref(),
+            super::super::BooleanExpr::Compare { .. }
+        ));
+        assert_eq!(then_type.kind, TypeKind::I64);
+        assert_eq!(else_type.kind, TypeKind::I32);
+        assert!(!return_type.is_concrete());
+        assert_eq!(ReturnType::parse(&parsed.to_string()).unwrap(), parsed);
+    }
+
+    #[test]
+    fn typed_conditional_returns_roundtrip() {
+        for source in [
+            "if P > 10 then decimal<10, 2> else decimal<P, 2>",
+            "list<(P > 1) ? i32? : i64>",
+            "map<string, (P > 1) ? list<i32> : list<i64>>",
+            "func<i32 -> (P > 1) ? i32 : i64>",
+            "P > 1 ? (Q > 2 ? i32 : i64) : fp64",
+            "varchar<(P >= 1 AND P <= 10) ? P : 10>",
+            "varchar<(!(P = 1) OR P != 2) ? 1 : 2>",
+            "varchar<IF P < 1 THEN 1 ELSE P>",
+            "varchar<((P > 1) ? Q > 2 : Q < 3) ? 1 : 2>",
+            "P = 10\nlist<(P > 1) ? i32 : i64>",
+            "u!box<(P > 1) ? 2 : 3>",
+            "u!box<(P > 1) ? i32 : i64>",
+        ] {
+            let parsed =
+                ReturnType::parse(source).unwrap_or_else(|error| panic!("{source}: {error}"));
+            assert_eq!(
+                ReturnType::parse(&parsed.to_string()).unwrap(),
+                parsed,
+                "{source}"
+            );
+        }
+    }
+
+    #[test]
+    fn type_conditionals_validate_both_branches() {
+        for source in [
+            "P > 1 ? decimal<39, 0> : i32",
+            "P > 1 ? i32 : decimal<39, 0>",
+        ] {
+            assert!(matches!(
+                ReturnType::parse(source),
+                Err(ExtensionTypeError::InvalidParameterRange { .. })
+            ));
+        }
+    }
+
+    #[test]
     fn return_type_display_roundtrips() {
         for source in ["i32", "P = 10\nS = 2\ndecimal<P, S>"] {
             assert_eq!(ReturnType::parse(source).unwrap().to_string(), source);

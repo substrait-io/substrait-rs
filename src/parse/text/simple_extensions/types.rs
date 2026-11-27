@@ -6,6 +6,7 @@ use super::TypeExpr;
 use super::argument::{
     EnumOptions as ParsedEnumOptions, EnumOptionsError as ParsedEnumOptionsError,
 };
+use super::boolean_expr::BooleanExpr;
 use super::extensions::TypeContext;
 use super::type_ast::TypeExprParam;
 use crate::parse::Parse;
@@ -168,6 +169,15 @@ pub enum TypeKind {
         /// The return type
         return_type: Box<Type>,
     },
+    /// A type-valued conditional retained without choosing a branch.
+    Conditional {
+        /// Boolean condition determining the selected type.
+        condition: Box<BooleanExpr>,
+        /// Type produced when the condition is true.
+        then_type: Box<Type>,
+        /// Type produced when the condition is false.
+        else_type: Box<Type>,
+    },
     /// An unnumbered wildcard, such as `any`.
     Any,
     /// A numbered type variable, such as `any1`.
@@ -235,6 +245,13 @@ impl TypeKind {
                 write_separated(f, fields, "{", "}", ", ")?;
                 return f.write_str(nullability);
             }
+            Self::Conditional {
+                condition,
+                then_type,
+                else_type,
+            } => {
+                return write!(f, "(({condition}) ? {then_type} : {else_type})");
+            }
             Self::Any => return write!(f, "any{nullability}"),
             Self::Variable { id } => return write!(f, "any{id}{nullability}"),
         };
@@ -294,14 +311,11 @@ pub enum BinaryOp {
     Multiply,
     /// Integer division.
     Divide,
-    /// Greater-than comparison.
-    GreaterThan,
 }
 
 impl BinaryOp {
     fn precedence(self) -> u8 {
         match self {
-            Self::GreaterThan => 2,
             Self::Add | Self::Subtract => 3,
             Self::Multiply | Self::Divide => 4,
         }
@@ -315,7 +329,6 @@ impl fmt::Display for BinaryOp {
             Self::Subtract => f.write_str("-"),
             Self::Multiply => f.write_str("*"),
             Self::Divide => f.write_str("/"),
-            Self::GreaterThan => f.write_str(">"),
         }
     }
 }
@@ -360,7 +373,7 @@ pub enum IntegerParameter {
     /// A ternary conditional, retained without selecting a branch.
     Conditional {
         /// The condition to test when evaluating the derivation.
-        condition: Box<Self>,
+        condition: Box<BooleanExpr>,
         /// The value when the condition is true.
         then_value: Box<Self>,
         /// The value when the condition is false.
@@ -423,7 +436,7 @@ impl IntegerParameter {
                 then_value,
                 else_value,
             } => {
-                condition.fmt_with_precedence(f, precedence + 1)?;
+                write!(f, "({condition})")?;
                 write!(f, " ? {then_value} : ")?;
                 else_value.fmt_with_precedence(f, precedence + 1)
             }
@@ -1037,7 +1050,7 @@ impl Type {
     /// Returns whether this type contains no unresolved variables.
     pub fn is_concrete(&self) -> bool {
         match &self.kind {
-            TypeKind::Any | TypeKind::Variable { .. } => false,
+            TypeKind::Any | TypeKind::Variable { .. } | TypeKind::Conditional { .. } => false,
             TypeKind::FixedChar { length }
             | TypeKind::VarChar { length }
             | TypeKind::FixedBinary { length } => length.is_concrete(),
@@ -1393,6 +1406,18 @@ impl<'a> TryFrom<TypeExpr<'a>> for Type {
             TypeExpr::TypeVariable(id, nullable) => {
                 Ok(Type::new(TypeKind::Variable { id }, nullable))
             }
+            TypeExpr::Conditional {
+                condition,
+                then_type,
+                else_type,
+            } => Ok(Type::new(
+                TypeKind::Conditional {
+                    condition,
+                    then_type: Box::new(Type::try_from(*then_type)?),
+                    else_type: Box::new(Type::try_from(*else_type)?),
+                },
+                false,
+            )),
         }
     }
 }
@@ -1507,25 +1532,18 @@ mod tests {
     #[test]
     fn conditional_expression_display_roundtrips() {
         for source in [
-            "P > S",
-            "P > -1",
-            "P > S > 1",
-            "P > (S > 1)",
             "(P > 38 ? 38 : P) + 1",
             "P * 2 > S / 2 ? P / 2 : S * 2",
             "(P > 38 ? 38 : P) * 2",
             "P / (S > 1 ? S : 1)",
-            "(P > S) * 2",
             "P - (S > 38 ? 38 : S)",
-            "(P > 1) + (S > 1)",
-            "(P > 1 ? 1 : 0) > S",
-            "(P ? S : 1) ? 2 : 3",
+            "((P > 1 ? 1 : 0) > S) ? 2 : 3",
+            "(P ? Q : S) ? 2 : 3",
             "P ? S ? 1 : 2 : 3",
             "P ? 1 : (S ? 2 : 3)",
             "min(P > 38 ? 38 : P, 10)",
         ] {
             let expression = parse_integer_expression(source).unwrap();
-            assert_eq!(expression.to_string(), source);
             assert_eq!(
                 parse_integer_expression(&expression.to_string()).unwrap(),
                 expression
