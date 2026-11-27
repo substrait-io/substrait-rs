@@ -619,6 +619,26 @@ scalar_functions:
     }
 
     #[test]
+    fn multiplication_and_division_returns_are_retained() {
+        for return_type in [
+            "varchar<L * 2>",
+            "decimal<(P + 1) / 2, S>",
+            "varchar<L / 0>",
+        ] {
+            let raw = extension_with_custom_type_reference(
+                "extension:example.com:arithmetic",
+                "arithmetic",
+                return_type,
+                vec![],
+            );
+            let file = ExtensionFile::create(raw).unwrap();
+            let function = file.extension().get_scalar_function("arithmetic").unwrap();
+            assert_eq!(function.impls.len(), 1);
+            assert_eq!(function.impls[0].return_type.to_string(), return_type);
+        }
+    }
+
+    #[test]
     fn malformed_addition_returns_are_reported() {
         use super::super::type_ast::TypeParseError;
 
